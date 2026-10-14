@@ -1,0 +1,2267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuenTrade Trading OS — Freight & Logistics Providers</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<link rel="shortcut icon" href="/icons/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Real ask 2026-09-09 ("aplicalo en logistics"): same dark-native-popup fix as plants.html —
+       color-scheme is the standard CSS property telling the browser this page's own form controls
+       (select popups, checkboxes, scrollbars) should render in their dark variant. */
+    color-scheme:dark;
+    --navy:#0A2547; --navy-2:#0E3D8F; --blue:#1E6ADB; --blue-bright:#5AAAFF; --blue-light:rgba(90,170,255,.14);
+    --bg:#0A2547; --card:rgba(255,255,255,.08); --line:rgba(255,255,255,.18); --ink:#FFFFFF; --ink-soft:rgba(255,255,255,.55); --red:#C4432E; --green:#0F8A5F; --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  input,select,textarea{background:var(--card);color:var(--ink);}
+  /* Real bug, confirmed live 2026-09-10 ("fondos blancos... cada que entro hay algo
+     diferente"): Chrome forces its own solid white/yellow background on any text input it
+     decides to autofill, overriding this rule entirely and only for whichever fields it
+     remembers on a given visit — exactly the "random, changes every time" pattern reported.
+     The inset box-shadow trick repaints over Chrome's own autofill background since a real
+     background-color can't win against it; text-fill-color keeps the text itself visible
+     against that same dark fill instead of Chrome's own (often black-on-white) choice. */
+  input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,input:-webkit-autofill:active{-webkit-box-shadow:0 0 0 1000px var(--card) inset !important;-webkit-text-fill-color:var(--ink) !important;caret-color:var(--ink);transition:background-color 5000s ease-in-out 0s;}
+  body{
+    margin:0;color:var(--ink);font-family:'Inter',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,
+      linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;
+  }
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px 40px;}
+  header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;padding:20px 32px 20px;margin-bottom:24px;position:relative;}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.55;}
+  .brand-word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px;color:#fff;line-height:1;}
+  .brand-word span{color:var(--blue-bright);}
+  .top-row{display:flex;justify-content:space-between;align-items:center;min-height:44px;position:relative;}
+  .nav-row{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap;}
+  .nav-pill{display:inline-flex;align-items:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:.2px;color:#fff;text-decoration:none;padding:7px 15px;border-radius:999px;transition:color .25s ease;white-space:nowrap;}
+  .nav-pill.active{color:var(--blue-bright);}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 4px;}
+  h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 12px;font-weight:700;}
+  .subtitle{color:var(--ink-soft);font-size:13px;margin:0 0 16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px;}
+  /* Real ask 2026-09-09 ("aplicalo en logistics"): same colored stat-card component as
+     Plants/Products/Quotes, ported verbatim. See renderProviderStats(). */
+  .stats-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
+  .stat-card{border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;}
+  .stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .stat-icon svg{width:18px;height:18px;}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;color:#fff;line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .stat-card.hero .stat-value{font-size:28px;}
+  .stat-label{font-size:11.5px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;display:flex;align-items:center;gap:5px;}
+  .stat-label::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+  @media (max-width:900px){ .stats-row{grid-template-columns:1fr 1fr;} }
+  .stat-card.hero{background:linear-gradient(135deg, rgba(90,170,255,.32), rgba(90,170,255,.08));border:1px solid rgba(90,170,255,.55);box-shadow:0 3px 12px -3px rgba(90,170,255,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.hero .stat-icon{background:rgba(90,170,255,.15);border:1.5px solid rgba(90,170,255,.55);color:#5AAAFF;}
+  .stat-card.hero .stat-label::before{background:#5AAAFF;box-shadow:0 0 7px 1.5px rgba(90,170,255,.8);}
+  .stat-card.ok{background:linear-gradient(135deg, rgba(63,203,126,.35), rgba(63,203,126,.1));border:1px solid rgba(63,203,126,.55);box-shadow:0 3px 12px -3px rgba(63,203,126,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.ok .stat-icon{background:rgba(63,203,126,.18);border:1.5px solid rgba(63,203,126,.55);color:#3FCB7E;}
+  .stat-card.ok .stat-label::before{background:#3FCB7E;box-shadow:0 0 7px 1.5px rgba(63,203,126,.8);}
+  .stat-card.danger{background:linear-gradient(135deg, rgba(196,67,46,.32), rgba(196,67,46,.08));border:1px solid rgba(255,156,138,.55);box-shadow:0 3px 12px -3px rgba(196,67,46,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.danger .stat-icon{background:rgba(196,67,46,.18);border:1.5px solid rgba(255,156,138,.55);color:#FF9C8A;}
+  .stat-card.danger .stat-label::before{background:#FF9C8A;box-shadow:0 0 7px 1.5px rgba(255,156,138,.8);}
+  .stat-card.warn{background:linear-gradient(135deg, rgba(255,200,118,.32), rgba(255,200,118,.08));border:1px solid rgba(255,200,118,.55);box-shadow:0 3px 12px -3px rgba(255,200,118,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.warn .stat-icon{background:rgba(255,200,118,.15);border:1.5px solid rgba(255,200,118,.55);color:#FFC876;}
+  .stat-card.warn .stat-label::before{background:#FFC876;box-shadow:0 0 7px 1.5px rgba(255,200,118,.8);}
+  /* Same glass-pill search as Plants/Products, scoped "pv-" for this page. */
+  /* Real bug found 2026-09-09 ("no la de vidrio... que llegue hasta el borde redondo que no se
+     corte en todos los modulos"): the pill's background/border/shadow used to live on the <input>
+     while this wrap had neither radius nor clipping, so the glass highlight (::before) floated
+     unclipped, misaligned with the pill's actual rounded shape. Fixed properly, matching Quotes'
+     own structure — the wrap IS the pill now (background/border/shadow/radius/blur all here,
+     clipped via overflow:hidden), the input inside is just a plain transparent field. */
+  /* Real ask 2026-09-18 ("new plant tiene diseno buentrade hazlo en all categories search etc"):
+     same flat blue-glass .btn recipe as every other module's search box now, replacing the
+     white/gray glass-pill look. */
+  .pv-search-wrap{position:relative;width:280px;height:40px;border-radius:999px;overflow:hidden;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);transition:background .18s,border-color .18s;}
+  .pv-search-wrap:focus-within{background:rgba(90,170,255,.12);border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(90,170,255,.25);}
+  .pv-search-ico{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:rgba(255,255,255,.55);pointer-events:none;}
+  .pv-search-input{width:100%;height:100%;padding:0 14px 0 38px;border:none;background:transparent;color:#fff;font-size:13px;font-family:inherit;}
+  .pv-search-input::placeholder{color:rgba(255,255,255,.5);}
+  .pv-search-input:focus{outline:none;}
+  .btn{background:rgba(255,255,255,.05);color:var(--blue-bright);border:1.5px solid rgba(90,170,255,.4);border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;transition:background .18s,border-color .18s;}
+  .btn:hover{background:rgba(90,170,255,.12);border-color:var(--blue-bright);}
+  .btn.secondary{background:var(--card);color:var(--blue);border:1.5px solid var(--blue);}
+  .btn.danger{background:var(--card);color:#FF9C8A;border:1.5px solid rgba(196,67,46,.4);padding:5px 10px;font-size:12px;}
+  .btn.small{padding:5px 10px;font-size:12px;}
+  /* Real ask 2026-09-09 ("aplicalo en logistics"): same transparent table convention as
+     collections.html/quotes.html/products.html/plants.html — hairline dividers, near-invisible
+     hover. Upgrades the existing Customs Agencies rate table for free, no HTML change needed.
+     Real ask 2026-09-18 ("nunca quedan centrados... centralos con la data"): headers centered
+     over their column to match the data below, except the first (identity) column, which stays
+     left with its data — same system-wide change, same reasoning, in every file listed above. */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:center;font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;font-weight:700;padding:0 10px 8px;}
+  th:first-child{text-align:left;}
+  td{padding:10px;border-top:1px solid var(--line);vertical-align:middle;text-align:center;}
+  td:first-child{text-align:left;}
+  tr:hover td{background:rgba(255,255,255,.03);}
+  .table-scroll{overflow-x:auto;}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .muted{color:var(--ink-soft);}
+  /* Real ask 2026-09-09 ("arregla la tabla"): Locations Catalog was one cell with every carrier's
+     status crammed into dot-separated inline text. Real columns instead — one per carrier, grouped
+     by state so 28+ cities read as something, price/pending as a pill instead of colored text. */
+  #locationsListCard table{table-layout:fixed;}
+  #locationsListCard .loc-city-col{width:200px;}
+  #locationsListCard thead th{text-align:center;}
+  #locationsListCard thead th.loc-city-head{text-align:left;}
+  .loc-carrier-name{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;font-weight:700;}
+  .loc-carrier-coverage{display:block;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:#fff;}
+  .loc-carrier-coverage small{font-family:'Inter',sans-serif;font-size:10.5px;font-weight:600;color:var(--ink-soft);}
+  .loc-state-row td{padding:14px 10px 6px;border-top:none;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-bright);}
+  .loc-state-row:first-child td{padding-top:0;}
+  .loc-state-row td::after{content:'';display:block;height:1px;background:var(--line);margin-top:6px;}
+  .loc-rate-cell{text-align:center;}
+  .loc-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .loc-pill::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+  .loc-pill.ok{background:rgba(63,203,126,.16);border:1px solid rgba(63,203,126,.4);color:#3FCB7E;}
+  .loc-pill.ok::before{background:#3FCB7E;box-shadow:0 0 5px 1px rgba(63,203,126,.7);}
+  .loc-pill.stale{background:rgba(255,200,118,.14);border:1px solid rgba(255,200,118,.4);color:#FFC876;}
+  .loc-pill.stale::before{background:#FFC876;box-shadow:0 0 5px 1px rgba(255,200,118,.7);}
+  .loc-pill.pending{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);color:var(--ink-soft);font-family:'Inter',sans-serif;font-weight:500;font-size:11.5px;}
+  .loc-pill.pending::before{background:#FF9C8A;box-shadow:0 0 5px 1px rgba(255,156,138,.6);}
+  /* Real gap found 2026-09-09: this master view had no way to actually get a new price in —
+     "Cargar precios" only ever lived inside one carrier's own US Freight tab. One click here jumps
+     straight to that same, unchanged paste box for the right carrier, instead of the trader having
+     to know to leave this screen and find the carrier in the other tab first. */
+  /* Real fix 2026-09-09: these used to live stacked inside each table header cell — fine for 3
+     carriers, genuinely broke the table's own columns at 4 (headers wrapping 3+ lines, squeezed
+     rate columns). Own row of compact cards instead, same component language as everywhere else
+     in the app that shows a set of like-things side by side (profile-grid, stats-row). */
+  .loc-carrier-actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
+  /* 2026-10-10 ("has todos los cambios iguales aquí"): a carrier's summary is a plain block like a list row — a divider line, no card; name blue 13px / 600, numbers 13px, notes 11.5px */
+  .loc-carrier-card{flex:1 1 190px;min-width:170px;background:none;border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 10px;}
+  .loc-carrier-card-name{font-size:13px;font-weight:600;color:var(--blue);margin-bottom:4px;}
+  .loc-carrier-card-coverage{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:400;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:10px;}
+  .loc-carrier-card-coverage small{font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .loc-carrier-card-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .loc-asked-note{margin-top:8px;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;text-align:center;}
+  .field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;text-align:center;background:var(--card);color:var(--ink);}
+
+  /* Real ask 2026-09-11 ("hazlo... desde el principio con el diseno buentrade para no tener que
+     repetir trabajo"): a GENERIC dropdown, built once (same as plants/products/customers.html),
+     that turns ANY existing <select> into this same look — used by btEnhanceSelect() below. */
+  .bt-select-wrap{position:relative;display:block;width:100%;}
+  /* Real ask 2026-09-18 ("te los mande para que lo hagas mismo diseno buentrade"): same flat
+     blue-glass .btn recipe as every search box/category dropdown now, replacing the plain
+     var(--line)-bordered "generic form field" look every one of these selects had. */
+  .bt-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;height:38px;padding:0 12px;border-radius:7px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:var(--blue-bright);font-weight:700;font-size:13.5px;font-family:'Inter',sans-serif;cursor:pointer;text-align:left;transition:background .18s,border-color .18s;}
+  .bt-select-trigger:hover{background:rgba(90,170,255,.12);border-color:var(--blue-bright);}
+  .bt-select-wrap.open .bt-select-trigger{border-color:var(--blue);}
+  .bt-select-trigger:disabled{opacity:.5;cursor:default;}
+  .bt-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+  .bt-select-chevron{width:14px;height:14px;flex-shrink:0;color:var(--ink-soft);transition:transform .15s ease;}
+  .bt-select-wrap.open .bt-select-chevron{transform:rotate(180deg);}
+  .bt-select-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;width:max-content;max-width:320px;background:rgba(20,40,74,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1.5px solid rgba(232,181,76,.4);border-radius:12px;box-shadow:0 24px 60px rgba(4,12,26,.5);padding:6px;z-index:80;max-height:280px;overflow-y:auto;}
+  .bt-select-search{width:100%;box-sizing:border-box;margin-bottom:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06);color:#fff;font-size:12.5px;font-family:inherit;}
+  .bt-select-search::placeholder{color:var(--ink-soft);}
+  .bt-select-option{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:8px 10px;border:none;background:none;color:#fff;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;text-align:left;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .bt-select-option:hover{background:rgba(232,181,76,.1);}
+  .bt-select-option.selected{background:rgba(232,181,76,.16);color:#E8B54C;font-weight:700;}
+  .bt-select-option .bt-select-check{width:13px;flex-shrink:0;visibility:hidden;}
+  .bt-select-option.selected .bt-select-check{visibility:visible;}
+  .bt-select-empty{padding:10px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px;}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:0 14px;}
+  .view-label{display:block;font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.02em;margin-bottom:2px;}
+  .profile-panel{background:var(--card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:18px 22px;}
+  .profile-panel + .profile-panel{margin-top:16px;}
+  .profile-heading{font-size:11.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+  .profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 28px;}
+  .profile-row{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .profile-row.half{grid-column:span 2;}
+  .profile-row.span2{grid-column:1 / -1;}
+  .profile-row .view-label{margin-bottom:0;}
+  /* 2026-10-10 ("has todos los cambios iguales aquí"): the carrier's Profile is plain rows like a client's Details — a divider line, the field name left in the list's table-header look, the value right at 13px; no cards */
+  #profileView .profile-panel{background:none;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;border-radius:0;padding:0;margin:0 0 18px;}
+  #profileView .profile-panel + .profile-panel{margin-top:0;}
+  #profileView .profile-heading{font-size:12px;letter-spacing:.04em;margin-bottom:6px;}
+  #profileView .profile-grid{display:block;}
+  #profileView .profile-row{flex-direction:row;align-items:baseline;gap:16px;padding:10px;border-top:1px solid var(--line);}
+  #profileView .profile-row .view-label{flex:0 0 200px;margin:0;font-size:10.5px;font-weight:700;letter-spacing:.03em;}
+  #profileView .profile-row-value{flex:1;font-size:13px;line-height:1.45;}
+  @media (max-width:760px){ #profileView .profile-row{flex-direction:column;gap:2px;} #profileView .profile-row .view-label{flex:none;} }
+  .profile-row-value{font-size:14px;color:var(--ink);line-height:1.5;overflow-wrap:break-word;word-break:break-word;}
+  .empty{color:var(--ink-soft);text-align:center;padding:24px;}
+  td.empty{text-align:center !important;}
+  .order-num{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--ink);}
+  /* Real ask 2026-09-14: "cambialo por diseno buentrade" — same dark-glass modal every other page
+     already uses (js/email-modal.js injects into this, both for its own Review-before-sending
+     screen and the shared btAlert() that now replaces every native await btAlert() here). */
+  .email-modal-overlay{position:fixed;inset:0;background:rgba(15,31,51,.45);z-index:2000;display:flex;align-items:center;justify-content:center;}
+  .email-modal-box{background:rgba(15,31,51,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1.5px solid rgba(232,181,76,.4);border-radius:14px;width:100%;max-width:480px;padding:22px 24px;box-shadow:0 24px 60px rgba(4,12,26,.45);color:var(--ink);}
+  .email-modal-box h3{margin:0 0 14px;font-size:16px;font-family:'Space Grotesk',sans-serif;}
+  .email-modal-field{margin-bottom:12px;}
+  .email-modal-field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+  .email-modal-field input,.email-modal-field textarea{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:var(--card);color:var(--ink);}
+  .email-modal-field textarea{min-height:110px;resize:vertical;}
+  .email-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;}
+  /* Same badge convention as plants.html/orders.html — verbatim, not a new component. Used by the
+     History tab's Sent/Not sent status. */
+  .payment-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;border:1px solid transparent;display:inline-block;}
+  .payment-badge.ok{background:transparent;color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .payment-badge.due-soon{background:transparent;color:#FFC876;border-color:rgba(255,200,118,.4);}
+  /* Same full-screen overlay pattern as the Trading Tool panel and plants.html's Load Price List —
+     "Cargar precios" used to unhide a card in place, pushing the rest of the page down; the request
+     was explicit: never a partial-page card, always a real full-screen panel like the TT. */
+  .tt-overlay{position:fixed;inset:0;background:repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;z-index:850;display:none;flex-direction:column;}
+  .tt-overlay-head{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);flex-shrink:0;box-shadow:0 2px 10px rgba(10,37,71,.25);}
+  .tt-overlay-title{color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14.5px;}
+  /* Real ask 2026-09-26 ("el close es mediocre", picked option D): icon-only round close in Market Flash's bright blue —
+     blue ring + tinted glass, fills solid blue with a glow on hover. Same rule on every page that has it. */
+  .tt-overlay-close{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:rgba(30,106,219,.25);border:1.5px solid #5AAAFF;color:#5AAAFF;transition:background .18s,box-shadow .18s,color .18s;}
+  .tt-overlay-close svg{width:15px;height:15px;display:block;}
+  .tt-overlay-close:hover{background:#1E6ADB;color:#fff;box-shadow:0 0 16px 3px rgba(90,170,255,.55);}
+  .tt-overlay-close:active{transform:scale(.94);}
+  .tt-overlay-close:focus-visible{outline:2px solid #5AAAFF;outline-offset:2px;}
+  .tt-overlay-body{flex:1;min-height:0;overflow-y:auto;padding:20px;}
+  .plr-summary{display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;background:var(--card);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--blue-bright);margin:12px 0;}
+  .plr-summary-ok{color:#3FCB7E;}
+  .plr-summary-none{color:#FF9C8A;}
+  .name-link{color:var(--blue);font-weight:600;text-decoration:none;cursor:pointer;}
+  .name-link:hover{text-decoration:underline;}
+  .role-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:transparent;border:1px solid rgba(90,170,255,.4);color:var(--blue-bright);margin-right:4px;white-space:nowrap;}
+  /* Same card-row language as Quotes/Pending/Offers/Ingredient Suppliers — bordered rounded row with an
+     avatar instead of a plain table row. */
+  .pkg-table-wrap{display:flex;flex-direction:column;gap:0;}
+  /* 2026-10-10 (user: "has todos los cambios iguales aquí"): a row is a plain list row like Clients — a divider line, no card, no icon tile (a real logo stays) */
+  .pkg-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px;background:none;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;transition:background .12s;}
+  .pkg-row:hover{background:rgba(255,255,255,.03);}
+  .pkg-row .pkg-plant-avatar:not(.pkg-plant-avatar-logo){display:none;}
+  .pkg-plant-avatar{width:44px;height:44px;border-radius:11px;flex-shrink:0;background:linear-gradient(135deg,#E7F0FE,#D5E5FC);color:#5AAAFF;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  /* Same real fix as plants.html/offers.html/quotes.html — a wordmark logo forced into a 44×44
+     square reads tiny once it's wider than it is tall. Checked live: both real carrier logos on
+     file today (EBI Logistics, Key Global Logistics) are already 1:1 square, so this changes
+     nothing for them right now, but the next carrier to add a wide wordmark logo won't get
+     squeezed into a square the way plants' logos did. White card stays — light page, correct. */
+  .pkg-plant-avatar-logo{width:auto;max-width:70px;background:none;border:none;padding:2px;}
+  .pkg-plant-avatar-logo img{width:auto;max-width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);}
+  /* Real ask 2026-09-11 ("te parece bien hecho esto?"): same fix as plants.html/customers.html —
+     a wide logo now fills nearly the whole 220x140 box, so a fixed-corner edit pencil sat on top
+     of the artwork. Hidden until hover/focus instead. */
+  .pkg-logo-edit-btn{opacity:0;transition:opacity .15s ease;}
+  .pkg-logo-wrap:hover .pkg-logo-edit-btn,.pkg-logo-edit-btn:focus-visible{opacity:1;}
+  /* Real ask 2026-09-11 ("pon otro fondo... que quede bien"): same fix as plants.html/
+     customers.html — a dark-ink logo has no readable contrast on navy no matter the outline. Real
+     white card behind it, scoped to .pkg-logo-wrap only; small list-row avatars stay transparent. */
+  .pkg-logo-wrap .pkg-plant-avatar-logo{background:#fff;border:1px solid var(--line);}
+  .pkg-logo-wrap .pkg-plant-avatar-logo img{filter:none;}
+  .pkg-plant-name{font-weight:600;color:var(--blue);font-size:13px;}
+  .pkg-plant-sub{font-size:11.5px;color:var(--ink-soft);}
+  .pkg-plant-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:140px;}
+  .role-check{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;cursor:pointer;font-size:13px;}
+  .role-check input{width:auto;}
+  .tab-row{display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--line);}
+  .tab-btn{background:none;border:none;padding:9px 14px;font-size:15px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;}
+  .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab-btn:focus{outline:none;}
+  .tab-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+  /* Real ask 2026-09-28 ("aplica el modo de la C en todos los modulos donde estan las otras pestanas,
+     ojo solo diseno"): every page tab row looks like Orders' phase selector / Pay & Receive — one
+     rounded bar, equal segments, the active one in gold. Design only: markup, ids and JS untouched. */
+  .tab-row{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:4px;gap:3px;}
+  .tab-btn{flex:1;justify-content:center;text-align:center;padding:9px 6px;border:none;border-radius:7px;margin-bottom:0;font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:700;color:var(--ink-soft);transition:background .15s,color .15s;}
+  .tab-btn:hover{color:var(--ink);}
+  .tab-btn.active{background:rgba(232,181,76,.15);color:#E8B54C;border-bottom-color:transparent;}
+  .rate-input{padding:5px 7px;border:1.5px solid var(--line);border-radius:6px;font-size:12.5px;font-family:inherit;width:100%;}
+  .rate-input:focus{outline:none;border-color:var(--blue);}
+  .save-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:4px;transition:background .2s;}
+  .save-dot.saved{background:#3FCB7E;}
+  .save-dot.saving{background:var(--blue-bright);}
+  /* Real fix 2026-09-02, explicit ask ("unifica... revisa todos los tabs") — same gradient+shadow
+     every WhatsApp button across the OS now uses, not this page's own flat green. */
+  .wa-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:#3FCB7E;border:1.5px solid rgba(63,203,126,.4);border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .18s,border-color .18s,color .18s;}
+  .wa-btn:hover{background:rgba(29,168,81,.18);color:#3FCB7E;border-color:#3FCB7E;}
+  .wa-btn:active{background:rgba(29,168,81,.28);}
+  .wa-btn.outline{background:var(--card);color:#1DA851;border:1.5px solid #1DA851;box-shadow:none;}
+  .wa-btn.outline:hover{background:rgba(29,168,81,.18);box-shadow:none;transform:none;}
+  .wa-btn svg{width:12px;height:12px;flex-shrink:0;fill:currentColor;}
+</style>
+<link rel="stylesheet" href="css/bt-ui.css">
+</head>
+<body>
+
+<!-- ============ LOGIN GATE ============ -->
+<style>
+  #authGate{position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#123A6B 100%);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+  .auth-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:32px 30px;box-shadow:0 20px 60px rgba(0,0,0,.35);--ink:#0F1F33;--ink-soft:#64748B;}
+  .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px;}
+  .auth-logo .word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#0B2545;}
+  .auth-logo .word span{color:#1B6FC9;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{display:block;font-size:12px;font-weight:600;color:#5B6B82;margin-bottom:5px;}
+  .auth-field input{width:100%;padding:10px 12px;border:1.5px solid #E1E6ED;border-radius:8px;font-size:14px;font-family:inherit;}
+  .auth-submit{width:100%;padding:11px;border:none;border-radius:8px;background:#1B6FC9;color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;}
+  .auth-msg{font-size:12.5px;margin-top:12px;padding:9px 11px;border-radius:8px;line-height:1.4;display:none;}
+  .auth-msg.err{background:#FCEBE7;color:#B23A22;display:block;}
+  .auth-note{font-size:11px;color:#9AABC2;text-align:center;margin-top:16px;line-height:1.5;}
+</style>
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg viewBox="0 0 44 44" width="30" height="30"><circle cx="22" cy="22" r="21" fill="#123A6B" stroke="#3E7BC4" stroke-width="1.2"/><path d="M6,25 C13,19 17,29 24,23 C30,18 34,24 38,20" stroke="#5FA8E8" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="16" y="14" width="13" height="8" rx="1.4" fill="#00A9A0"/></svg>
+      <div class="word">Buen<span>Trade</span> Trading OS</div>
+    </div>
+    <form id="formSignIn" onsubmit="return doSignIn(event)">
+      <div class="auth-field"><label>Work email</label><input type="email" id="siEmail" required></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="siPass" required></div>
+      <button class="auth-submit" type="submit">Sign In</button>
+    </form>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-note">Accounts are created from the Trading Tool. Same login works here.</div>
+  </div>
+</div>
+
+<script src="demo-auth.js"></script>
+<script src="js/email-modal.js"></script>
+<script src="js/contact-validation.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "demo",
+  authDomain: "demo.invalid",
+  projectId: "demo",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+// STAGING Trading OS API — every read/write on this page goes through an Edge Function, never a
+// direct database call. This is a deliberate architecture change (2026-08): Claude/AI and the
+// frontend alike only ever call named, narrow API operations; Postgres itself is never touched
+// directly by anyone but the API's own service role. Points at staging (oqotaxmacwueiutdxgkk),
+// not the production database — this page shows staging data until Fase 4's real migration runs.
+const API_ROOT = 'https://oqotaxmacwueiutdxgkk.supabase.co/functions/v1/';
+// Run the functions next to the database (us-east-1), not near the browser (2026-09-29, measured: a function
+// running in Europe spent ~830 ms connecting to the US database and 86 ms per query; pinned: 80 ms and 3 ms).
+const API_REGION = '?forceFunctionRegion=us-east-1';
+const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
+
+async function callApi(fn, body){
+  const res = await fetch(API_ROOT + fn + API_REGION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error(data.message || data.error || res.status); err.data = data; throw err; }
+  return data;
+}
+function currentActor(){ return (auth.currentUser && auth.currentUser.email) || 'unknown'; }
+
+function showAuthMsg(text){
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'auth-msg err';
+}
+function doSignIn(e){
+  e.preventDefault();
+  const email = document.getElementById('siEmail').value;
+  const pass = document.getElementById('siPass').value;
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(cred => {
+      if(!cred.user.emailVerified){ showAuthMsg('Please verify your email first.'); auth.signOut(); }
+    })
+    .catch(err => showAuthMsg(err.message));
+  return false;
+}
+function logout(){ auth.signOut(); }
+// Real bug reported live 2026-09-18 ("rebota se sale se brinca de donde estoy" — same one
+// already fixed on Quotes): Firebase refires onAuthStateChanged on its own on every silent
+// ID-token refresh (and on tab refocus/reconnect), not just the real sign-in. loadEverything() used
+// to run unconditionally on every firing, wiping the page back to "Loading…" mid-session. This
+// flag makes the real load happen exactly once per tab.
+let btAuthLoaded = false;
+auth.onAuthStateChanged(user => {
+  const gate = document.getElementById('authGate');
+  const app = document.getElementById('appContent');
+  if (user && user.emailVerified) {
+    gate.style.display = 'none';
+    app.style.display = 'block';
+    document.getElementById('userBadge').textContent = user.email;
+    if (!btAuthLoaded) { btAuthLoaded = true; loadEverything(); }
+  } else {
+    gate.style.display = 'flex';
+    app.style.display = 'none';
+  }
+});
+</script>
+<!-- ============ END LOGIN GATE ============ -->
+
+<div id="appContent" style="display:none;">
+<header>
+  <div class="top-row">
+    <a href="dashboard.html" style="position:absolute;left:32px;top:50%;transform:translateY(-50%);text-align:center;text-decoration:none;" title="Go to Dashboard"><div class="brand-word">Buen<span>Trade</span><div style="font-size:14px;letter-spacing:0.1em;color:rgba(255,255,255,.75);margin-top:5px;"><b style="font-weight:800;color:var(--blue-bright);">O</b>perating <b style="font-weight:800;color:var(--blue-bright);">S</b>ystem</div></div></a>
+  </div>
+  <div id="userChip" style="position:absolute;right:32px;bottom:24px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:3px 5px 3px 3px;">
+    <span id="userAvatar" style="width:19px;height:19px;border-radius:50%;background:#1E6ADB;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0;"></span>
+    <span id="userBadge" style="display:none;"></span>
+    <button type="button" class="hdr-logout" onclick="logout()" title="Log Out" aria-label="Log Out"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+  </div>
+  <nav class="nav-row">
+    <a href="quotes.html" class="nav-pill">Quotes</a>
+    <a href="offers.html" class="nav-pill">Offers</a>
+    <a href="orders.html" class="nav-pill">Orders</a>
+    <a href="plants.html" class="nav-pill">Plants</a>
+    <a href="products.html" class="nav-pill">Products</a>
+    <a href="customers.html" class="nav-pill">Clients</a>
+    <a href="providers.html" class="nav-pill active">Logistics</a>
+    <a href="collections.html" class="nav-pill">Pay &amp; Receive</a>
+  </nav>
+</header>
+<script src="js/header-chip.js"></script>
+<script src="js/bt-dialogs.js"></script>
+<script src="js/entity-history.js"></script>
+
+<div class="wrap">
+  <h1>Logistics</h1>
+  <!-- Real ask 2026-09-09 ("aplicalo en logistics"): same stat cards + glass-pill search +
+       transparent table already shipped on Plants/Products/Quotes. See renderProviderStats(). -->
+  <div class="stats-row" id="providerStatsRow"></div>
+  <div class="tab-row" style="margin-bottom:20px;">
+    <button class="tab-btn active" id="tabCarriersBtn" onclick="setProviderTab('carriers')">Carriers</button>
+    <button class="tab-btn" id="tabAgenciesBtn" onclick="setProviderTab('agencies')">Customs Agencies</button>
+    <button class="tab-btn" id="tabLocationsBtn" onclick="setProviderTab('locations')">Locations</button>
+  </div>
+
+  <!-- Corrected 2026-09-09 ("la unica que estaba bien era quotes... ve uno por uno y ponlos
+       igual"): Quotes' reference is the search floating OUTSIDE the results card — toolbar moved
+       above providerListCard, not inside it. -->
+  <div id="providerToolbarRow" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 20px;">
+    <div class="pv-search-wrap">
+      <svg class="pv-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="searchBox" placeholder="Search" oninput="renderProviders()" class="pv-search-input">
+    </div>
+    <button class="btn" onclick="openNewProviderForm()">+ Add Provider</button>
+  </div>
+  <div class="card" id="providerListCard">
+    <div class="table-scroll">
+      <!-- Real bug found 2026-09-09: min-width is only a FLOOR — table-layout:auto let this
+           column grow arbitrarily wide on a wide screen, centering the icon pair inside whatever
+           leftover gap resulted instead of a tight, consistent-width column. table-layout:fixed
+           makes the un-widthed first column absorb 100% of the remainder deterministically. -->
+      <table style="table-layout:fixed;">
+        <thead><tr><th>Provider</th><th style="width:110px;">Contact</th></tr></thead>
+        <tbody id="providerRows"></tbody>
+      </table>
+    </div>
+    <div id="emptyMsg" class="empty" style="display:none;">No providers found.</div>
+  </div>
+
+  <!-- ============ Locations catalog — the same real, closed city list every carrier's US Freight
+       tab already reads from (locations table). This is the master view: one row per real city,
+       showing every carrier's price status side by side, so a gap ("Key Global has no price for
+       Waco TX") is visible here without having to open each carrier one at a time. Confirmed real
+       requirement 2026-08-30: "debe haber un tab que diga locations... asi sabemos cuales de los
+       carriers no tenemos up to date" — same master-catalog-vs-per-entity-status split as
+       Products (products.html) vs each plant's Products & Prices tab. ============ -->
+  <div class="card" id="locationsListCard" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <strong style="font-size:15px;">Locations Catalog</strong>
+      <button class="btn secondary small" style="margin-left:auto;" onclick="sendCarrierRateTable(null)">Send to all carriers</button>
+      <button class="btn secondary small" onclick="startAddLocationMaster()">+ Add New City to Catalog</button>
+    </div>
+    <!-- Real fix 2026-09-09: a 4th carrier made the two action buttons + "Asked Nd ago" crammed
+         into each table header cell genuinely break the table's own design (columns squeezed,
+         headers wrapping to 3+ lines). Actions get their own row of compact cards here instead —
+         the table itself goes back to just City + coverage per carrier, like it was before any
+         button lived in it. -->
+    <div id="carrierActionRow" class="loc-carrier-actions"></div>
+    <div class="table-scroll">
+      <table>
+        <colgroup><col class="loc-city-col"></colgroup>
+        <thead><tr id="locationsHeadRow"><th class="loc-city-head">City</th></tr></thead>
+        <tbody id="locationRows"></tbody>
+      </table>
+    </div>
+    <div id="locationsEmptyMsg" class="empty" style="display:none;">No locations in the catalog yet.</div>
+  </div>
+
+  <!-- Just enough to create the record — same two-step pattern as Ingredient Suppliers' "+ New Plant":
+       classify it here, then the full Profile (contact, WhatsApp, address, rates) opens right
+       after for everything else. -->
+  <div class="card" id="newProviderCard" style="display:none;">
+    <strong>New provider</strong>
+    <div class="profile-panel" style="margin-top:12px;">
+      <div class="grid3">
+        <div class="field"><label>Name *</label><input id="np_name"></div>
+        <div class="field"><label>Country</label><select id="np_country_id"><option value="">—</option></select></div>
+        <div class="field"><label>City</label><input id="np_city"></div>
+      </div>
+      <div class="field">
+        <label>Roles — a provider can be one or both</label>
+        <div class="grid2" style="grid-template-columns:1fr 1fr;gap:8px;">
+          <label class="role-check"><input type="checkbox" value="carrier" class="np-role-cb"> Carrier</label>
+          <label class="role-check"><input type="checkbox" value="customs_broker" class="np-role-cb"> Customs Broker</label>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn" onclick="saveNewProvider()">Create</button>
+      <button class="btn secondary" onclick="closeNewProviderForm()">Cancel</button>
+    </div>
+    <div id="newProviderMsg" style="font-size:12.5px;margin-top:10px;"></div>
+  </div>
+
+  <!-- ============ Unified Provider Profile — same "always-visible header, tabs below" pattern
+       as Ingredient Suppliers' plant card: Edit/Delete never depend on which tab happens to be open. ============ -->
+  <div class="card" id="providerCard" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <!-- Same wide-box logo treatment as Ingredient Suppliers (2026-08-30 fix) — most real logos are
+             landscape-shaped, and a forced square just shrinks them to a thin sliver. -->
+        <div class="pkg-logo-wrap" style="position:relative;width:220px;height:140px;flex-shrink:0;">
+          <div id="pv_provider_logo_placeholder" class="pkg-plant-avatar" style="width:220px;height:140px;border-radius:18px;font-size:52px;"></div>
+          <img id="pv_provider_logo" class="pkg-plant-avatar pkg-plant-avatar-logo" style="width:220px;max-width:220px;height:140px;border-radius:18px;object-fit:contain;padding:14px;display:none;position:absolute;top:0;left:0;" alt="">
+          <button type="button" class="pkg-logo-edit-btn" onclick="document.getElementById('providerLogoFileInput').click()" title="Change logo" style="position:absolute;bottom:-4px;right:-4px;width:32px;height:32px;border-radius:50%;background:var(--blue);border:2px solid #fff;color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✎</button>
+          <input type="file" id="providerLogoFileInput" accept="image/*" style="display:none;" onchange="uploadProviderLogo()">
+        </div>
+        <div>
+          <strong id="providerTitle" style="font-size:18px;"></strong>
+          <div id="providerRolesLine" style="margin-top:6px;"></div>
+          <div id="providerLogoMsg" style="font-size:12px;color:var(--ink-soft);margin-top:4px;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn secondary" onclick="editProviderProfile()">Edit</button>
+      </div>
+    </div>
+
+    <div class="tab-row" style="margin-top:18px;">
+      <button class="tab-btn active" id="provTabBtn_profile" onclick="setProvCardTab('profile')">Profile</button>
+      <button class="tab-btn" id="provTabBtn_rates" onclick="setProvCardTab('rates')">Rates</button>
+      <button class="tab-btn" id="provTabBtn_history" onclick="setProvCardTab('history')">History</button>
+    </div>
+
+    <!-- ============ PROFILE ============ -->
+    <div id="provTab_profile">
+      <div id="profileView">
+        <div class="profile-panel">
+          <div class="profile-heading">Contact</div>
+          <div class="profile-grid">
+            <div class="profile-row"><span class="view-label">Location</span><span class="profile-row-value" id="pv_location">—</span></div>
+            <div class="profile-row"><span class="view-label">Address</span><span class="profile-row-value" id="pv_address">—</span></div>
+            <div class="profile-row"><span class="view-label">Contact Name</span><span class="profile-row-value" id="pv_contact_name">—</span></div>
+            <div class="profile-row"><span class="view-label">Phone</span><span class="profile-row-value" id="pv_phone">—</span></div>
+            <div class="profile-row">
+              <span class="view-label">WhatsApp</span>
+              <button class="wa-btn" id="waBtn" style="display:none;width:fit-content;" onclick="openProviderWhatsApp()"><svg viewBox="0 0 24 24" width="12" height="12" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg>Chat</button>
+              <span class="profile-row-value" id="pv_no_whatsapp">—</span>
+            </div>
+            <div class="profile-row"><span class="view-label">Contact Email</span><span class="profile-row-value" id="pv_email">—</span></div>
+            <div class="profile-row"><span class="view-label">CC Emails</span><span class="profile-row-value" id="pv_email_cc">—</span></div>
+          </div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-heading">Payment Terms</div>
+          <div class="profile-row"><span class="view-label">We pay</span><span class="profile-row-value" id="pv_payment_days">—</span></div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-heading">Notes</div>
+          <div class="profile-row"><span class="profile-row-value" id="pv_notes">—</span></div>
+        </div>
+      </div>
+
+      <div id="profileEdit" style="display:none;">
+        <div class="profile-panel" style="margin-top:0;">
+          <div class="profile-heading">Classification</div>
+          <div class="grid3">
+            <div class="field"><label>Name *</label><input id="p_name" required></div>
+            <div class="field"><label>Country</label><select id="p_country_id"><option value="">—</option></select></div>
+            <div class="field"><label>City</label><input id="p_city"></div>
+          </div>
+          <div class="field"><label>Address</label><input id="p_address" placeholder="Street address"></div>
+          <div class="field">
+            <label>Roles — a provider can be one or both</label>
+            <div class="grid2" style="grid-template-columns:1fr 1fr;gap:8px;">
+              <label class="role-check"><input type="checkbox" value="carrier" class="role-cb"> Carrier</label>
+              <label class="role-check"><input type="checkbox" value="customs_broker" class="role-cb"> Customs Broker</label>
+            </div>
+          </div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-heading">Contact</div>
+          <div class="grid2">
+            <div class="field"><label>Contact Name</label><input id="p_contact_name"></div>
+            <div class="field"><label>Contact Email</label><input id="p_email" type="email"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Phone</label>
+              <div style="display:flex;gap:6px;">
+                <select id="p_phone_code" style="width:88px;flex-shrink:0;"></select>
+                <input id="p_phone_number" placeholder="6621234567" style="flex:1;">
+              </div>
+            </div>
+            <div class="field"><label>WhatsApp</label>
+              <div style="display:flex;gap:6px;">
+                <select id="p_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
+                <input id="p_whatsapp_number" placeholder="6621234567" style="flex:1;">
+              </div>
+            </div>
+          </div>
+          <div class="field"><label>CC Emails (comma-separated)</label><input id="p_email_cc" placeholder="dispatch@carrier.com, billing@carrier.com"></div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-heading">Payment Terms</div>
+          <div class="field"><label>We pay them</label><select id="p_payment_days"><option value="">Not set</option><option value="0">At delivery</option><option value="30">30 days after delivery</option></select></div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-heading">Notes</div>
+          <div class="field"><textarea id="p_notes" rows="2"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="btn" onclick="saveProviderProfile()">Save</button>
+          <button class="btn secondary" onclick="cancelProviderEdit()">Cancel</button>
+        </div>
+    <div id="provDangerZone" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn danger" onclick="deleteProvider(currentProviderId)">Delete provider</button>
+      <span class="muted" style="font-size:12px;">Only a provider with no loads, offers or payments can be deleted. You'll type its name to confirm.</span>
+    </div>
+      </div>
+      <div id="formMsg" style="font-size:12.5px;margin-top:10px;"></div>
+    </div>
+
+    <!-- ============ RATES ============ -->
+    <div id="provTab_rates" style="display:none;">
+      <div class="tab-row">
+        <button class="tab-btn active" id="rateTabBtn_us_freight" data-svc="us_freight" onclick="switchRateTab('us_freight')">US Freight</button>
+        <button class="tab-btn" id="rateTabBtn_mexican_freight" data-svc="mexican_freight" onclick="switchRateTab('mexican_freight')">Colombian Freight</button>
+        <button class="tab-btn" id="rateTabBtn_customs" data-svc="customs" onclick="switchRateTab('customs')">Customs &amp; Fees</button>
+      </div>
+      <!-- Same row/alignment as Ingredient Suppliers' "Load Prices" + "+ Add New Product" (both left-
+           aligned, together, right under the tabs) — this used to have "Cargar precios" alone,
+           right-aligned, above the tabs, and the per-tab "+ Add" button in a second right-aligned
+           row further down; two separate rows in two different places read as visually inconsistent
+           next to the rest of the app (real feedback: "no lo veo igual"). rateAddBtnSlot is filled
+           in by renderRateTable() per active tab (label/handler differ for US/Colombian/Customs). -->
+      <div style="display:flex;gap:10px;margin:14px 0;">
+        <button class="btn secondary small" id="loadRatesBtn" onclick="openRateListPanel()">📋 Load Prices</button>
+        <span id="rateAddBtnSlot"></span>
+      </div>
+
+      <div class="tt-overlay" id="rateListCard">
+        <div class="tt-overlay-head">
+          <div class="tt-overlay-title" id="rateListTitle">Load Price List</div>
+          <button class="tt-overlay-close" onclick="closeRateListPanel()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="tt-overlay-body">
+        <div style="max-width:900px;margin:0 auto;">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:6px 0 10px;" id="rateListHint"></p>
+        <textarea id="rateListInput" rows="16" style="width:100%;min-height:320px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:10px;border:1.5px solid var(--line);border-radius:7px;"></textarea>
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="btn" onclick="processRateListText()">Process</button>
+          <button class="btn secondary" onclick="closeRateListPanel()">Cancel</button>
+        </div>
+        <div id="rateListSummary" class="plr-summary" style="display:none;"></div>
+        <div id="rateListReviewWrap" style="display:none;margin-top:16px;">
+          <div id="rateListReviewRows" class="pkg-table-wrap"></div>
+          <div style="display:flex;gap:10px;margin-top:12px;">
+            <button class="btn" onclick="applyRateList()">Apply All</button>
+            <button class="btn secondary" onclick="closeRateListPanel()">Cancel</button>
+          </div>
+        </div>
+        <div id="rateListMsg" style="font-size:12.5px;margin-top:10px;"></div>
+        </div>
+        </div>
+      </div>
+
+      <div id="rateTableWrap"></div>
+    </div>
+
+    <!-- ============ HISTORY — real ask 2026-09-14: "en el momento en el que creo PO SO FO INV
+         debe alojarse en el perfil de cada destinatario"; 2026-09-29 every movement of every load
+         for this carrier / customs agency — documents, bills, surcharges, invoices, payments —
+         by date, searchable (js/entity-history.js). ============ -->
+    <div id="provTab_history" style="display:none;"><div id="provHistory"></div></div>
+  </div>
+</div>
+
+<script>
+let providers = [];
+let providerRolesMap = {}; // provider_id -> [role,...]
+let allRates = [];
+let allLocations = [];
+// A per-STATE carrier quote ("IA to Buenaventura/Cartagena - $5200") expands to every real catalog city in
+// that state (see 20260830040000_create_locations_catalog.sql and rowsForUsFreightCatalog above) —
+// built straight from allLocations (the real table, fetched fresh in loadEverything), grouped by
+// state, so it's always the SAME single source of truth the US Freight tab itself renders from.
+function knownCitiesForState(state){
+  return allLocations.filter(l => l.state === state).map(l => `${l.city} ${l.state}`).sort();
+}
+let currentProviderId = null;
+let currentRateTab = 'us_freight';
+
+const ROLE_LABELS = {carrier:'Carrier', customs_broker:'Customs Broker'};
+const CUSTOMS_TYPES = [
+  {value:'tramite_aduanal', label:'Trámite aduanal (customs processing)'},
+  {value:'bodega_americana', label:'Bodega americana (US warehouse)'},
+  {value:'lumper_fee', label:'Lumper fee'},
+  {value:'inbond_release', label:'INBOND release'},
+  {value:'customs', label:'Other / lump customs cost'},
+];
+
+let countries = [];
+function countryName(countryId){
+  const c = countries.find(x => x.id === countryId);
+  return c ? c.name_en : null;
+}
+
+// Same real E.164 calling codes and split/join helpers as plants.html/customers.html — closed
+// dropdown next to Phone/WhatsApp so the code can never be mistyped, same reason those two pages
+// use it. Providers never had this at all before (2026-08-30 fix) — just a placeholder hint typed
+// into one plain text box, which is exactly why the trader couldn't tell if WhatsApp would work.
+const DIAL_CODES = {
+  US: '+1', CA: '+1', MX: '+52', CL: '+56', BR: '+55', GT: '+502', HN: '+504', SV: '+503',
+  NI: '+505', CR: '+506', PA: '+507', CO: '+57', EC: '+593', PE: '+51', BO: '+591', PY: '+595',
+  UY: '+598', AR: '+54', VE: '+58', DO: '+1',
+};
+function populateDialCodeSelect(selectEl){
+  const uniqueCodes = [...new Set(Object.values(DIAL_CODES))].sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)));
+  selectEl.innerHTML = uniqueCodes.map(code => `<option value="${code}">${code}</option>`).join('');
+}
+function splitPhone(full){
+  if (!full) return { code: '', number: '' };
+  const codes = [...new Set(Object.values(DIAL_CODES))].sort((a, b) => b.length - a.length);
+  const match = codes.find(c => full.startsWith(c));
+  if (!match) return { code: '', number: full.replace(/^\+/, '') };
+  return { code: match, number: full.slice(match.length).trim() };
+}
+function joinPhone(code, number){
+  if (!number) return null;
+  return code ? `${code} ${number.trim()}` : number.trim();
+}
+
+async function loadEverything(){
+  try {
+    const [provRes, rolesRes, ratesRes, countriesRes, locationsRes] = await Promise.all([
+      callApi('providers-search', {}),
+      callApi('provider-roles-search', {}),
+      callApi('provider-rates-search', {}),
+      callApi('lookups-search', {}), // countries (the old one-table countries-search was folded into this bundle)
+      callApi('locations-search', {}),
+    ]);
+    providers = provRes.results || [];
+    allRates = ratesRes.results || [];
+    countries = countriesRes.countries || [];
+    // The real, closed city catalog (see 20260830040000_create_locations_catalog.sql) — every
+    // carrier's US Freight tab is built from this SAME list, not from whatever subset of cities
+    // this one carrier happens to already have a price for, so a gap is visible instead of absent.
+    allLocations = locationsRes.results || [];
+    const countryOptions = '<option value="">—</option>' + countries.map(c => `<option value="${c.id}">${escapeHtml(c.name_en)}</option>`).join('');
+    document.getElementById('p_country_id').innerHTML = countryOptions;
+    document.getElementById('np_country_id').innerHTML = countryOptions;
+    populateDialCodeSelect(document.getElementById('p_phone_code'));
+    populateDialCodeSelect(document.getElementById('p_whatsapp_code'));
+    providerRolesMap = {};
+    (rolesRes.results || []).forEach(r => {
+      if (!providerRolesMap[r.provider_id]) providerRolesMap[r.provider_id] = [];
+      providerRolesMap[r.provider_id].push(r.role);
+    });
+    renderProviders();
+    renderProviderStats();
+  } catch (e) {
+    document.getElementById('providerRows').innerHTML = `<div class="empty">Error loading from API: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// Customs agencies are a different relationship than carriers/forwarders — a customer works
+// with their own agency on an ongoing basis (docs, load notices, appointments), not a one-off
+// per-load booking like a carrier. Keeping them in a single mixed list made that easy to miss.
+// A provider that's both a carrier and a customs broker shows up in both tabs.
+let providerTab = 'carriers';
+function setProviderTab(tab){
+  providerTab = tab;
+  document.getElementById('tabCarriersBtn').classList.toggle('active', tab === 'carriers');
+  document.getElementById('tabAgenciesBtn').classList.toggle('active', tab === 'agencies');
+  document.getElementById('tabLocationsBtn').classList.toggle('active', tab === 'locations');
+  // Whichever provider's Profile/Rates was open belongs to whichever provider you clicked before
+  // switching — leaving it open while browsing the other category is exactly the "mixing
+  // everything" bug: you'd see Customs Agencies in the list with a carrier's rates still showing.
+  closeProviderCard();
+  closeNewProviderForm();
+  document.getElementById('providerToolbarRow').style.display = tab === 'locations' ? 'none' : 'flex';
+  document.getElementById('providerListCard').style.display = tab === 'locations' ? 'none' : 'block';
+  document.getElementById('locationsListCard').style.display = tab === 'locations' ? 'block' : 'none';
+  if (tab === 'locations') renderLocationsList(); else renderProviders();
+}
+
+// One row per real catalog city, every carrier's US Freight status shown side by side — the
+// master view that makes a gap visible without opening each carrier one at a time.
+let locationsAddingNew = false;
+
+// Real ask 2026-09-09 ("aplicalo en logistics"): transparent table row now — the 📍 avatar drops
+// (no table in the app shows one). renderNewLocationFicha() stays untouched for its OTHER, still
+// card-based use in a carrier's own US Freight rate-editing list (a different, inline-editable
+// grid this pass doesn't touch) — this table gets its own small "add new" row builder instead.
+function renderLocationsList(){
+  const wrap = document.getElementById('locationRows');
+  const headRow = document.getElementById('locationsHeadRow');
+  const actionRow = document.getElementById('carrierActionRow');
+  document.getElementById('locationsEmptyMsg').style.display = allLocations.length ? 'none' : 'block';
+  const carriers = providers.filter(p => (providerRolesMap[p.id] || []).includes('carrier'));
+  const colCount = 1 + carriers.length;
+
+  if (!carriers.length){
+    actionRow.innerHTML = '';
+    headRow.innerHTML = '<th class="loc-city-head">City</th>';
+    wrap.innerHTML = (locationsAddingNew ? renderNewLocationTableRow(colCount) : '')
+      + allLocations.map(loc => `<tr><td>${escapeHtml(loc.city)} ${escapeHtml(loc.state)}</td></tr>`).join('');
+    return;
+  }
+
+  // Each carrier's own header shows its coverage fraction — the gap ("Key Global has 13/28") is
+  // visible here without opening that carrier's own US Freight tab.
+  const coverage = carriers.map(c => allLocations.filter(loc =>
+    allRates.some(r => r.provider_id === c.id && r.service_type === 'us_freight' && r.location_id === loc.id)
+  ).length);
+  headRow.innerHTML = '<th class="loc-city-head">City</th>' + carriers.map((c, i) => `
+    <th><span class="loc-carrier-name">${escapeHtml(c.name)}</span><span class="loc-carrier-coverage">${coverage[i]}<small> / ${allLocations.length}</small></span></th>
+  `).join('');
+
+  // Real fix 2026-09-09: a 4th carrier made two buttons + an "Asked Nd ago" note crammed into
+  // every table header genuinely break the table (columns squeezed, headers wrapping 3+ lines).
+  // Same actions, own compact row of cards above the table instead — the table stays just a table.
+  // Real fix 2026-09-10 ("tiene que abrir el correo y el whatsapp igual que funciona todo el
+  // sistema"): the first version of Request Update sent a real email itself, straight from a
+  // backend Edge Function — a different mechanism from every other contact point in this app
+  // (the WhatsApp/Email icon pair on Carriers/Customs Agencies/Plants/Customers, all of which just
+  // open wa.me / a Gmail compose window and let the trader review and hit send themselves). Same
+  // two icons here now, same pattern, prefilled with the ask — nothing gets sent without the
+  // trader's own click in their own WhatsApp/Gmail.
+  // Real ask 2026-09-10: "debe mandar la tabla para que llenen... me va a decir cual de todas las
+  // tarifas" — asking a carrier for "updated rates" with no list attached leaves them guessing
+  // which cities BuenTrade even means. The message now carries the real, closed city catalog
+  // (grouped by state, same order as the table itself) as a literal fill-in list, one line per
+  // city, so replying is just filling in numbers next to a name they were already given.
+  actionRow.innerHTML = carriers.map((c, i) => {
+    // Carriers keep their own table current (carrier-rates.html, emailed Mon / Wed / Fri 8 am Miami): when it was last sent and confirmed.
+    const dayOf = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const whenText = (d) => { const days = rateAgeDays(d); return days === 0 ? 'today ' + new Date(d).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : days === 1 ? 'yesterday' : `${days}d ago`; };
+    const noteParts = [];
+    if (c.rates_request_emailed_at) noteParts.push('Emailed ' + whenText(c.rates_request_emailed_at));
+    if (c.rates_confirmed_at) noteParts.push('Confirmed ' + whenText(c.rates_confirmed_at));
+    else if (c.rates_request_emailed_at) noteParts.push('not confirmed yet');
+    if (!noteParts.length && c.last_rate_update_requested_at) noteParts.push('Asked ' + whenText(c.last_rate_update_requested_at));
+    const askedNote = noteParts.length ? noteParts.join(' · ') : 'Never asked';
+    const waDigits = (c.whatsapp || c.phone || '').replace(/\D/g, '');
+    const hasRates = Number(coverage[i]) > 0;
+    const waBtn = waDigits && hasRates
+      ? `<button type="button" class="wa-btn" style="padding:6px 12px;font-weight:700;font-size:12px;" onclick="askCarrierRates('${c.id}')" title="WhatsApp ${escapeHtml(c.name)}: update the rates in their table">WhatsApp</button>`
+      : '';
+    const mailBtn = !hasRates
+      ? `<button type="button" class="btn secondary small" disabled style="opacity:.5;cursor:not-allowed;" title="This carrier has no rates yet — load them first">Load Prices first</button>`
+      : c.email
+        ? `<button type="button" class="btn secondary small" onclick="sendCarrierRateTable('${c.id}')" title="Email ${escapeHtml(c.name)} its rate table now">Send rate table</button>`
+        : `<span style="font-size:12px;color:var(--ink-soft);">No email on file</span>`;
+    return `
+    <div class="loc-carrier-card">
+      <div class="loc-carrier-card-name">${escapeHtml(c.name)}</div>
+      <div class="loc-carrier-card-coverage">${coverage[i]}<small> / ${allLocations.length} priced</small></div>
+      <div class="loc-carrier-card-btns">
+        <button type="button" class="btn secondary small" onclick="loadPricesForCarrierFromLocations('${c.id}')" title="Load ${escapeHtml(c.name)}'s prices">📋 Load Prices</button>
+        ${waBtn}${mailBtn}
+      </div>
+      <div class="loc-asked-note">${askedNote}</div>
+    </div>`;
+  }).join('');
+
+  // Grouped by state — a flat list of 28+ cities reads as a wall of text without this, same
+  // reasoning as the carrier's own US Freight rate list (sortRatesByPlace).
+  const sorted = [...allLocations].sort((a, b) => (a.state || '').localeCompare(b.state || '') || (a.city || '').localeCompare(b.city || ''));
+  let rowsHtml = '';
+  let lastState = null;
+  sorted.forEach(loc => {
+    if (loc.state !== lastState){
+      rowsHtml += `<tr class="loc-state-row"><td colspan="${colCount}">${escapeHtml(loc.state || '—')}</td></tr>`;
+      lastState = loc.state;
+    }
+    const cells = carriers.map(c => {
+      const rate = allRates.find(r => r.provider_id === c.id && r.service_type === 'us_freight' && r.location_id === loc.id);
+      if (!rate) return `<td class="loc-rate-cell"><span class="loc-pill pending">Pending</span></td>`;
+      const isStale = (rateAgeDays(rate.confirmed_at || rate.updated_at) || 0) > RATE_STALE_DAYS;
+      const amount = `$${Number(rate.rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      return `<td class="loc-rate-cell"><span class="loc-pill ${isStale ? 'stale' : 'ok'}">${amount}${isStale ? ' ⚠' : ''}</span></td>`;
+    }).join('');
+    rowsHtml += `<tr><td>${escapeHtml(loc.city)}</td>${cells}</tr>`;
+  });
+  wrap.innerHTML = (locationsAddingNew ? renderNewLocationTableRow(colCount) : '') + rowsHtml;
+}
+
+// Opens that one carrier's own US Freight "Load Prices" box right on top of the Locations Catalog
+// — same panel, same parser, same review step as Plants' own Load Prices, nothing duplicated.
+// Real fix 2026-09-09 (first pass): the first version of this navigated to the Carriers tab and
+// that provider's own profile first, so closing the box afterward landed you on the carrier's page
+// instead of back on Locations.
+//
+// Real fix 2026-09-09 (second pass — confirmed live with a REAL click, not just calling the
+// function from the console): that first pass avoided navigating, but rateListCard lives nested
+// inside #providerCard > #provTab_rates in the actual HTML, and BOTH default to display:none.
+// position:fixed;inset:0 only sizes an element once it and every ancestor are actually rendered —
+// a display:none ancestor removes the whole subtree from layout, fixed-position child included, so
+// the overlay silently computed to a real 0×0 box despite display:flex on itself (confirmed via
+// getBoundingClientRect — width/height both 0 — this is why clicking visibly did nothing, with no
+// console error at all). Now forces just enough of that ancestor chain visible for the overlay to
+// actually paint, and rateListOpenedFromLocations remembers to quietly undo it again on close so
+// the carrier's own profile card never flashes into view here.
+let rateListOpenedFromLocations = false;
+// Real ask 2026-09-09: "mandar un update a los carriers" — distinct from Load Prices, which only
+// ever pastes rates already received. This actually emails the carrier asking for fresh US
+// Freight numbers (provider-rate-update-request — real send, same Gmail account
+// plant-price-emails-poll already sends trader notifications from), and stamps
+// last_rate_update_requested_at so "never asked" vs "asked today" is visible right in the header.
+// Real fix 2026-09-10: this used to send the email itself via a backend Gmail API call — a
+// different mechanism from every other WhatsApp/Email button in the app, and a real message going
+// out from a server call the trader never actually saw or confirmed in their own inbox. The
+// WhatsApp/mailto links built in renderLocationsList do the actual "opening" now, exactly like
+// the Carriers list's own contact icons; this only stamps that it was asked, fired in the
+// background from that link's own onclick — never blocks or replaces the link's normal behavior.
+// The trader's WhatsApp / email to a carrier: points it to its own rate table (the same private link the Mon / Wed / Fri email carries), so
+// what it updates there loads straight into the system — no list to fill in by hand.
+// The carrier's WhatsApp (Spanish, tú — user 2026-10-04): only asks to update them in the email; it never talks about the system.
+function carrierWhatsAppText(c, link){
+  const first = String(c.contact_name || '').trim().split(/\s+/)[0];
+  return `¡Hola${first ? ' ' + first : ''}! Te mandamos por correo la tabla de tarifas de flete — por favor actualízalas en el correo, solo las que cambiaron. ¡Gracias!`;
+}
+async function askCarrierRates(providerId){
+  const c = providers.find(p => p.id === providerId);
+  if (!c) return;
+  let link;
+  try { link = (await callApi('provider-rate-update-request', { action: 'carrier_link', actor: currentActor(), provider_id: providerId })).link; }
+  catch (e) { await btAlert('Could not get the carrier\'s link: ' + e.message); return; }
+  window.open('https://wa.me/' + String(c.whatsapp || c.phone || '').replace(/\D/g, '') + '?text=' + encodeURIComponent(carrierWhatsAppText(c, link)), '_blank');
+  markRateUpdateRequested(providerId);
+}
+
+// The rate table sent by hand, through the same email window as every other BuenTrade email (review / edit, WhatsApp inside, signature, BCC
+// info@): the same text the Mon / Wed / Fri 8 am automatic email carries. "Send to all carriers" opens it carrier by carrier.
+async function sendCarrierRateTable(providerId){
+  const ids = providerId ? [providerId]
+    : providers.filter(p => allRates.some(r => r.provider_id === p.id && r.service_type === 'us_freight') && String(p.email || '').includes('@')).map(p => p.id);
+  if (!ids.length){ await btAlert('No carrier with rates and an email on file.'); return; }
+  const sent = [];
+  for (const id of ids){
+    const c = providers.find(p => p.id === id);
+    let mail;
+    try { mail = await callApi('provider-rate-update-request', { action: 'carrier_email_text', actor: currentActor(), provider_id: id }); }
+    catch (e) { await btAlert(`${c ? c.name : 'Carrier'}: ` + ((e.data && e.data.message) || e.message)); continue; }
+    if (!mail.to.length){ await btAlert(`${c.name} has no email on file.`); continue; }
+    const phone = c.whatsapp || c.phone;
+    try {
+      await bcSendEmailApi({ fromAlias: 'logistics', fromDisplay: 'Logistics BuenTrade <logistics@buentradegroup.com>', to: mail.to, cc: mail.cc.join(','), subject: mail.subject, text: mail.text,
+        waInfo: phone ? { phone, message: carrierWhatsAppText(c, mail.link) } : null, title: `Rate table — ${c.name}` });
+    } catch (e) {
+      if (e.cancelled) continue;
+      await btAlert(`${c.name}: the email could not be sent — ` + e.message);
+      continue;
+    }
+    sent.push(c.name);
+    try { await callApi('provider-rate-update-request', { action: 'carrier_emailed', actor: currentActor(), provider_id: id }); } catch (e) {}
+  }
+  try { providers = (await callApi('providers-search', {})).results || []; } catch (e) {}
+  renderLocationsList();
+}
+
+function markRateUpdateRequested(providerId){
+  callApi('provider-rate-update-request', { actor: currentActor(), provider_id: providerId })
+    .then(result => {
+      const idx = providers.findIndex(p => p.id === providerId);
+      if (idx >= 0) providers[idx] = result.provider;
+      if (providerTab === 'locations') renderLocationsList();
+    })
+    .catch(() => {}); // purely a "last asked" convenience note — a failed stamp never blocks the real WhatsApp/email tab that already opened
+}
+
+function loadPricesForCarrierFromLocations(providerId){
+  const carrier = providers.find(p => p.id === providerId);
+  if (!carrier) return;
+  currentProviderId = providerId;
+  currentRateTab = 'us_freight';
+  rateListOpenedFromLocations = true;
+  document.getElementById('providerCard').style.display = 'block';
+  document.getElementById('provTab_rates').style.display = 'block';
+  openRateListPanel();
+  document.getElementById('rateListTitle').textContent = `Load Price List — ${carrier.name}`;
+}
+
+function renderNewLocationTableRow(colCount){
+  return `<tr>
+    <td colspan="${colCount}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="newLocationCity" placeholder="City" style="flex:1;min-width:140px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+        <input id="newLocationState" placeholder="State (2 letters)" maxlength="2" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;text-transform:uppercase;">
+        <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveNewLocationMaster()">Add to Catalog</button>
+        <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="cancelLocationsAdd()">Cancel</button>
+      </div>
+      <div id="newLocationMsg" style="font-size:11.5px;color:#FF9C8A;margin-top:6px;"></div>
+    </td>
+  </tr>`;
+}
+
+function startAddLocationMaster(){
+  locationsAddingNew = true;
+  renderLocationsList();
+}
+
+function cancelLocationsAdd(){
+  locationsAddingNew = false;
+  renderLocationsList();
+}
+
+async function saveNewLocationMaster(){
+  const cityInput = document.getElementById('newLocationCity');
+  const stateInput = document.getElementById('newLocationState');
+  const city = cityInput.value.trim();
+  const state = stateInput.value.trim();
+  const msgEl = document.getElementById('newLocationMsg');
+  if (!city || state.length !== 2){
+    msgEl.textContent = 'Enter a city name and a 2-letter state.';
+    return;
+  }
+  try {
+    const idempotencyKey = `locations-create|${city}|${state}|${new Date().toISOString().slice(0, 16)}`;
+    const result = await callApi('locations-create', { actor: currentActor(), city, state, idempotency_key: idempotencyKey });
+    allLocations.push(result.location);
+  } catch (e) {
+    if (e.data && e.data.error === 'possible_duplicate'){
+      msgEl.textContent = e.data.message;
+      return;
+    }
+    msgEl.textContent = 'Error: ' + e.message;
+    return;
+  }
+  locationsAddingNew = false;
+  renderLocationsList();
+}
+
+function renderProviders(){
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const filtered = providers.filter(p => {
+    const providerRoles = providerRolesMap[p.id] || [];
+    const inTab = providerTab === 'agencies'
+      ? providerRoles.includes('customs_broker')
+      : providerRoles.includes('carrier');
+    if (!inTab) return false;
+    const roles = providerRoles.map(r => ROLE_LABELS[r] || r).join(' ').toLowerCase();
+    return (p.name || '').toLowerCase().includes(q) ||
+      (p.city || '').toLowerCase().includes(q) ||
+      roles.includes(q);
+  });
+  const wrap = document.getElementById('providerRows');
+  document.getElementById('emptyMsg').style.display = filtered.length ? 'none' : 'block';
+  // Real ask 2026-09-09 ("aplicalo en logistics"): same transparent table convention as
+  // Plants/Products/Quotes — logo avatar drops (no table in the app shows one), name + city/
+  // contact subtitle stack in column 1, WhatsApp/Email actions in their own right-aligned column.
+  wrap.innerHTML = filtered.map(p => {
+    const city = [p.city, countryName(p.country_id)].filter(Boolean).join(', ');
+    return `<tr>
+      <td>
+        <a class="name-link" onclick="selectProvider('${p.id}')">${escapeHtml(p.name || '')}</a>
+        <div class="pkg-plant-sub">${escapeHtml(city || '—')}${p.contact_name ? ' · ' + escapeHtml(p.contact_name) : ''}</div>
+      </td>
+      <td>
+      <div style="display:flex;justify-content:center;align-items:center;gap:10px;">
+        ${(p.whatsapp || p.phone) ? `<a class="wa-btn" style="padding:6px 10px;" href="https://wa.me/${escapeHtml((p.whatsapp || p.phone).replace(/\D/g,''))}" target="_blank" rel="noopener" title="${escapeHtml(p.whatsapp || p.phone)}"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg></a>` : ''}
+        ${p.email ? `<a class="wa-btn outline" style="padding:6px 10px;" href="https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(p.email)}" target="bt_gmail" rel="noopener" title="${escapeHtml(p.email)}"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></a>` : ''}
+      </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Real ask 2026-09-09 ("aplicalo en logistics"): same colored stat-card row as Plants/Products —
+// real, already-tracked counts only (Total/Carriers/Agencies/Stale Rates), no invented metrics.
+function renderProviderStats(){
+  const wrap = document.getElementById('providerStatsRow');
+  if (!wrap) return;
+  const total = providers.length;
+  const carrierCount = providers.filter(p => (providerRolesMap[p.id] || []).includes('carrier')).length;
+  const agencyCount = providers.filter(p => (providerRolesMap[p.id] || []).includes('customs_broker')).length;
+  const staleCount = allRates.filter(r => (rateAgeDays(r.updated_at) || 0) > RATE_STALE_DAYS).length;
+  const stats = [
+    { value: String(total), label: 'Total Providers', cls: 'hero',
+      icon: '<path d="M20 7h-9m9 5h-9m9 5h-9M5 7h.01M5 12h.01M5 17h.01"/>' },
+    { value: String(carrierCount), label: 'Carriers', cls: 'ok',
+      icon: '<rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>' },
+    { value: String(agencyCount), label: 'Customs Agencies', cls: 'warn',
+      icon: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M15 9h.01M15 13h.01"/>' },
+    { value: String(staleCount), label: 'Stale Rates', cls: 'danger',
+      icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>' },
+  ];
+  wrap.innerHTML = stats.map(s => `
+    <div class="stat-card ${s.cls}">
+      <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${s.icon}</svg></div>
+      <div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>
+    </div>`).join('');
+}
+
+function openNewProviderForm(){
+  document.getElementById('providerToolbarRow').style.display = 'none';
+  document.getElementById('providerStatsRow').style.display = 'none';
+  document.getElementById('providerListCard').style.display = 'none';
+  document.getElementById('newProviderCard').style.display = 'block';
+  document.getElementById('np_name').value = '';
+  document.getElementById('np_country_id').value = '';
+  document.getElementById('np_city').value = '';
+  // Same reasoning as the old pre-check: each tab now maps to exactly one role
+  // (freight_forwarder removed 2026-08-30), so defaulting to it is never a guess — just a
+  // starting point, never forced (a provider can still hold both).
+  const roleForTab = providerTab === 'agencies' ? 'customs_broker' : 'carrier';
+  document.querySelectorAll('.np-role-cb').forEach(cb => cb.checked = (cb.value === roleForTab));
+  document.getElementById('newProviderMsg').textContent = '';
+  document.getElementById('newProviderCard').scrollIntoView({behavior:'smooth'});
+}
+
+function closeNewProviderForm(){
+  document.getElementById('newProviderCard').style.display = 'none';
+  document.getElementById('providerToolbarRow').style.display = 'flex';
+  document.getElementById('providerStatsRow').style.display = 'grid';
+  document.getElementById('providerListCard').style.display = 'block';
+}
+
+async function saveNewProvider(){
+  const name = document.getElementById('np_name').value;
+  if (!name){
+    document.getElementById('newProviderMsg').textContent = 'Name is required.';
+    return;
+  }
+  const payload = {
+    name,
+    country_id: document.getElementById('np_country_id').value || null,
+    city: document.getElementById('np_city').value || null,
+  };
+  const idempotencyKey = `providers-create|${JSON.stringify(payload)}|${new Date().toISOString().slice(0, 16)}`;
+  let created;
+  try {
+    created = await callApi('providers-create', { actor: currentActor(), ...payload, idempotency_key: idempotencyKey });
+  } catch (e) {
+    if (e.data && e.data.error === 'possible_duplicate'){
+      const match = e.data.exact_match || (e.data.near_duplicate_names && e.data.near_duplicate_names[0]);
+      document.getElementById('newProviderMsg').innerHTML = `
+        <div style="background:rgba(255,200,118,.08);border:1px solid rgba(255,200,118,.4);border-radius:8px;padding:10px 12px;color:#FFC876;">
+          ${escapeHtml(e.data.message)}${match ? `<br><strong>${escapeHtml(match.name)}</strong>` : ''}
+          <div style="margin-top:8px;"><button type="button" class="btn small" onclick="saveNewProvider(true)">Create anyway — this is genuinely different</button></div>
+        </div>`;
+      return;
+    }
+    document.getElementById('newProviderMsg').textContent = 'Error: ' + e.message;
+    return;
+  }
+  const providerId = created.provider.id;
+  const selectedRoles = Array.from(document.querySelectorAll('.np-role-cb:checked')).map(cb => cb.value);
+  for (const role of selectedRoles) await callApi('provider-roles-assign', { actor: currentActor(), provider_id: providerId, role });
+  closeNewProviderForm();
+  await loadEverything();
+  // Straight into editing — a fresh provider still needs phone/WhatsApp/address/email filled in,
+  // exactly what Classification alone never asked for.
+  selectProvider(providerId);
+  editProviderProfile();
+}
+
+// ============ Unified Provider Profile (header always visible, Profile/Rates tabs below) ============
+
+function closeProviderCard(){
+  document.getElementById('providerCard').style.display = 'none';
+  document.getElementById('providerStatsRow').style.display = 'grid';
+  currentProviderId = null;
+}
+
+function renderProviderCardHeader(p){
+  document.getElementById('providerTitle').textContent = p.name || '';
+  const roles = providerRolesMap[p.id] || [];
+  document.getElementById('providerRolesLine').innerHTML = roles.map(r => `<span class="role-badge">${ROLE_LABELS[r] || r}</span>`).join('') || '<span class="profile-row-value" style="color:var(--ink-soft);">No roles set</span>';
+  renderProviderLogo(p);
+}
+
+function renderProviderLogo(p){
+  const img = document.getElementById('pv_provider_logo');
+  const placeholder = document.getElementById('pv_provider_logo_placeholder');
+  if (p.logo_url){
+    img.src = p.logo_url;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+    placeholder.textContent = (p.name || '?').trim().charAt(0).toUpperCase();
+  }
+}
+
+function uploadProviderLogo(){
+  const input = document.getElementById('providerLogoFileInput');
+  const file = input.files[0];
+  if (!file || !currentProviderId) return;
+  const MAX_BYTES = 5 * 1024 * 1024;
+  if (file.size > MAX_BYTES){
+    document.getElementById('providerLogoMsg').textContent = 'Logo must be 5MB or smaller.';
+    return;
+  }
+  document.getElementById('providerLogoMsg').textContent = 'Uploading…';
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result.split(',')[1];
+    let result;
+    try {
+      result = await callApi('provider-logo-upload', {
+        actor: currentActor(), provider_id: currentProviderId,
+        file_name: file.name, file_base64: base64, content_type: file.type || null,
+      });
+    } catch (e) {
+      document.getElementById('providerLogoMsg').textContent = 'Error: ' + e.message;
+      return;
+    }
+    input.value = '';
+    document.getElementById('providerLogoMsg').textContent = '';
+    const idx = providers.findIndex(p => p.id === currentProviderId);
+    if (idx !== -1) providers[idx] = result.provider;
+    renderProviderLogo(result.provider);
+    renderProviders();
+  };
+  reader.onerror = () => { document.getElementById('providerLogoMsg').textContent = 'Could not read the file.'; };
+  reader.readAsDataURL(file);
+}
+
+// Same read-only view pattern as plants.html's Contact card — a WhatsApp Chat button only when a
+// real number is on file, falling back to the plain phone (same "waNumber = whatsapp || phone"
+// rule plants.html uses), never a dead button.
+function renderProviderProfileView(p){
+  const loc = [p.city, countryName(p.country_id)].filter(Boolean).join(', ');
+  document.getElementById('pv_location').textContent = loc || '—';
+  document.getElementById('pv_address').textContent = p.address || '—';
+  document.getElementById('pv_contact_name').textContent = p.contact_name || '—';
+  document.getElementById('pv_phone').textContent = p.phone || '—';
+  const waNumber = p.whatsapp || p.phone;
+  const waBtn = document.getElementById('waBtn');
+  if (waNumber){ waBtn.style.display = 'inline-flex'; waBtn.dataset.number = waNumber; }
+  else { waBtn.style.display = 'none'; waBtn.dataset.number = ''; }
+  document.getElementById('pv_no_whatsapp').style.display = waNumber ? 'none' : 'inline';
+  // mailto: hands off to whatever the OS has registered as the default mail app — for a trader
+  // who actually works out of Gmail in the browser, that's the wrong app (or nothing, if none is
+  // registered). Same fix as quotes.html's rqGmailComposeUrl: open Gmail's own compose screen
+  // directly instead, pre-filled, inside the trader's actual signed-in inbox.
+  document.getElementById('pv_email').innerHTML = p.email ? `<a href="${escapeHtml('https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(p.email))}" target="bt_gmail" rel="noopener" style="color:var(--blue);text-decoration:none;">${escapeHtml(p.email)}</a>` : '—';
+  document.getElementById('pv_email_cc').textContent = p.email_cc || '—';
+  document.getElementById('pv_notes').textContent = p.notes || '—';
+  document.getElementById('pv_payment_days').textContent = p.payment_days == null ? 'Not set' : p.payment_days === 0 ? 'At delivery' : `${p.payment_days} days after delivery`;
+}
+
+function openProviderWhatsApp(){
+  const raw = document.getElementById('waBtn').dataset.number || '';
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return;
+  window.open('https://wa.me/' + digits, '_blank');
+}
+
+let providerCardTab = 'profile';
+function setProvCardTab(tab){
+  providerCardTab = tab;
+  document.getElementById('provTabBtn_profile').classList.toggle('active', tab === 'profile');
+  document.getElementById('provTabBtn_rates').classList.toggle('active', tab === 'rates');
+  document.getElementById('provTabBtn_history').classList.toggle('active', tab === 'history');
+  document.getElementById('provTab_profile').style.display = tab === 'profile' ? 'block' : 'none';
+  document.getElementById('provTab_rates').style.display = tab === 'rates' ? 'block' : 'none';
+  document.getElementById('provTab_history').style.display = tab === 'history' ? 'block' : 'none';
+  if (tab === 'rates') openProviderRates(currentProviderId);
+  if (tab === 'history') renderProviderHistory();
+}
+
+// Real ask 2026-09-14: "yo necesito es que se guarde el pdf" — the real PDF already lands in the
+// order-documents bucket the moment it's actually sent (uploadOrderPdf, orders.html/offers.html),
+// filename always {DOC_TYPE}-BT-{order_number}.pdf at the bucket root. Deterministic, so the link
+// can be built here with no extra backend round-trip — only shown once sent_at proves the file
+// really exists.
+function docPdfUrl(docType, orderNumber){
+  return `https://oqotaxmacwueiutdxgkk.supabase.co/storage/v1/object/public/order-documents/${docType}-BT-${orderNumber}.pdf`;
+}
+// Real bug found live 2026-09-14: "no sirven los links de ordenes" — filenames are saved as
+// "{DOC}-BT-" + btNum(orderNumber) since the 2026-09-14 "BT-BT-" duplicate-prefix fix, but a
+// legacy order could genuinely have been sent BEFORE that fix, meaning its real stored file is
+// still named with the old doubled prefix. No client-side way to know which applies to a given
+// row without asking, so this tries the current (single-prefix) name first, falls back to legacy.
+function btNum(orderNumber){
+  return String(orderNumber || '').replace(/^BT-/, '');
+}
+async function openDocPdf(docType, orderNumber){
+  const primary = docPdfUrl(docType, btNum(orderNumber));
+  const legacy = docPdfUrl(docType, orderNumber);
+  if (primary === legacy){ window.open(primary, '_blank'); return; }
+  try {
+    const res = await fetch(primary, { method: 'HEAD' });
+    window.open(res.ok ? primary : legacy, '_blank');
+  } catch (e) { window.open(legacy, '_blank'); }
+}
+// Real ask 2026-09-14: "en el momento en el que creo PO SO FO INV debe alojarse en el perfil de
+// cada destinatario... tener el historico por fecha" — every FO ever created for this carrier.
+async function renderProviderHistory(){
+  if (currentProviderId) renderEntityHistory('provHistory', 'provider', currentProviderId, 'pv');
+}
+
+function selectProvider(id){
+  const p = providers.find(x => x.id === id);
+  if (!p) return;
+  currentProviderId = id;
+  document.getElementById('providerToolbarRow').style.display = 'none';
+  // Real bug found live 2026-09-10 (same pattern confirmed in plants.html/customers.html):
+  // providerStatsRow is a sibling of providerListCard, never nested inside it — hiding the list
+  // alone left "Total Providers / Carriers / Customs Agencies / Stale Rates" sitting directly
+  // under this one provider's own tabs.
+  document.getElementById('providerStatsRow').style.display = 'none';
+  document.getElementById('providerListCard').style.display = 'none';
+  document.getElementById('newProviderCard').style.display = 'none';
+  document.getElementById('providerCard').style.display = 'block';
+  renderProviderCardHeader(p);
+  document.getElementById('profileView').style.display = 'block';
+  document.getElementById('profileEdit').style.display = 'none';
+  renderProviderProfileView(p);
+  document.getElementById('formMsg').textContent = '';
+  // Rates is the daily-use tab (same reasoning as Ingredient Suppliers defaulting to Products & Prices) —
+  // Profile is set-once information, Rates is what actually gets updated often.
+  setProvCardTab('rates');
+  document.getElementById('providerCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// Edit lives in the always-visible header, same pattern as Ingredient Suppliers' plant profile — clicking
+// it from the Rates tab jumps to Profile and enters edit mode in one click.
+function editProviderProfile(){
+  const p = providers.find(x => x.id === currentProviderId);
+  if (!p) return;
+  setProvCardTab('profile');
+  document.getElementById('p_name').value = p.name || '';
+  document.getElementById('p_country_id').value = p.country_id || '';
+  document.getElementById('p_city').value = p.city || '';
+  document.getElementById('p_address').value = p.address || '';
+  document.getElementById('p_contact_name').value = p.contact_name || '';
+  document.getElementById('p_email').value = p.email || '';
+  document.getElementById('p_email_cc').value = p.email_cc || '';
+  document.getElementById('p_notes').value = p.notes || '';
+  document.getElementById('p_payment_days').value = p.payment_days == null ? '' : String(p.payment_days);
+  if (document.getElementById('p_payment_days').btSync) document.getElementById('p_payment_days').btSync();
+  const pPhone = splitPhone(p.phone);
+  document.getElementById('p_phone_code').value = pPhone.code;
+  document.getElementById('p_phone_number').value = pPhone.number;
+  const pWa = splitPhone(p.whatsapp);
+  document.getElementById('p_whatsapp_code').value = pWa.code;
+  document.getElementById('p_whatsapp_number').value = pWa.number;
+  // Real bug found live 2026-09-18 (products.html/plants.html): setting p_country_id.value above
+  // programmatically never fires 'change', so the bt-select widget's visible Country label never
+  // updated even though the real value was set correctly.
+  const countrySel = document.getElementById('p_country_id');
+  if (countrySel.btSync) countrySel.btSync();
+  const roles = providerRolesMap[currentProviderId] || [];
+  document.querySelectorAll('#profileEdit .role-cb').forEach(cb => cb.checked = roles.includes(cb.value));
+  document.getElementById('formMsg').textContent = '';
+  document.getElementById('profileView').style.display = 'none';
+  document.getElementById('profileEdit').style.display = 'block';
+}
+
+function cancelProviderEdit(){
+  document.getElementById('profileEdit').style.display = 'none';
+  document.getElementById('profileView').style.display = 'block';
+}
+
+async function saveProviderProfile(forceOverride){
+  // a number pasted the way people paste it ("+1 479 555 0100", "(479) 555-0100") is fixed before anything is checked (js/contact-validation.js)
+  const phoneProblem = bcFixPhoneInputs('p_phone_code', 'p_phone_number', '+1') || bcFixPhoneInputs('p_whatsapp_code', 'p_whatsapp_number', '+1');
+  if (phoneProblem){ document.getElementById('formMsg').textContent = phoneProblem; return; }
+  const id = currentProviderId;
+  const payload = {
+    name: document.getElementById('p_name').value,
+    country_id: document.getElementById('p_country_id').value || null,
+    city: document.getElementById('p_city').value || null,
+    address: document.getElementById('p_address').value || null,
+    phone: joinPhone(document.getElementById('p_phone_code').value, document.getElementById('p_phone_number').value),
+    whatsapp: joinPhone(document.getElementById('p_whatsapp_code').value, document.getElementById('p_whatsapp_number').value),
+    contact_name: document.getElementById('p_contact_name').value || null,
+    email: document.getElementById('p_email').value || null,
+    email_cc: document.getElementById('p_email_cc').value || null,
+    notes: document.getElementById('p_notes').value || null,
+    payment_days: document.getElementById('p_payment_days').value === '' ? null : Number(document.getElementById('p_payment_days').value),
+  };
+  if (!payload.name){
+    document.getElementById('formMsg').textContent = 'Name is required.';
+    return;
+  }
+  // Real ask 2026-09-13 ("blindar mejor los formularios... para que el input no quede con
+  // errores"): same shared checks as Customers/Plants (js/contact-validation.js) — this file had
+  // zero validation on email/phone before today, not even the weak "+"-prefix check Customers has.
+  if (document.getElementById('p_email').value && !bcIsValidEmail(document.getElementById('p_email').value)){
+    document.getElementById('formMsg').textContent = 'Email doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('p_email_cc').value && !bcIsValidEmailList(document.getElementById('p_email_cc').value)){
+    document.getElementById('formMsg').textContent = 'One of the CC emails doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('p_phone_number').value && !bcIsValidPhoneDigits(document.getElementById('p_phone_number').value)){
+    document.getElementById('formMsg').textContent = 'Phone number doesn\'t look valid — digits only, no country code (that\'s the dropdown next to it).';
+    return;
+  }
+  if (document.getElementById('p_whatsapp_number').value && !bcIsValidPhoneDigits(document.getElementById('p_whatsapp_number').value)){
+    document.getElementById('formMsg').textContent = 'WhatsApp number doesn\'t look valid — digits only, no country code (that\'s the dropdown next to it).';
+    return;
+  }
+  try {
+    const idempotencyKey = `providers-update|${id}|${JSON.stringify(payload)}|${new Date().toISOString().slice(0, 16)}`;
+    const updated = await callApi('providers-update', { actor: currentActor(), id, ...payload, override_duplicate_check: !!forceOverride, idempotency_key: idempotencyKey });
+    // Diff against the current roles instead of delete-all-then-reinsert — fewer writes, and a
+    // role that was never touched never gets a spurious delete+recreate.
+    const selectedRoles = Array.from(document.querySelectorAll('#profileEdit .role-cb:checked')).map(cb => cb.value);
+    const currentRoles = providerRolesMap[id] || [];
+    const toAdd = selectedRoles.filter(r => !currentRoles.includes(r));
+    const toRemove = currentRoles.filter(r => !selectedRoles.includes(r));
+    for (const role of toAdd) await callApi('provider-roles-assign', { actor: currentActor(), provider_id: id, role });
+    for (const role of toRemove) await callApi('provider-roles-remove', { actor: currentActor(), provider_id: id, role });
+  } catch (e) {
+    if (e.data && e.data.error === 'possible_duplicate'){
+      const match = e.data.exact_match || (e.data.near_duplicate_names && e.data.near_duplicate_names[0]);
+      document.getElementById('formMsg').innerHTML = `
+        <div style="background:rgba(255,200,118,.08);border:1px solid rgba(255,200,118,.4);border-radius:8px;padding:10px 12px;color:#FFC876;">
+          ${escapeHtml(e.data.message)}${match ? `<br><strong>${escapeHtml(match.name)}</strong>` : ''}
+          <div style="margin-top:8px;"><button type="button" class="btn small" onclick="saveProviderProfile(true)">Save anyway — this is genuinely different</button></div>
+        </div>`;
+      return;
+    }
+    // Real backstop 2026-09-13: the form's own checks (bcIsValid*) already catch this in normal
+    // use — this only fires if something reaches the API without going through them.
+    if (e.data && e.data.error === 'invalid_contact_fields'){
+      document.getElementById('formMsg').textContent = e.data.problems.join(' ');
+      return;
+    }
+    document.getElementById('formMsg').textContent = 'Error: ' + e.message;
+    return;
+  }
+  await loadEverything();
+  const p = providers.find(x => x.id === id);
+  currentProviderId = id;
+  renderProviderCardHeader(p);
+  renderProviderProfileView(p);
+  cancelProviderEdit();
+}
+
+async function deleteProvider(id){
+  const pv = providers.find(x => x.id === id); if (!pv) return;
+  const name = (pv.name || '').trim();
+  if (!(await btConfirmTyped(`Delete ${name}? This also deletes its roles and rates. This cannot be undone.\nType the provider's name to confirm:`, name))) return;
+  try {
+    await callApi('providers-delete', { actor: currentActor(), id });
+  } catch (e) {
+    await btAlert('Error: ' + e.message);
+    return;
+  }
+  closeProviderCard();
+  await loadEverything();
+}
+
+// ============ RATES (spreadsheet-style, per provider) ============
+
+// A provider only sees the tabs its own roles actually use — a pure carrier never had a reason
+// to see a Customs & Fees tab (and vice versa for a pure customs agency), so showing all 3
+// unconditionally was misleading even after the underlying data was already split correctly.
+function ratesTabsForProvider(providerId){
+  const roles = providerRolesMap[providerId] || [];
+  const isFreight = roles.includes('carrier');
+  const isCustoms = roles.includes('customs_broker');
+  return {
+    us_freight: isFreight, mexican_freight: isFreight, customs: isCustoms,
+  };
+}
+
+function openProviderRates(providerId){
+  const visible = ratesTabsForProvider(providerId);
+  ['us_freight', 'mexican_freight', 'customs'].forEach(svc => {
+    document.getElementById('rateTabBtn_' + svc).style.display = visible[svc] ? 'inline-block' : 'none';
+  });
+  // 2026-10-10: one option (a customs agency only has "Customs & Fees") is not a choice — no full-width bar for it
+  { const row = document.querySelector('#provTab_rates > .tab-row'); if (row) row.style.display = Object.values(visible).filter(Boolean).length > 1 ? '' : 'none'; }
+  currentRateTab = visible.us_freight ? 'us_freight' : (visible.mexican_freight ? 'mexican_freight' : 'customs');
+  document.querySelectorAll('.tab-btn[data-svc]').forEach(b => b.classList.toggle('active', b.dataset.svc === currentRateTab));
+  document.getElementById('loadRatesBtn').style.display = 'inline-block';
+  editingRateId = null;
+  renderRateTable();
+}
+
+function switchRateTab(svc){
+  currentRateTab = svc;
+  editingRateId = null;
+  document.querySelectorAll('.tab-btn[data-svc]').forEach(b => b.classList.toggle('active', b.dataset.svc === svc));
+  closeRateListPanel();
+  document.getElementById('loadRatesBtn').style.display = 'inline-block';
+  renderRateTable();
+}
+
+// ============ CARGAR PRECIOS (bulk paste, same pattern as plants.html's price-list intake) ============
+// US Freight rate sheets arrive as an Excel export (Price, Ship Name, Ship City, Ship State columns)
+// — pasted straight from Excel that comes through tab-separated, which is what this parses.
+// Colombian Freight rate sheets arrive as a PDF (DESTINO / Currency / Dolares columns) — pasted as
+// plain text, one "CITY USD $ 1,234.00" line per destination. Tested against real EBI Transfer
+// rate sheets (Aug 2026) before shipping — both formats confirmed working against actual data.
+let rateListRows = [];
+
+async function openRateListPanel(){
+  const isUs = currentRateTab === 'us_freight';
+  const isCustoms = currentRateTab === 'customs';
+  document.getElementById('rateListTitle').textContent = 'Load Price List';
+  document.getElementById('rateListHint').textContent = isUs
+    ? 'Paste from Excel (columns: Price, Name, City, State), or a plain-text list like "IA to Buenaventura/Cartagena - $5200 + lumper" — one row per line. Nothing is saved until you review and confirm.'
+    : isCustoms
+    ? 'Paste the cost list as it arrived — one line per cost, with its type and price (e.g. "Customs processing: $400"). Nothing is saved until you review and confirm.'
+    : 'Paste the PDF text as it is — one line per destination ("CITY USD $ 1,234.00"). Nothing is saved until you review and confirm.';
+  document.getElementById('rateListInput').value = '';
+  document.getElementById('rateListReviewWrap').style.display = 'none';
+  document.getElementById('rateListSummary').style.display = 'none';
+  document.getElementById('rateListMsg').textContent = '';
+  rateListRows = [];
+  document.getElementById('rateListCard').style.display = 'flex';
+  // The "apply the state's rate to every real catalog city in it" step (processRateListText) needs
+  // a live, current picture of the real locations table — refetched here rather than trusting
+  // whatever loadEverything() had at page load, so a city someone just added a minute ago (this tab
+  // or another) is never missed.
+  try { allLocations = (await callApi('locations-search', {})).results || allLocations; } catch (e) {}
+}
+
+function closeRateListPanel(){
+  document.getElementById('rateListCard').style.display = 'none';
+  rateListEditingIndex = null;
+  // Undo the "just enough to render" trick from loadPricesForCarrierFromLocations — only when this
+  // is really how we got here, so closing "Load Prices" from a carrier's own real profile page
+  // (the normal flow) never hides that page out from under the trader.
+  if (rateListOpenedFromLocations){
+    document.getElementById('providerCard').style.display = 'none';
+    document.getElementById('provTab_rates').style.display = 'none';
+    rateListOpenedFromLocations = false;
+  }
+}
+
+function titleCaseWords(s){
+  return (s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Excel paste comes through as one tab-separated row per line: Price, Ship Name, Ship City, Ship
+// State. Ship Name is only used to locate the city/state columns — not kept, per the user: just
+// the pickup location and the price to the border, nothing else. Falls back to null (row dropped,
+// never guessed) if it doesn't have all 4 fields.
+function parseUsFreightLine(line){
+  const parts = line.split('\t').map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 4){
+    const price = parseFloat(parts[0].replace(/[$,]/g, ''));
+    const [, , city, state] = parts;
+    if (!isNaN(price) && city && state){
+      return { origin: `${titleCaseWords(city)}, ${state.toUpperCase()}`, price, notes: null, isState: false };
+    }
+  }
+  // Real second real carrier format, confirmed live 2026-08-30: a blanket rate per ORIGIN STATE
+  // (not a specific city — this carrier quotes one number for the whole state) to a combined
+  // Buenaventura/Cartagena destination, as a bulleted plain-text list ("• IA to mcallen / Cartagena - $5200 +
+  // lumper"), copy-pasted straight out of an email/Word doc rather than an Excel sheet.
+  //
+  // Deliberately NOT one strict regex over the whole line — a first version of this used
+  // `^([A-Za-z]{2})\s+to\s+.+?\$\s*([\d,]+\.?\d*)...$`, confirmed live to fail on the user's own
+  // real paste even though it matched an apparently-identical string typed by hand here: a
+  // screenshot can't show whether the real clipboard has a curly/en/em dash instead of a plain "-",
+  // a non-breaking space, or some other invisible character Word/Outlook love to insert, any one of
+  // which breaks a single all-or-nothing pattern. Extracted in three independent, tolerant steps
+  // instead, so no single unexpected character anywhere in the line can fail the whole match:
+  // normalize the line first (curly/en/em dashes and any unicode whitespace collapsed to plain
+  // ones), pull the state off the very front, confirm "to" appears as a real word somewhere, then
+  // take the LAST dollar-amount-looking number in the line as the price — wherever it sits,
+  // whatever comes immediately before it.
+  const normalized = line
+    .replace(/[‐-―−]/g, '-') // hyphen/en/em/minus variants -> plain hyphen
+    .replace(/\s/g, ' ') // any unicode whitespace (incl. non-breaking space) -> plain space
+    .replace(/^[^A-Za-z]+/, '') // any leading bullet/number/dash/space, whatever glyph it actually is, up to the first letter
+    .trim();
+  const stateOnly = normalized.match(/^([A-Za-z]{2})\b/);
+  const hasTo = /\bto\b/i.test(normalized);
+  const priceMatches = [...normalized.matchAll(/\$?\s*([\d,]+\.\d{2}|[\d,]{2,})/g)];
+  if (stateOnly && hasTo && priceMatches.length){
+    const basePrice = parseFloat(priceMatches[priceMatches.length - 1][1].replace(/,/g, ''));
+    if (!isNaN(basePrice)){
+      // Real correction 2026-08-30: a lumper fee was first kept as a separate note, on the
+      // reasoning that lumper is its own real cost type elsewhere in this system. Wrong for this
+      // screen specifically — a quote/offer only ever reads ONE number off a freight rate, so a
+      // price that doesn't already include everything this carrier actually charges silently
+      // undercuts every quote built from it. The stored rate is now the real, fixed, all-in total
+      // (base + $120 when lumper applies, the exact known amount confirmed by the user — this
+      // carrier specifically; EBI's own rates carry no lumper fee at all and are unaffected since
+      // they're never parsed through this per-state branch). The note stays, purely so the total's
+      // makeup is still visible at a glance, but never participates in any calculation itself.
+      const hasLumper = /lumper/i.test(normalized);
+      const price = hasLumper ? basePrice + 120 : basePrice;
+      const notes = hasLumper ? `Includes $120 lumper fee (base $${basePrice.toLocaleString('en-US')})` : null;
+      return { origin: stateOnly[1].toUpperCase(), price, notes, isState: true };
+    }
+  }
+  return null;
+}
+
+// PDF text comes through as "DESTINATION NAME  USD  $ 1,234.00" per line — destination kept
+// exactly as written (existing rows are already uppercase, matching the source PDF's own case).
+function parseColombianFreightLine(line){
+  const m = line.match(/^(.+?)\s+USD\s+\$\s*([\d,]+\.?\d*)/i);
+  if (!m) return null;
+  const destination = m[1].trim();
+  const price = parseFloat(m[2].replace(/,/g, ''));
+  if (!destination || isNaN(price)) return null;
+  return { destination, price };
+}
+
+// Matches free text against the fixed CUSTOMS_TYPES list by keyword, not exact string — a real
+// fee sheet writes these differently every time ("Trámite aduanal", "customs processing", "INBOND
+// release fee"). Falls back to the first type (trámite_aduanal) with a flag so the trader picks
+// the right one by hand in review rather than the row being silently dropped — customs costs are
+// few enough per agency that a wrong guess is cheap to catch, an unlisted row isn't.
+const CUSTOMS_KEYWORDS = [
+  { value: 'tramite_aduanal', words: ['tramite aduanal', 'aduanal', 'customs processing', 'customs clearance'] },
+  { value: 'bodega_americana', words: ['bodega americana', 'us warehouse', 'american warehouse'] },
+  { value: 'lumper_fee', words: ['lumper'] },
+  { value: 'inbond_release', words: ['inbond'] },
+];
+function guessCustomsType(line){
+  const norm = line.toLowerCase();
+  for (const k of CUSTOMS_KEYWORDS){
+    if (k.words.some(w => norm.includes(w))) return k.value;
+  }
+  return null;
+}
+function parseCustomsLine(line){
+  const m = line.match(/\$?\s*([\d,]+\.?\d*)\s*$/) || line.match(/\$\s*([\d,]+\.?\d*)/);
+  if (!m) return null;
+  const price = parseFloat(m[1].replace(/,/g, ''));
+  if (isNaN(price)) return null;
+  const serviceType = guessCustomsType(line) || 'tramite_aduanal';
+  const unmatched = !guessCustomsType(line);
+  return { serviceType, price, unmatched };
+}
+
+function processRateListText(){
+  const text = document.getElementById('rateListInput').value;
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length){ document.getElementById('rateListMsg').textContent = 'Paste the text first.'; return; }
+
+  const isUs = currentRateTab === 'us_freight';
+  const isCustoms = currentRateTab === 'customs';
+  rateListRows = [];
+  // Real bug, confirmed live 2026-09-10: the "Request Update" ask (loadPricesForCarrierFromLocations's
+  // askBody) sends the carrier a real fill-in template — a bare state code on its own line, then
+  // one "City: price" line per city in it — but this parser had no format for that at all, so a
+  // carrier filling in exactly the template we sent them got "No valid rows were recognized." A
+  // bare 2-letter line sets which state the "City: price" lines under it belong to, until the next
+  // one; the city itself is checked against the real catalog (allLocations) so a typo or a city
+  // not actually in it is never silently guessed into a new row.
+  let currentState = null;
+  for (const line of lines){
+    if (isUs){
+      const bareState = line.match(/^([A-Za-z]{2})$/);
+      if (bareState){ currentState = bareState[1].toUpperCase(); continue; }
+    }
+    let parsed = isCustoms ? parseCustomsLine(line) : (isUs ? parseUsFreightLine(line) : parseColombianFreightLine(line));
+    if (!parsed && isUs && currentState){
+      const cityPrice = line.match(/^([A-Za-z .\/]+?)\s*:\s*\$?\s*([\d,]+\.?\d*)\s*$/);
+      if (cityPrice){
+        const cityName = cityPrice[1].trim().toLowerCase();
+        const price = parseFloat(cityPrice[2].replace(/,/g, ''));
+        const realLoc = allLocations.find(l => (l.city || '').toLowerCase() === cityName && (l.state || '').toUpperCase() === currentState);
+        if (realLoc && !isNaN(price)) parsed = { origin: `${realLoc.city} ${realLoc.state}`, price, notes: null, isState: false };
+      }
+    }
+    if (!parsed) continue; // not a data row (header, note, blank) — silently skipped, never guessed
+    // A per-STATE quote ("IA to Buenaventura/Cartagena - $5320") is never saved as one literal "IA" row —
+    // confirmed real requirement 2026-08-30: it must apply to EVERY real city already known in
+    // that state, so a future quote for ANY of them finds this carrier's real number. If no city
+    // is known yet for that state (a state this carrier is the very first to ever mention), one
+    // fallback row keeps the state code itself rather than silently losing the quote — flagged so
+    // it's obviously incomplete, not mistaken for a real, final city.
+    if (isCustoms){
+      rateListRows.push({ raw: line, ...parsed });
+      continue;
+    }
+    // US and Colombian rows are normalized to the same {place, price, notes} shape from here on —
+    // "place" is whichever field actually applies (origin for US, destination for Colombian) — so
+    // the review/expansion logic below never needs to branch on isUs again; applyRateList() maps
+    // it back to the real origin/destination column names only once, right before saving.
+    const place = isUs ? parsed.origin : parsed.destination;
+    if (parsed.isState){
+      const cities = knownCitiesForState(place);
+      if (cities.length){
+        cities.forEach(city => rateListRows.push({ raw: line, place: city, price: parsed.price, notes: parsed.notes }));
+      } else {
+        rateListRows.push({ raw: line, place, price: parsed.price, notes: `${parsed.notes ? parsed.notes + ' — ' : ''}No known city on file yet for ${place} — add a real city name before saving`, noKnownCities: true });
+      }
+    } else {
+      rateListRows.push({ raw: line, place, price: parsed.price, notes: parsed.notes });
+    }
+  }
+  renderRateListReview();
+  document.getElementById('rateListMsg').textContent = rateListRows.length
+    ? ''
+    : 'No valid rows were recognized in the pasted text.';
+}
+
+// Which review row (by index) currently shows its inline edit form, or null — same "click Edit,
+// get a small inline form on the same card, never an always-editable cell" pattern as the saved
+// rates list, applied here too (real feedback: "por que una pantalla editable si estamos
+// trabajando todo por fichas" — this review step is the one place that hadn't caught up yet).
+let rateListEditingIndex = null;
+
+function renderRateListReview(){
+  const wrap = document.getElementById('rateListReviewWrap');
+  const list = document.getElementById('rateListReviewRows');
+  const summaryEl = document.getElementById('rateListSummary');
+  const isCustoms = currentRateTab === 'customs';
+  wrap.style.display = rateListRows.length ? 'block' : 'none';
+
+  if (!isCustoms){
+    const pending = rateListRows.filter(r => r.noKnownCities).length;
+    const ok = rateListRows.length - pending;
+    summaryEl.style.display = rateListRows.length ? 'flex' : 'none';
+    summaryEl.innerHTML = `
+      <span class="plr-summary-ok">✓ ${ok} rate${ok === 1 ? '' : 's'} ready</span>
+      ${pending ? `<span class="plr-summary-none">${pending} need${pending === 1 ? 's' : ''} a real city name</span>` : ''}`;
+  } else {
+    summaryEl.style.display = 'none';
+  }
+
+  list.innerHTML = rateListRows.map((row, i) => {
+    if (isCustoms){
+      if (rateListEditingIndex === i){
+        const typeOptions = CUSTOMS_TYPES.map(t => `<option value="${t.value}" ${row.serviceType === t.value ? 'selected' : ''}>${t.label}</option>`).join('');
+        return `<div class="pkg-row" style="flex-wrap:wrap;">
+          <select id="rateListEdit_type_${i}" style="flex:1;min-width:180px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">${typeOptions}</select>
+          <input id="rateListEdit_price_${i}" type="number" step="0.01" value="${row.price}" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+          <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveRateListEdit(${i})">Save</button>
+          <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="rateListEditingIndex=null;renderRateListReview();">Cancel</button>
+        </div>`;
+      }
+      const typeLabel = (CUSTOMS_TYPES.find(t => t.value === row.serviceType) || {}).label || row.serviceType;
+      return `<div class="pkg-row">
+        <div class="pkg-plant-avatar">💵</div>
+        <div class="pkg-plant-info"><span class="pkg-plant-name">${escapeHtml(typeLabel)}</span>${row.unmatched ? '<span class="pkg-plant-sub" style="color:#B8720A;">Type guessed — please confirm</span>' : ''}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:13px;flex-shrink:0;">$${Number(row.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <button class="btn secondary" style="padding:5px 10px;font-size:12px;flex-shrink:0;" onclick="rateListEditingIndex=${i};renderRateListReview();">Edit</button>
+      </div>`;
+    }
+
+    if (rateListEditingIndex === i){
+      return `<div class="pkg-row" style="flex-wrap:wrap;">
+        <input id="rateListEdit_place_${i}" value="${escapeHtml(row.place)}" placeholder="City, State" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+        <input id="rateListEdit_price_${i}" type="number" step="0.01" value="${row.price}" placeholder="Price (USD)" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+        <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveRateListEdit(${i})">Save</button>
+        <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="rateListEditingIndex=null;renderRateListReview();">Cancel</button>
+      </div>`;
+    }
+    return `<div class="pkg-row">
+      <div class="pkg-plant-avatar">${row.noKnownCities ? '⚠️' : '🚚'}</div>
+      <div class="pkg-plant-info"><span class="pkg-plant-name">${escapeHtml(row.place)}</span>${row.notes ? `<span class="pkg-plant-sub">${escapeHtml(row.notes)}</span>` : ''}</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:13px;flex-shrink:0;">$${Number(row.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+      <button class="btn secondary" style="padding:5px 10px;font-size:12px;flex-shrink:0;" onclick="rateListEditingIndex=${i};renderRateListReview();">Edit</button>
+    </div>`;
+  }).join('');
+  btEnhanceAllSelects(list);
+}
+
+function saveRateListEdit(i){
+  const row = rateListRows[i];
+  const isCustoms = currentRateTab === 'customs';
+  const priceInput = document.getElementById(`rateListEdit_price_${i}`);
+  row.price = parseFloat(priceInput.value) || 0;
+  if (isCustoms){
+    row.serviceType = document.getElementById(`rateListEdit_type_${i}`).value;
+    row.unmatched = false;
+  } else {
+    const placeInput = document.getElementById(`rateListEdit_place_${i}`);
+    row.place = placeInput.value.trim();
+    row.noKnownCities = false; // hand-confirmed now, no longer a guess
+  }
+  rateListEditingIndex = null;
+  renderRateListReview();
+}
+
+async function applyRateList(){
+  if (!currentProviderId || !rateListRows.length) return;
+  const isUs = currentRateTab === 'us_freight';
+  const isCustoms = currentRateTab === 'customs';
+  // A row still flagged noKnownCities is a bare state code, not a real city — saving it as-is
+  // would put exactly the kind of non-standard, unmatchable place name this whole rebuild exists
+  // to prevent. Left pending above (with its own Edit already open to a real city name) instead
+  // of silently saved or silently dropped.
+  const toApply = rateListRows.filter(r => !r.noKnownCities);
+  const pending = rateListRows.filter(r => r.noKnownCities);
+  if (!toApply.length){ document.getElementById('rateListMsg').textContent = 'No row is ready to save yet — confirm a real city name first.'; return; }
+  document.getElementById('rateListMsg').textContent = `Saving ${toApply.length} rate(s)…`;
+  const outcomes = await Promise.allSettled(toApply.map(row => {
+    const payload = isCustoms ? {
+      actor: currentActor(),
+      provider_id: currentProviderId,
+      service_type: row.serviceType,
+      origin: '',
+      destination: '',
+      rate: row.price,
+    } : {
+      actor: currentActor(),
+      provider_id: currentProviderId,
+      service_type: currentRateTab,
+      origin: isUs ? row.place : 'Border',
+      destination: isUs ? '' : row.place,
+      rate: row.price,
+      notes: row.notes || null,
+      // Every US Freight row here came straight from a real catalog city (either matched directly
+      // or expanded from a per-state quote against the same catalog) — always links to it, so this
+      // load lands on the exact same rows the US Freight tab itself reads from, never a parallel
+      // free-text copy of the same place.
+      location_id: isUs ? (allLocations.find(l => row.place === `${l.city} ${l.state}`) || {}).id || null : null,
+    };
+    // Same lane (provider+service+origin+destination) can already exist from a prior load —
+    // provider-rates-set upserts on that exact key, updating the price instead of erroring (see
+    // the Gadsden/AL multi-plant case).
+    return callApi('provider-rates-set', payload);
+  }));
+  let applied = 0, errors = 0;
+  const failedRows = [];
+  outcomes.forEach((outcome, i) => {
+    if (outcome.status === 'fulfilled') applied++;
+    else { errors++; failedRows.push(toApply[i]); }
+  });
+  rateListRows = [...pending, ...failedRows];
+  rateListEditingIndex = null;
+  renderRateListReview();
+  document.getElementById('rateListMsg').textContent = `${applied} rate(s) saved.${pending.length ? ` ${pending.length} still need a real city name, left above.` : ''}${errors ? ` ${errors} failed, left above to retry.` : ''}`;
+  if (!rateListRows.length){
+    closeRateListPanel();
+  }
+  await loadEverything();
+  renderRateTable();
+  // Loaded from the Locations Catalog shortcut (loadPricesForCarrierFromLocations) without ever
+  // navigating away from it — refresh that table too so the new prices show the moment the overlay
+  // closes, not only after switching tabs and back.
+  if (providerTab === 'locations') renderLocationsList();
+}
+
+function ratesForCurrentTab(){
+  if (currentRateTab === 'customs'){
+    const customsTypeValues = CUSTOMS_TYPES.map(t => t.value);
+    return allRates.filter(r => r.provider_id === currentProviderId && customsTypeValues.includes(r.service_type));
+  }
+  return allRates.filter(r => r.provider_id === currentProviderId && r.service_type === currentRateTab);
+}
+
+function renderRateTable(){
+  const wrap = document.getElementById('rateTableWrap');
+  const rows = ratesForCurrentTab();
+  // Lives in the static "Cargar precios" row right under the tabs (same left-aligned, side-by-side
+  // placement as Ingredient Suppliers' "Load Prices" + "+ Add New Product") — never a second, separately
+  // positioned button further down, which is what made this screen look inconsistent with the rest
+  // of the app (real feedback: "no lo veo igual").
+  const addSlot = document.getElementById('rateAddBtnSlot');
+
+  if (currentRateTab === 'customs'){
+    addSlot.innerHTML = `<button class="btn secondary small" onclick="addRateRow()">+ Add Cost</button>`;
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Type</th><th>Rate</th><th>Currency</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="rateRowsBody"></tbody>
+      </table>`;
+    const tbody = document.getElementById('rateRowsBody');
+    tbody.innerHTML = '';
+    rows.forEach(r => tbody.appendChild(buildCustomsRow(r)));
+    if (!rows.length) tbody.innerHTML = '<tr><td colspan="5" class="empty">No costs yet.</td></tr>';
+    btEnhanceAllSelects(tbody);
+    return;
+  }
+
+  const isUs = currentRateTab === 'us_freight';
+
+  // US Freight is built from the REAL, closed city catalog (locations table) — every carrier shows
+  // the exact same 24 cities, priced or "Pending", never just whatever subset this one carrier
+  // happens to have quoted. Confirmed real requirement 2026-08-30: "TODOS los estados TODAS las
+  // ciudades deben estar en TODOS los carriers" — this is what closed the gap that let Key Global
+  // quietly cover only 13 of EBI's 21 cities with nothing anywhere showing the other 8 were missing.
+  if (isUs){
+    addSlot.innerHTML = `<button class="btn secondary small" onclick="startAddLocation()">+ Add New City to Catalog</button>`;
+    wrap.innerHTML = `<div class="pkg-table-wrap" id="rateRowsWrap"></div>`;
+    const catalogRows = allLocations.map(loc => {
+      const rate = allRates.find(r => r.provider_id === currentProviderId && r.service_type === 'us_freight' && r.location_id === loc.id);
+      return { locationId: loc.id, place: `${loc.city} ${loc.state}`, rateId: rate ? rate.id : null, rate: rate ? Number(rate.rate) : null, notes: rate ? rate.notes : null, updatedAt: rate ? rate.updated_at : null };
+    });
+    renderRateRows(catalogRows);
+    return;
+  }
+
+  // Fichas, same pattern as the catalog's own product list — a route + its price, an Edit button
+  // that opens a small inline form (never an always-editable cell), and no Plant picker: a rate is
+  // never plant-specific (confirmed 2026-08-30 — "sin nombre de planta... dos o mas plantas pueden
+  // tener locations en la misma ciudad", one real-world city has one real freight number, shared by
+  // whichever plants happen to be there), so the field this used to set is now display-only dead
+  // weight this screen doesn't ask for anymore.
+  addSlot.innerHTML = `<button class="btn secondary small" onclick="startAddRate('mexican_freight')">+ Add Destination</button>`;
+  wrap.innerHTML = `<div class="pkg-table-wrap" id="rateRowsWrap"></div>`;
+  renderRateRows(sortRatesByPlace(rows, false).map(r => ({ locationId: null, place: r.destination, rateId: r.id, rate: Number(r.rate), notes: r.notes, updatedAt: r.updated_at })));
+}
+
+// Grouped by state first ("IA together, TX together"), city alphabetical within each state — a
+// real Excel-paste load has no natural order of its own (arrives sorted however the sheet was),
+// so 21+ scattered rows read as a wall of random cities without this. Colombian Freight destinations
+// don't carry a US state suffix the same way, so those just sort alphabetically by destination.
+function sortRatesByPlace(rows, isUs){
+  const stateOf = (place) => {
+    const parts = (place || '').trim().split(/\s+/);
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : '';
+  };
+  return [...rows].sort((a, b) => {
+    const placeA = isUs ? (a.origin || '') : (a.destination || '');
+    const placeB = isUs ? (b.origin || '') : (b.destination || '');
+    if (isUs){
+      const stateCmp = stateOf(placeA).localeCompare(stateOf(placeB));
+      if (stateCmp !== 0) return stateCmp;
+    }
+    return placeA.localeCompare(placeB);
+  });
+}
+
+// Every row is now {locationId, place, rateId, rate, notes} regardless of tab — locationId is set
+// (and place is fixed, non-editable text) for US Freight rows, since those are always a real
+// catalog row; null for Colombian Freight, which stays free-text since it has no catalog yet.
+// rate === null means "this carrier has no price for this real place yet" (US Freight only, since
+// Colombian/Customs rows only ever exist once someone has actually added one).
+function renderRateRows(rows){
+  const listWrap = document.getElementById('rateRowsWrap');
+  const isUs = currentRateTab === 'us_freight';
+  const newRowHtml = editingRateKey === 'NEW' ? renderRateEditFicha({ locationId: null, place: '', rateId: null, rate: '' })
+    : editingRateKey === 'NEW_LOCATION' ? renderNewLocationFicha() : '';
+  if (!rows.length && !newRowHtml){
+    listWrap.innerHTML = '<div class="empty">No rates yet.</div>';
+    return;
+  }
+  listWrap.innerHTML = newRowHtml + rows.map(r => {
+    const key = r.locationId || r.rateId;
+    return editingRateKey === key ? renderRateEditFicha(r) : renderRateViewFicha(r, isUs);
+  }).join('');
+}
+
+// A carrier's rate is only as good as the last time they actually confirmed it — same "still
+// shown, just flagged" pattern as a product's stale price (plants.html PRICE_STALE_DAYS), applied
+// here to freight. Confirmed real requirement 2026-08-30: "si actualizamos una lista con algunos
+// fletes y otros no unos estan al dia y otros no pero los sigue sacando, enunciando que no estan
+// al dia." 30 days is a starting assumption (freight lanes move far less often than daily protein
+// prices) — easy to adjust, never blocks the rate from being used either way.
+const RATE_STALE_DAYS = 30;
+function rateAgeDays(updatedAt){
+  if (!updatedAt) return null;
+  const ms = new Date().setHours(0,0,0,0) - new Date(String(updatedAt).slice(0, 10) + 'T00:00:00').setHours(0,0,0,0);
+  return Math.round(ms / 86400000);
+}
+
+function renderRateViewFicha(r, isUs){
+  const label = isUs ? `${r.place || '—'} → Border` : `Border → ${r.place || '—'}`;
+  const key = r.locationId || r.rateId;
+  const pending = r.rate == null;
+  if (pending){
+    return `<div class="pkg-row">
+      <div class="pkg-plant-avatar">⚠️</div>
+      <div class="pkg-plant-info"><span class="pkg-plant-name">${escapeHtml(label)}</span><span class="pkg-plant-sub" style="color:#FF9C8A;">Pending — no price yet</span></div>
+      <button class="btn secondary" style="padding:5px 10px;font-size:12px;flex-shrink:0;" onclick="editRateInline('${key}')">Add Price</button>
+    </div>`;
+  }
+  const age = rateAgeDays(r.updatedAt);
+  const stale = age != null && age > RATE_STALE_DAYS;
+  const staleNote = stale ? `<span class="pkg-plant-sub" style="color:#FF9C8A;">⚠ Expired — last confirmed ${age}d ago</span>` : '';
+  return `<div class="pkg-row">
+    <div class="pkg-plant-avatar">🚚</div>
+    <div class="pkg-plant-info"><span class="pkg-plant-name">${escapeHtml(label)}</span>${r.notes ? `<span class="pkg-plant-sub">${escapeHtml(r.notes)}</span>` : ''}${staleNote}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:13px;flex-shrink:0;">$${Number(r.rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+    <button class="btn secondary" style="padding:5px 10px;font-size:12px;flex-shrink:0;" onclick="editRateInline('${key}')">Edit</button>
+    ${r.rateId ? `<button class="btn danger" style="padding:5px 8px;font-size:12px;flex-shrink:0;" onclick="deleteRate('${r.rateId}')">×</button>` : ''}
+  </div>`;
+}
+
+function renderRateEditFicha(r){
+  const isUs = currentRateTab === 'us_freight';
+  const key = r.locationId || r.rateId || 'NEW';
+  // A US Freight row's place is a real, fixed catalog entry — never retyped here, only its price.
+  // Colombian Freight (no catalog yet) keeps the free-text place field.
+  const placeField = (isUs && r.locationId)
+    ? `<div class="pkg-plant-info"><span class="pkg-plant-name">${escapeHtml(r.place)}</span></div>`
+    : `<input id="rateEdit_place_${key}" value="${escapeHtml(r.place || '')}" placeholder="Destination" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">`;
+  return `<div class="pkg-row" style="flex-wrap:wrap;">
+    ${placeField}
+    <input id="rateEdit_rate_${key}" type="number" step="0.01" value="${r.rate == null ? '' : r.rate}" placeholder="Rate (USD)" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+    <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveRateInline('${key}', ${r.locationId ? `'${r.locationId}'` : 'null'})">Save</button>
+    <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="cancelRateEdit()">Cancel</button>
+  </div>`;
+}
+
+let editingRateKey = null;
+
+function editRateInline(key){
+  editingRateKey = key;
+  renderRateTable();
+}
+
+// US Freight no longer needs a generic "+ Add Origin" — every real city already has a row, priced
+// or pending. Only Colombian Freight (no catalog yet) still adds a genuinely new destination this way.
+function startAddRate(serviceType){
+  editingRateKey = 'NEW';
+  currentRateTab = serviceType;
+  renderRateTable();
+}
+
+function cancelRateEdit(){
+  editingRateKey = null;
+  renderRateTable();
+}
+
+async function saveRateInline(key, locationId){
+  const isUs = currentRateTab === 'us_freight';
+  const rateInput = document.getElementById(`rateEdit_rate_${key}`);
+  const rate = parseFloat(rateInput.value) || 0;
+  const placeInput = document.getElementById(`rateEdit_place_${key}`);
+  const place = locationId ? null : (placeInput ? placeInput.value.trim() : null);
+  if (!locationId && !place){ if (placeInput) placeInput.style.borderColor = 'var(--red)'; return; }
+  try {
+    if (isUs){
+      // Always provider-rates-set (upserts on provider+service+origin+destination) — a US Freight
+      // row's place text is derived straight from the real catalog entry, so this naturally lands
+      // on the same lane whether it's the first price ever or the fifth correction.
+      const loc = allLocations.find(l => l.id === locationId);
+      const origin = `${loc.city} ${loc.state}`;
+      const result = await callApi('provider-rates-set', {
+        actor: currentActor(), provider_id: currentProviderId, service_type: 'us_freight',
+        origin, rate, location_id: locationId,
+      });
+      const idx = allRates.findIndex(r => r.id === result.provider_rate.id);
+      if (idx >= 0) allRates[idx] = result.provider_rate; else allRates.push(result.provider_rate);
+    } else if (key === 'NEW'){
+      const idempotencyKey = `provider-rates-create|${currentProviderId}|mexican_freight|${place}|${new Date().toISOString().slice(0, 16)}`;
+      const created = await callApi('provider-rates-create', {
+        actor: currentActor(), provider_id: currentProviderId, service_type: 'mexican_freight',
+        destination: place, rate, idempotency_key: idempotencyKey,
+      });
+      allRates.push(created.rate);
+    } else {
+      await callApi('provider-rates-update', { actor: currentActor(), id: key, destination: place, rate });
+      const row = allRates.find(r => r.id === key);
+      if (row){ row.destination = place; row.rate = rate; }
+    }
+  } catch (e) {
+    await btAlert('Error saving: ' + e.message);
+    return;
+  }
+  editingRateKey = null;
+  renderRateTable();
+}
+
+// A genuinely new real city — not a price, the catalog entry itself. Rare (the 24-city list is
+// meant to already cover everywhere BuenTrade actually ships from); this is the escape hatch for
+// the day a plant's next price list mentions somewhere nobody has ever priced before.
+function startAddLocation(){
+  editingRateKey = 'NEW_LOCATION';
+  renderRateTable();
+}
+
+function renderNewLocationFicha(saveFn = 'saveNewLocation', cancelFn = 'cancelRateEdit'){
+  return `<div class="pkg-row" style="flex-wrap:wrap;">
+    <input id="newLocationCity" placeholder="City" style="flex:1;min-width:140px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+    <input id="newLocationState" placeholder="State (2 letters)" maxlength="2" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;text-transform:uppercase;">
+    <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="${saveFn}()">Add to Catalog</button>
+    <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="${cancelFn}()">Cancel</button>
+    <div id="newLocationMsg" style="width:100%;font-size:11.5px;color:var(--red);"></div>
+  </div>`;
+}
+
+async function saveNewLocation(){
+  const cityInput = document.getElementById('newLocationCity');
+  const stateInput = document.getElementById('newLocationState');
+  const city = cityInput.value.trim();
+  const state = stateInput.value.trim();
+  const msgEl = document.getElementById('newLocationMsg');
+  if (!city || state.length !== 2){
+    msgEl.textContent = 'Enter a city name and a 2-letter state.';
+    return;
+  }
+  try {
+    const idempotencyKey = `locations-create|${city}|${state}|${new Date().toISOString().slice(0, 16)}`;
+    const result = await callApi('locations-create', { actor: currentActor(), city, state, idempotency_key: idempotencyKey });
+    allLocations.push(result.location);
+  } catch (e) {
+    if (e.data && e.data.error === 'possible_duplicate'){
+      msgEl.textContent = e.data.message;
+      return;
+    }
+    msgEl.textContent = 'Error: ' + e.message;
+    return;
+  }
+  editingRateKey = null;
+  renderRateTable();
+}
+
+function buildCustomsRow(r){
+  const tr = document.createElement('tr');
+  tr.dataset.id = r.id;
+  const typeOptions = CUSTOMS_TYPES.map(t => `<option value="${t.value}" ${r.service_type === t.value ? 'selected' : ''}>${t.label}</option>`).join('');
+  tr.innerHTML = `
+    <td style="width:220px;"><select class="rate-input" onchange="saveRateField('${r.id}','service_type',this.value,this)">${typeOptions}</select></td>
+    <td style="width:100px;"><input class="rate-input" type="number" step="0.01" value="${r.rate}" onblur="saveRateField('${r.id}','rate',parseFloat(this.value)||0,this)"></td>
+    <td style="width:80px;"><input class="rate-input" value="${escapeHtml(r.currency || 'USD')}" onblur="saveRateField('${r.id}','currency',this.value,this)"></td>
+    <td><input class="rate-input" value="${escapeHtml(r.notes || '')}" onblur="saveRateField('${r.id}','notes',this.value,this)"></td>
+    <td><button class="btn danger" onclick="deleteRate('${r.id}')">×</button></td>`;
+  return tr;
+}
+
+async function saveRateField(rateId, field, value, inputEl){
+  const row = allRates.find(r => r.id === rateId);
+  if (!row) return;
+  if (row[field] === value) return;
+  try {
+    await callApi('provider-rates-update', { actor: currentActor(), id: rateId, [field]: value });
+  } catch (e) {
+    await btAlert('Error saving: ' + e.message);
+    return;
+  }
+  row[field] = value;
+  if (inputEl){
+    inputEl.style.borderColor = '#3FCB7E';
+    setTimeout(() => { inputEl.style.borderColor = ''; }, 700);
+  }
+}
+
+// A content-based idempotency key doesn't fit this one — every blank row is identical, and
+// clicking "+ Add row" twice on purpose (to add two blank rows to fill in) is the real, intended
+// workflow, not a duplicate. What actually needs guarding against is a genuine double-click firing
+// two overlapping requests before the first one's row shows up — a simple in-flight lock, not a
+// content key.
+let addRateRowInFlight = false;
+async function addRateRow(){
+  if (!currentProviderId || addRateRowInFlight) return;
+  addRateRowInFlight = true;
+  try {
+    const created = await callApi('provider-rates-create', {
+      actor: currentActor(),
+      provider_id: currentProviderId,
+      service_type: currentRateTab === 'customs' ? 'customs' : currentRateTab,
+      origin: '', destination: '', rate: 0,
+    });
+    allRates.push(created.rate);
+    renderRateTable();
+  } catch (e) {
+    await btAlert('Error: ' + e.message);
+  } finally {
+    addRateRowInFlight = false;
+  }
+}
+
+async function deleteRate(rateId){
+  if (!await btConfirm('Delete this rate?')) return;
+  try {
+    await callApi('provider-rates-delete', { actor: currentActor(), id: rateId });
+  } catch (e) {
+    await btAlert('Error: ' + e.message);
+    return;
+  }
+  allRates = allRates.filter(r => r.id !== rateId);
+  renderRateTable();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ============ Real ask 2026-09-11 ("hazlo... desde el principio con el diseno buentrade para no
+// tener que repetir trabajo") — same generic replacement as plants/products/customers.html for
+// every remaining native <select> (Country, phone/WhatsApp code in the edit/new provider forms,
+// plus the rate-type selects in the rates table, which are built dynamically — see the
+// btEnhanceAllSelects(...) calls added at their render sites below). ============
+function btEnhanceSelect(selectEl){
+  if (!selectEl || selectEl.dataset.btEnhanced) return;
+  selectEl.dataset.btEnhanced = '1';
+  const savedStyle = selectEl.getAttribute('style') || '';
+  selectEl.removeAttribute('style');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'bt-select-wrap';
+  if (savedStyle) wrap.setAttribute('style', savedStyle);
+  selectEl.parentNode.insertBefore(wrap, selectEl);
+  wrap.appendChild(selectEl);
+  selectEl.style.display = 'none';
+
+  wrap.insertAdjacentHTML('afterbegin', `
+    <button type="button" class="bt-select-trigger">
+      <span class="bt-select-label"></span>
+      <svg class="bt-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="bt-select-panel" style="display:none;"></div>`);
+  const trigger = wrap.querySelector('.bt-select-trigger');
+  const label = wrap.querySelector('.bt-select-label');
+  const panel = wrap.querySelector('.bt-select-panel');
+  if (selectEl.disabled) trigger.disabled = true;
+
+  const escBt = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  let searchTerm = '';
+
+  function renderPanel(){
+    const opts = [...selectEl.options];
+    const showSearch = opts.length > 8;
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = q ? opts.filter(o => o.textContent.toLowerCase().includes(q)) : opts;
+    panel.innerHTML = (showSearch ? `<input type="text" class="bt-select-search" placeholder="Search…" value="${escBt(searchTerm)}">` : '')
+      + (filtered.length ? filtered.map(o => `
+          <button type="button" class="bt-select-option${o.value === selectEl.value ? ' selected' : ''}" data-value="${escBt(o.value)}">
+            <svg class="bt-select-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${escBt(o.textContent)}
+          </button>`).join('')
+        : `<div class="bt-select-empty">No matches</div>`);
+    panel.querySelectorAll('.bt-select-option').forEach(btn => {
+      btn.onclick = () => {
+        selectEl.value = btn.dataset.value;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        searchTerm = '';
+        close();
+        sync();
+      };
+    });
+    const search = panel.querySelector('.bt-select-search');
+    if (search){
+      search.addEventListener('click', e => e.stopPropagation());
+      search.addEventListener('input', () => {
+        searchTerm = search.value;
+        const pos = search.selectionStart;
+        renderPanel();
+        const ns = panel.querySelector('.bt-select-search');
+        if (ns){ ns.focus(); ns.setSelectionRange(pos, pos); }
+      });
+    }
+  }
+  function sync(){
+    const opt = selectEl.options[selectEl.selectedIndex];
+    label.textContent = opt ? opt.textContent : '';
+  }
+  function open(){ searchTerm = ''; renderPanel(); panel.style.display = 'block'; wrap.classList.add('open'); const s = panel.querySelector('.bt-select-search'); if (s) s.focus(); }
+  function close(){ panel.style.display = 'none'; wrap.classList.remove('open'); }
+  trigger.onclick = e => { e.stopPropagation(); if (selectEl.disabled) return; panel.style.display === 'none' ? open() : close(); };
+  document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
+  new MutationObserver(sync).observe(selectEl, { childList: true, subtree: true });
+  // Real bug found live 2026-09-18 (products.html/plants.html): the MutationObserver above only
+  // catches <option> nodes being added/removed — setting selectEl.value programmatically (any
+  // form-population code) changes no DOM structure at all, so the visible label never updated even
+  // though the real underlying value was set correctly. A 'change' listener plus this exposed
+  // resync method cover both cases.
+  selectEl.addEventListener('change', sync);
+  selectEl.btSync = sync;
+  sync();
+}
+function btEnhanceAllSelects(root){
+  (root || document).querySelectorAll('select:not([data-bt-enhanced])').forEach(btEnhanceSelect);
+}
+document.addEventListener('DOMContentLoaded', () => btEnhanceAllSelects());
+if (document.readyState !== 'loading') btEnhanceAllSelects();
+</script>
+</body>
+</html>

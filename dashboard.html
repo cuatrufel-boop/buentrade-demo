@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuenTrade Trading OS — Dashboard</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<link rel="shortcut icon" href="/icons/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A2547;
+    --navy-2:#0E3D8F;
+    --blue:#1E6ADB;
+    --blue-bright:#5AAAFF;
+    --blue-light:rgba(90,170,255,.14);
+    --bg:#0A2547;
+    --card:rgba(255,255,255,.08);
+    --line:rgba(255,255,255,.18);
+    --ink:#FFFFFF;
+    --ink-soft:rgba(255,255,255,.55);
+    --green:#0F8A5F;
+    --red:#C4432E;
+    --amber:#FFC876;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  /* Real ask 2026-09-11 ("scan de TODOS los modulos... homogeneo"): this whole file was still the
+     original light theme, never touched — same dark gradient + gold header stripe every other
+     page in the OS has. */
+  body{
+    margin:0;color:var(--ink);font-family:'Inter',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,
+      linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;
+  }
+  header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;padding:20px 32px 20px;margin-bottom:24px;position:relative;}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.55;}
+  .top-row{display:flex;justify-content:space-between;align-items:center;min-height:44px;position:relative;}
+  .brand-word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px;color:#fff;line-height:1;}
+  .brand-word span{color:var(--blue-bright);}
+  main{max-width:1180px;margin:0 auto;padding:0 24px 60px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:28px 0 14px;}
+  /* Same gold stat-card component as Offers/Quotes/Products (ported verbatim, not a new one) —
+     the KPI strip is exactly that same concept, just under a different class name here. */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:8px;}
+  .kpi{
+    background:linear-gradient(135deg, rgba(232,181,76,.32), rgba(232,181,76,.08));
+    border:1px solid rgba(232,181,76,.55); border-radius:12px;
+    box-shadow:0 3px 12px -3px rgba(232,181,76,.4), inset 0 1px 0 rgba(255,255,255,.1);
+    padding:16px 18px;
+  }
+  .kpi-label{font-size:11.5px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;color:#fff;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .kpi-value.red{color:#FF9C8A;}
+  .kpi-value.amber{color:var(--amber);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:center;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);font-weight:700;padding:0 10px 8px;}
+  th:first-child{text-align:left;}
+  td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-align:middle;text-align:center;}
+  td:first-child{text-align:left;}
+  /* The table itself lost its own white card background in the dark-theme conversion above —
+     this wrapper is what every other file's tables get from an outer .card; same treatment here
+     since the HTML has no separate .card div around these tables. */
+  .tbl-wrap{overflow-x:auto;border-radius:12px;background:var(--card);border:1px solid var(--line);margin-bottom:20px;padding:8px 10px;}
+  /* Same transparent+border+IBM Plex Mono pill formula as .payment-badge/.pkg-tag everywhere
+     else — this used to be a bespoke filled-pastel-background Inter-font component. */
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid transparent;background:transparent;}
+  .tag.pending_pickup{color:var(--ink-soft);border-color:rgba(255,255,255,.35);}
+  .tag.picked_up{color:var(--amber);border-color:rgba(255,200,118,.4);}
+  .tag.unloading{color:var(--blue-bright);border-color:rgba(90,170,255,.4);}
+  .tag.delivered{color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .tag.sent{color:var(--blue-bright);border-color:rgba(90,170,255,.4);}
+  .tag.won{color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .tag.lost{color:#FF9C8A;border-color:rgba(196,67,46,.4);}
+  .tag.paid{color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .tag.unpaid{color:#FF9C8A;border-color:rgba(196,67,46,.4);}
+  .btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-weight:600;font-size:12px;font-family:inherit;cursor:pointer;margin-right:6px;}
+  .btn:disabled{background:rgba(255,255,255,.08);color:var(--ink-soft);cursor:default;}
+  .btn.secondary{background:var(--card);color:var(--blue-bright);border:1.5px solid var(--blue);}
+  .empty{padding:30px;text-align:center;color:var(--ink-soft);}
+  .err{background:rgba(196,67,46,.14);border:1px solid rgba(196,67,46,.4);color:#FF9C8A;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;}
+  /* same stat cards and segmented tab bar as Clients / Orders / Pay & Receive (2026-09-29: "mismo formato de otros módulos") */
+  .stats-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
+  .stat-card{border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;}
+  .stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .stat-icon svg{width:18px;height:18px;}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;color:#fff;line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .stat-card.hero .stat-value{font-size:28px;}
+  .stat-label{font-size:11.5px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;display:flex;align-items:center;gap:5px;}
+  .stat-label::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+  @media (max-width:900px){ .stats-row{grid-template-columns:1fr 1fr;} }
+  .stat-card.hero{background:linear-gradient(135deg, rgba(90,170,255,.32), rgba(90,170,255,.08));border:1px solid rgba(90,170,255,.55);box-shadow:0 3px 12px -3px rgba(90,170,255,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.hero .stat-icon{background:rgba(90,170,255,.15);border:1.5px solid rgba(90,170,255,.55);color:#5AAAFF;}
+  .stat-card.hero .stat-label::before{background:#5AAAFF;box-shadow:0 0 7px 1.5px rgba(90,170,255,.8);}
+  .stat-card.ok{background:linear-gradient(135deg, rgba(63,203,126,.35), rgba(63,203,126,.1));border:1px solid rgba(63,203,126,.55);box-shadow:0 3px 12px -3px rgba(63,203,126,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.ok .stat-icon{background:rgba(63,203,126,.18);border:1.5px solid rgba(63,203,126,.55);color:#3FCB7E;}
+  .stat-card.ok .stat-label::before{background:#3FCB7E;box-shadow:0 0 7px 1.5px rgba(63,203,126,.8);}
+  .stat-card.danger{background:linear-gradient(135deg, rgba(196,67,46,.32), rgba(196,67,46,.08));border:1px solid rgba(255,156,138,.55);box-shadow:0 3px 12px -3px rgba(196,67,46,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.danger .stat-icon{background:rgba(196,67,46,.18);border:1.5px solid rgba(255,156,138,.55);color:#FF9C8A;}
+  .stat-card.danger .stat-label::before{background:#FF9C8A;box-shadow:0 0 7px 1.5px rgba(255,156,138,.8);}
+  .stat-card.warn{background:linear-gradient(135deg, rgba(255,200,118,.32), rgba(255,200,118,.08));border:1px solid rgba(255,200,118,.55);box-shadow:0 3px 12px -3px rgba(255,200,118,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.warn .stat-icon{background:rgba(255,200,118,.15);border:1.5px solid rgba(255,200,118,.55);color:#FFC876;}
+  .stat-card.warn .stat-label::before{background:#FFC876;box-shadow:0 0 7px 1.5px rgba(255,200,118,.8);}
+  .phase-tabs{display:flex;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:4px;gap:3px;margin:0 0 18px;}
+  .phase-tab{flex:1;text-align:center;padding:9px 6px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,color .15s;user-select:none;}
+  .phase-tab:hover{color:var(--ink);}
+  .phase-tab.active{background:rgba(232,181,76,.15);color:#E8B54C;}
+  .phase-tab-count{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;margin-top:2px;opacity:.75;}
+  /* Today = a feed of task cards (the Live quotes recipe): a rail coloured by priority (red = Now, pulsing; amber = Soon), the when / area pills, what to do, why, and its one button.
+     A task that is done leaves the list: it flashes green with a check and folds away. */
+  /* shared with customers.html: the outlined icon button and the blue name link */
+  .name-link{color:var(--blue);font-weight:600;text-decoration:none;cursor:pointer;} .name-link:hover{text-decoration:underline;}
+  .wa-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:#3FCB7E;border:1.5px solid rgba(63,203,126,.4);border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;text-decoration:none;transition:background .18s,border-color .18s,color .18s;}
+  .wa-btn:hover{background:rgba(29,168,81,.18);color:#3FCB7E;border-color:#3FCB7E;}
+  .wa-btn svg{width:14px;height:14px;flex-shrink:0;}
+  .td-table{table-layout:fixed;} .td-table td{vertical-align:middle;} .td-role{font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:#8EC5FF;margin-bottom:2px;} .td-table .td-secrow td{border-top:0;padding:14px 4px 4px;text-align:left;} .td-table .td-sec{margin:0;}
+  .td-table .num,.mono{font-family:'IBM Plex Mono',monospace;}
+  .td-table .td-heldrow td{border-top:0;text-align:left;}
+  .td-table tr.prod-cont td{border-top-color:rgba(255,255,255,.07);}
+  .td-table tr.prod-cont .cont-name{display:none;} @media (max-width:760px){ .td-table tr.prod-cont .cont-name{display:inline;} } /* on a phone every card is its own: the product name comes back */
+  .td-pills{margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;justify-content:center;}
+  .td-chips{margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;justify-content:center;} .td-chips .tag{white-space:normal;text-align:center;}
+  .td-notecl{font-size:11.5px;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .td-table td{overflow-wrap:break-word;word-break:normal;} /* a word breaks only when it does not fit at all, never in the middle of a name that fits */
+  .td-row.leaving td{background:rgba(63,203,126,.12);border-top-color:rgba(63,203,126,.5);}
+  .td-feed{display:flex;flex-direction:column;gap:10px;}
+  .td-act{align-self:center;}
+  .td-sec{display:flex;align-items:center;gap:10px;margin:10px 2px 0;font:700 11.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;}
+  .td-sec:first-child{margin-top:0;}
+  .td-sec::after{content:'';flex:1;height:1px;background:currentColor;opacity:.25;}
+  .td-sec b{font-weight:700;opacity:.8;}
+  .td-sec.now{color:#FF9C8A;} .td-sec.soon{color:#FFC876;} .td-sec.hold{color:rgba(255,255,255,.5);}
+  /* urgency = the coloured block on the left (NOW / TODAY / WAIT + why it is urgent); the action = the button on the right, named after what you do */
+  .td-card{display:grid;grid-template-columns:112px minmax(0,1fr) auto;gap:18px;align-items:stretch;padding:0 16px 0 0;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.035);overflow:hidden;transition:background .15s,border-color .15s;}
+  .td-card:hover{background:rgba(255,255,255,.065);}
+  .td-urg{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:14px 8px;text-align:center;background:rgba(255,200,118,.14);color:#FFC876;border-right:1px solid rgba(255,200,118,.35);}
+  .td-urg b{font:700 15px 'IBM Plex Mono',monospace;letter-spacing:.1em;}
+  .td-urg span{font-size:10.5px;line-height:1.3;color:rgba(255,255,255,.7);}
+  .td-card.now{border-color:rgba(255,156,138,.55);background:linear-gradient(90deg,rgba(255,156,138,.12),rgba(255,255,255,.035) 45%);}
+  .td-card.now .td-urg{background:rgba(255,156,138,.22);color:#FF9C8A;border-right-color:rgba(255,156,138,.55);animation:tdRail 1.6s ease-in-out infinite;}
+  @keyframes tdRail{0%,100%{box-shadow:inset -3px 0 14px -6px rgba(255,156,138,.9);}50%{box-shadow:inset -3px 0 22px 0 rgba(255,156,138,.9);}}
+  .td-kind{font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);}
+  .td-held{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+  .td-hrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.03);}
+  .td-hrow b{color:#fff;font-weight:600;font-size:13px;} .td-hrow .m{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .td-hrow .w{display:block;font-size:11.5px;color:#FFC876;margin-top:3px;}
+  .td-heldbtn{align-self:flex-start;}
+  .td-opts{display:flex;flex-direction:column;gap:4px;max-width:520px;}
+  .td-opts-h{font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.5);}
+  .td-opt{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);font-size:13px;color:#fff;}
+  .td-opt .d{font-size:11.5px;color:var(--ink-soft);} .td-opt .n{display:block;font-size:11px;color:rgba(255,255,255,.55);}
+  .td-opt b{font:700 13px 'IBM Plex Mono',monospace;}
+  .td-opt.low{border-color:rgba(63,203,126,.7);background:linear-gradient(90deg,rgba(63,203,126,.16),rgba(63,203,126,.04));box-shadow:0 0 14px -6px rgba(63,203,126,.8);}
+  .td-opt.low b{color:#3FCB7E;} .td-opt .tag{font:700 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:#3FCB7E;margin-left:8px;}
+  .td-who{display:flex;gap:6px;flex-wrap:wrap;}
+  .td-who span.lead{color:#8EC5FF;border-color:rgba(90,170,255,.55);background:rgba(90,170,255,.12);}
+  .td-who span{font-size:12px;font-weight:600;color:#fff;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);}
+  .td-main{display:flex;flex-direction:column;gap:7px;min-width:0;padding:14px 0;justify-content:center;}
+  .td-pills{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .td-title{font-size:14px;font-weight:600;color:#fff;line-height:1.35;}
+  .td-why{font-size:12.5px;color:var(--ink-soft);line-height:1.4;}
+  .td-why-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .td-chip{font:600 11px 'IBM Plex Mono',monospace;padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.7);}
+  .td-chip.asked{color:#8EC5FF;border-color:rgba(90,170,255,.55);background:rgba(90,170,255,.1);}
+  .td-chip.history{color:#C9B6FF;border-color:rgba(201,182,255,.5);}
+  .td-chip.bid{color:#8EC5FF;border-color:rgba(142,197,255,.5);}
+  .td-chip.cadence{color:#FFC876;border-color:rgba(255,200,118,.45);}
+  .td-chip.below_avg{color:#3FCB7E;border-color:rgba(63,203,126,.5);background:rgba(63,203,126,.08);}
+  .td-note{font-size:13px;line-height:1.45;color:#fff;border-left:3px solid rgba(63,203,126,.7);padding:6px 0 6px 12px;background:linear-gradient(90deg,rgba(63,203,126,.08),transparent 70%);border-radius:0 8px 8px 0;}
+  .td-note span{display:block;font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#3FCB7E;margin-bottom:2px;}
+  .td-card.done .td-urg{background:rgba(63,203,126,.14);color:#3FCB7E;border-right-color:rgba(63,203,126,.4);} .td-card.done{opacity:.92;}
+  .td-sec.done{color:#3FCB7E;}
+  .td-card.hold .td-urg{background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border-right-color:rgba(255,255,255,.18);}
+  .td-card.hold{opacity:.9;}
+  .td-card.leaving{border-color:rgba(63,203,126,.6);background:rgba(63,203,126,.12);pointer-events:none;animation:tdLeave 1.2s ease forwards;}
+  .td-card.leaving .td-urg{background:rgba(63,203,126,.25);color:#3FCB7E;box-shadow:none;animation:none;border-right-color:rgba(63,203,126,.5);}
+  .td-card.leaving .td-title::before{content:'✓ ';color:#3FCB7E;}
+  @keyframes tdLeave{0%,45%{max-height:900px;opacity:1;margin-bottom:0;}100%{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-width:0;margin-bottom:-10px;}}
+  @media (max-width:760px){ .td-card{grid-template-columns:minmax(0,1fr);padding:0 0 12px;} .td-urg{flex-direction:row;justify-content:flex-start;gap:10px;border-right:0;padding:8px 14px;} .td-main,.td-act{padding-left:14px;padding-right:14px;} .td-act{padding-top:0;} }
+  .refresh{float:right;font-size:12.5px;color:var(--blue-bright);cursor:pointer;text-decoration:underline;}
+  .nav-row{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap;}
+  .nav-pill{display:inline-flex;align-items:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:.2px;color:#fff;text-decoration:none;padding:7px 15px;border-radius:999px;transition:color .25s ease;white-space:nowrap;}
+  .nav-pill.active{color:var(--blue-bright);}
+</style>
+<!-- ============ LOGIN GATE (same Firebase project/login as every other screen) ============ -->
+<style>
+  #authGate{position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#123A6B 100%);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+  .auth-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:32px 30px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px;}
+  .auth-logo .word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#0B2545;}
+  .auth-logo .word span{color:#1B6FC9;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{display:block;font-size:12px;font-weight:600;color:#5B6B82;margin-bottom:5px;}
+  .auth-field input{width:100%;padding:10px 12px;border:1.5px solid #E1E6ED;border-radius:8px;font-size:14px;font-family:inherit;}
+  .auth-field input:focus{outline:none;border-color:#1B6FC9;}
+  .auth-submit{width:100%;padding:11px;border:none;border-radius:8px;background:#1B6FC9;color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;}
+  .auth-msg{font-size:12.5px;margin-top:12px;padding:9px 11px;border-radius:8px;line-height:1.4;display:none;}
+  .auth-msg.err{background:#FCEBE7;color:#B23A22;display:block;}
+  .auth-msg.ok{background:#E3F6F4;color:#00776F;display:block;}
+  .auth-note{font-size:11px;color:#9AABC2;text-align:center;margin-top:16px;line-height:1.5;}
+</style>
+<link rel="stylesheet" href="css/bt-ui.css">
+</head>
+<body>
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg viewBox="0 0 44 44" width="30" height="30"><circle cx="22" cy="22" r="21" fill="#123A6B" stroke="#3E7BC4" stroke-width="1.2"/><path d="M6,25 C13,19 17,29 24,23 C30,18 34,24 38,20" stroke="#5FA8E8" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="16" y="14" width="13" height="8" rx="1.4" fill="#00A9A0"/></svg>
+      <div class="word">Buen<span>Trade</span> Trading OS</div>
+    </div>
+    <form id="formSignIn" onsubmit="return doSignIn(event)">
+      <div class="auth-field"><label>Work email</label><input type="email" id="siEmail" required placeholder="name@buentradegroup.com"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="siPass" required></div>
+      <button class="auth-submit" type="submit">Sign In</button>
+    </form>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-note">Accounts are created from the Trading Tool. Same login works here.</div>
+  </div>
+</div>
+
+<script src="demo-auth.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "demo",
+  authDomain: "demo.invalid",
+  projectId: "demo",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+function currentActor(){ return (auth.currentUser && auth.currentUser.email) || 'unknown'; }
+
+function showAuthMsg(text){
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'auth-msg err';
+}
+
+function doSignIn(e){
+  e.preventDefault();
+  const email = document.getElementById('siEmail').value;
+  const pass = document.getElementById('siPass').value;
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(cred => {
+      if(!cred.user.emailVerified){
+        showAuthMsg('Please verify your email first.');
+        auth.signOut();
+      }
+    })
+    .catch(err => showAuthMsg(err.message));
+  return false;
+}
+
+function logout(){ auth.signOut(); }
+
+// Real bug reported live 2026-09-18 ("rebota se sale se brinca de donde estoy" — same one
+// already fixed on Quotes): Firebase refires onAuthStateChanged on its own on every silent
+// ID-token refresh (and on tab refocus/reconnect), not just the real sign-in. loadAll() used to
+// run unconditionally on every firing, wiping every table back to "Loading…" mid-session. This
+// flag makes the real load happen exactly once per tab.
+let btAuthLoaded = false;
+auth.onAuthStateChanged(user => {
+  const gate = document.getElementById('authGate');
+  const app = document.getElementById('appContent');
+  if (user && user.emailVerified) {
+    gate.style.display = 'none';
+    app.style.display = 'block';
+    document.getElementById('userBadge').textContent = user.email;
+    if (!btAuthLoaded) { btAuthLoaded = true; loadAll(); loadToday(); }
+  } else {
+    gate.style.display = 'flex';
+    app.style.display = 'none';
+  }
+});
+</script>
+<!-- ============ END LOGIN GATE ============ -->
+
+<div id="appContent" style="display:none;">
+<header>
+  <div class="top-row">
+    <a href="dashboard.html" style="position:absolute;left:32px;top:50%;transform:translateY(-50%);text-align:center;text-decoration:none;" title="Dashboard"><div class="brand-word">Buen<span>Trade</span><div style="font-size:14px;letter-spacing:0.1em;color:rgba(255,255,255,.75);margin-top:5px;"><b style="font-weight:800;color:var(--blue-bright);">O</b>perating <b style="font-weight:800;color:var(--blue-bright);">S</b>ystem</div></div></a>
+  </div>
+  <div id="userChip" style="position:absolute;right:32px;bottom:24px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:3px 5px 3px 3px;">
+    <span id="userAvatar" style="width:19px;height:19px;border-radius:50%;background:#1E6ADB;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0;"></span>
+    <span id="userBadge" style="display:none;"></span>
+    <button type="button" class="hdr-logout" onclick="logout()" title="Log Out" aria-label="Log Out"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+  </div>
+  <nav class="nav-row">
+    <a href="quotes.html" class="nav-pill">Quotes</a>
+    <a href="offers.html" class="nav-pill">Offers</a>
+    <a href="orders.html" class="nav-pill">Orders</a>
+    <a href="plants.html" class="nav-pill">Plants</a>
+    <a href="products.html" class="nav-pill">Products</a>
+    <a href="customers.html" class="nav-pill">Clients</a>
+    <a href="providers.html" class="nav-pill">Logistics</a>
+    <a href="collections.html" class="nav-pill">Pay &amp; Receive</a>
+  </nav>
+</header>
+<script src="js/header-chip.js"></script>
+<script src="js/bt-dialogs.js"></script>
+<main>
+  <div id="errBox"></div>
+  <!-- Dashboard (2026-09-29): same layout as the other modules — cards on top, the tab bar, one view per
+       tab (no long scroll where the data gets lost). Today = the trader's day (Copilot v1); Goals & Money
+       = the CEO / CFO view; Sales Mix = where sales come from. -->
+  <h1>Dashboard <span id="todayDate" style="color:var(--ink-soft);font-weight:400;font-size:15px;"></span> <span class="refresh" onclick="loadAll();loadToday()">↻ refresh</span></h1>
+  <div class="stats-row" id="dashCards" style="grid-template-columns:repeat(4,minmax(0,1fr));"><div class="empty">Loading…</div></div>
+  <div class="phase-tabs" id="dashTabs"></div>
+
+  <div id="dashPanel_today">
+    <div class="tbl-wrap" style="padding:12px 14px;">
+      <div id="todayWrap"><div class="empty">Loading today…</div></div>
+    </div>
+  </div>
+
+  <div id="dashPanel_goals" style="display:none;">
+    <div class="kpis" id="ceoGoals" style="grid-template-columns:repeat(3,minmax(0,1fr));"><div class="empty">Loading…</div></div>
+    <h1>Loads per Month <span style="color:var(--ink-soft);font-weight:400;font-size:15px;">— last 12 months, against the goal</span></h1>
+    <div class="tbl-wrap" id="ceoChart" style="padding:18px 20px;"></div>
+    <h1>What brings bids <span style="color:var(--ink-soft);font-weight:400;font-size:15px;" id="learnSince"></span></h1>
+    <div class="tbl-wrap" id="learnWrap"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div id="dashPanel_mix" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px;">
+      <div class="tbl-wrap" style="margin:0;"><table id="tblTopCustomers"><thead><tr><th>Customer</th><th>Loads</th><th>Sales</th></tr></thead><tbody></tbody></table></div>
+      <div class="tbl-wrap" style="margin:0;"><table id="tblTopProducts"><thead><tr><th>Product</th><th>Loads</th><th>Sales</th></tr></thead><tbody></tbody></table></div>
+      <div class="tbl-wrap" style="margin:0;"><table id="tblTopTraders"><thead><tr><th>Trader</th><th>Loads</th><th>Sales</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <h1>Best Orders <span style="color:var(--ink-soft);font-weight:400;font-size:15px;">— by margin</span></h1>
+    <div class="tbl-wrap"><table id="tblTopMargin"><thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>Sale</th><th>Margin</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</main>
+</div><!-- /appContent -->
+
+<script>
+const API_ROOT = 'https://oqotaxmacwueiutdxgkk.supabase.co/functions/v1/';
+// Run the functions next to the database (us-east-1), not near the browser (2026-09-29, measured: a function
+// running in Europe spent ~830 ms connecting to the US database and 86 ms per query; pinned: 80 ms and 3 ms).
+const API_REGION = '?forceFunctionRegion=us-east-1';
+const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
+
+async function callApi(fn, body){
+  const res = await fetch(API_ROOT + fn + API_REGION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+
+const money = n => n == null ? '—' : '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits:0});
+const dt = s => s ? new Date(s).toLocaleDateString() : '—';
+
+// Real 4 stages (pending_pickup/picked_up/unloading/delivered) — matches offers.html's Status
+// tab and shipments-update-status exactly. Not scheduled/in_transit, which were wrong here.
+const STATUS_LABEL = { pending_pickup:'Pending Pickup', picked_up:'Picked Up', unloading:'Unloading', delivered:'Delivered' };
+const NEXT_STATUS = { pending_pickup:'picked_up', picked_up:'unloading', unloading:'delivered' };
+const NEXT_LABEL = { pending_pickup:'Mark Picked Up', picked_up:'Mark Unloading', unloading:'Mark Delivered' };
+
+function showErr(msg){
+  document.getElementById('errBox').innerHTML = `<div class="err">${msg}</div>`;
+}
+
+async function loadAll(){
+  document.getElementById('errBox').innerHTML = '';
+  setDashTab(dashTab);
+  try {
+    const [summary, ceo] = await Promise.all([callApi('dashboard-summary'), callApi('dashboard-summary', { view: 'ceo' })]);
+    renderCeo(ceo.ceo);
+    renderTopMargin(summary.top_orders_by_margin);
+  } catch (e) {
+    showErr('Error calling API: ' + e.message);
+  }
+  loadLearning(); // its own try: a failure here never hides the money numbers above
+}
+// What brings bids: per reason Today suggests, how many suggestions became an offer, a bid, a won order (from the engine's own daily record) — next to everything ever offered.
+const HOOK_NAME = { asked: 'Asked for it', window: 'Buys now (his note)', bid_meet: 'His bid works now', beats_last: 'Cheaper than his last offer', plant_drop: 'Plant lowered its price', bid: 'Has bid before', never_offered: 'Never offered', history: 'Bought from us', below_avg: 'Under its 30-day average', cadence: 'How often he buys', none: 'No reason' };
+async function loadLearning(){
+  const wrap = document.getElementById('learnWrap');
+  try {
+    const d = (await callApi('dashboard-summary', { view: 'learning' })).learning;
+    const pct = (n, t) => t ? `${(n / t * 100).toFixed(1)}%` : '—';
+    const b = d.baseline;
+    document.getElementById('learnSince').textContent = d.since ? `— suggestions since ${d.since.slice(5).replace('-', '/')}, each counted once` : '';
+    const rows = d.hooks.map(h => `<tr><td style="text-align:left;">${escapeHtml(HOOK_NAME[h.hook_key] || h.hook_key)}</td><td class="num">${h.suggested}</td><td class="num">${h.offered}</td><td class="num">${h.bids}</td><td class="num">${h.won}</td><td class="num">${pct(h.bids, h.offered)}</td></tr>`).join('');
+    wrap.innerHTML = `<table><thead><tr><th style="text-align:left;">Reason</th><th>Suggested</th><th>Offered</th><th>Bids</th><th>Won</th><th>Bids per offer</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="empty">No suggestions recorded yet.</td></tr>'}
+      <tr><td style="text-align:left;" class="muted">Everything ever offered</td><td class="num muted">—</td><td class="num muted">${b.offers}</td><td class="num muted">${b.bids}</td><td class="num muted">${b.won}</td><td class="num muted">${pct(b.bids, b.offers)}</td></tr></tbody></table>`;
+  } catch (e) { wrap.innerHTML = `<div class="empty">Could not load: ${escapeHtml(e.message)}</div>`; }
+}
+
+// ---------- Today ----------
+const TODAY_GROUP = { bid: 'Bid', sell: 'New price', collect: 'Collect', pay: 'Pay', credit: 'Credit', hold: 'Hold', sent: 'Sent today', prices: 'Prices in', ask: 'Customer asked', check: 'Check' };
+// Coming back to the Dashboard (from Quotes, Offers…) re-reads Today, so what was just sent is no longer listed (user 2026-10-09: "cuando
+// mando la sugerencia, la deja ahí, no sabe si ya mandé"). The server only lists what is still waiting: an offer sent, a customer told.
+let todayLoadedAt = 0;
+function reloadTodayIfStale(){ if (btAuthLoaded && Date.now() - todayLoadedAt > 3000) loadToday(); }
+setInterval(() => { if (!document.hidden && btAuthLoaded) loadToday(); }, 60000); // a task done elsewhere leaves the list on its own
+const todayKey = i => i.group + '|' + i.title;
+document.addEventListener('visibilitychange', () => { if (!document.hidden) reloadTodayIfStale(); });
+window.addEventListener('pageshow', (e) => { if (e.persisted) reloadTodayIfStale(); });
+window.addEventListener('focus', reloadTodayIfStale);
+async function loadToday(){
+  todayLoadedAt = Date.now();
+  const wrap = document.getElementById('todayWrap');
+  document.getElementById('todayDate').textContent = '— ' + new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+  if (!dashToday) wrap.innerHTML = '<div class="empty">Loading today…</div>'; // a refresh keeps the list on screen
+  const prev = dashToday ? dashToday.slice() : null;
+  let items = [];
+  try { items = (await callApi('dashboard-summary', { view: 'today' })).today || []; }
+  catch (e) { wrap.innerHTML = `<div class="empty">Could not load today: ${escapeHtml(e.message)}</div>`; return; }
+  dashToday = items;
+  const gone = prev ? prev.filter(p => !items.some(n => todayKey(n) === todayKey(p))) : [];
+  renderDashCards(); setDashTab(dashTab); renderToday(gone);
+  if (gone.length) setTimeout(() => renderToday(), 1400);
+}
+function renderToday(gone = []){
+  const wrap = document.getElementById('todayWrap'), all = dashToday || [];
+  // ONE list, closest to a bid first (the server orders it) — no area tabs (user 2026-10-12: "todo enfocado en bids")
+  const items = all, leaving = gone;
+  if (!items.length && !leaving.length){ wrap.innerHTML = '<div class="empty">Nothing urgent today — all caught up.</div>'; return; }
+  // a reason the note already says is not repeated as a chip (the % under the average, 'as you asked')
+  const chipsOf = i => (i.reasons || []).filter(r => !(i.note && ((r.key === 'below_avg' && /por debajo/.test(i.note)) || (r.key === 'asked' && /me pediste/.test(i.note)))));
+  // Today is a table, the same one Clients / Offers / Orders use (user 2026-10-12, pointing at Clients: "este es el diseno"): name in blue with a grey line under it,
+  // pills for state, mono values, an outlined .wa-btn icon button. Columns: Product · Customer · Priority · Price · Next.
+  const ICON_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
+  const ICON_GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+  const SEC = [[1, 'Do now', 'now'], [2, 'Do today', 'soon'], [3, 'Wait', 'hold'], [4, 'Sent today', 'done']];
+  // Each plant line says what arrived: the plant, its price, what it was before (a price drop) and when it came in.
+  const NYD = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', month: '2-digit', day: '2-digit' });
+  const MONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const whenOf = d => !d ? '' : d === NYD ? 'today' : /^\d\d\/\d\d$/.test(d) ? `${MONS[Number(d.slice(0, 2)) - 1]} ${Number(d.slice(3))}` : d;
+  const money = o => {
+    const was = o.note && /\$/.test(o.note) ? o.note.replace(/^lowered from /i, 'was ') : '', when = whenOf(o.date);
+    return `<div style="white-space:nowrap;"><span class="muted" style="font-size:11.5px;">${escapeHtml(o.plant)}</span> <b class="mono"${o.cheapest ? ' style="color:#3FCB7E;"' : ''} title="${escapeHtml([o.landed != null ? `Border cost $${Number(o.landed).toFixed(3)}/lb` : '', o.freight || '', o.cheapest ? 'Cheapest at the border' : ''].filter(Boolean).join(' · '))}">$${Number(o.price).toFixed(2)}</b>${was || when ? ` <span class="muted" style="font-size:11px;">${[was ? `<s>${escapeHtml(was.replace(/^was /, ''))}</s>` : '', when].filter(Boolean).join(' · ')}</span>` : ''}</div>`;
+  };
+  // ONE short pill under the customer: why this price makes sense for him (strongest reason first). Everything longer stays in the tooltip.
+  const whyPill = i => {
+    // the engine's own hook, with its number, is the pill (user 2026-10-13); the older rules below only fill in when a line has none
+    if (i.hook && i.hook.label){
+      const cls = ['asked', 'window', 'bid_meet', 'beats_last', 'plant_drop'].includes(i.hook.key) ? 'won' : i.hook.key === 'gap' ? 'lost' : 'sent';
+      return `<span class="tag ${cls}">${escapeHtml(i.hook.label)}</span>`;
+    }
+    const rs = chipsOf(i), by = k => rs.find(r => r.key === k), m = (r, re) => r && (String(r.label).match(re) || [])[1];
+    if (m(by('below_avg'), /([\d.]+)% below/)) return `<span class="tag won">${m(by('below_avg'), /([\d.]+)% below/)}% below avg</span>`;
+    if (m(by('cadence'), /every (\d+) days/)) return `<span class="tag sent">Buys every ${m(by('cadence'), /every (\d+) days/)}d</span>`;
+    if (m(by('history'), /(\d+) time/)) return `<span class="tag sent">Bought ${m(by('history'), /(\d+) time/)}×</span>`;
+    const o = i.lead && String(i.lead.reason).match(/Offer of (\$[\d.]+)\/lb open since (\d\d\/\d\d)/);
+    return o ? `<span class="tag sent">Has ${o[1]} offer · ${whenOf(o[2])}</span>` : '';
+  };
+  // Only what matters on this screen: which product arrived and which customer needs it (user 2026-10-12: "solo quiero saber que producto llego y que cliente lo necesita").
+  // The reason, the note, the history and the rest sit in the tooltip of the customer name.
+  // One product, one block: the lines of the same product in a section sit together and the product name is written once (same rule as Offers)
+  const byProduct = arr => { const order = [], by = new Map(); arr.forEach(i => { const k = i.product || ('\u0000' + todayKey(i)); if (!by.has(k)){ by.set(k, []); order.push(k); } by.get(k).push(i); }); return order.flatMap(k => by.get(k)); };
+  const row = (i, cls, cont) => {
+    const k = todayKey(i), chips = chipsOf(i);
+    const names = (i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : []);
+    const tip = [i.lead && i.lead.reason, ...chips.map(r => r.label), i.note && `Note: ${i.note}`, i.why && !(i.lead && (i.group === 'ask' || i.group === 'bid')) ? i.why : '', i.hot].filter(Boolean).join('\n');
+    const prodLink = `<a class="name-link" href="${i.href}"${i.product ? '' : ` title="${escapeHtml(tip)}"`}>${escapeHtml(i.product || i.title)}</a>`;
+    const prodCell = (cont ? `<span class="cont-name">${prodLink}</span>` : prodLink)
+      + (i.held && i.held.length ? `<div style="margin-top:6px;"><button class="btn secondary small" onclick="toggleHeld(${escapeHtml(JSON.stringify(k))})">${todayHeldOpen.has(k) ? 'Hide' : 'Show'} ${i.held.length} held</button></div>` : '');
+    const why = i.group === 'ask' || (i.lead && i.lead.asked) ? '<span class="tag won" title="The customer asked for this product">Asked</span>' : i.group === 'bid' ? '<span class="tag won" title="The customer made a bid">Bid</span>' : '';
+    const pill = names.length ? whyPill(i) : '';
+    const custCell = names.length ? `<span title="${escapeHtml(tip)}"><b style="font-weight:600;font-size:14px;">${escapeHtml(names[0])}</b>${names.length > 1 ? `<span class="muted" title="${escapeHtml(names.slice(1).join(', '))}"> + ${names.length - 1} more</span>` : ''}</span>${why || pill ? `<div class="td-pills">${why}${pill}</div>` : ''}` : '<span class="muted">—</span>';
+    const priceCell = i.options && i.options.length ? i.options.map(money).join('') : '<span class="muted">—</span>';
+    const n = i.who && i.who.length > 1 ? i.who.length : 0;
+    const btn = cls ? '' : `<a class="wa-btn" href="${i.href}" title="${escapeHtml(i.action || 'Open')}" aria-label="${escapeHtml(i.action || 'Open')}">${i.group === 'bid' || i.group === 'gap' || i.group === 'watch' || !i.product ? ICON_GO : ICON_SEND}${n ? `<span>${n}</span>` : ''}</a>`;
+    const held = i.held && i.held.length && todayHeldOpen.has(k) ? `<tr class="td-heldrow"><td colspan="4"><div class="td-held">${i.held.map(h => `<div class="td-hrow"><div><b>${escapeHtml(h.customer)}</b> — ${escapeHtml(h.product)}<span class="m">${escapeHtml(h.price)}${h.reasons && h.reasons.length ? ' · ' + h.reasons.map(escapeHtml).join(' · ') : ''}</span><span class="w">Held: ${escapeHtml(h.why)}</span></div><a class="wa-btn" href="${h.href}" title="Send anyway" aria-label="Send anyway">${ICON_SEND}</a></div>`).join('')}</div></td></tr>` : '';
+    return `<tr class="td-row${cls}${cont ? ' prod-cont' : ''}"><td>${prodCell}</td><td>${custCell}</td><td class="num">${priceCell}</td><td>${btn}</td></tr>${held}`;
+  };
+  // what one load of each offer in the section is worth at the trader's own margin (the engine's potential_usd)
+  const fmtK = v => v >= 1000 ? '$' + (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : '$' + Math.round(v);
+  const secRow = (label, lvl, count, part = []) => { const pot = part.reduce((n, i) => n + (Number(i.potential_usd) || 0), 0);
+    return `<tr class="td-secrow"><td colspan="4"><div class="td-sec ${lvl}">${label} <b>${count}</b>${pot ? ` <span title="What one load of each offer is worth at your margin" style="opacity:.75;font-weight:600;">· ≈ ${fmtK(pot)}</span>` : ''}</div></td></tr>`; };
+  wrap.innerHTML = `<div class="table-scroll"><table class="td-table"><thead><tr><th style="width:30%;">Product</th><th>Customer</th><th style="width:320px;">Price</th><th style="width:90px;">Next</th></tr></thead><tbody>${leaving.map(i => row(i, ' leaving')).join('')}${SEC.map(([pr, label, lvl]) => {
+    // the products customers buy that no plant has priced are their own block inside "Do today" (they are asks to the plants, not offers to send)
+    const blocks = pr === 2 ? [[label, items.filter(i => i.prio === pr && i.group !== 'gap')], ['Needs a price', items.filter(i => i.prio === pr && i.group === 'gap')]] : [[label, items.filter(i => i.prio === pr)]];
+    return blocks.map(([lb, part]) => { const ordered = byProduct(part);
+      return part.length ? secRow(lb, lvl, part.length, part) + ordered.map((i, k) => row(i, '', k > 0 && i.product && ordered[k - 1].product === i.product)).join('') : ''; }).join(''); }).join('')}</tbody></table></div>`;
+}
+
+
+// Real ask 2026-09-14: total/monthly sales and the single biggest order — all sourced from
+// shipments (real won orders), never sent_offers (would overcount lost/pending quotes).
+
+// Margin is the real, final shipments.net_profit once an order is paid — until then it's the
+// exact same live estimate collections.html's own aging report already shows as "profit so far",
+// tagged Estimated here so it's never confused with a locked-in number.
+// ---------- CEO / CFO ----------
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const bar = (pct, color) => `<div style="height:8px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:10px;overflow:hidden;"><div style="height:100%;width:${Math.min(100, pct)}%;background:${color};border-radius:99px;"></div></div>`;
+let dashCeo = null, dashToday = null, dashTab = 'today'; const todayHeldOpen = new Set(); // which "held" lists the trader opened, kept across the minute refresh
+function toggleHeld(k){ if (todayHeldOpen.has(k)) todayHeldOpen.delete(k); else todayHeldOpen.add(k); renderToday(); }
+const DASH_TABS = [['today', 'Today'], ['goals', 'Goals & Money'], ['mix', 'Sales Mix']];
+function setDashTab(t){
+  dashTab = t;
+  DASH_TABS.forEach(([k]) => { document.getElementById('dashPanel_' + k).style.display = k === t ? '' : 'none'; });
+  document.getElementById('dashTabs').innerHTML = DASH_TABS.map(([k, l]) => `<div class="phase-tab${k === t ? ' active' : ''}" onclick="setDashTab('${k}')">${l}${k === 'today' && dashToday ? ` <span style="opacity:.7;">(${dashToday.filter(i => i.prio !== 4).length})</span>` : ''}</div>`).join('');
+}
+// the four cards on top — the day, the month's goal, the month's profit, the money in the street
+function renderDashCards(){
+  if (!dashCeo || !dashToday) return;
+  const c = dashCeo, m = c.month, now = dashToday.filter(i => i.prio === 1).length, todo = dashToday.filter(i => i.prio !== 4).length, mon = MONTHS[Number(c.ym.slice(5)) - 1];
+  const card = (cls, value, label, sub, icon, tab) => `<div class="stat-card ${cls}" style="cursor:pointer;" onclick="setDashTab('${tab}')"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></div><div style="min-width:0;"><div class="stat-value">${value}</div><div class="stat-label">${label}</div><div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:3px;">${sub}</div></div></div>`;
+  const left = Math.max(0, c.goal - m.loads);
+  document.getElementById('dashCards').innerHTML =
+    card(now ? 'danger' : 'hero', now ? `${now} now` : String(todo), 'Today', now ? `${todo} thing${todo === 1 ? '' : 's'} to do` : `thing${todo === 1 ? '' : 's'} to do`, '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', 'today') +
+    card(m.loads >= c.goal ? 'ok' : 'warn', `${m.loads} of ${c.goal}`, `Loads · ${mon}`, m.loads >= c.goal ? 'Goal met' : `${left} to go`, '<rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3.5L22 14v3h-6z"/><circle cx="6" cy="19" r="2"/><circle cx="17.5" cy="19" r="2"/>', 'goals') +
+    card(m.margin >= 0 ? 'hero' : 'danger', money(m.margin), `Profit · ${mon}`, `${m.sales ? (m.margin / m.sales * 100).toFixed(1) : '0.0'}% on ${money(m.sales)}`, '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>', 'goals') +
+    card('warn', money(c.to_collect), 'To collect', `To pay ${money(c.to_pay)}`, '<path d="M12 5v14M19 12l-7 7-7-7"/>', 'goals');
+}
+function renderCeo(c){
+  dashCeo = c; renderDashCards();
+  const G = '#3FCB7E', R = '#FF9C8A', A = 'var(--amber)';
+  const m = c.month, y = c.year_total, left = Math.max(0, c.goal - m.loads), daysLeft = c.days_in_month - c.day_of_month;
+  const monthSub = m.loads >= c.goal ? `Goal met${m.loads > c.goal ? ` · +${m.loads - c.goal} over` : ''}`
+    : `${left} load${left === 1 ? '' : 's'} to go · ${daysLeft} day${daysLeft === 1 ? '' : 's'} left${c.avg_sale ? ` · ≈ ${money(left * c.avg_sale)} in sales` : ''}`;
+  const gap = y.loads - y.expected_by_now;
+  const yearSub = gap >= 0 ? `Ahead of pace by ${gap.toFixed(1)} loads` : `Behind pace by ${(-gap).toFixed(1)} loads (${y.expected_by_now.toFixed(1)} expected by today)`;
+  const kpi = (label, value, sub, color, pct) => `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value" style="${color ? 'color:' + color + ';' : ''}">${value}</div>${pct != null ? bar(pct, color || G) : ''}<div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:8px;">${sub}</div></div>`;
+  const pctM = m.sales ? (m.margin / m.sales * 100) : 0, pctY = y.sales ? (y.margin / y.sales * 100) : 0;
+  document.getElementById('ceoGoals').innerHTML =
+    kpi(`Loads · ${MONTHS[Number(c.ym.slice(5)) - 1]} ${c.year}`, `${m.loads} <span style="font-size:15px;color:rgba(255,255,255,.7);">of ${c.goal}</span>`, monthSub, m.loads >= c.goal ? G : A, m.loads / c.goal * 100) +
+    kpi(`Loads · ${c.year}`, `${y.loads} <span style="font-size:15px;color:rgba(255,255,255,.7);">of ${y.goal}</span>`, yearSub, gap >= 0 ? G : R, y.loads / y.goal * 100) +
+    kpi(`Sales · ${MONTHS[Number(c.ym.slice(5)) - 1]}`, money(m.sales), `${c.year}: ${money(y.sales)}`) +
+    kpi(`Profit · ${MONTHS[Number(c.ym.slice(5)) - 1]}`, money(m.margin), `${pctM.toFixed(1)}% margin · ${c.year}: ${money(y.margin)} (${pctY.toFixed(1)}%)`, m.margin >= 0 ? G : R);
+  document.getElementById('ceoGoals').innerHTML +=
+    kpi('To collect', money(c.to_collect), 'Customers still owe on loads in Pay & Receive', G) +
+    kpi('To pay', money(c.to_pay), 'Customs and freight still unpaid on those loads', A);
+  // loads per month, one series, the goal as a dashed reference line; hover shows the month's numbers
+  const max = Math.max(c.goal, ...c.months.map(x => x.loads)) || 1, H = 160;
+  document.getElementById('ceoChart').innerHTML = `<div style="position:relative;height:${H + 26}px;">
+      <div style="position:absolute;left:0;right:0;bottom:${26 + c.goal / max * H}px;border-top:2px dashed rgba(255,255,255,.55);"></div>
+      <div style="position:absolute;left:0;bottom:${30 + c.goal / max * H}px;font-size:11px;color:rgba(255,255,255,.75);">Goal ${c.goal} loads</div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:${H + 26}px;display:flex;align-items:flex-end;gap:10px;">
+        ${c.months.map(x => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;" title="${MONTHS[Number(x.ym.slice(5)) - 1]} ${x.ym.slice(0, 4)} · ${x.loads} load${x.loads === 1 ? '' : 's'} · sales ${money(x.sales)} · profit ${money(x.margin)}">
+          ${x.loads ? `<div style="font-size:11px;color:#fff;margin-bottom:4px;">${x.loads}</div>` : ''}
+          <div style="width:70%;max-width:38px;height:${x.loads / max * H}px;min-height:${x.loads ? 2 : 0}px;background:var(--blue-bright);border-radius:4px 4px 0 0;"></div>
+          <div style="height:22px;line-height:22px;font-size:11px;color:rgba(255,255,255,.6);">${MONTHS[Number(x.ym.slice(5)) - 1]}</div></div>`).join('')}
+      </div></div>`;
+  const fill = (id, rows) => { document.querySelector(`#${id} tbody`).innerHTML = rows.length ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${r.loads}</td><td>${money(r.sales)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">No loads yet this year.</td></tr>'; };
+  fill('tblTopCustomers', c.top_customers); fill('tblTopProducts', c.top_products); fill('tblTopTraders', c.top_traders);
+}
+
+function renderTopMargin(rows){
+  const tbody = document.querySelector('#tblTopMargin tbody');
+  if (!rows || !rows.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty">No orders yet.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><strong>${escapeHtml(r.order_number)}</strong></td>
+      <td>${escapeHtml(r.customer_name || '—')}</td>
+      <td>${escapeHtml((r.product_spec || r.product_name) || '—')}</td>
+      <td>${money(r.sale_amount)}</td>
+      <td>${money(r.margin)} ${r.is_final ? '<span class="tag paid">Final</span>' : '<span class="tag sent">Estimated</span>'}</td>
+    </tr>`).join('');
+}
+
+
+// Real gap, shown honestly rather than hidden: real_weight (the actual customs weight) is rarely
+// captured today, so this mostly totals the quoted sent_offers.weight — the same fallback
+// collections.html/orders.html already use wherever real_weight would otherwise be missing.
+
+// "Trader" is only ever the free-text email that closed the offer (sent_offers.won_by) — there's
+// no normalized user/employee table behind it yet, so this shows exactly that email, nothing more.
+
+
+// Real ask 2026-09-16: "en que momento me avisa" — the red "Cupo" tag on offers.html is passive
+// (only seen if a trader happens to open that screen); this same over-limit fact now also shows
+// right here on the landing page every trader sees first, so it doesn't depend on remembering to
+// check offers.html. Same raw numbers (outstanding, credit_limit) dashboard-summary already
+// returns — no new query, just a highlight this table never had.
+
+
+
+
+
+
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>

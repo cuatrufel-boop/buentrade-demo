@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>BuenTrade Trading OS — Offers</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<link rel="shortcut icon" href="/icons/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="js/pdf-base.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A2547;
+    --navy-2:#0E3D8F;
+    --blue:#1E6ADB;
+    --blue-bright:#5AAAFF;
+    --blue-light:rgba(90,170,255,.14);
+    --bg:#0A2547;
+    --card:rgba(255,255,255,.08);
+    --line:rgba(255,255,255,.18);
+    --ink:#FFFFFF;
+    --ink-soft:rgba(255,255,255,.55);
+    --red:#C4432E;
+    --green:#0F8A5F;
+    --amber:#FFC876;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  input,select,textarea{background:var(--card);color:var(--ink);}
+  body{
+    margin:0;color:var(--ink);font-family:'Inter',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,
+      linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;
+  }
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px 40px;}
+  header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;padding:20px 32px 20px;margin-bottom:24px;position:relative;}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.55;}
+  .brand-word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px;color:#fff;line-height:1;}
+  .brand-word span{color:var(--blue-bright);}
+  .top-row{display:flex;justify-content:space-between;align-items:center;min-height:44px;position:relative;}
+  .nav-row{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap;}
+  .nav-pill{display:inline-flex;align-items:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:.2px;color:#fff;text-decoration:none;padding:7px 15px;border-radius:999px;transition:color .25s ease;white-space:nowrap;}
+  .nav-pill.active{color:var(--blue-bright);}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px;}
+  .btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;}
+  .btn.secondary{background:var(--card);color:var(--blue);border:1.5px solid var(--blue);}
+  .confirm-box .btn.secondary{background:#fff;}
+  .btn.danger{background:var(--card);color:#FF9C8A;border:1.5px solid rgba(196,67,46,.4);padding:5px 10px;font-size:12px;}
+  .btn.win{background:var(--green);color:#fff;border:none;padding:6px 12px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(15,138,95,.3);transition:transform .1s,box-shadow .1s;}
+  .btn.win:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,138,95,.35);}
+  .tt-btn{
+    background:linear-gradient(135deg,#0E3D8F 0%,#0F8A82 130%); color:#fff;
+    border:none; border-radius:999px;
+    padding:7px 16px 7px 12px; font-weight:700; font-size:12px; cursor:pointer;
+    box-shadow:0 3px 10px rgba(15,42,82,.4);
+    display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .tt-btn:hover{transform:translateY(-1px); box-shadow:0 5px 16px rgba(15,138,130,.45);}
+  .tt-btn svg{flex-shrink:0;}
+  .doc-split{display:inline-flex;margin-right:4px;}
+  .doc-split > .btn:first-child{border-radius:8px 0 0 8px;border-right:none;}
+  .doc-split > .btn:last-child{border-radius:0 8px 8px 0;padding:5px 7px !important;font-size:11px !important;}
+  .docs-btn{background:#fff;color:var(--blue);border:1.5px solid var(--blue);border-radius:8px;padding:6px 12px;font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .docs-btn svg{width:14px;height:14px;}
+  .menu-overlay{position:fixed;inset:0;background:rgba(15,31,51,.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .docs-menu{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 60px rgba(15,31,51,.35);padding:8px;min-width:320px;max-width:calc(100vw - 40px);max-height:80vh;overflow-y:auto;--ink:#0F1F33;--ink-soft:#64748B;}
+  .docs-menu-row{display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:8px;}
+  .docs-menu-row:hover{background:var(--bg);}
+  .docs-menu-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .docs-menu-label{font-weight:700;font-size:13px;color:var(--ink);width:32px;flex-shrink:0;}
+  .docs-menu-desc{font-size:11.5px;color:var(--ink-soft);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .docs-menu-actions{display:flex;gap:4px;flex-shrink:0;}
+  .docs-icon-btn{background:var(--bg);border:1px solid var(--line);color:var(--ink-soft);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .docs-icon-btn:hover{background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
+  .docs-icon-btn svg{width:15px;height:15px;}
+  .docs-menu-divider{height:1px;background:var(--line);margin:6px 2px;}
+  .docs-menu{animation:menuPop .16s cubic-bezier(.2,.9,.3,1.2);}
+  @keyframes menuPop{from{opacity:0;transform:translateY(-4px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+  .docs-menu-action-row{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:8px;cursor:pointer;transition:background .12s;}
+  .docs-menu-action-row:hover{background:var(--bg);}
+  .docs-menu-action-row svg{width:15px;height:15px;flex-shrink:0;}
+  .row-menu-btn{background:var(--card);border:1.5px solid var(--line);color:var(--ink-soft);border-radius:8px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,border-color .15s,color .15s;}
+  .doc-preview-box .row-menu-btn{background:#fff;}
+  .row-menu-btn:hover{background:var(--blue-light);border-color:var(--blue);color:var(--blue);}
+  .row-menu-btn svg{width:17px;height:17px;}
+  .doc-preview-box{background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(15,31,51,.4);width:100%;max-width:760px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;animation:menuPop .18s cubic-bezier(.2,.9,.3,1.2);--ink:#0F1F33;--ink-soft:#64748B;}
+  .doc-preview-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .doc-preview-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--ink);}
+  .doc-preview-sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .doc-preview-body{flex:1;min-height:0;background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;}
+  .doc-preview-loading{color:var(--ink-soft);font-size:13px;display:flex;align-items:center;gap:10px;}
+  .doc-preview-loading::before{content:'';width:16px;height:16px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--blue);animation:docSpin .7s linear infinite;}
+  @keyframes docSpin{to{transform:rotate(360deg);}}
+  .doc-preview-frame{width:100%;height:100%;min-height:60vh;border:none;background:#fff;}
+  .doc-preview-actions{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--line);flex-shrink:0;}
+  .doc-preview-actions .btn{display:inline-flex;align-items:center;gap:7px;}
+  .doc-preview-actions .btn svg{width:15px;height:15px;}
+  .confirm-box{background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(15,31,51,.35);padding:24px 26px;max-width:420px;width:100%;animation:menuPop .16s cubic-bezier(.2,.9,.3,1.2);--ink:#0F1F33;--ink-soft:#64748B;}
+  .confirm-title{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .confirm-message{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:20px;}
+  .confirm-actions{display:flex;justify-content:flex-end;gap:10px;}
+  .toast-stack{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:10px;}
+  .email-modal-overlay{position:fixed;inset:0;background:rgba(15,31,51,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .email-modal-box{background:rgba(15,31,51,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1.5px solid rgba(232,181,76,.4);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:22px 24px;box-shadow:0 24px 60px rgba(4,12,26,.45);color:var(--ink);}
+  .email-modal-box h3{margin:0 0 4px;font-size:16px;font-family:'Space Grotesk',sans-serif;}
+  .email-modal-from{font-size:12px;color:var(--ink-soft);margin-bottom:14px;}
+  .email-modal-field{margin-bottom:12px;}
+  .email-modal-field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+  .email-modal-field input,.email-modal-field textarea{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:var(--card);color:var(--ink);}
+  .email-modal-field textarea{min-height:130px;resize:vertical;}
+  .email-modal-attachments{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+  .email-modal-chip{background:var(--blue-light);color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;}
+  .email-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;}
+  .toast{background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(15,31,51,.2);padding:13px 16px;display:flex;align-items:center;gap:11px;min-width:260px;max-width:380px;border-left:4px solid var(--green);animation:toastIn .25s ease-out;--ink:#0F1F33;--ink-soft:#64748B;}
+  .toast.error{border-left-color:var(--red);}
+  .toast-icon{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .toast.error .toast-icon{background:var(--red);}
+  .toast-icon svg{width:12px;height:12px;}
+  .toast-text{font-size:13px;color:var(--ink);line-height:1.35;}
+  .toast-text b{display:block;font-size:13px;margin-bottom:1px;}
+  @keyframes toastIn{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
+  /* Real ask 2026-09-08: "organiza cada offer igual que esta en collections" — same table
+     conventions as collections.html/orders.html: uppercase muted headers, hairline row dividers,
+     near-invisible hover, mono/tabular numbers. Replaces this file's own older, unused
+     center-aligned table rules (no <table> existed anywhere in this file before this change). */
+  /* Real ask 2026-09-18 ("la tabla de cada cliente debe coincidir una debajo de la otra"): each
+     customer is its own separate <table>, so column widths used to auto-size per-table based on
+     that customer's own content — Plant/Price/Status landed at different x positions from one
+     customer group to the next. Fixed percentage widths make every group's table use the exact
+     same column boundaries, so they line up vertically down the whole page. */
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+  th:nth-child(1),td:nth-child(1){width:28%;}
+  th:nth-child(2),td:nth-child(2){width:18%;}
+  th:nth-child(3),td:nth-child(3){width:18%;}
+  th:nth-child(4),td:nth-child(4){width:22%;}
+  th:nth-child(5),td:nth-child(5){width:14%;}
+  th{text-align:center;font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;font-weight:700;padding:0 10px 8px;}
+  th:first-child{text-align:left;}
+  td{padding:10px;border-top:1px solid var(--line);vertical-align:middle;text-align:center;}
+  td:first-child{text-align:left;}
+  tr:hover td{background:rgba(255,255,255,.03);}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .muted{color:var(--ink-soft);}
+  .table-scroll{overflow-x:auto;}
+  /* Real ask 2026-09-08 (corrected — "el precio abre la grafica de negotiation solamente", NOT the
+     full QT/calculator overlay, that's what the QT circle is already for): same visual component
+     as trading-tool.html's own #negoCard (title/legend/sparkline/step-track, .nego-* classes
+     below ported verbatim from there), rendered here directly from data offers.html already has
+     (negotiation_log, purchase_price, sale_per_lb, sent_at, plant_name, customer_name) — no iframe,
+     no extra API call, no second copy of the negotiation business logic. */
+  #negoViewOverlay{display:none;position:fixed;inset:0;background:rgba(4,12,26,.85);z-index:2200;align-items:center;justify-content:center;padding:20px;}
+  #negoViewBox{background:#0F2B52;border:1px solid var(--line);border-radius:16px;padding:26px 28px;max-width:900px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 60px rgba(4,12,26,.6);}
+  .nego-track{display:flex;align-items:flex-end;gap:0;padding:4px 2px 8px;}
+  .nego-step{display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0;position:relative;}
+  .nego-step:not(:last-child)::after{content:'';position:absolute;top:15px;left:calc(50% + 17px);width:calc(100% - 34px);height:2px;background:linear-gradient(90deg, var(--line), var(--line));}
+  .nego-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;z-index:1;box-shadow:0 2px 6px rgba(15,31,51,.18);}
+  .nego-dot.in{background:linear-gradient(160deg,#22C17B,#0F8A5F);}
+  .nego-dot.out{background:linear-gradient(160deg,#4C8FEE,var(--blue));}
+  .nego-price{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:13px;color:var(--ink);margin-top:6px;white-space:nowrap;}
+  .nego-label{font-size:10px;color:var(--ink-soft);text-align:center;margin-top:2px;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .nego-date{font-size:9.5px;color:var(--ink-soft);opacity:.75;margin-top:2px;white-space:nowrap;}
+  .nego-chart-wrap{padding:2px 2px 0;}
+  /* Real ask 2026-09-08 (4 passes to land on this exact rule): "un lado y el otro dependiendo
+     quien tenga la ultima info" — whichever side (purchase=plant, sale=customer) the LAST
+     negotiation_log entry touches is the active one — green, blinking, needs the trader's eyes —
+     regardless of whether that touch was us messaging out (plant/customer) or them replying in
+     (plant_reply/customer_bid): "si le hable la primera vez a la planta... purchase price
+     blinking" confirmed contacting the plant blinks purchase itself, not the reply to it. The
+     other, not-last-touched side sits calm — blue, static ("azul estatico"). No hover underline
+     ("sin raya abajo") — the cell's own click behavior is affordance enough. */
+  .price-link{cursor:pointer;}
+  .price-idle{color:var(--blue-bright);}
+  .price-active{color:#3FCB7E;animation:pkgTagBlink 1.1s ease-in-out infinite;}
+  @media (prefers-reduced-motion: reduce){
+    .price-active{animation:none;}
+  }
+  .field{margin-bottom:0;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;text-align:center;}
+  /* Real ask 2026-09-18 ("y tengo que repetir que hagas diseno buentrade"): From/To now match
+     Search/Status in this same filter row — same flat blue-glass .btn recipe. */
+  .field input,.field select{width:100%;padding:8px 10px;border:1.5px solid rgba(90,170,255,.4);border-radius:7px;font-size:13.5px;font-family:inherit;text-align:center;background:rgba(255,255,255,.05);color:var(--blue-bright);}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(90,170,255,.25);}
+  .empty{color:var(--ink-soft);text-align:center;padding:24px;}
+  .status-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .status-sent{background:var(--blue-light);color:var(--blue);}
+  .status-won{background:#E3F6EC;color:var(--green);}
+  .status-lost{background:var(--bg);color:var(--ink-soft);}
+  .status-hot{background:#E3F6EC;color:var(--green);animation:hotPulse 1.4s ease-in-out infinite;}
+  @keyframes hotPulse{0%,100%{box-shadow:0 0 0 0 rgba(63,203,126,.45);}50%{box-shadow:0 0 0 5px rgba(63,203,126,0);}}
+  /* Offers grouped by customer, same card language as Pending Quotes: a section header per
+     customer, one compact row per offer with a plant avatar, and the action on the right living
+     inside the row's own bordered card instead of a stretched table cell. */
+  .pending-group{padding:18px 0;border-bottom:1px solid var(--line);}
+  .pending-group:last-child{border-bottom:none;}
+  .pending-group-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+  /* 2026-10-10: a group header is a name like every list's: Inter blue 13px / 600; the product (first cell) the same */
+  .pending-group-title{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--blue);display:flex;align-items:center;gap:9px;}
+  .pending-group tbody td:first-child:not(.empty){color:var(--blue);font-weight:600;}
+  .pending-group-title::before{content:'';width:7px;height:7px;border-radius:2px;background:var(--blue);flex-shrink:0;}
+  .pending-group-count{font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-light);padding:4px 11px;border-radius:20px;white-space:nowrap;}
+  .pkg-table-wrap{display:flex;flex-direction:column;gap:8px;}
+  .pkg-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;background:var(--card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;transition:border-color .15s,box-shadow .15s;}
+  .pkg-row:hover{border-color:rgba(255,255,255,.4);box-shadow:0 3px 12px rgba(4,12,26,.25);}
+  .pkg-plant-avatar{width:44px;height:44px;border-radius:11px;flex-shrink:0;background:linear-gradient(135deg,#E7F0FE,#D5E5FC);color:#1E6ADB;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  /* Same real fix as plants.html/quotes.html: plant logos are wordmarks up to ~3:1 wide, and a
+     forced 44×44 square left most of that square empty above/below a thin sliver of logo. Width
+     now follows each logo's own aspect ratio; white card stays (light page, already correct). */
+  .pkg-plant-avatar-logo{width:auto;max-width:70px;background:none;border:none;padding:2px;}
+  .pkg-plant-avatar-logo img{width:auto;max-width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);}
+  .pkg-plant-info{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex:1;min-width:0;}
+  .pkg-plant{font-weight:600;color:var(--ink);font-size:13.5px;}
+  /* Real ask 2026-09-08: "funcionalidad bien diseno muy mal... bordes" — traced to a real,
+     longstanding bug: this rule was missing `border`, so every .pkg-tag variant's border-color
+     (won/lost/price/hot/sent/expired) did nothing — no border-width/style to paint it with. The
+     comment below always claimed "exact same outline-pill pattern as quotes.html's real Dashboard
+     tags," but quotes.html's own .pkg-tag (line 261 there) has `border:1px solid transparent`;
+     this file's copy silently dropped it. Restored verbatim from that real reference. */
+  .pkg-tag{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;font-family:'IBM Plex Mono',monospace;border:1px solid transparent;}
+  /* Exact same outline-pill pattern as quotes.html's real Dashboard tags (.pkg-tag.missing/.stale/
+     .price there) — transparent fill, colored border + text, not a tinted filled box. */
+  .pkg-tag.price{background:transparent;color:var(--blue-bright);border-color:rgba(90,170,255,.4);}
+  .pkg-tag.won{background:transparent;color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  /* Real ask 2026-09-08 (2nd pass): "ese fue el cambio de diseno?????" — the border-property fix
+     was real but border-color:var(--line) (rgba(255,255,255,.18), the hairline table-divider
+     color) is nearly invisible against this page's own dark background. Every OTHER real badge in
+     this app (payment-badge.ok/due-soon/overdue, pkg-tag.won/hot) uses a saturated hue at .4 alpha
+     — bumped Lost/Expired to the same .4-alpha visibility, still plain white/gray (a closed-dead
+     offer, deliberately no color signal), just actually visible now. */
+  .pkg-tag.lost{background:transparent;color:var(--ink-soft);border-color:rgba(255,255,255,.35);}
+  /* Real ask 2026-09-08: "que se expiren las ofertas en 10 dias y donde quedan?" — a stale, never-
+     replied-to offer auto-flips to its own 'expired' status (sent-offers-expire-stale, daily cron),
+     kept distinct from a real competitive 'lost' so it never dilutes the win-rate stat. Same
+     neutral, no-signal color as .pkg-tag.lost — it's not a bad outcome, just dead. */
+  .pkg-tag.expired{background:transparent;color:var(--ink-soft);border-color:rgba(255,255,255,.35);}
+  /* Real ask 2026-09-08: "bloinking la que tiene bid" — same green as .pkg-tag.won (a bid is good
+     news, same as a win). Blink is quotes.html's own real .pkg-tag-blink/rqTagBlink (plain opacity
+     fade), not hotPulse's box-shadow ring — that ring is built for round icons (QT circle,
+     stat-icon), and reads as a blurry halo bleeding off a rounded-rect pill's corners instead of a
+     clean pulse. Respects prefers-reduced-motion, same as the reference. */
+  .pkg-tag.hot{display:inline-flex;align-items:center;gap:6px;background:rgba(63,203,126,.16);color:#3FCB7E;border-color:rgba(63,203,126,.6);animation:pkgTagBlink 1.1s ease-in-out infinite;}
+  .pkg-tag.hot::before{content:'';width:6px;height:6px;border-radius:50%;background:#3FCB7E;}
+  /* 2026-10-11 ("haz un mejor trabajo de diseño entre bid y better price"): two different things, two different looks. Bid = the CUSTOMER answered, a live
+     negotiation that needs you now: filled green with a live dot, blinking. Better price = the PLANT lowered its price, an opening to use: calm blue, outlined,
+     with a down-trend icon, no blinking — the same blue as its strip. Green stays for the customer's side only. */
+  .pkg-tag.drop{display:inline-flex;align-items:center;gap:5px;background:var(--blue-light);color:#8EC5FF;border-color:rgba(90,170,255,.55);}
+  .pkg-tag.drop svg{width:12px;height:12px;flex-shrink:0;}
+  @keyframes pkgTagBlink{0%,100%{opacity:1;}50%{opacity:.35;}}
+  @media (prefers-reduced-motion: reduce){
+    .pkg-tag.hot{animation:none;}
+  }
+  /* Real ask 2026-09-08 (2nd pass): "revisa toda la data... colores bordes" — gray-on-gray
+     (var(--ink-soft) text + var(--line) border) reads as no color at all against the dark page,
+     the exact "no sale status" complaint restated. Real fix: give "Sent" its own actual color
+     instead of trying to make gray "visible enough." Blue-bright is this app's own established
+     "in progress / waiting" hue — orders.html's stage badge (.payment-badge.active) already uses
+     the identical color+border for the same "not done, not urgent, just moving along" meaning. */
+  .pkg-tag.sent{background:transparent;color:var(--blue-bright);border-color:rgba(90,170,255,.4);}
+  /* Real ask 2026-09-16: an open offer being negotiated above the customer's available credit
+     (over_credit_limit from sent-offers-search) — never blocks the negotiation any more, just
+     signals it can only close once the customer's last invoice is paid.
+     Real ask 2026-09-18, twice ("no se ve bien ni me gusta" then "over limit no puede ser igual a
+     bid... haz algo bueno"): a same-shape outline pill just recolored read as a cosmetic tweak,
+     not a real distinction — Bid is a live status (blinking, transparent), Over Limit is a
+     standing constraint on the whole row, a different KIND of information. Filled amber chip with
+     its own icon (not just colored text) plus a matching wash on the row itself (same real
+     precedent as dashboard.html's Outstanding table: `background:rgba(196,67,46,.08)` on an
+     over-limit <tr>, adapted to amber here since this isn't a blocking state) — the row reads as
+     flagged at a glance, not just one small pill among others. */
+  .pkg-tag.credit-hold{display:inline-flex;align-items:center;gap:4px;background:rgba(255,200,118,.14);color:var(--amber);border-color:rgba(255,200,118,.5);}
+  .pkg-tag.credit-hold svg{width:11px;height:11px;flex-shrink:0;}
+  tr.over-limit-row{background:rgba(255,200,118,.05);}
+  /* 2026-10-11: every offer nobody has touched disappears together on Monday at 5 pm Miami (user), so no per-offer countdown: the Status cell shows only what
+     needs a look — Bid, Better price, Plant ↑, credit hold — centered. */
+  .status-cell{display:inline-flex;align-items:center;justify-content:center;gap:5px;}
+  .status-cell .pkg-tag{margin-left:0 !important;}
+  @media (max-width:760px){ .status-cell{align-items:flex-end;} .status-tags{justify-content:flex-end;} }
+  /* 2026-10-11 ("¿qué pasó con la línea de números de better price? dame un mejor trabajo visual"): the numbers of a price drop live in the Status cell, under the
+     tag, as one small block — the old price struck through, the new one bold, and a level bar: the whole bar is the old price, the lit tail is what the plant took off. */
+  .status-cell{flex-direction:column;}
+  .status-tags{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px;}
+  .drop-block{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin-top:1px;}
+  .drop-nums{display:inline-flex;align-items:baseline;gap:7px;font:600 12px 'IBM Plex Mono',monospace;white-space:nowrap;}
+  .drop-nums s{color:var(--ink-soft);text-decoration-color:rgba(255,255,255,.45);}
+  .drop-nums em{font-style:normal;color:var(--ink-soft);font-size:11px;}
+  .drop-nums b{color:#8EC5FF;font-weight:700;font-size:13.5px;}
+  .drop-level{display:inline-flex;align-items:center;gap:7px;}
+  .drop-bar{position:relative;display:inline-flex;width:64px;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.1);}
+  .drop-bar i{display:block;height:100%;background:rgba(90,170,255,.35);}
+  .drop-bar u{display:block;height:100%;min-width:5px;background:linear-gradient(90deg,#5AAAFF,#8EC5FF);box-shadow:0 0 8px rgba(90,170,255,.8);}
+  .drop-pct{font:700 10.5px 'IBM Plex Mono',monospace;color:#8EC5FF;}
+  .pkg-asof{font-size:10.5px;color:var(--ink-soft);}
+  /* Real ask 2026-09-18 ("titulo de QT ponle Quotation... el logo que da igual QT"): the column
+     header (previously blank) now reads "Quotation" — the button itself still just says "QT".
+     Reverses the 2026-09-08 decision below in one respect only: a real .btn.secondary.small pill
+     now, not a bare icon-only circle (diseño BUENTRADE wants real buttons, not icon-only squares —
+     see feedback_buentrade_design_reference), but keeps the same short "QT" label. Hot (a bid/
+     counter is in) keeps this file's own established green hotPulse convention, just applied to
+     the pill's border/glow instead of the old circle's. */
+  .btn.small{padding:5px 10px;font-size:12px;}
+  /* the 2nd, 3rd… plant of the same product: the product name is not repeated and the divider is faint, so they read as one block */
+  tr.prod-cont td{border-top-color:rgba(255,255,255,.07);}
+  tr.prod-cont .cont-name{display:none;} /* on a phone every card is its own: the product name comes back */
+  @media (max-width:760px){ tr.prod-cont .cont-name{display:inline;} }
+  .btn.secondary.qt-hot{border-color:#3FCB7E;color:#3FCB7E;animation:hotPulse 1.4s ease-in-out infinite;}
+  .btn.secondary.qt-hot:hover{background:rgba(63,203,126,.14);}
+  /* Real ask: customer-first drill-down (find Murgati, then her Sirloin, then the plants quoting
+     it), not a flat list of every offer. A customer's card collapses to one line once you're not
+     actively looking at it — opens on its own when it has a live bid, or when the search box
+     matches it, so scanning past a quiet customer costs nothing. */
+  .pending-group-head{cursor:pointer;user-select:none;}
+  .cust-chevron{width:8px;height:8px;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(-45deg);transition:transform .15s;flex-shrink:0;display:inline-block;margin-right:4px;}
+  .pending-group.open .cust-chevron{transform:rotate(45deg);}
+  .pending-group-body{display:none;}
+  .pending-group.open .pending-group-body{display:block;}
+  .prod-subhead{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;display:flex;align-items:center;gap:8px;}
+  .prod-subhead:first-child{margin-top:0;}
+  .prod-subhead .n{background:var(--bg);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;color:var(--ink-soft);}
+  .pkg-asof.cold{color:#A6371F;font-weight:600;}
+  .stats-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
+  .stat-card{
+    background:linear-gradient(135deg, rgba(232,181,76,.32), rgba(232,181,76,.08));
+    border:1px solid rgba(232,181,76,.55); border-radius:12px;
+    box-shadow:0 3px 12px -3px rgba(232,181,76,.4), inset 0 1px 0 rgba(255,255,255,.1);
+    padding:16px 18px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;transition:box-shadow .15s,transform .15s;
+  }
+  .stat-card:hover{box-shadow:0 6px 20px -4px rgba(232,181,76,.5), inset 0 1px 0 rgba(255,255,255,.12); transform:translateY(-1px);}
+  .stat-icon{width:38px;height:38px;border-radius:10px;background:rgba(232,181,76,.15);border:1.5px solid rgba(232,181,76,.55);color:#E8B54C;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .stat-icon svg{width:18px;height:18px;}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;color:#fff;line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .stat-card.hero .stat-value{font-size:28px;}
+  .stat-value.empty{font-size:14px;font-weight:600;color:rgba(255,255,255,.7);font-family:'Inter',sans-serif;text-shadow:none;}
+  .stat-label{font-size:11.5px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;display:flex;align-items:center;gap:5px;}
+  .stat-label::before{content:'';width:4px;height:4px;border-radius:50%;background:#E8B54C;box-shadow:0 0 7px 1.5px rgba(232,181,76,.8);flex-shrink:0;}
+  @media (max-width:900px){ .stats-row{grid-template-columns:1fr 1fr;} }
+  .row-actions{display:inline-flex;align-items:center;gap:8px;}
+  .icon-btn.lose{
+    background:transparent; color:#FF9C8A; border:1.5px solid rgba(196,67,46,.4);
+    width:30px;height:30px;border-radius:50%;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+    transition:background .12s ease,border-color .12s ease,transform .12s ease,color .12s ease;
+  }
+  .icon-btn.lose:hover{background:#C4432E;border-color:#C4432E;color:#fff;transform:translateY(-1px);}
+  .icon-btn.lose svg{width:13px;height:13px;}
+  .tt-overlay{position:fixed;inset:0;background:repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;z-index:850;display:none;flex-direction:column;}
+  .tt-overlay-head{display:grid;grid-template-columns:1fr minmax(0,auto) 1fr;align-items:center;gap:14px;padding:12px 20px;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);flex-shrink:0;box-shadow:0 2px 10px rgba(10,37,71,.25);}
+  .tt-overlay-title{color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14.5px;}
+  /* Real ask 2026-09-26 ("el close es mediocre", picked option D): icon-only round close in Market Flash's bright blue —
+     blue ring + tinted glass, fills solid blue with a glow on hover. Same rule on every page that has it. */
+  .tt-overlay-close{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:rgba(30,106,219,.25);border:1.5px solid #5AAAFF;color:#5AAAFF;transition:background .18s,box-shadow .18s,color .18s;}
+  .tt-overlay-close svg{width:15px;height:15px;display:block;}
+  .tt-overlay-close:hover{background:#1E6ADB;color:#fff;box-shadow:0 0 16px 3px rgba(90,170,255,.55);}
+  .tt-overlay-close:active{transform:scale(.94);}
+  .tt-overlay-close:focus-visible{outline:2px solid #5AAAFF;outline-offset:2px;}
+  .tt-overlay-body{flex:1;min-height:0;position:relative;}
+  .tt-overlay-body iframe{width:100%;height:100%;border:none;display:block;}
+  /* Plant logo sits in the overlay's own title bar, not floating over the iframe — the quickbar
+     inside trading-tool.html (frozen, never touched) has only 18px of internal padding and close
+     to zero margin outside it at normal window widths, nowhere near enough room for a logo badge
+     without either overlapping "PLANT"/Email/WhatsApp or getting clipped off the viewport edge.
+     The title bar has real open space and doesn't scroll, so no position-tracking is needed either. */
+  /* Same wide-wordmark fix as the row avatars below, scaled down for this smaller header icon —
+     a fixed 32×32 square squeezed a wide plant logo just as thin here as it did in the list rows. */
+  .tt-logo-inline{width:auto;max-width:52px;height:32px;object-fit:contain;background:#fff;border-radius:7px;padding:4px;box-sizing:border-box;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .order-num{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--ink);}
+  .edit-input{padding:5px 7px;border:1.5px solid var(--line);border-radius:6px;font-size:12.5px;font-family:inherit;width:90px;transition:border-color .3s;}
+  .edit-input:focus{outline:none;border-color:var(--blue);}
+  .tab-row{display:flex;gap:6px;margin:0 0 18px;border-bottom:1.5px solid var(--line);}
+  .tab-btn{background:none;border:none;padding:9px 14px;font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;font-family:inherit;}
+  .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab-btn:focus{outline:none;}
+  .tab-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+  /* Real ask 2026-09-18 ("y tengo que repetir que hagas diseno buentrade"): same flat blue-glass
+     .btn recipe as Search right next to it in this same filter row. */
+  .seg-control{display:flex;background:rgba(255,255,255,.05);border:1.5px solid rgba(90,170,255,.4);border-radius:9px;padding:3px;gap:2px;height:38px;box-sizing:border-box;}
+  .seg-btn{flex:1;background:transparent;border:none;color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:0 10px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s,color .15s;}
+  .seg-btn:hover:not(.active){background:rgba(255,255,255,.07);color:var(--ink);}
+  .seg-btn.active{background:var(--blue);color:#fff;}
+  .load-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:14px;}
+  .load-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+  .load-product-row{display:flex;align-items:center;gap:14px;}
+  .load-product-icon{width:52px;height:52px;border-radius:10px;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .load-product-icon svg{width:26px;height:26px;}
+  .load-product-name{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--ink);line-height:1.25;}
+  .load-product-spec{font-size:12.5px;color:var(--ink-soft);margin-top:1px;}
+  .load-route{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin:14px 0;font-size:13px;}
+  .load-route-node{display:flex;align-items:center;gap:7px;min-width:0;}
+  .load-route-node svg{width:15px;height:15px;color:var(--ink-soft);flex-shrink:0;}
+  .load-route-node .rname{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .load-route-arrow{color:var(--line);flex-shrink:0;}
+  .load-route-arrow svg{width:16px;height:16px;display:block;}
+  .stepper{display:flex;align-items:flex-start;margin:24px 4px 18px;}
+  .step{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;width:104px;position:relative;}
+  .step-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg);border:2px solid var(--line);color:var(--ink-soft);transition:all .25s;flex-shrink:0;}
+  .step-icon svg{width:18px;height:18px;}
+  .step.done .step-icon{background:var(--green);border-color:var(--green);color:#fff;}
+  .step.current .step-icon{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px var(--blue-light);animation:stepPulse 1.8s ease-in-out infinite;}
+  @keyframes stepPulse{0%,100%{box-shadow:0 0 0 4px var(--blue-light);}50%{box-shadow:0 0 0 7px rgba(30,106,219,.12);}}
+  .step-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-top:8px;text-align:center;line-height:1.3;}
+  .step.done .step-label,.step.current .step-label{color:var(--ink);}
+  .step-line{flex:1 1 auto;height:2px;background:var(--line);margin-top:19px;transition:background .25s;}
+  .step-line.done{background:var(--green);}
+  .load-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  /* Real fix 2026-09-02, explicit ask ("unifica... revisa todos los tabs") — same gradient+shadow
+     every WhatsApp button across the OS now uses, not this page's own flat green. */
+  .wa-btn{background:rgba(255,255,255,.05);color:#3FCB7E;border:1.5px solid rgba(63,203,126,.4);border-radius:8px;padding:8px 14px;font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer;transition:background .18s,border-color .18s,color .18s;}
+  .wa-btn:hover{background:rgba(29,168,81,.18);color:#3FCB7E;border-color:#3FCB7E;}
+  .wa-btn:active{background:rgba(29,168,81,.28);}
+  .wa-btn svg{fill:currentColor;}
+  .wa-btn.outline{background:var(--card);color:#1DA851;border:1.5px solid #1DA851;box-shadow:none;}
+  .wa-btn.outline:hover{background:rgba(29,168,81,.18);box-shadow:none;transform:none;}
+  .payment-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;border:1px solid transparent;display:inline-block;}
+  .payment-badge.ok{background:transparent;color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .payment-badge.due-soon{background:transparent;color:var(--amber);border-color:rgba(255,200,118,.4);}
+  .payment-badge.overdue{background:transparent;color:#FF9C8A;border-color:rgba(196,67,46,.4);}
+  /* Real ask 2026-09-16: "SEARCH unificado diseno buentrade" — glass-pill search shipped on
+     Products/Quotes/Plants (see plants.html's own comment on this exact block), scoped "of-" for
+     this page. Real ask 2026-09-18 ("new plant tiene diseno buentrade hazlo en... search etc"):
+     that glass-pill look is now replaced everywhere with the flat blue-glass .btn recipe instead —
+     same system-wide change described in plants.html's own comment on this block. */
+  .of-search-wrap{position:relative;width:160px;height:36px;border-radius:999px;overflow:hidden;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);transition:background .18s,border-color .18s;}
+  .of-search-wrap:focus-within{background:rgba(90,170,255,.12);border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(90,170,255,.25);}
+  .of-search-ico{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:rgba(255,255,255,.55);pointer-events:none;}
+  .of-search-input{width:100%;height:100%;padding:0 14px 0 38px;border:none;background:transparent;color:#fff;font-size:13px;font-family:inherit;}
+  .of-search-input::placeholder{color:rgba(255,255,255,.5);}
+  .of-search-input:focus{outline:none;}
+</style>
+<link rel="stylesheet" href="css/bt-ui.css">
+</head>
+<body>
+
+<!-- ============ LOGIN GATE (same Firebase project/login as the Trading Tool) ============ -->
+<style>
+  #authGate{position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#123A6B 100%);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+  .auth-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:32px 30px;box-shadow:0 20px 60px rgba(0,0,0,.35);--ink:#0F1F33;--ink-soft:#64748B;}
+  .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px;}
+  .auth-logo .word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#0B2545;}
+  .auth-logo .word span{color:#1B6FC9;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{display:block;font-size:12px;font-weight:600;color:#5B6B82;margin-bottom:5px;}
+  .auth-field input{width:100%;padding:10px 12px;border:1.5px solid #E1E6ED;border-radius:8px;font-size:14px;font-family:inherit;}
+  .auth-field input:focus{outline:none;border-color:#1B6FC9;}
+  .auth-submit{width:100%;padding:11px;border:none;border-radius:8px;background:#1B6FC9;color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;}
+  .auth-msg{font-size:12.5px;margin-top:12px;padding:9px 11px;border-radius:8px;line-height:1.4;display:none;}
+  .auth-msg.err{background:#FCEBE7;color:#B23A22;display:block;}
+  .auth-msg.ok{background:#E3F6F4;color:#00776F;display:block;}
+  .auth-note{font-size:11px;color:#9AABC2;text-align:center;margin-top:16px;line-height:1.5;}
+</style>
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg viewBox="0 0 44 44" width="30" height="30"><circle cx="22" cy="22" r="21" fill="#123A6B" stroke="#3E7BC4" stroke-width="1.2"/><path d="M6,25 C13,19 17,29 24,23 C30,18 34,24 38,20" stroke="#5FA8E8" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="16" y="14" width="13" height="8" rx="1.4" fill="#00A9A0"/></svg>
+      <div class="word">Buen<span>Trade</span> Trading OS</div>
+    </div>
+    <form id="formSignIn" onsubmit="return doSignIn(event)">
+      <div class="auth-field"><label>Work email</label><input type="email" id="siEmail" required placeholder="name@buentradegroup.com"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="siPass" required></div>
+      <button class="auth-submit" type="submit">Sign In</button>
+    </form>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-note">Accounts are created from the Trading Tool. Same login works here.</div>
+  </div>
+</div>
+
+<script src="demo-auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/email-modal.js"></script>
+<script src="js/bt-dialogs.js"></script>
+<script src="js/pickup-picker.js"></script>
+<script src="js/po-pdf.js"></script>
+<script src="js/fo-pdf.js"></script>
+<script src="js/so-pdf.js"></script>
+<script src="js/date-picker.js"></script>
+<script src="js/quote-more-clients.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "demo",
+  authDomain: "demo.invalid",
+  projectId: "demo",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+// STAGING Trading OS API — see providers.html/plants.html for the full note. Every read/write
+// goes through an Edge Function. The one deliberate exception is file Storage (order-documents
+// PDFs) — storageClient below, pointed at staging's bucket, same pattern as products.html.
+const API_ROOT = 'https://oqotaxmacwueiutdxgkk.supabase.co/functions/v1/';
+// Run the functions next to the database (us-east-1), not near the browser (2026-09-29, measured: a function
+// running in Europe spent ~830 ms connecting to the US database and 86 ms per query; pinned: 80 ms and 3 ms).
+const API_REGION = '?forceFunctionRegion=us-east-1';
+const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
+
+async function callApi(fn, body){
+  const res = await fetch(API_ROOT + fn + API_REGION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error(data.message || data.error || res.status); err.data = data; throw err; }
+  return data;
+}
+function currentActor(){ return (auth.currentUser && auth.currentUser.email) || 'unknown'; }
+
+// ============ PUSH NOTIFICATIONS (real-time actionable alerts) ============
+// Real ask 2026-09-06: "una notificacion donde yo le de ok y se ejecute... no me sirve un
+// resumen." First piece of the approved architecture — see project_order_lifecycle_and_alerting_
+// spec memory. This registers the service worker and subscribes THIS browser to push, once per
+// login. Silently does nothing if the trader denies the permission prompt or the browser has no
+// push support (Safari on iOS pre-16.4, etc.) — never blocks the rest of the app on this.
+const VAPID_PUBLIC_KEY = 'BF6sg1hoRI0lW7rnTtrq0OjNTpx1QXWd775B30addUWlvqkJIsBuWZaB9mG-zvsIZ9C-cCP2Penh-eUxZTAFmiI';
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+async function initPushNotifications(){
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub){
+      // Asking happens only from the header's "Enable notifications" tap (js/header-chip.js): iPhone refuses an
+      // ask that isn't a tap. Here we only re-subscribe a device that already said yes.
+      if (Notification.permission !== 'granted') return;
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const json = sub.toJSON();
+    await callApi('push-subscribe', { actor: currentActor(), endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth });
+  } catch (e) {
+    console.warn('Push notification setup failed (non-fatal):', e.message);
+  }
+}
+
+const storageClient = supabase.createClient('https://oqotaxmacwueiutdxgkk.supabase.co', API_KEY);
+
+function showAuthMsg(text){
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'auth-msg err';
+}
+
+function doSignIn(e){
+  e.preventDefault();
+  const email = document.getElementById('siEmail').value;
+  const pass = document.getElementById('siPass').value;
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(cred => {
+      if(!cred.user.emailVerified){
+        showAuthMsg('Please verify your email first.');
+        auth.signOut();
+      }
+    })
+    .catch(err => showAuthMsg(err.message));
+  return false;
+}
+
+function logout(){ auth.signOut(); }
+
+// Real bug reported live 2026-09-18 ("rebota se sale se brinca de donde estoy" — same one
+// already fixed on Quotes): Firebase refires onAuthStateChanged on its own on every silent
+// ID-token refresh (and on tab refocus/reconnect), not just the real sign-in. The calls below used
+// to run unconditionally on every firing, wiping the page back to "Loading…" mid-session and
+// re-registering push notifications repeatedly. This flag makes the real load happen exactly once
+// per tab.
+let btAuthLoaded = false;
+auth.onAuthStateChanged(user => {
+  const gate = document.getElementById('authGate');
+  const app = document.getElementById('appContent');
+  if (user && user.emailVerified) {
+    gate.style.display = 'none';
+    app.style.display = 'block';
+    document.getElementById('userBadge').textContent = user.email;
+    if (!btAuthLoaded) {
+      btAuthLoaded = true;
+      loadOffers();
+      initPushNotifications();
+      // Disabled 2026-09-13 per user: auto-trigger removed from all modules (orders/offers/collections),
+      // function kept intact to re-enable later per-module if needed.
+      // runUrgentQueueOnLogin();
+    }
+  } else {
+    gate.style.display = 'flex';
+    app.style.display = 'none';
+  }
+});
+</script>
+<!-- ============ END LOGIN GATE ============ -->
+
+<div id="appContent" style="display:none;">
+<header>
+  <div class="top-row">
+    <a href="dashboard.html" style="position:absolute;left:32px;top:50%;transform:translateY(-50%);text-align:center;text-decoration:none;" title="Go to Dashboard"><div class="brand-word">Buen<span>Trade</span><div style="font-size:14px;letter-spacing:0.1em;color:rgba(255,255,255,.75);margin-top:5px;"><b style="font-weight:800;color:var(--blue-bright);">O</b>perating <b style="font-weight:800;color:var(--blue-bright);">S</b>ystem</div></div></a>
+  </div>
+  <div id="userChip" style="position:absolute;right:32px;bottom:24px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:3px 5px 3px 3px;">
+    <span id="userAvatar" style="width:19px;height:19px;border-radius:50%;background:#1E6ADB;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0;"></span>
+    <span id="userBadge" style="display:none;"></span>
+    <button type="button" class="hdr-logout" onclick="logout()" title="Log Out" aria-label="Log Out"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+  </div>
+  <nav class="nav-row">
+    <a href="quotes.html" class="nav-pill">Quotes</a>
+    <a href="offers.html" class="nav-pill active">Offers</a>
+    <a href="orders.html" class="nav-pill">Orders</a>
+    <a href="plants.html" class="nav-pill">Plants</a>
+    <a href="products.html" class="nav-pill">Products</a>
+    <a href="customers.html" class="nav-pill">Clients</a>
+    <a href="providers.html" class="nav-pill">Logistics</a>
+    <a href="collections.html" class="nav-pill">Pay &amp; Receive</a>
+  </nav>
+</header>
+<script src="js/header-chip.js"></script>
+
+<div class="wrap">
+  <h1>Offers</h1>
+
+  <div id="offerPanel_pipeline">
+    <div class="stats-row" id="pipelineStats"></div>
+    <!-- 2026-10-11 ("asi se tiene que ver todos los modulos"): the Customers / Quotes recipe — the filters float OUTSIDE the list card in one row, no labels. -->
+    <div class="bt-toolbar">
+      <input type="hidden" id="f_status" value="sent">
+      <div class="seg-control" id="f_status_seg">
+        <button type="button" class="seg-btn active" data-val="sent" onclick="setStatusFilter('sent',this)">Pending</button>
+        <button type="button" class="seg-btn" data-val="lost" onclick="setStatusFilter('lost',this)">Lost</button>
+        <button type="button" class="seg-btn" data-val="" onclick="setStatusFilter('',this)">All</button>
+      </div>
+      <span class="bt-range"><span class="bt-range-lbl">From</span><input type="date" id="f_from" onchange="loadOffers()"><span class="bt-range-arrow">→</span><input type="date" id="f_to" onchange="loadOffers()"></span>
+      <div class="of-search-wrap">
+        <svg class="of-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="f_search" type="text" placeholder="Search" oninput="renderOffers()" class="of-search-input">
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="offerRows"></div>
+      <div id="emptyState" class="empty" style="display:none;">No offers in this range yet.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="negoViewOverlay" onclick="if(event.target===this) closeNegotiationView()">
+  <div id="negoViewBox">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <h2 style="margin:0 0 2px;font-family:'Space Grotesk',sans-serif;font-size:16px;">Negotiation</h2>
+        <div id="negoViewTitle" class="muted" style="font-size:12.5px;"></div>
+      </div>
+      <button class="tt-overlay-close" onclick="closeNegotiationView()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div style="display:flex;gap:16px;align-items:center;font-size:11px;color:var(--ink-soft);margin-bottom:10px;">
+      <span><span style="color:#0F8A5F;font-weight:700;">←</span> Received (their number)</span>
+      <span><span style="color:var(--blue);font-weight:700;">→</span> Sent (your number)</span>
+    </div>
+    <div id="negoViewChart"></div>
+    <div id="negoViewLog" class="nego-track"></div>
+  </div>
+</div>
+
+<div id="menuOverlay" class="menu-overlay" style="display:none;" onclick="closeFloatingMenus()">
+  <div id="docsMenu" class="docs-menu" style="display:none;" onclick="event.stopPropagation()"></div>
+</div>
+<div id="docPreviewOverlay" class="menu-overlay" style="display:none;" onclick="closeDocPreviewByUser()">
+  <div class="doc-preview-box" onclick="event.stopPropagation()">
+    <div class="doc-preview-head">
+      <div>
+        <div class="doc-preview-title" id="docPreviewTitle">Purchase Order</div>
+        <div class="doc-preview-sub" id="docPreviewSub"></div>
+      </div>
+      <button class="tt-overlay-close" onclick="closeDocPreviewByUser()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="doc-preview-body" id="docPreviewBody">
+      <div class="doc-preview-loading" id="docPreviewLoading">Building document…</div>
+      <iframe id="docPreviewFrame" class="doc-preview-frame" style="display:none;"></iframe>
+    </div>
+    <div class="doc-preview-actions" id="docPreviewActions"></div>
+  </div>
+</div>
+<div id="confirmOverlay" class="menu-overlay" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle"></div>
+    <div class="confirm-message" id="confirmMessage"></div>
+    <div class="confirm-actions">
+      <button class="btn secondary" onclick="confirmResolve(false)">Cancel</button>
+      <button class="btn win" id="confirmOkBtn" onclick="confirmResolve(true)"></button>
+    </div>
+  </div>
+</div>
+<!-- Real ask 2026-09-14: "esa fecha no la puedo dejar al sistema... muy delicado" — same gate as
+     trading-tool.html's negoSaveDefinitive: Create Order (even offers.html's quick "Ganada" path)
+     never fires without the trader confirming the real, final PU/Delivery date first. -->
+<div id="dateConfirmOverlay" class="menu-overlay" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-title" id="dateConfirmTitle"></div>
+    <div class="confirm-message" id="dateConfirmMessage"></div>
+    <input type="date" id="dateConfirmInput" style="width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--ink);margin:10px 0 4px;">
+    <div id="dateConfirmError" style="font-size:12px;color:#C4432E;min-height:16px;margin-bottom:8px;"></div>
+    <div class="confirm-actions">
+      <button class="btn secondary" onclick="dateConfirmResolve(null)">Cancel</button>
+      <button class="btn win" onclick="dateConfirmSubmit()">Confirm & Create Order</button>
+    </div>
+  </div>
+</div>
+<!-- Collections module (2026-09-08): "si el cliente me da un bid por una carga y no tiene cupo
+     debemos poder enviar un mensaje... o la otra opcion que liberes el cupo" — real action, not
+     just a warning, at the exact moment a new deal would exceed a customer's credit_limit. -->
+<div id="creditLimitOverlay" class="menu-overlay" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-title">Credit Limit Exceeded</div>
+    <div class="confirm-message" id="creditLimitMessage"></div>
+    <div class="confirm-actions" style="flex-wrap:wrap;">
+      <button class="btn secondary" onclick="creditLimitResolve('cancel')">Cancel</button>
+      <button class="btn secondary" onclick="creditLimitResolve('collect')">Collect Pending Debt</button>
+      <button class="btn secondary" onclick="creditLimitResolve('financials')">Request Financial Statements</button>
+      <button class="btn win" onclick="creditLimitResolve('override')">Create Anyway</button>
+    </div>
+  </div>
+</div>
+<div id="ttOverlay" class="tt-overlay">
+  <div class="tt-overlay-head">
+    <div></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;">
+      <img id="ttOverlayLogo" class="tt-logo-inline" alt="" style="display:none;">
+      <div class="tt-overlay-title" id="ttOverlayTitle"></div>
+    </div>
+    <button class="tt-overlay-close" onclick="closeTTOverlay()" title="Close" aria-label="Close" style="justify-self:end;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="tt-overlay-body" id="ttOverlayBody"></div>
+</div>
+<div id="toastStack" class="toast-stack"></div>
+
+<!-- Real unification 2026-09-13 ("arreglalo globalmente en todo el sistema, unificalo"): the
+     #emailModalOverlay markup this page used to keep its own copy of is now injected once by
+     js/email-modal.js (bcEnsureEmailModal) — same CSS classes, same look, one real source of
+     truth instead of 4 files that could each drift (and had: plants.html never even had CC or
+     attachments). See sendEmailApi below for the send-side half of this. -->
+
+<script>
+let offers = [];
+let offerPlantsById = {};
+
+// Default view: last 30 days, so the list stays light — older sent-but-never-confirmed
+// offers aren't deleted, just not shown unless you widen the date range or search.
+function rqDefaultDates(){
+  const to = new Date();
+  const from = new Date(Date.now() - 30 * 86400000);
+  const fmt = d => d.toISOString().slice(0, 10);
+  btDpAttach('f_from');
+  btDpAttach('f_to');
+  document.getElementById('f_from').value = fmt(from);
+  document.getElementById('f_to').value = fmt(to);
+}
+
+async function loadOffers(){
+  const from = document.getElementById('f_from').value;
+  const to = document.getElementById('f_to').value;
+  // Grouped by customer first — when a customer calls in with a bid, that's what you already
+  // know and search by, not the plant or when it was sent.
+  let data;
+  try {
+    data = (await callApi('sent-offers-search', {
+      sent_from: from ? from + 'T00:00:00' : null,
+      sent_to: to ? to + 'T23:59:59' : null,
+      order_by: 'customer', limit: 1000,
+    })).results || [];
+  } catch (e) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').textContent = 'Error loading offers: ' + e.message;
+    return;
+  }
+  offers = data;
+  // Deep link from Today (?customers=A|B): those customers open on arrival, once, so the card you clicked is not hidden behind closed tabs.
+  if (!deepLinkDone){
+    deepLinkDone = true;
+    const want = (new URLSearchParams(location.search).get('customers') || '').split('|').map(x => x.trim()).filter(Boolean);
+    want.forEach(n => { const hit = offers.find(o => String(o.customer_name || '').trim().toLowerCase() === n.toLowerCase()); if (hit) { custOpenOverride.set(hit.customer_name, true); if (!deepLinkFirst) deepLinkFirst = hit.customer_name; if (!deepLinkOrder.includes(hit.customer_name)) deepLinkOrder.push(hit.customer_name); } }); // the first name in the link is the one Today put first
+    if (want.length) deepLinkScroll = true;
+  }
+  // Same plant-avatar logo used in Pending Quotes — fetched once here since sent_offers itself
+  // only stores the plant's name/id, not its logo.
+  if (!Object.keys(offerPlantsById).length){
+    const plantRows = (await callApi('plants-search', {})).results || [];
+    plantRows.forEach(p => { offerPlantsById[p.id] = p; });
+  }
+  renderOffers();
+  if (deepLinkScroll){
+    deepLinkScroll = false;
+    const g = [...document.querySelectorAll('#offerRows .pending-group')].find(x => x.dataset.cust === deepLinkFirst) || document.querySelector('#offerRows .pending-group.open');
+    if (g) g.scrollIntoView({ block: 'start' });
+  }
+}
+
+// Reads straight off the loaded (date-filtered) `offers` array, not the search/status-filtered
+// list — the point is a fixed read of the whole pipeline in range, so it doesn't jump around
+// as you type into the search box.
+function renderStats(){
+  const money = n => '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const pending = offers.filter(o => o.status === 'sent');
+  const hot = pending.filter(offerIsHot);
+  const won = offers.filter(o => o.status === 'won');
+  const lost = offers.filter(o => o.status === 'lost');
+  const pipelineValue = pending.reduce((s, o) => s + (o.total_sale || 0), 0);
+  const closedCount = won.length + lost.length;
+  const winRate = closedCount ? Math.round((won.length / closedCount) * 100) : null;
+  const stats = [
+    { accent: '#5AAAFF', accentSoft: 'rgba(90,170,255,.4)', value: money(pipelineValue), label: 'Pipeline value',
+      hero: true, icon: '<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+    { accent: '#FF9C8A', accentSoft: 'rgba(196,67,46,.4)', value: String(hot.length), label: 'Negotiating now',
+      icon: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.4 0 2.5-1 2.5-2.3 0-1.4-1.5-2-1.2-3.7.3-1.6 2-2.7 2-2.7s.5 2 .3 3.3c1.5-.7 2.4-2.5 2.4-4.1 0-2.3-1.6-4-3.2-5C13 4.4 12 6.6 10 8c-2 1.4-3.5 3.5-3.5 6.5"/>' },
+    { accent: '#5AAAFF', accentSoft: 'rgba(90,170,255,.4)', value: String(pending.length), label: 'Pending offers',
+      icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>' },
+    { accent: '#3FCB7E', accentSoft: 'rgba(63,203,126,.4)', value: winRate === null ? 'No closed deals yet' : winRate + '%', label: 'Win rate',
+      empty: winRate === null, icon: '<path d="M20 6 9 17l-5-5"/>' },
+  ];
+  document.getElementById('pipelineStats').innerHTML = stats.map(s => `
+    <div class="stat-card ${s.hero ? 'hero' : ({ '#5AAAFF': 'blue', '#FF9C8A': 'danger', '#3FCB7E': 'ok' })[s.accent] || ''}" style="--stat-accent:${s.accent};--stat-accent-soft:${s.accentSoft};">
+      <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${s.icon}</svg></div>
+      <div><div class="stat-value${s.empty ? ' empty' : ''}">${s.value}</div><div class="stat-label">${s.label}</div></div>
+    </div>`).join('');
+}
+
+function offerAgeDays(dateStr){
+  if (!dateStr) return null;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+// A BID is the customer answering (a customer_bid round in the negotiation) — sending him a price, or the updated list, is not a bid (user 2026-10-12: the objective is bids, so the
+// Bid tag, "Negotiating now" and the green QT button mean exactly that and nothing else).
+function offerIsHot(o){ return o.status === 'sent' && (o.negotiation_log || []).some(e => e && e.to === 'customer_bid'); }
+
+// Manual open/close overrides, keyed by customer name — set the moment a trader clicks a card's
+// header, so it stays exactly how they left it across re-renders (a new search keystroke, a
+// status change) instead of snapping back to the hot/cold default every time.
+const custOpenOverride = new Map();
+let deepLinkDone = false, deepLinkScroll = false, deepLinkFirst = null, deepLinkOrder = [];
+function toggleCustGroup(name, currentlyOpen){
+  custOpenOverride.set(name, !currentlyOpen);
+  renderOffers();
+}
+
+// Segmented pill control replacing the old plain <select> — same f_status hidden value and
+// same renderOffers() read, just a modern toggle group instead of a native dropdown.
+function setStatusFilter(val, btn){
+  document.getElementById('f_status').value = val;
+  document.querySelectorAll('#f_status_seg .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderOffers();
+}
+
+function renderOffers(){
+  renderStats();
+  const status = document.getElementById('f_status').value;
+  // Real correction 2026-09-16: "un search pequeno por cliente" — scoped to customer name only,
+  // not every field.
+  const q = (document.getElementById('f_search').value || '').trim().toLowerCase();
+  const filtered = offers.filter(o => {
+    if (status && o.status !== status) return false;
+    if (!q) return true;
+    return o.customer_name && String(o.customer_name).toLowerCase().includes(q);
+  });
+  const wrap = document.getElementById('offerRows');
+  document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
+  document.getElementById('emptyState').textContent = 'No offers match.';
+
+  // Grouped by customer, same shape as Pending Quotes — one section per customer, one compact
+  // row per offer inside it.
+  const groupsByCustomer = {};
+  filtered.forEach(o => {
+    const key = o.customer_name || '—';
+    if (!groupsByCustomer[key]) groupsByCustomer[key] = [];
+    groupsByCustomer[key].push(o);
+  });
+  const isHot = offerIsHot;
+  const groupList = Object.entries(groupsByCustomer).map(([customerName, rows]) => ({
+    customerName, rows, hasHot: rows.some(isHot),
+  }));
+  // A live negotiation belongs at the top, not wherever it happens to fall alphabetically — that's
+  // the whole point of flagging it hot: you should see it the moment you open this page.
+  groupList.sort((a, b) => {
+    const ia = deepLinkOrder.indexOf(a.customerName), ib = deepLinkOrder.indexOf(b.customerName); // the customers Today sent you here for come first, in Today's order
+    if (ia !== ib && (ia >= 0 || ib >= 0)) return ia < 0 ? 1 : ib < 0 ? -1 : ia - ib;
+    if (a.hasHot !== b.hasHot) return a.hasHot ? -1 : 1;
+    return a.customerName.localeCompare(b.customerName);
+  });
+  // One product, one block: a customer's plants for the SAME product sit together, the most expensive first and the cheapest last (user 2026-10-12: "de mas cara a mas barata").
+  const prodKey = o => String(o.product_spec || o.product_name || '');
+  groupList.forEach(g => {
+    const hotProd = new Set(g.rows.filter(isHot).map(prodKey));
+    g.rows.sort((a, b) => (hotProd.has(prodKey(b)) - hotProd.has(prodKey(a))) || prodKey(a).localeCompare(prodKey(b)) || (Number(b.sale_per_lb) - Number(a.sale_per_lb)) || (isHot(b) - isHot(a)));
+  });
+
+  // Real ask 2026-09-08: "analiza todo lo que hemos hecho... en lugar de eso tan grandes con
+  // botones gigantes que hicimos en orden. organiza cada offer igual que esta en collections" —
+  // same conversion already done for orders.html: plant-avatar cards become plain table rows
+  // (Product/Plant/Price/Status/Actions), no logos, no per-product sub-grouping (Product is just
+  // its own column now, exactly how collections lists Order/Customer/Product per row).
+
+  // A won/lost row keeps the exact original actions (kebab menu/History) — nothing about how a
+  // closed deal is acted on changes here, just the row's own markup (table row, not a card).
+  function renderClosedRow(o){
+    const statusTag = o.status === 'won'
+      ? `<span class="pkg-tag won">Win${o.order_number ? ' · ' + escapeHtml(o.order_number) : ''}</span>`
+      : o.status === 'expired'
+      ? `<span class="pkg-tag expired">Expired</span>`
+      : `<span class="pkg-tag lost">Lost</span>`;
+    const actionsHtml = o.status === 'won'
+      ? `<button class="row-menu-btn" title="Actions" onclick="toggleRowMenu(event,'${o.id}','${o.order_number}',${o.customs_agency_provider_id ? 'true' : 'false'},${(o.negotiation_log || []).length})">${KEBAB_ICON}</button>`
+      : '';
+    return `<tr>
+        <td>${escapeHtml((o.product_spec || o.product_name) || '—')}</td>
+        <td class="muted">${escapeHtml(o.plant_name || '—')}</td>
+        <td class="num">$${(o.purchase_price || 0).toFixed(4)} → $${(o.sale_per_lb || 0).toFixed(4)}</td>
+        <td>${statusTag}</td>
+        <td>${actionsHtml}</td>
+      </tr>
+      <tr id="history_row_${o.id}" style="display:none;"><td colspan="5" style="padding:0 0 12px;"><div id="history_panel_${o.id}"></div></td></tr>`;
+  }
+
+  // A live/pending offer — one row per plant quoting it. Real ask 2026-09-08 (twice, explicit):
+  // "en status debe decir sent o bid blinking" — exactly two words, nothing else: "Sent" normal,
+  // "Bid" pulsing green (.pkg-tag hot, same hotPulse animation this file already uses everywhere
+  // else for this exact state) the moment a real bid/counter is in (offerIsHot). No day-count, no
+  // "no response" wording — that finer detail was a real ask (1), not this one; the group's own
+  // "N going cold" badge already carries the aging signal.
+  // Real ask 2026-09-08 (corrected — "el precio no te abre el QT... el precio abre la grafica de
+  // negotiation solamente", the QT circle already opens the full calculator, this is deliberately
+  // NOT that): the price cell opens openNegotiationView, a lightweight modal with the exact same
+  // negotiation chart trading-tool.html's own #negoCard shows (see the .nego-* CSS block above) —
+  // rendered directly from data already loaded here, no iframe, no second negotiation business
+  // logic invented.
+  //
+  // "un lado y el otro dependiendo quien tenga la ultima info" — purchase tracks the plant side
+  // (plant/plant_reply), sale tracks the customer side (customer/customer_bid). Whichever side the
+  // LAST negotiation_log entry touches is active (green, blinking) — regardless of whether that
+  // touch was us messaging out or them replying in, confirmed explicit: "si le hable la primera
+  // vez a la planta... purchase price blinking" (contacting the plant itself blinks purchase, not
+  // just a reply to it). The other, not-last-touched side sits idle (blue, static).
+  function renderOpenRow(o, cont){
+    const hot = offerIsHot(o);
+    // an open offer says when it went out (user 2026-10-12: "status sent… debería decir sent (date)"): the calm blue .pkg-tag.sent, the channel and time in its tooltip
+    const sentOn = o.sent_at ? new Date(o.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }) : '';
+    const sentAt = o.sent_at ? new Date(o.sent_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
+    const statusHead = (hot ? `<span class="pkg-tag hot">Bid</span>` : '')
+      + (o.price_drop_told && o.price_drop_told.at ? `<span class="pkg-tag sent" title="The customer was told the new price on ${escapeHtml(new Date(o.price_drop_told.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }))}">Updated · ${escapeHtml(new Date(o.price_drop_told.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }))}</span>` : '')
+      + (sentOn ? `<span class="pkg-tag sent" title="Sent ${escapeHtml(sentAt)}${o.channel ? ' by ' + escapeHtml(o.channel) : ''}">Sent · ${escapeHtml(sentOn)}</span>` : '');
+    const statusTags = ''
+      + (o.over_credit_limit
+        ? `<span class="pkg-tag credit-hold" style="margin-left:5px;" title="${o.customer_name || 'This customer'}'s outstanding balance ($${Number(o.outstanding_balance || 0).toLocaleString()}) plus this offer would exceed their credit limit ($${Number(o.credit_limit || 0).toLocaleString()}). Can close once their last invoice is paid."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Over Limit</span>`
+        : '')
+      // The plant lowered its price after this offer went out (sent-offers-search price_drop, 2026-10-09) — the offer itself never changes.
+      + (o.price_drop
+        ? `<span class="pkg-tag drop" title="${escapeHtml(o.plant_name || 'The plant')} lowered its price to $${o.price_drop.plant_price.toFixed(4)}/lb (${escapeHtml(String(o.price_drop.price_date || ''))}) after this offer went out — this offer has $${o.price_drop.offer_cost.toFixed(4)}/lb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>Better price</span>`
+        // …and when it went UP: the offer's margin shrinks — its QT takes the new cost when it opens (plant_price_now)
+        : o.plant_price_now && o.plant_price_now.price > o.plant_price_now.offer_cost
+        ? `<span class="pkg-tag credit-hold" style="margin-left:5px;" title="${escapeHtml(o.plant_name || 'The plant')} raised its price to $${o.plant_price_now.price.toFixed(4)}/lb (${escapeHtml(String(o.plant_price_now.price_date || ''))}) after this offer went out — this offer has $${o.plant_price_now.offer_cost.toFixed(4)}/lb. Its QT takes the new cost when it opens.">Plant ↑ $${o.plant_price_now.price.toFixed(4)}</span>`
+        : '');
+    // the price drop's numbers (sent-offers-search price_drop): old struck through → new, and a level bar (whole bar = old price, lit tail = what was taken off)
+    let dropBlock = '';
+    if (o.price_drop){
+      const was = Number(o.price_drop.offer_cost), now = Number(o.price_drop.plant_price), pct = was ? (was - now) / was * 100 : 0;
+      dropBlock = `<span class="drop-block" title="${escapeHtml(o.plant_name || 'The plant')} lowered its price from $${was.toFixed(4)} to $${now.toFixed(4)}/lb"><span class="drop-nums"><s>$${was.toFixed(4)}</s><em>→</em><b>$${now.toFixed(4)}</b></span><span class="drop-level"><span class="drop-bar"><i style="width:${Math.max(0, 100 - pct).toFixed(1)}%"></i><u style="width:${Math.min(100, pct).toFixed(1)}%"></u></span><span class="drop-pct">−${pct.toFixed(1)}%</span></span></span>`;
+    }
+    const tagsRow = statusHead + statusTags;
+    const statusHtml = (tagsRow ? `<span class="status-tags">${tagsRow}</span>` : '') + dropBlock;
+    const log = o.negotiation_log || [];
+    const last = log.length ? log[log.length - 1] : null;
+    let purchaseCls = '', saleCls = '';
+    if (last){
+      const purchaseTouched = last.to === 'plant' || last.to === 'plant_reply';
+      purchaseCls = purchaseTouched ? ' class="price-active"' : ' class="price-idle"';
+      saleCls = purchaseTouched ? ' class="price-idle"' : ' class="price-active"';
+    }
+    // The latest price on each side, not the first one (user 2026-10-06: "puse un bid por .86… y me lo puso como quiso por .90").
+    const purchaseHtml = `<span${purchaseCls}>$${offerLatestPrice(o, 'plant').toFixed(4)}</span>`;
+    const saleHtml = `<span${saleCls}>$${offerLatestPrice(o, 'customer').toFixed(4)}</span>`;
+    return `<tr class="${o.over_credit_limit ? 'over-limit-row ' : ''}${cont ? 'prod-cont' : ''}">
+        <td>${cont ? `<span class="cont-name">${escapeHtml((o.product_spec || o.product_name) || '—')}</span>` : escapeHtml((o.product_spec || o.product_name) || '—')}</td>
+        <td class="muted">${escapeHtml(o.plant_name || '—')}</td>
+        <td class="num price-link" onclick="openNegotiationView('${o.id}')" title="Open negotiation">${purchaseHtml} → ${saleHtml}</td>
+        <td>${statusHtml ? `<span class="status-cell">${statusHtml}</span>` : ''}</td>
+        <td><div style="display:flex;gap:6px;align-items:center;"><button type="button" class="btn secondary small${hot ? ' qt-hot' : ''}" onclick="toggleTT('${o.id}')" title="${hot ? 'A bid is in — negotiate now' : 'Open the calculator to negotiate and close this offer'}">QT</button></div></td>
+      </tr>
+      <tr id="history_row_${o.id}" style="display:none;"><td colspan="5" style="padding:0 0 12px;"><div id="history_panel_${o.id}"></div></td></tr>`;
+  }
+
+  wrap.innerHTML = groupList.map(g => {
+    const openRows = g.rows.filter(o => o.status === 'sent');
+    const closedRows = g.rows.filter(o => o.status !== 'sent');
+    const rowsHtml = openRows.map((o, k) => renderOpenRow(o, k > 0 && prodKey(openRows[k - 1]) === prodKey(o))).join('') + closedRows.map(renderClosedRow).join('');
+
+    // Real bug, confirmed against the real 11-offer dataset: "open only when hot" collapsed
+    // EVERY customer the moment none of them had a live negotiation yet (the normal state early
+    // on), leaving the whole page looking empty until you noticed you had to click. Pending offers
+    // ARE the thing a trader watches for day to day — they should be visible by default, not
+    // hidden behind a click; only a customer with nothing left to act on (every offer already
+    // won/lost) collapses down to its one-line summary.
+    // 2026-10-11 (user: "deja offers cerradas por default y una seña la que tenga bid"): every customer starts closed; the one with a
+    // bid in shows the same pulsing green "Bid" pill as its row, so it is found without opening anything. A click opens/closes and stays.
+    const isOpen = custOpenOverride.has(g.customerName) ? custOpenOverride.get(g.customerName) : false;
+    const bidN = openRows.filter(offerIsHot).length;
+    return `<div class="pending-group${isOpen ? ' open' : ''}" data-cust="${escapeHtml(g.customerName)}">
+      <div class="pending-group-head" onclick="toggleCustGroup('${escapeHtml(g.customerName).replace(/'/g, "\\'")}', ${isOpen})">
+        <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+          <span class="cust-chevron"></span>
+          <span class="pending-group-title">${escapeHtml(g.customerName)}</span>
+          ${bidN ? `<span class="pkg-tag hot" title="${bidN} offer${bidN === 1 ? '' : 's'} with a bid in — open to negotiate">${bidN > 1 ? bidN + ' ' : ''}Bid</span>` : ''}
+        </div>
+      </div>
+      <div class="pending-group-body">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Product</th><th>Plant</th><th>Price</th><th>Status</th><th>Quotation</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// How this order actually closed — read-only, for a WON offer. The negotiation trail (who
+// countered who, and the original quote before any of that) is never deleted when an offer
+// wins, but nothing else in the UI ever showed it again once PO/SO/FO took over the row's
+// buttons — this is the only way to look back at "how did we land on this price" afterward.
+let historyOpenId = null;
+
+// history_row_ is now a <tr> (the offer list moved from pkg-row cards to a table) — 'table-row',
+// not 'block', or the expanded panel would render as a stray non-row child of <tbody>.
+function toggleHistory(offerId){
+  const row = document.getElementById('history_row_' + offerId);
+  if (historyOpenId && historyOpenId !== offerId){
+    const prev = document.getElementById('history_row_' + historyOpenId);
+    if (prev) prev.style.display = 'none';
+  }
+  if (row.style.display === 'table-row'){
+    row.style.display = 'none';
+    historyOpenId = null;
+    return;
+  }
+  row.style.display = 'table-row';
+  historyOpenId = offerId;
+  renderHistoryPanel(offerId);
+}
+
+const HISTORY_STEP_LABEL = {
+  plant_original: 'Plant quoted',
+  customer_original: 'You offered customer',
+  plant_reply: 'Plant replied',
+  customer_bid: 'Customer bid',
+  plant: 'Your bid to plant',
+  customer: 'You offered customer',
+};
+
+function renderHistoryPanel(offerId){
+  const o = offers.find(x => x.id === offerId);
+  const panel = document.getElementById('history_panel_' + offerId);
+  if (!o){ panel.innerHTML = ''; return; }
+  const steps = [
+    { to: 'plant_original', price: o.purchase_price, at: o.sent_at },
+    { to: 'customer_original', price: o.sale_per_lb, at: o.sent_at },
+    ...(o.negotiation_log || []),
+  ];
+  panel.innerHTML = `
+    <div style="padding:14px 4px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">How this closed</div>
+      ${steps.map((s, i) => {
+        const isIn = s.to === 'plant_original' || s.to === 'plant_reply' || s.to === 'customer_bid';
+        const arrow = isIn ? '←' : '→';
+        const color = isIn ? '#0F8A5F' : 'var(--blue)';
+        const when = new Date(s.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        return `<div style="display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:12.5px;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);width:16px;">${i + 1}</span>
+          <span style="color:${color};font-weight:700;">${arrow}</span>
+          <span>${HISTORY_STEP_LABEL[s.to] || s.to} — <b>$${Number(s.price).toFixed(4)}/lb</b></span>
+          <span style="color:var(--ink-soft);font-size:11.5px;">${when}</span>
+        </div>`;
+      }).join('')}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12.5px;">
+        <b style="color:#0F8A5F;">✓ Won at $${(o.purchase_price || 0).toFixed(4)} / $${(o.sale_per_lb || 0).toFixed(4)}</b>
+        <span style="color:var(--ink-soft);"> — Order ${escapeHtml(o.order_number || '')}</span>
+      </div>
+    </div>`;
+}
+
+// Opens the full calculator pre-loaded with this offer's real numbers (same params Quotes
+// already builds for the Trading Tool) plus offerId/plantId so the TT can message the plant,
+// message the customer, and — once a number is actually confirmed — save it back here and
+// generate the order, all without the trader re-entering anything from scratch.
+// Opens the calculator full-screen (overlay, not embedded in the row) — the row's own width and
+// the page's scroll position were cutting off the negotiation bar and its own Create Order
+// confirm modal ("me toca scroll y se corta"). Full screen means whatever the Trading Tool
+// renders is always inside the visible viewport. Same Trading Tool file either way, nothing
+// duplicated; only how it's presented changed. Auth carries over automatically since the iframe
+// shares this page's origin/localStorage — no second login.
+let ttOpenId = null;
+
+// The open QT saves its last version (trading-tool ttFlushStateSave) before its window is closed or replaced (2026-10-06).
+async function flushOpenTT(){
+  const f = document.getElementById('ttIframe');
+  try { if (f && f.contentWindow && f.contentWindow.ttFlushStateSave) await f.contentWindow.ttFlushStateSave(); } catch (e) { /* the QT reports its own save problems */ }
+}
+async function toggleTT(id){
+  if (ttOpenId === id){ await closeTTOverlay(); return; }
+  await flushOpenTT();
+  ttOpenId = id;
+  const o = offers.find(x => x.id === id);
+  document.getElementById('ttOverlayTitle').textContent = o
+    ? `${(o.product_spec || o.product_name) || ''} — ${o.plant_name || ''} — ${o.customer_name || ''}` : 'Negotiate';
+  const plant = o && o.plant_id ? offerPlantsById[o.plant_id] : null;
+  const logo = plant && (plant.logo_url || plant.logo_url_dark);
+  const logoEl = document.getElementById('ttOverlayLogo');
+  if (logo){ logoEl.src = logo; logoEl.style.display = 'block'; }
+  else { logoEl.style.display = 'none'; logoEl.src = ''; }
+  loadTTPanel(id);
+  document.getElementById('ttOverlay').style.display = 'flex';
+}
+
+async function closeTTOverlay(){
+  await flushOpenTT();
+  document.getElementById('ttOverlay').style.display = 'none';
+  document.getElementById('ttOverlayBody').innerHTML = '';
+  ttOpenId = null;
+  loadOffers(); // what was confirmed or sent in the QT shows right away (user 2026-10-12: "ya mande las dos y queda igual")
+}
+
+// ============ NEGOTIATION VIEW (price cell) ============
+// Real ask 2026-09-08 (corrected): "el precio no te abre el QT para eso ya hay un boton de qt...
+// el precio abre la grafica de negotiation solamente." Same exact chart trading-tool.html's own
+// #negoCard renders (title/legend/sparkline/step-track) — ported verbatim (see the .nego-* CSS
+// above) since offers.html already has every field this needs in the `offers` array already
+// loaded (negotiation_log, purchase_price, sale_per_lb, sent_at, plant_name, customer_name).
+const NEGO_STEP_META = {
+  plant_original: { dir: 'in', label: (o) => `Plant quoted${o.plant_name ? ' (' + escapeHtml(o.plant_name) + ')' : ''}` },
+  customer_original: { dir: 'out', label: (o) => `You offered${o.customer_name ? ' (' + escapeHtml(o.customer_name) + ')' : ''}` },
+  plant_reply: { dir: 'in', label: (o) => `Plant replied${o.plant_name ? ' (' + escapeHtml(o.plant_name) + ')' : ''}` },
+  customer_bid: { dir: 'in', label: (o) => `Customer bid${o.customer_name ? ' (' + escapeHtml(o.customer_name) + ')' : ''}` },
+  plant: { dir: 'out', label: (o) => `Your bid to Plant${o.plant_name ? ' (' + escapeHtml(o.plant_name) + ')' : ''}` },
+  customer: { dir: 'out', label: (o) => `You offered Customer${o.customer_name ? ' (' + escapeHtml(o.customer_name) + ')' : ''}` },
+};
+
+// Same line-chart-of-the-price-arc as trading-tool.html's negoSparklineSvg — in (received) green,
+// out (sent) blue, one equal 1/n slice per step so each dot lines up with its step below it.
+function negoViewSparklineSvg(steps){
+  if (steps.length < 2) return '';
+  const w = 1000, h = 46, padY = 8, n = steps.length;
+  const prices = steps.map(s => Number(s.price));
+  const min = Math.min(...prices), max = Math.max(...prices);
+  const range = (max - min) || 1;
+  const x = i => ((i + 0.5) / n) * w;
+  const y = p => h - padY - ((p - min) / range) * (h - padY * 2);
+  const points = prices.map((p, i) => `${x(i)},${y(p)}`).join(' ');
+  const dots = steps.map((s, i) => {
+    const meta = NEGO_STEP_META[s.to] || { dir: 'out' };
+    const color = meta.dir === 'in' ? '#0F8A5F' : '#1E6ADB';
+    return `<circle cx="${x(i)}" cy="${y(prices[i])}" r="3.5" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
+  }).join('');
+  return `<div class="nego-chart-wrap"><svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="display:block;overflow:visible;">
+    <polyline points="${points}" fill="none" stroke="#C7D6EA" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+  </svg></div>`;
+}
+
+function openNegotiationView(offerId){
+  const o = offers.find(x => x.id === offerId);
+  if (!o) return;
+  const steps = [
+    { to: 'plant_original', price: o.purchase_price, at: o.sent_at },
+    { to: 'customer_original', price: o.sale_per_lb, at: o.sent_at },
+    ...(o.negotiation_log || []),
+  ];
+  document.getElementById('negoViewTitle').textContent = `${(o.product_spec || o.product_name) || ''} — ${o.plant_name || ''} — ${o.customer_name || ''}`;
+  document.getElementById('negoViewChart').innerHTML = negoViewSparklineSvg(steps);
+  document.getElementById('negoViewLog').innerHTML = steps.map(e => {
+    const meta = NEGO_STEP_META[e.to] || { dir: 'out', label: () => e.to };
+    const when = new Date(e.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `<div class="nego-step">
+      <div class="nego-dot ${meta.dir}" title="${meta.dir === 'in' ? 'Received' : 'Sent'}">${meta.dir === 'in' ? '↓' : '↑'}</div>
+      <div class="nego-price">$${Number(e.price).toFixed(4)}</div>
+      <div class="nego-label">${meta.label(o)}</div>
+      <div class="nego-date">${when}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('negoViewOverlay').style.display = 'flex';
+}
+function closeNegotiationView(){
+  document.getElementById('negoViewOverlay').style.display = 'none';
+}
+
+// Where a negotiation stands on one side: the last price in its log for that side (our bid to the plant / the plant's reply;
+// our new offer to the customer / the customer's bid), else the price the offer went out with.
+function offerLatestPrice(o, side){
+  const kinds = side === 'plant' ? ['plant', 'plant_reply'] : ['customer', 'customer_bid'];
+  const last = (o.negotiation_log || []).filter(e => kinds.includes(e.to)).slice(-1)[0];
+  const qt = o.qt_state && o.qt_state.products && o.qt_state.products[0];
+  const qtPrice = qt ? Number(side === 'plant' ? qt.cost : qt.sellBorder) || 0 : 0;
+  return Number(last ? last.price : (qtPrice || (side === 'plant' ? o.purchase_price : o.sale_per_lb))) || 0;
+}
+
+function loadTTPanel(id){
+  const panel = document.getElementById('ttOverlayBody');
+  const o = offers.find(x => x.id === id);
+  if (!o) return;
+  const imported = !!o.mexican_dest_rate_id;
+  const params = new URLSearchParams({
+    embed: '1', weight: String(o.weight || 40000), cost: String(offerLatestPrice(o, 'plant')), sell: String(offerLatestPrice(o, 'customer')),
+    freight: String(o.us_freight_amount || 0), hideFreight: o.us_freight_rate_id ? '0' : '1',
+    // an offer that went out with US freight is a FOB price: its QT never offers "Del Border" ($0) for it
+    fob: Number(o.us_freight_amount) > 0 ? '1' : '0',
+    inspection: String(o.inspection_amount || 0), hideInspection: (o.inspection_amount || 0) > 0 ? '0' : '1',
+    hideImportCost: '1', forceImportCostZero: imported ? '1' : '0',
+    hideExtras: '1', showExtras: (o.extra_fields || []).join(','),
+    tramiteAduanal: String(o.tramite_aduanal_amount || 0), bodegaAmericana: String(o.bodega_americana_amount || 0),
+    hideCustomsBrokerage: imported ? '0' : '1',
+    hideColombianFreight: imported ? '0' : '1', freightMx: String(o.mexican_freight_mxn || 0),
+    label: `${o.product_spec || o.product_name || ''} — ${o.plant_name || ''}`.slice(0, 70),
+    offerId: o.id, plantId: o.plant_id || '',
+    v: String(Date.now()),
+  });
+  panel.innerHTML = `<iframe id="ttIframe" src="trading-tool.html?${params.toString()}"></iframe>`;
+}
+
+// Losing an offer just needs the status flip — no orders, nothing else to generate.
+async function markOffer(id, status){
+  if (status === 'lost'){
+    try { await callApi('sent-offers-mark-lost', { actor: currentActor(), sent_offer_id: id }); }
+    catch (e) { await btAlert('Error: ' + e.message); return; }
+    loadOffers();
+    return;
+  }
+  await markWon(id);
+}
+
+// Winning is the real event — sent_offers.markWon is one atomic transaction on the API side:
+// stamps a consecutive order number, flips the offer, and creates the PO (plant), SO (customer),
+// a freight_order per leg actually part of this deal (US and/or Colombian, each resolved from the
+// same provider_rates row the offer itself was built from), and any customs costs charged. This
+// used to be ~55 lines of that same logic duplicated here (and diverging from trading-tool.html's
+// own copy, which only ever handled the US leg) — now there's exactly one implementation.
+async function markWon(id, overrideCreditCheck, confirmedDeliveryDate){
+  const o = offers.find(x => x.id === id);
+  if (!o) return;
+  // The plant changed its price since this offer went out (sent-offers-search plant_price_now, 2026-10-09): a quick Won here would close
+  // with the offer's old cost. It closes from its QT, where the new price is in (or offered, when the cost was negotiated) — so the order,
+  // the PO and the profit carry the cost the trader actually confirmed.
+  if (o.plant_price_now && !overrideCreditCheck){
+    const n = o.plant_price_now;
+    const go = await showConfirm('Close it from its QT', `${o.plant_name || 'The plant'} changed its price to $${n.price.toFixed(4)}/lb since this offer went out (the offer has $${n.offer_cost.toFixed(4)}). Open its QT to check the numbers and create the order there.`, 'Open QT');
+    if (go) toggleTT(id);
+    return;
+  }
+  if (!overrideCreditCheck){
+    const ok = await showConfirm('Create Order?', `${(o.product_spec || o.product_name)} — ${o.plant_name} — ${o.customer_name}`, '✓ Create Order');
+    if (!ok) return;
+  }
+  // Real ask 2026-09-14: "esa fecha no la puedo dejar al sistema... muy delicado" — asked fresh
+  // every time, same gate as trading-tool.html's Create Order, never inherited silently from
+  // whatever the quote said when it was priced. Only asked once through the credit-override retry.
+  if (!confirmedDeliveryDate){
+    const isFob = Number(o.us_freight_amount) > 0;
+    confirmedDeliveryDate = await showDateConfirm(isFob, (o.delivery_dates && o.delivery_dates[0]) || '');
+    if (!confirmedDeliveryDate) return; // trader cancelled — nothing created
+  }
+
+  const wonIdempotencyKey = `sent-offers-mark-won|${id}|${new Date().toISOString().slice(0, 16)}`;
+  let result;
+  try {
+    result = await bcCallWithAsk('sent-offers-mark-won', { actor: currentActor(), sent_offer_id: id, override_credit_check: !!overrideCreditCheck, confirmed_delivery_date: confirmedDeliveryDate, won_idempotency_key: wonIdempotencyKey });
+  } catch (e) {
+    if (e.data && e.data.error === 'credit_limit_exceeded'){
+      const choice = await showCreditLimitOverlay(e.data.message);
+      if (choice === 'override') return markWon(id, true, confirmedDeliveryDate);
+      if (choice === 'collect'){ window.open('collections.html', '_blank'); return; }
+      if (choice === 'financials'){
+        let customerEmail = null;
+        try { const r = await callApi('customers-search', { ids: [o.customer_id] }); customerEmail = r.results && r.results[0] && r.results[0].email; } catch (err) {}
+        requestFinancialStatements(customerEmail, o.customer_name);
+        return;
+      }
+      return;
+    }
+    if (e.cancelled) return; // nothing created
+    await btAlert('Error marking won: ' + e.message);
+    return;
+  }
+  await sendWonDocs(result, id);
+  loadOffers();
+}
+
+// Real flow correction 2026-09-05, explicit ask: "solo mandando estos se vuelve orden" — an offer
+// isn't really an order until its required documents actually go out, right at the moment it's
+// won, not left for the trader to remember from the row menu later. PO (plant), SO (customer), and
+// customs always apply. FO (carrier) is the ONE conditional one — only when this deal actually has
+// a US and/or Colombian freight leg booked (a Seaboard-style self-delivered load has neither, so
+// there's no carrier to send anything to — explicit ask: "solo si tiene un flete americano hacemos
+// FO"). Customs is NOT conditional — corrected 2026-09-05 after wrongly gating it on an agency
+// being on file ("nunca dije solo si hay doc de aduana SIEMPRE hay que avisar y mandar a aduana"):
+// shareCustoms still runs every time; if no agency is on file it alerts the trader right here,
+// which is exactly the point — a missing agency surfaces immediately, it never just gets skipped.
+// Each share*() call still opens its own real editable preview and waits for the trader to confirm
+// or cancel — this only removes the part where sending them was optional and easy to forget, it
+// does not remove the trader's confirmation step.
+// Real correction 2026-09-06: "la Aduana solo se contacta cuando se recoge la carga en planta" —
+// customs was wrongly included here at Won time. It only gets contacted at pickup (BOL/packing
+// list/label photos/USDA papers, requested from carrier AND plant, forwarded to customs) — that's
+// a separate step at Confirm Pickup, not this one. PO/SO/FO are the only documents that belong at
+// the moment an offer becomes an order.
+async function sendWonDocs(result, offerId){
+  const orderNumber = result.order_number;
+  const kinds = ['PO', 'SO'];
+  if (result.freight_order || result.mexican_freight_order) kinds.push('FO');
+  // Real ask 2026-09-26: right after the PO goes out → "Quote more clients?" (js/quote-more-clients.js), then SO/FO.
+  await runDocSendSequence(orderNumber, kinds,
+    () => qmcRun({ callApi, actor: currentActor(), offerId, fromDisplay: FROM_DISPLAY.offers, notify: qmcQuietNotify, ask: true }));
+  showToast(`Orden ${orderNumber} creada`, '');
+}
+// Quiet when there is simply nothing to quote (no other customer, test product) — only a real failure or result shows.
+function qmcQuietNotify(title, detail, isError){
+  if (title === 'Offer not saved' || / created /.test(detail)) showToast(title, detail, isError);
+}
+
+// Real addition 2026-09-22, reworked 2026-09-26 as "Quote more clients" — the logic lives in
+// js/quote-more-clients.js (shared with trading-tool.html, which offers it right after the Invoice
+// is sent). From here it stays an optional row-menu action the trader can run whenever they want.
+async function notifyOtherCustomers(offerId){
+  await qmcRun({ callApi, actor: currentActor(), offerId, fromDisplay: FROM_DISPLAY.offers, notify: showToast });
+  loadOffers();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+// Real bug found live 2026-09-14: "consecutivo debe estar bien tiene typos repetido el BT" — same
+// fix as orders.html: legacy orders still literally start with "BT-" (the old "BT-0042" scheme),
+// so "PO-BT-" + orderNumber doubled into "PO-BT-BT-0019". No-op for the new bare consecutives.
+function btNum(orderNumber){
+  return String(orderNumber || '').replace(/^BT-/, '');
+}
+
+// ============ ROW ACTIONS MENU (Documents + Real Costs + History — replaces three separate
+// lookalike buttons that were crowding the row and squeezing the customer name next to them) ============
+const DOC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+const DOWNLOAD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+const EMAIL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>';
+const KEBAB_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+const COSTS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+const HISTORY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 16 14"/></svg>';
+const PREVIEW_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const NOTIFY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+
+const DOC_TYPES = [
+  { key: 'PO', color: '#1E6ADB', desc: 'To plant', exportFn: 'exportPO', shareFn: 'sharePO', waFn: 'waCardPO', title: 'Purchase Order' },
+  { key: 'SO', color: '#0F8A5F', desc: 'To customer', exportFn: 'exportSO', shareFn: 'shareSO', waFn: 'waCardSO', title: 'Sales Order' },
+  { key: 'FO', color: '#C4432E', desc: 'To carrier', exportFn: 'exportFO', shareFn: 'shareFO', waFn: 'waCardFO', title: 'Freight Order' },
+];
+
+function toggleRowMenu(evt, offerId, orderNumber, hasCustoms, historyCount){
+  evt.stopPropagation();
+  const menu = document.getElementById('docsMenu');
+  if (menu.dataset.orderNumber === orderNumber && menu.style.display === 'block'){
+    closeFloatingMenus();
+    return;
+  }
+  menu.dataset.orderNumber = orderNumber;
+
+  const rows = DOC_TYPES.map(d => `
+    <div class="docs-menu-row" style="cursor:pointer;" onclick="closeFloatingMenus(); openDocPreview('${d.key}','${orderNumber}')">
+      <span class="docs-menu-dot" style="background:${d.color};"></span>
+      <span class="docs-menu-label" style="color:${d.color};">${d.key}</span>
+      <span class="docs-menu-desc">${d.desc}</span>
+      <span class="docs-menu-actions" style="color:var(--ink-soft);">${PREVIEW_ICON}</span>
+    </div>`).join('');
+
+  const customsRow = hasCustoms ? `
+    <div class="docs-menu-divider"></div>
+    <div class="docs-menu-row">
+      <span class="docs-menu-dot" style="background:var(--ink-soft);"></span>
+      <span class="docs-menu-label" style="color:var(--ink-soft);font-size:11px;width:auto;">Customs</span>
+      <span class="docs-menu-desc">Bundle to broker</span>
+      <span class="docs-menu-actions">
+        <button class="docs-icon-btn" title="Email to customs agency" onclick="shareCustoms('${orderNumber}')">${EMAIL_ICON}</button>
+      </span>
+    </div>` : '';
+
+  const otherRows = `
+    <div class="docs-menu-divider"></div>
+    <div class="docs-menu-action-row" onclick="closeFloatingMenus(); toggleTT('${offerId}')">
+      ${COSTS_ICON}<span>Real Costs</span>
+    </div>
+    ${historyCount ? `<div class="docs-menu-action-row" onclick="closeFloatingMenus(); toggleHistory('${offerId}')">
+      ${HISTORY_ICON}<span>History</span>
+    </div>` : ''}
+    <div class="docs-menu-action-row" onclick="closeFloatingMenus(); notifyOtherCustomers('${offerId}')">
+      ${NOTIFY_ICON}<span>Quote more clients</span>
+    </div>`;
+
+  menu.innerHTML = rows + customsRow + otherRows;
+  menu.style.display = 'block';
+  document.getElementById('menuOverlay').style.display = 'flex';
+}
+
+// One shared centered overlay for the row-actions menu — replaced the old anchored-to-the-button
+// positioning (positionFloatingMenu), which had to flip above/below and clamp off the right edge
+// to avoid clipping near the table's own edges. Centering sidesteps that entirely and matches
+// every other modal in the app (email preview, WhatsApp preview) instead of being the one
+// floating exception.
+function closeFloatingMenus(){
+  document.getElementById('menuOverlay').style.display = 'none';
+  document.getElementById('docsMenu').style.display = 'none';
+}
+
+// ============ DOCUMENT PREVIEW ============
+// A real navigator.share() attempt used to run here first, handing the PDF straight to the OS
+// share sheet. Confirmed live on macOS Chrome: that sheet doesn't list WhatsApp at all (WhatsApp
+// Desktop never registered as a share target) and its "Mail" opens the system Mail app instead of
+// BuenTrade's own branded, Resend-backed send — worse than what it replaced, not better.
+//
+// Clicking a document type now opens this instead — the actual generated PDF rendered inline
+// (jsPDF's own blob-URL output, no separate render step) so the trader sees exactly what's about
+// to go out before picking Download/Email/WhatsApp, all three right below the preview.
+// `sequence` (optional) is the ordered list of remaining doc kinds still to go after this one —
+// only set when this preview is one step of a guided send (see runDocSendSequence below). When
+// set, clicking Email or WhatsApp (the two real "I sent this" actions — Download is just saving a
+// copy, not sending) automatically closes this preview and opens the next one, so the trader never
+// has to reopen the row menu for PO -> SO -> FO by hand.
+async function openDocPreview(kind, orderNumber, sequence){
+  const cfg = DOC_TYPES.find(d => d.key === kind);
+  document.getElementById('docPreviewTitle').textContent = cfg.title;
+  document.getElementById('docPreviewSub').textContent = `Order ${orderNumber}` + (sequence ? ` — document ${sequence.stepIndex} of ${sequence.stepCount}` : '');
+  document.getElementById('docPreviewActions').innerHTML = '';
+  const frame = document.getElementById('docPreviewFrame');
+  const loading = document.getElementById('docPreviewLoading');
+  frame.style.display = 'none';
+  frame.src = 'about:blank';
+  loading.style.display = 'flex';
+  loading.textContent = 'Building document…';
+  document.getElementById('docPreviewOverlay').style.display = 'flex';
+
+  try {
+    let doc;
+    if (kind === 'PO'){ doc = (await buildPODoc(orderNumber)).doc; }
+    else if (kind === 'SO'){ doc = (await buildSODoc(orderNumber)).doc; }
+    else if (kind === 'FO'){
+      const legs = await buildFODocs(orderNumber);
+      if (!legs.length) throw new Error('No freight leg on this order.');
+      // Multiple legs (more than one truck on this order) all still go out correctly through
+      // Download/Email/WhatsApp below (those cover every leg) — only the preview itself shows
+      // the first, since previewing several PDFs at once has nowhere sensible to put the rest.
+      doc = legs[0].doc;
+    }
+    frame.src = doc.output('bloburl');
+    frame.onload = () => { loading.style.display = 'none'; frame.style.display = 'block'; };
+    const nextLabel = sequence ? `, continue to next document&rsaquo;` : '';
+    document.getElementById('docPreviewActions').innerHTML = `
+      <button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="${cfg.exportFn}('${orderNumber}')">${DOWNLOAD_ICON}Download</button>
+      <button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="previewDocSend('${cfg.shareFn}','${orderNumber}')" title="Send${nextLabel}">${EMAIL_ICON}Email</button>
+      <button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="previewDocSend('${cfg.waFn}','${orderNumber}')" title="Send${nextLabel}">${WA_ICON}WhatsApp</button>`;
+  } catch(e){
+    loading.textContent = 'Could not build this document: ' + e.message;
+  }
+}
+
+function closeDocPreview(){
+  document.getElementById('docPreviewOverlay').style.display = 'none';
+  document.getElementById('docPreviewFrame').src = 'about:blank';
+}
+
+// ============ DOCUMENT SEND SEQUENCE (preview -> send -> next, no extra clicks) ============
+// Real gap fixed 2026-09-11: "Create Order" used to fire PO/SO/FO straight through sharePO/
+// shareSO/shareFO with no preview at all — the trader never saw the real PDF before it went out.
+// This reuses the exact same preview screen the row-menu already shows for a single document
+// (openDocPreview above) — no new UI — and just drives which document it shows next.
+let docSeq = null; // { orderNumber, queue: [kinds left], resolve }
+
+// Real bug 2026-09-26: closing the preview (✕) in the middle of the PO → SO → FO sequence left runDocSendSequence's
+// promise pending forever, so nothing after it ran (the "Quote more clients?" question never appeared once the
+// trader closed after sending the PO). Closing now ends the sequence; nothing is sent by closing.
+function closeDocPreviewByUser(){
+  closeDocPreview();
+  if (!docSeq) return;
+  const resolve = docSeq.resolve;
+  docSeq = null;
+  resolve();
+}
+
+async function docSeqAdvance(){
+  if (!docSeq) return;
+  // Real ask 2026-09-26 ("mandé la PO y no sale nada"): the step to run right after the FIRST document (the PO) of a
+  // new order goes out — "Quote more clients?" — then the sequence carries on to SO/FO as before.
+  if (docSeq.afterFirst){
+    const afterFirst = docSeq.afterFirst;
+    docSeq.afterFirst = null;
+    closeDocPreview();
+    await afterFirst();
+    if (!docSeq) return;
+  }
+  if (!docSeq.queue.length){
+    closeDocPreview();
+    const resolve = docSeq.resolve;
+    docSeq = null;
+    resolve();
+    return;
+  }
+  const kind = docSeq.queue.shift();
+  openDocPreview(kind, docSeq.orderNumber, { stepIndex: docSeq.total - docSeq.queue.length, stepCount: docSeq.total });
+}
+
+// Email/WhatsApp buttons inside the preview call this instead of the share/wa function directly
+// whenever a sequence is running — same function, same behavior, it just also advances afterward.
+async function previewDocSend(fnName, orderNumber){
+  await window[fnName](orderNumber);
+  if (docSeq) docSeqAdvance();
+}
+
+// Shows PO, then SO, then FO (if there's a freight leg) one at a time — resolves once the trader
+// has gone through all of them. Each Email/WhatsApp click sends that one and moves to the next;
+// Download never advances (it's just saving a copy, not "sending").
+function runDocSendSequence(orderNumber, kinds, afterFirst){
+  return new Promise(resolve => {
+    docSeq = { orderNumber, queue: kinds.slice(1), resolve, total: kinds.length, afterFirst: afterFirst || null };
+    openDocPreview(kinds[0], orderNumber, { stepIndex: 1, stepCount: kinds.length });
+  });
+}
+
+// Replaces the plain browser confirm() that used to gate markWon — same centered-modal look as
+// everything else in the app instead of the one native, unstyled, English-app/Spanish-message
+// popup left over from before this whole redesign.
+let confirmResolveFn = null;
+function showConfirm(title, message, okLabel){
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmOkBtn').textContent = okLabel;
+  document.getElementById('confirmOverlay').style.display = 'flex';
+  return new Promise(resolve => { confirmResolveFn = resolve; });
+}
+function confirmResolve(val){
+  document.getElementById('confirmOverlay').style.display = 'none';
+  if (confirmResolveFn) confirmResolveFn(val);
+  confirmResolveFn = null;
+}
+
+let dateConfirmResolveFn = null;
+// Same real gate as trading-tool.html's showTTDateConfirm — isFob true asks "PU Date" (BuenTrade's
+// carrier picks up), false asks "Delivery Date" (plant self-delivers, DAP). Resolves the chosen
+// YYYY-MM-DD, or null on Cancel.
+function showDateConfirm(isFob, defaultDate){
+  const label = isFob ? 'PU Date' : 'Delivery Date';
+  document.getElementById('dateConfirmTitle').textContent = `Confirm ${label}`;
+  document.getElementById('dateConfirmMessage').textContent = isFob
+    ? 'This is the real, final pick-up date BuenTrade\'s carrier will pick up on — the system cannot calculate this, confirm the actual agreed date before the order and its documents are created.'
+    : 'This is the real, final delivery date the plant will self-deliver on — the system cannot calculate this, confirm the actual agreed date before the order and its documents are created.';
+  btDpAttach('dateConfirmInput');
+  const input = document.getElementById('dateConfirmInput');
+  input.value = defaultDate || '';
+  document.getElementById('dateConfirmError').textContent = '';
+  document.getElementById('dateConfirmOverlay').style.display = 'flex';
+  return new Promise(resolve => { dateConfirmResolveFn = resolve; });
+}
+function dateConfirmSubmit(){
+  const value = document.getElementById('dateConfirmInput').value;
+  if (!value){ document.getElementById('dateConfirmError').textContent = 'Pick a date to continue.'; return; }
+  document.getElementById('dateConfirmOverlay').style.display = 'none';
+  const resolve = dateConfirmResolveFn;
+  dateConfirmResolveFn = null;
+  if (resolve) resolve(value);
+}
+function dateConfirmResolve(val){
+  document.getElementById('dateConfirmOverlay').style.display = 'none';
+  if (dateConfirmResolveFn) dateConfirmResolveFn(val);
+  dateConfirmResolveFn = null;
+}
+
+let creditLimitResolveFn = null;
+function showCreditLimitOverlay(message){
+  document.getElementById('creditLimitMessage').textContent = message;
+  document.getElementById('creditLimitOverlay').style.display = 'flex';
+  return new Promise(resolve => { creditLimitResolveFn = resolve; });
+}
+function creditLimitResolve(choice){
+  document.getElementById('creditLimitOverlay').style.display = 'none';
+  if (creditLimitResolveFn) creditLimitResolveFn(choice);
+  creditLimitResolveFn = null;
+}
+// Real ask 2026-09-08: "mandar un mensaje de buentrade diciendo dame los estados financieros para
+// que pidamos mas cupo." Placeholder copy — texto real pendiente de aprobación ("ponle cualquier
+// mensaje despues lo ponemos bien", confirmed explicitly), same as the rest of Collections' new
+// customer-facing copy.
+async function requestFinancialStatements(customerEmail, customerName){
+  if (!customerEmail){ await btAlert('This customer has no email on file.'); return; }
+  const subject = 'BuenTrade — Solicitud de estados financieros';
+  const body = `Hola${customerName ? ' ' + customerName : ''},\n\nPara poder aumentar tu línea de crédito con BuenTrade, ¿nos podrías compartir tus estados financieros más recientes?\n\nGracias,\nBuenTrade Team`;
+  window.open(gmailComposeUrl([customerEmail], subject, body), '_blank');
+}
+
+// ============ PDF EXPORT (PO / SO / FO) ============
+// PO and SO are ready the moment an order exists (Ganada already created them with the last
+// confirmed Trading Tool numbers). FO is exported the same way, but in practice you'd print it
+// once the actual carrier is booked — the numbers on it can still be corrected later via
+// "Costos reales" without needing to touch this generator.
+const COMPANY = {
+  name1: 'Buen', name2: 'Trade',
+  legalName: 'BuenTrade LLC',
+  address: '1525 N Park Dr, Suite 104, Weston, FL 33326',
+  phone: '+1 754 248 1016',
+};
+
+// Contact shown on each document depends on who it's going to — plants deal with Purchasing,
+// customers with Offers, carriers/customs brokers with Logistics.
+const CONTACT_EMAIL_PO = 'purchasing@buentradegroup.com';
+const CONTACT_EMAIL_SO = 'offers@buentradegroup.com';
+const CONTACT_EMAIL_FO = 'logistics@buentradegroup.com';
+
+// Draft, original language written for BuenTrade — not copied from any other company's forms.
+// Flagged to the user as a draft for legal review, not a finished/reviewed contract.
+// Language is fixed per audience, not per translation preference: PO goes to US plants (English
+// only), SO goes to Latin American customers (Spanish only), FO goes to US/MX carriers (English,
+// matching how US trucking rate confirmations are always written).
+
+function fmtDateStr(d){
+  if (!d) return '';
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+function fmtDatesList(arr){
+  return (arr || []).map(fmtDateStr).join(', ') || 'TBD';
+}
+function todayStr(){
+  return new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+
+
+
+
+
+
+
+
+// Uploads a generated PDF to the public "order-documents" bucket and returns its shareable URL
+// — mailto:/wa.me links can't carry a real attachment, so a link is the only way to actually
+// deliver the file through those channels.
+// Real bug fixed 2026-09-06, found live testing sharePO: this referenced `db`, a variable that
+// never exists anywhere in this file — the actual Supabase client is `storageClient` (declared
+// near the top, next to API_KEY). Every call site (sharePO/shareSO/shareFO/shareCustoms/
+// buildInvoiceDoc's delivery flow) awaits this before ever opening the send-preview modal, so this
+// silently aborted PO/SO/FO/customs/invoice sending at the upload step, before the trader ever saw
+// anything — confirmed by reproducing sharePO live and catching the real error ("db is not
+// defined").
+async function uploadOrderPdf(doc, filename){
+  const blob = doc.output('blob');
+  const { error } = await storageClient.storage.from('order-documents').upload(filename, blob, { upsert: true, contentType: 'application/pdf' });
+  if (error) throw error;
+  // A new version gets a new link (the same filename is cached for an hour), so the link sent never opens an older copy.
+  return storageClient.storage.from('order-documents').getPublicUrl(filename).data.publicUrl + '?v=' + Date.now();
+}
+
+// Real attachment for the API send path — Resend can actually carry a file, unlike mailto:/wa.me,
+// so the PDF itself goes in the email instead of making the recipient click a link.
+function pdfAttachment(doc, filename){
+  return { filename, content: doc.output('datauristring').split(',')[1] };
+}
+
+// Primary contact email plus every address in email_cc (comma-separated) — the "varios correos"
+// a plant/customer/carrier/customs agency can have on file, deduped.
+function collectEmails(entity){
+  if (!entity) return [];
+  const raw = [entity.email, ...String(entity.email_cc || '').split(',')];
+  return [...new Set(raw.map(e => (e || '').trim()).filter(Boolean))];
+}
+
+async function buildPODoc(orderNumber){
+  let result;
+  try { result = await bcComposeDocument('orders-compose-po', orderNumber); }
+  catch (e) { throw new Error(e.data && e.data.error === 'unknown order_number' ? 'PO not found.' : e.message); }
+  const { document: composed, po, plant } = result;
+  // Drawn by js/po-pdf.js (one drawing for orders.html and offers.html) from what orders-compose-po composed.
+  return { doc: bcRenderPO(composed, orderNumber), po, plant };
+}
+
+async function exportPO(orderNumber){
+  let built;
+  try { built = await buildPODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  built.doc.save(`PO-BT-${btNum(orderNumber)}.pdf`);
+}
+
+// Mirrors netlify/functions/send-email.js's FROM_ADDRESSES/SIGNATURE_TEXT exactly — the preview
+// below must show precisely what gets sent (from address + signature), not a shorter draft of
+// it. A preview that looks thinner than the real email is what made the trader distrust it.
+const FROM_DISPLAY = {
+  purchasing: 'Purchasing BuenTrade <purchasing@buentradegroup.com>',
+  offers: 'Offers BuenTrade <offers@buentradegroup.com>',
+  logistics: 'Logistics BuenTrade <logistics@buentradegroup.com>',
+  info: 'BuenTrade <info@buentradegroup.com>',
+};
+
+// Real unification 2026-09-13 ("arreglalo globalmente en todo el sistema, unificalo"): the modal
+// (openEmailModal/emailModalCancel/emailModalConfirm/emailModalSendWhatsApp) and the actual send
+// call now live once in js/email-modal.js (bcOpenEmailModal/bcSendEmailApi) instead of four
+// separate copies. This file's own sendEmailApi keeps its exact original signature and every one
+// of its real call sites is unchanged — it's now a thin wrapper onto the shared implementation.
+async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo){
+  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
+}
+
+// Opens Gmail's own compose screen instead of a mailto: link — same fix as quotes.html's
+// rqGmailComposeUrl. mailto: hands off to whatever the OS has registered as the default mail
+// app, which for a trader who actually works out of Gmail in the browser is the wrong app
+// entirely (or nothing, if none is registered).
+function gmailComposeUrl(emails, subject, body){
+  return `https://mail.google.com/mail/?${new URLSearchParams({ view: 'cm', to: emails.join(','), su: subject, body }).toString()}`;
+}
+// Real gap fixed 2026-09-01: netlify/functions/send-email.js already appends this exact signature
+// server-side on every successful Resend send — but this fallback link never goes near that
+// function, so without this it would go out with no sign-off at all.
+// Real unification 2026-09-13: the actual value now lives once in js/email-modal.js
+// (BC_EMAIL_SIGNATURE) — this is a plain alias so nothing else in this file has to change.
+const EMAIL_SIGNATURE = BC_EMAIL_SIGNATURE;
+// Real bug fixed 2026-09-01, confirmed live with a screenshot: a window.open() call here — even
+// one opened synchronously at the very top of the caller, before any await — can still be
+// silently killed by Chrome's own per-site pop-up permission for this page, with no error and no
+// visible feedback at all. A real <a href target="_blank"> the trader clicks themselves is not
+// subject to that same block, so the fallback is now a real link inside the toast (see showToast)
+// instead of anything JS-driven opening a window on the trader's behalf.
+// Clicking the fallback records the send, the same as the automatic path (orders.html's markSentFallback).
+async function markSentFallback(orderNumber, docType){
+  await markDocSent(orderNumber, docType);
+}
+function gmailFallbackLinkHtml(emails, subject, body, orderNumber, docType){
+  const url = gmailComposeUrl(emails, subject, body + EMAIL_SIGNATURE);
+  // A fixed target name (not "_blank") reuses the same Gmail tab across every click instead of
+  // cold-opening a brand new one each time — see quotes.html's rqRenderEmailModal for why: Gmail
+  // renders a reduced compose (no "From" alias picker) on a cold, first-ever load of that URL.
+  const onclick = orderNumber && docType ? ` onclick="markSentFallback('${orderNumber}','${docType}')"` : '';
+  return `<br><a href="${escapeHtml(url)}" target="bt_gmail" rel="noopener"${onclick} style="color:var(--blue);text-decoration:underline;font-weight:700;">Open in Gmail →</a>`;
+}
+
+// ============ WHATSAPP SHARE (the real PDF, not a fabricated summary image) ============
+// Real correction 2026-09-06: this used to draw a separate summary card to canvas and share that
+// as a PNG instead of the actual document — wa.me can only pre-fill text, never attach a file, so
+// a prior pass invented an image workaround instead of just handing over the real PDF. Downloading
+// the real PDF and letting the trader attach it themselves is no harder and is the actual document,
+// not a re-derived stand-in.
+// Real ask 2026-09-13: "no manda atachment" — same shared confirmation as orders.html now
+// (bcConfirmWaSend, js/email-modal.js) instead of a toast that faded before anyone could act on it.
+// Returns true only when the trader confirms he sent it on WhatsApp (no phone, or "Not sent": false) — the caller marks the document sent on true only.
+async function shareDocAndOpenWhatsApp(doc, filename, phone, message, label){
+  doc.save(filename);
+  if (!phone){ showToast('No WhatsApp on file', 'Attach the PDF manually.', true); return false; }
+  return bcConfirmWaSend(phone, message, filename, { label, ask: false }); // the resend cards of the docs panel record nothing
+}
+
+// Real gap found live 2026-09-07: these three still had their own leftover WhatsApp text from
+// before the message table was approved — only the primary sharePO/shareSO/shareFO got updated
+// then. Same approved text as those, just reused here for the resend-from-docs-panel path.
+async function waCardPO(orderNumber){
+  let built;
+  try { built = await buildPODoc(orderNumber); } catch(e){ showToast('Error', e.message, true); return; }
+  const plant = built.plant;
+  const phone = plant && (plant.whatsapp || plant.phone);
+  shareDocAndOpenWhatsApp(built.doc, `PO-BT-${btNum(orderNumber)}.pdf`, phone, `PO-BT-${btNum(orderNumber)}\nHi, I sent the PO by email and I'm attaching it here as well, just to make sure you have it. Please confirm once you receive it. Thanks!`);  await markDocSent(orderNumber, 'po');
+}
+
+async function waCardSO(orderNumber){
+  let built;
+  try { built = await buildSODoc(orderNumber); } catch(e){ showToast('Error', e.message, true); return; }
+  const customer = built.customer;
+  const phone = customer && (customer.whatsapp || customer.phone);
+  shareDocAndOpenWhatsApp(built.doc, `SO-BT-${btNum(orderNumber)}.pdf`, phone, `Hola, te envié la confirmación de la orden de venta por correo. Te la adjunto también por aquí para asegurarme de que la recibiste. ¿Me confirmas, por favor? Saludos.`);  await markDocSent(orderNumber, 'so');
+}
+
+async function waCardFO(orderNumber){
+  let built;
+  try { built = await buildFODocs(orderNumber); } catch(e){ showToast('Error', e.message, true); return; }
+  const b = built[0];
+  if (!b){ showToast('No freight leg on this order.', '', true); return; }
+  // The carrier's WhatsApp first, else its phone — the same order as the SO and the customs messages.
+  if (!b.carrier){ showToast('No carrier booked yet', 'Assign the carrier to this freight order first.', true); return; }
+  const phone = b.carrier.whatsapp || b.carrier.phone;
+  shareDocAndOpenWhatsApp(b.doc, b.filename, phone, `FO-BT-${btNum(orderNumber)}\nHi, I sent the FO by email and I'm attaching it here as well, just to make sure you have it. Please confirm once you receive it. Thanks!`);  await markDocSent(orderNumber, 'fo');
+}
+
+// The plant lowered its price after an open offer went out (user 2026-10-09 → 2026-10-11): the offer's Status cell shows a "Better price" tag and, under it,
+// the old → new price with a level bar. The price for the customer is never typed here ("nunca voy a poner un precio a mano sin revisar un QT"): the QT
+// (the row's own button) opens with the plant's new price already in, the trader reviews the numbers and sets the sale there, and the QT's customer
+// WhatsApp (it glows) carries the updated list (trading-tool.html negoPriceDropBody). Sending marks the customer as told (sent-offers-log-event
+// price_drop_told), so the tag only comes back if the plant lowers the price again.
+const WA_ICON_SMALL = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg>';
+const WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg>';
+
+const TOAST_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const TOAST_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+function showToast(title, detail, isError, linkHtml){
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = 'toast' + (isError ? ' error' : '');
+  const closeBtn = linkHtml ? `<span onclick="this.closest('.toast').remove()" style="cursor:pointer;color:var(--ink-soft,#8a94a6);margin-left:8px;flex-shrink:0;">✕</span>` : '';
+  el.innerHTML = `<span class="toast-icon">${isError ? TOAST_X : TOAST_CHECK}</span><span class="toast-text"><b>${escapeHtml(title)}</b>${detail ? escapeHtml(detail) : ''}${linkHtml || ''}</span>${closeBtn}`;
+  stack.appendChild(el);
+  // A toast carrying a real link the trader still needs to click (the Gmail fallback) stays up
+  // until they close it themselves (the ✕ above) — auto-dismissing it after a few seconds would
+  // quietly take away the one thing that actually finishes the send.
+  if (!linkHtml){
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, isError ? 6000 : 4000);
+  }
+}
+
+async function sharePO(orderNumber){
+  let built;
+  try { built = await buildPODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  const emails = collectEmails(built.plant);
+  if (!emails.length){ await btAlert('This plant has no email on file.'); return; }
+  const filename = `PO-BT-${btNum(orderNumber)}.pdf`;
+  let url;
+  try { url = await uploadOrderPdf(built.doc, filename); } catch(e){ await btAlert('Upload error: ' + e.message); return; }
+  const po = built.po;
+  const poProductName = po.product_spec || po.product_name || '';
+  const subject = `PO-BT-${btNum(orderNumber)} — BuenTrade — ${poProductName}`;
+  const body = `Hi,\n\nPlease find the Purchase Order PO-BT-${btNum(orderNumber)} attached.\n\n`
+    + `Product: ${poProductName}\n`
+    + `Quantity: ${(po.weight || 0).toLocaleString('en-US')} lbs\n`
+    + `Unit Cost: $${(po.purchase_price || 0).toFixed(4)}\n`
+    + `Total: $${(po.total_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
+    + `Pick-up / Delivery Date: ${fmtDatesList(po.delivery_dates)}`;
+  try {
+    // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
+    // own standalone WhatsApp button (waCardPO), so no waInfo here to avoid a duplicate inside the
+    // Email modal.
+    await sendEmailApi('purchasing', emails, subject, body, [pdfAttachment(built.doc, filename)], null);
+    showToast('PO sent', emails.join(', '));
+    markDocSent(orderNumber, 'po');
+  } catch(e){
+    if (e.cancelled) return;
+    // Gmail's compose screen genuinely can't carry a file attachment, so the fallback link is the
+    // one place the trader still has to attach it themselves — the API path above always sends
+    // the real PDF when it works.
+    showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true,
+      gmailFallbackLinkHtml(emails, subject, `${body}\n\nPDF: ${url}`, orderNumber, 'po'));
+  }
+}
+
+// Real gap explained by the user 2026-09-05: nothing recorded whether the PO/FO/customs docs for a
+// won order were actually sent before its confirmed pickup date — this is the foundation a real
+// "pickup in 1 day, FO still not sent" warning needs. Best-effort only: the email already went out
+// successfully by the time this runs, so a failure here (network blip, etc.) must never look like
+// the send itself failed — it just means the readiness check won't see this one as sent yet.
+async function markDocSent(orderNumber, docType){
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: docType }); }
+  catch (e) { console.warn('markDocSent failed (send itself succeeded):', e.message); }
+}
+
+async function buildSODoc(orderNumber){
+  let result;
+  try { result = await bcComposeSO(orderNumber); }
+  catch (e) { throw new Error(e.data && e.data.error === 'unknown order_number' ? 'SO not found.' : e.message); }
+  const { document: composed, so, customer } = result;
+  // The Sales Order is composed by orders-compose-so and drawn by js/so-pdf.js (one drawing for orders.html and offers.html).
+  if (!composed.sales_order) throw new Error(composed.sales_order_problem ? composed.sales_order_problem.message : 'The Sales Order could not be composed.');
+  return { doc: bcRenderSO(composed.sales_order, orderNumber), so, customer, composed };
+}
+
+async function exportSO(orderNumber){
+  let built;
+  try { built = await buildSODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  built.doc.save(`SO-BT-${btNum(orderNumber)}.pdf`);
+}
+
+async function shareSO(orderNumber){
+  let built;
+  try { built = await buildSODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  const emails = collectEmails(built.customer);
+  if (!emails.length){ await btAlert('This customer has no email on file.'); return; }
+  const filename = `SO-BT-${btNum(orderNumber)}.pdf`;
+  let url;
+  try { url = await uploadOrderPdf(built.doc, filename); } catch(e){ await btAlert('Upload error: ' + e.message); return; }
+  const so = built.so;
+  const soProductName = so.product_spec_es || so.product_name_es || so.product_name || '';
+  const subject = `SO-BT-${btNum(orderNumber)} — Orden de Venta — ${soProductName}`;
+  const body = `Hola,\n\nAdjuntamos la Confirmación de Venta de la orden SO-BT-${btNum(orderNumber)}.\n\n`
+    + `Producto: ${soProductName}\n`
+    + `Cantidad: ${(so.weight || 0).toLocaleString('en-US')} lbs\n`
+    + `Precio: $${(so.sale_price || 0).toFixed(4)}/lb\n`
+    + `Total: $${(so.total_sale || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
+    + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`;
+  try {
+    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null);
+    showToast('SO sent', emails.join(', '));
+    markDocSent(orderNumber, 'so');
+  } catch(e){
+    if (e.cancelled) return;
+    showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true,
+      gmailFallbackLinkHtml(emails, subject, `${body}\n\nPDF: ${url}`, orderNumber, 'so'));
+  }
+}
+
+
+async function buildFODocs(orderNumber){
+  let result;
+  try { result = await bcComposeDocument('orders-compose-fo', orderNumber); }
+  catch (e) { throw new Error(e.data && e.data.error === 'no freight_orders for this order_number' ? 'No freight leg on this order.' : e.message); }
+  const docs = result.documents;
+
+  // The delivery place (the customs agency assigned to the customer, with its address and phone), the pick-up facility, the dates, the
+  // temperature and the release number all come composed from the server (orders-compose-fo): the PDF and the email/WhatsApp text read the same record.
+  const built = [];
+  for (const { document: composed, fo, carrier } of docs){
+    const doc = bcRenderFO(composed, carrier, orderNumber);
+    built.push({ doc, fo, carrier, composed, dates: composed.delivery_dates, filename: `FO-BT-${btNum(orderNumber)}${docs.length > 1 ? '-' + fo.id.slice(0, 4) : ''}.pdf` });
+  }
+  return built;
+}
+
+async function exportFO(orderNumber){
+  let built;
+  try { built = await buildFODocs(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  built.forEach(b => b.doc.save(b.filename));
+}
+
+async function shareFO(orderNumber){
+  let built;
+  try { built = await buildFODocs(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  for (const b of built){
+    const emails = collectEmails(b.carrier);
+    if (!emails.length){ await btAlert(`No email on file for the carrier on leg ${b.fo.origin || '?'} → ${b.fo.destination || '?'}.`); continue; }
+    let url;
+    try { url = await uploadOrderPdf(b.doc, b.filename); } catch(e){ await btAlert('Upload error: ' + e.message); continue; }
+    const subject = `FO-BT-${btNum(orderNumber)} — ${b.composed.pick_up_city || b.fo.origin || '—'} → ${b.composed.customs_broker || b.fo.destination || '—'}`;
+    const body = `Please find the Freight Order FO-BT-${btNum(orderNumber)} attached.\n\n`
+      + `Pick-up: ${b.fo.origin || '—'}\n`
+      + `Delivery: ${b.fo.destination || '—'}\n`
+      + `Agreed Rate: $${(b.composed.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    try {
+      await sendEmailApi('logistics', emails, subject, body, [pdfAttachment(b.doc, b.filename)], null);
+      showToast('FO sent', emails.join(', '));
+      markDocSent(orderNumber, 'fo');
+    } catch(e){
+      if (e.cancelled) continue;
+      // Each leg gets its own real link in its own toast — a real anchor click never depends on
+      // "was this still counted as the same user gesture," so every leg in the batch works the
+      // same, not just the first one.
+      showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true,
+        gmailFallbackLinkHtml(emails, subject, `${body}\n\nPDF: ${url}`, orderNumber, 'fo'));
+    }
+  }
+}
+
+// Border customs paperwork isn't its own document — the broker just needs whatever of
+// PO/SO/FO already exist for this order, so this bundles links to all of them in one email
+// instead of asking the trader to forward each separately.
+// Real correction 2026-09-06: "a la aduana no se le mandan po so fo" — customs never gets copies
+// of the trade documents. It gets the REAL pickup documents the plant/carrier emailed after
+// picking up (BOL, packing list, label photos, USDA papers if Docs) — collected automatically by
+// pickup-docs-emails-poll, sitting in shipment_pickup_documents until the trader confirms sending
+// them here. Never auto-forwarded; this is the explicit confirm step.
+async function shareCustoms(orderNumber){
+  const sentOffer = ((await callApi('sent-offers-search', { order_number: orderNumber, limit: 1 })).results || [])[0];
+  if (!sentOffer || !sentOffer.customs_agency_provider_id){ await btAlert('No customs agency on file for this order.'); return; }
+  const agency = ((await callApi('providers-search', { id: sentOffer.customs_agency_provider_id })).results || [])[0];
+  const emails = collectEmails(agency);
+  if (!emails.length){ await btAlert('This customs agency has no email on file.'); return; }
+
+  const shipment = ((await callApi('shipments-search', { order_number: orderNumber, limit: 1 })).results || [])[0];
+  const pending = (shipment && shipment.pending_pickup_documents) || [];
+  if (!pending.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
+
+  const attachments = [];
+  for (const doc of pending){
+    try {
+      const res = await fetch(doc.storage_url);
+      const blob = await res.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      attachments.push({ filename: doc.filename, content: base64 });
+    } catch(e){ /* one file failing to fetch never blocks the others */ }
+  }
+  if (!attachments.length){ await btAlert('No se pudieron cargar los documentos recibidos.'); return; }
+
+  const customerName = shipment && shipment.customer_name || '';
+  const subject = `${customerName} — BT-${btNum(orderNumber)} — BuenTrade`;
+  const body = `Hi,\n\nPlease find attached the documents for our customer, ${customerName}, regarding order BT-${btNum(orderNumber)}.\n\n`
+    + `Please confirm receipt of the documents and that you have everything needed on your end for the shipment. We will proceed accordingly.\n\nThank you,`;
+  const waPhoneCustoms = agency && (agency.whatsapp || agency.phone);
+  const waMessageCustoms = `Orden BT-${btNum(orderNumber)}\nHi BT-${btNum(orderNumber)}. I'm sending you the documents here as well. Please confirm you have received them and that everything is in order on your end. We'll proceed accordingly. Thank you!`;
+  try {
+    await sendEmailApi('logistics', emails, subject, body, attachments, { phone: waPhoneCustoms, message: waMessageCustoms });
+    showToast('Documentos reenviados a aduana', emails.join(', '));
+    await callApi('shipment-pickup-documents-mark-forwarded', { actor: currentActor(), document_ids: pending.map(d => d.id) });
+    markDocSent(orderNumber, 'customs');
+  } catch(e){
+    if (e.cancelled) return;
+    // Real bug found live 2026-09-14 (same gap fixed in orders.html): no way to confirm a manual
+    // send when the automatic one fails (Netlify still paused) — customs_sent_at and the pending
+    // documents' forwarded flag stayed unset forever.
+    const url = gmailComposeUrl(emails, subject, body + EMAIL_SIGNATURE);
+    const ids = JSON.stringify(pending.map(d => d.id));
+    showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true,
+      `<br><a href="${escapeHtml(url)}" target="bt_gmail" rel="noopener" onclick='markCustomsSentFallback("${orderNumber}", ${ids})' style="color:var(--blue);text-decoration:underline;font-weight:700;">Open in Gmail →</a>`);
+  }
+}
+async function markCustomsSentFallback(orderNumber, documentIds){
+  try { await callApi('shipment-pickup-documents-mark-forwarded', { actor: currentActor(), document_ids: documentIds }); }
+  catch (e) { await btAlert('No se pudo marcar los documentos: ' + e.message); return; }
+  await markDocSent(orderNumber, 'customs');
+  showToast('Documentos marcados como enviados a aduana', '');
+}
+
+rqDefaultDates();
+</script>
+</body>
+</html>

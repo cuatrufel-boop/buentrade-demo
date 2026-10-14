@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuenTrade Trading OS — Customers</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<link rel="shortcut icon" href="/icons/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Real ask 2026-09-09 ("ahora en clients"): same dark-native-popup fix as plants.html/
+       providers.html — color-scheme tells the browser this page's own form controls (select
+       popups, checkboxes, scrollbars) should render in their dark variant. */
+    color-scheme:dark;
+    --navy:#0A2547;
+    --navy-2:#0E3D8F;
+    --blue:#1E6ADB;
+    --blue-bright:#5AAAFF;
+    --blue-light:rgba(90,170,255,.14);
+    --bg:#0A2547;
+    --card:rgba(255,255,255,.08);
+    --line:rgba(255,255,255,.18);
+    --ink:#FFFFFF;
+    --ink-soft:rgba(255,255,255,.55);
+    --red:#C4432E;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  input,select,textarea{background:var(--card);color:var(--ink);}
+  /* Real bug, confirmed live 2026-09-10 ("fondos blancos... cada que entro hay algo
+     diferente"): Chrome forces its own solid white/yellow background on any text input it
+     decides to autofill, overriding this rule entirely and only for whichever fields it
+     remembers on a given visit — exactly the "random, changes every time" pattern reported.
+     The inset box-shadow trick repaints over Chrome's own autofill background since a real
+     background-color can't win against it; text-fill-color keeps the text itself visible
+     against that same dark fill instead of Chrome's own (often black-on-white) choice. */
+  input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,input:-webkit-autofill:active{-webkit-box-shadow:0 0 0 1000px var(--card) inset !important;-webkit-text-fill-color:var(--ink) !important;caret-color:var(--ink);transition:background-color 5000s ease-in-out 0s;}
+  body{
+    margin:0;color:var(--ink);font-family:'Inter',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,
+      linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;
+  }
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px 40px;}
+  header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;padding:20px 32px 20px;margin-bottom:24px;position:relative;}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.55;}
+  .brand-word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px;color:#fff;line-height:1;}
+  .brand-word span{color:var(--blue-bright);}
+  .top-row{display:flex;justify-content:space-between;align-items:center;min-height:44px;position:relative;}
+  .nav-row{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap;}
+  .nav-pill{display:inline-flex;align-items:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:.2px;color:#fff;text-decoration:none;padding:7px 15px;border-radius:999px;transition:color .25s ease;white-space:nowrap;}
+  .nav-pill.active{color:var(--blue-bright);}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 16px;}
+  h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 12px;font-weight:700;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px;}
+  /* Real ask 2026-09-09 ("ahora en clients"): same colored stat-card component as
+     Plants/Products/Quotes/Logistics, ported verbatim. See renderCustomerStats(). */
+  .stats-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
+  .stat-card{border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;}
+  .stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .stat-icon svg{width:18px;height:18px;}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;color:#fff;line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .stat-card.hero .stat-value{font-size:28px;}
+  .stat-label{font-size:11.5px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-top:1px;display:flex;align-items:center;gap:5px;}
+  .stat-label::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+  @media (max-width:900px){ .stats-row{grid-template-columns:1fr 1fr;} }
+  .stat-card.hero{background:linear-gradient(135deg, rgba(90,170,255,.32), rgba(90,170,255,.08));border:1px solid rgba(90,170,255,.55);box-shadow:0 3px 12px -3px rgba(90,170,255,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.hero .stat-icon{background:rgba(90,170,255,.15);border:1.5px solid rgba(90,170,255,.55);color:#5AAAFF;}
+  .stat-card.hero .stat-label::before{background:#5AAAFF;box-shadow:0 0 7px 1.5px rgba(90,170,255,.8);}
+  .stat-card.ok{background:linear-gradient(135deg, rgba(63,203,126,.35), rgba(63,203,126,.1));border:1px solid rgba(63,203,126,.55);box-shadow:0 3px 12px -3px rgba(63,203,126,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.ok .stat-icon{background:rgba(63,203,126,.18);border:1.5px solid rgba(63,203,126,.55);color:#3FCB7E;}
+  .stat-card.ok .stat-label::before{background:#3FCB7E;box-shadow:0 0 7px 1.5px rgba(63,203,126,.8);}
+  .stat-card.danger{background:linear-gradient(135deg, rgba(196,67,46,.32), rgba(196,67,46,.08));border:1px solid rgba(255,156,138,.55);box-shadow:0 3px 12px -3px rgba(196,67,46,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.danger .stat-icon{background:rgba(196,67,46,.18);border:1.5px solid rgba(255,156,138,.55);color:#FF9C8A;}
+  .stat-card.danger .stat-label::before{background:#FF9C8A;box-shadow:0 0 7px 1.5px rgba(255,156,138,.8);}
+  .stat-card.warn{background:linear-gradient(135deg, rgba(255,200,118,.32), rgba(255,200,118,.08));border:1px solid rgba(255,200,118,.55);box-shadow:0 3px 12px -3px rgba(255,200,118,.4), inset 0 1px 0 rgba(255,255,255,.1);}
+  .stat-card.warn .stat-icon{background:rgba(255,200,118,.15);border:1.5px solid rgba(255,200,118,.55);color:#FFC876;}
+  .stat-card.warn .stat-label::before{background:#FFC876;box-shadow:0 0 7px 1.5px rgba(255,200,118,.8);}
+  /* Same glass-pill search as Plants/Products/Logistics, scoped "cu-" for this page. */
+  /* Real bug found 2026-09-09 ("no la de vidrio... que llegue hasta el borde redondo que no se
+     corte en todos los modulos"): the pill's background/border/shadow used to live on the <input>
+     while this wrap had neither radius nor clipping, so the glass highlight (::before) floated
+     unclipped, misaligned with the pill's actual rounded shape. Fixed properly, matching Quotes'
+     own structure — the wrap IS the pill now (background/border/shadow/radius/blur all here,
+     clipped via overflow:hidden), the input inside is just a plain transparent field. */
+  /* Real ask 2026-09-18 ("new plant tiene diseno buentrade hazlo en all categories search etc"):
+     same flat blue-glass .btn recipe as every other module's search box now, replacing the
+     white/gray glass-pill look. */
+  .cu-search-wrap{position:relative;width:280px;height:40px;border-radius:999px;overflow:hidden;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);transition:background .18s,border-color .18s;}
+  .cu-search-wrap:focus-within{background:rgba(90,170,255,.12);border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(90,170,255,.25);}
+  .cu-search-ico{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:rgba(255,255,255,.55);pointer-events:none;}
+  .cu-search-input{width:100%;height:100%;padding:0 14px 0 38px;border:none;background:transparent;color:#fff;font-size:13px;font-family:inherit;}
+  .cu-search-input::placeholder{color:rgba(255,255,255,.5);}
+  .cu-search-input:focus{outline:none;}
+  .btn{background:rgba(255,255,255,.05);color:var(--blue-bright);border:1.5px solid rgba(90,170,255,.4);border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;transition:background .18s,border-color .18s;}
+  .btn:hover{background:rgba(90,170,255,.12);border-color:var(--blue-bright);}
+  .btn.secondary{background:var(--card);color:var(--blue);border:1.5px solid var(--blue);}
+  .btn.danger{background:var(--card);color:#FF9C8A;border:1.5px solid rgba(196,67,46,.4);padding:5px 10px;font-size:12px;}
+  .btn.small{padding:5px 10px;font-size:12px;}
+  /* Real fix 2026-09-02, explicit ask ("unifica... revisa todos los tabs") — same gradient+shadow
+     every WhatsApp button across the OS now uses, not this page's own flat green. */
+  .wa-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:#3FCB7E;border:1.5px solid rgba(63,203,126,.4);border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .18s,border-color .18s,color .18s;}
+  .wa-btn:hover{background:rgba(29,168,81,.18);color:#3FCB7E;border-color:#3FCB7E;}
+  .wa-btn:active{background:rgba(29,168,81,.28);}
+  .wa-btn.outline{background:var(--card);color:#1DA851;border:1.5px solid #1DA851;box-shadow:none;}
+  .wa-btn.outline:hover{background:rgba(29,168,81,.18);box-shadow:none;transform:none;}
+  .wa-btn svg{width:12px;height:12px;flex-shrink:0;fill:currentColor;}
+  /* Real ask 2026-09-09 ("ahora en clients"): same transparent table convention as
+     collections.html/quotes.html/products.html/plants.html/providers.html — hairline dividers,
+     near-invisible hover. Real ask 2026-09-18 ("nunca quedan centrados... centralos con la data"):
+     headers centered over their column to match the data below, except the first (identity)
+     column, which stays left with its data — same system-wide change, same reasoning, in every
+     file listed above. */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:center;font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;font-weight:700;padding:0 10px 8px;}
+  th:first-child{text-align:left;}
+  td{padding:10px;border-top:1px solid var(--line);vertical-align:middle;text-align:center;}
+  td:first-child{text-align:left;}
+  tr:hover td{background:rgba(255,255,255,.03);}
+  .table-scroll{overflow-x:auto;}
+  .muted{color:var(--ink-soft);}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .order-num{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--ink);}
+  /* Real ask 2026-09-14: "cambialo por diseno buentrade" — same dark-glass modal every other page
+     already uses (js/email-modal.js injects into this, both for its own Review-before-sending
+     screen and the shared btAlert() that now replaces every native await btAlert() here). */
+  .email-modal-overlay{position:fixed;inset:0;background:rgba(15,31,51,.45);z-index:2000;display:flex;align-items:center;justify-content:center;}
+  .email-modal-box{background:rgba(15,31,51,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1.5px solid rgba(232,181,76,.4);border-radius:14px;width:100%;max-width:480px;padding:22px 24px;box-shadow:0 24px 60px rgba(4,12,26,.45);color:var(--ink);}
+  .email-modal-box h3{margin:0 0 14px;font-size:16px;font-family:'Space Grotesk',sans-serif;}
+  .email-modal-field{margin-bottom:12px;}
+  .email-modal-field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+  .email-modal-field input,.email-modal-field textarea{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:var(--card);color:var(--ink);}
+  .email-modal-field textarea{min-height:110px;resize:vertical;}
+  .email-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;text-align:center;}
+  .field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;text-align:center;background:var(--card);color:var(--ink);}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);}
+
+  /* Real ask 2026-09-11 ("hazlo... desde el principio con el diseno buentrade para no tener que
+     repetir trabajo"): a GENERIC dropdown, built once (same as plants.html/products.html), that
+     turns ANY existing <select> into this same look — used by btEnhanceSelect() below. */
+  .bt-select-wrap{position:relative;display:block;width:100%;}
+  /* Real ask 2026-09-18 ("te los mande para que lo hagas mismo diseno buentrade"): same flat
+     blue-glass .btn recipe as every search box/category dropdown now, replacing the plain
+     var(--line)-bordered "generic form field" look every one of these selects had. */
+  .bt-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;height:38px;padding:0 12px;border-radius:7px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:var(--blue-bright);font-weight:700;font-size:13.5px;font-family:'Inter',sans-serif;cursor:pointer;text-align:left;transition:background .18s,border-color .18s;}
+  .bt-select-trigger:hover{background:rgba(90,170,255,.12);border-color:var(--blue-bright);}
+  .bt-select-wrap.open .bt-select-trigger{border-color:var(--blue);}
+  .bt-select-trigger:disabled{opacity:.5;cursor:default;}
+  .bt-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+  .bt-select-chevron{width:14px;height:14px;flex-shrink:0;color:var(--ink-soft);transition:transform .15s ease;}
+  .bt-select-wrap.open .bt-select-chevron{transform:rotate(180deg);}
+  .bt-select-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;width:max-content;max-width:320px;background:rgba(20,40,74,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1.5px solid rgba(232,181,76,.4);border-radius:12px;box-shadow:0 24px 60px rgba(4,12,26,.5);padding:6px;z-index:80;max-height:280px;overflow-y:auto;}
+  .bt-select-search{width:100%;box-sizing:border-box;margin-bottom:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06);color:#fff;font-size:12.5px;font-family:inherit;}
+  .bt-select-search::placeholder{color:var(--ink-soft);}
+  .bt-select-option{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:8px 10px;border:none;background:none;color:#fff;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;text-align:left;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .bt-select-option:hover{background:rgba(232,181,76,.1);}
+  .bt-select-option.selected{background:rgba(232,181,76,.16);color:#E8B54C;font-weight:700;}
+  .bt-select-option .bt-select-check{width:13px;flex-shrink:0;visibility:hidden;}
+  /* An option may carry a small translation under it (data-sub) — the app is English, the Spanish is only a guide. */
+  .bt-select-two{display:flex;flex-direction:column;gap:1px;white-space:normal;}
+  .bt-select-sub{font-size:11px;font-weight:400;color:var(--ink-soft);}
+  .bt-select-option.selected .bt-select-check{visibility:visible;}
+  .bt-select-empty{padding:10px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px;}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0 16px;}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:0 14px;}
+  .profile-panel{background:var(--card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:18px 22px;}
+  .profile-panel + .profile-panel{margin-top:16px;}
+  .profile-heading{font-size:11.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+  .profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 28px;}
+  .profile-row{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .profile-row.half{grid-column:span 2;}
+  .profile-row.span2{grid-column:1 / -1;}
+  .profile-row .view-label{margin-bottom:0;}
+  .profile-row-value{font-size:14px;color:var(--ink);line-height:1.5;overflow-wrap:break-word;word-break:break-word;}
+  .section-title{font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 10px;}
+  .section-title:first-child{margin-top:0;}
+  .empty{color:var(--ink-soft);text-align:center;padding:24px;}
+  /* Same badge convention as plants.html/orders.html — verbatim, not a new component. Used by the
+     History tab's Sent/Not sent status. */
+  .payment-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;border:1px solid transparent;display:inline-block;}
+  .payment-badge.ok{background:transparent;color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .payment-badge.neutral{background:transparent;color:rgba(255,255,255,.65);border-color:rgba(255,255,255,.3);}
+  .payment-badge.due-soon{background:transparent;color:#FFC876;border-color:rgba(255,200,118,.4);}
+  .payment-badge.overdue{background:transparent;color:#FF9C8A;border-color:rgba(196,67,46,.4);}
+  /* credit cards on the profile: four equal values (same as Pay & Receive's money cards) */
+  .cr-cards .stat-value,.cr-cards .stat-card.hero .stat-value{font-size:22px;white-space:nowrap;}
+  .payment-badge.active{background:transparent;color:var(--blue-bright);border-color:rgba(90,170,255,.4);}
+  .about-insights{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+  .about-insight{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12.5px;}
+  .about-insight > span:nth-child(2){flex:1;min-width:0;}
+  .about-insight > .btn{padding:5px 12px;font-size:12px;}
+  .about-insight-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;}
+  .row-actions{display:flex;gap:6px;}
+  .name-link{color:var(--blue);font-weight:600;text-decoration:none;cursor:pointer;}
+  .name-link:hover{text-decoration:underline;}
+  /* Real ask 2026-09-09 ("ahora en clients"): the customer list is a real <table> now (see
+     renderCustomers()) — .pkg-table-wrap/.pkg-row/.pkg-plant-name/.pkg-plant-info/.pkg-plant-sub
+     no longer used anywhere. .pkg-plant-avatar(-logo) survives — still real: the customer profile
+     view's own logo header. */
+  .pkg-plant-avatar{width:44px;height:44px;border-radius:11px;flex-shrink:0;background:linear-gradient(135deg,#E7F0FE,#D5E5FC);color:#1E6ADB;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .pkg-plant-avatar-logo{width:auto;max-width:70px;background:none;border:none;padding:2px;}
+  .pkg-plant-avatar-logo img{width:auto;max-width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);}
+  /* Real ask 2026-09-11 ("te parece bien hecho esto?"): same fix as plants.html/providers.html —
+     a wide logo now fills nearly the whole 220x140 box, so a fixed-corner edit pencil sat on top
+     of the artwork. Hidden until hover/focus instead. */
+  .pkg-logo-edit-btn{opacity:0;transition:opacity .15s ease;}
+  .pkg-logo-wrap:hover .pkg-logo-edit-btn,.pkg-logo-edit-btn:focus-visible{opacity:1;}
+  /* Real ask 2026-09-11 ("pon otro fondo... que quede bien"): same fix as plants.html/
+     providers.html — a dark-ink logo has no readable contrast on navy no matter the outline. Real
+     white card behind it, scoped to .pkg-logo-wrap only; small list-row avatars stay transparent. */
+  .pkg-logo-wrap .pkg-plant-avatar-logo{background:#fff;border:1px solid var(--line);}
+  .pkg-logo-wrap .pkg-plant-avatar-logo img{filter:none;}
+  .view-label{display:block;font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.02em;margin-bottom:2px;}
+  /* 2026-10-10 (user: "la A igual que la B… color de letra, tamaño"): inside a client the text uses the SAME scale as the list — body 13px, small / hint 11.5px, headings 12px — instead of 14 / 12.5 / 12 / 11 */
+  #custTab_credit,#custTab_about,#custTab_details,#custTab_history{font-size:13px;}
+  #custTab_credit .empty,#custTab_credit b{font-size:13px;}
+  #custTab_about .about-insight,#custTab_about .about-insight > span,#custTab_about .muted a{font-size:13px;}
+  #custTab_about .muted,#custTab_history .muted,#custTab_history label.muted{font-size:11.5px;}
+  #custTab_details .view-label{font-size:11.5px;}
+  .profile-heading{font-size:12px;}
+  #formCard{display:none;}
+  .tab-row{display:flex;gap:6px;margin:14px 0 18px;border-bottom:1.5px solid var(--line);}
+  .tab-btn{background:none;border:none;padding:9px 14px;font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;}
+  .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .tab-btn:focus{outline:none;}
+  .tab-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+  /* Real ask 2026-09-28 ("aplica el modo de la C en todos los modulos donde estan las otras pestanas,
+     ojo solo diseno"): every page tab row looks like Orders' phase selector / Pay & Receive — one
+     rounded bar, equal segments, the active one in gold. Design only: markup, ids and JS untouched. */
+  .tab-row{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:4px;gap:3px;}
+  .tab-btn{flex:1;justify-content:center;text-align:center;padding:9px 6px;border:none;border-radius:7px;margin-bottom:0;font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:700;color:var(--ink-soft);transition:background .15s,color .15s;}
+  .tab-btn:hover{color:var(--ink);}
+  .tab-btn.active{background:rgba(232,181,76,.15);color:#E8B54C;border-bottom-color:transparent;}
+
+  /* ============ Products they buy — searchable combobox + product cards, replacing a plain
+     native <select> whose only label was the bare cut name (e.g. six identical-looking "Cabeza
+     de lomo" entries with no way to tell them apart). Every option/card now shows the real,
+     already-disambiguated full_name_es a trader typed in at creation — never guessed here, just
+     surfaced. ============ */
+  .cp-add-row{position:relative;display:flex;gap:8px;margin-bottom:16px;}
+  .cp-search-box{position:relative;flex:1;}
+  .cp-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-soft);pointer-events:none;}
+  .cp-search-input{width:100%;padding:11px 14px 11px 40px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;text-align:left;background:var(--card);color:var(--ink);transition:border-color .15s,box-shadow .15s;}
+  .cp-search-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(30,106,219,.1);}
+  .cp-suggest-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--navy);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(4,12,26,.4);max-height:320px;overflow-y:auto;z-index:30;display:none;}
+  .cp-suggest-panel.show{display:block;}
+  .cp-suggest-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--line);transition:background .12s;}
+  .cp-suggest-item:last-child{border-bottom:none;}
+  .cp-suggest-item:hover,.cp-suggest-item.active{background:var(--blue-light);}
+  .cp-suggest-main{min-width:0;}
+  .cp-suggest-title{font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cp-suggest-sub{font-size:11.5px;color:var(--ink-soft);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cp-suggest-empty{padding:20px 16px;text-align:center;color:var(--ink-soft);font-size:13px;}
+  .cp-temp-badge{flex-shrink:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+  .cp-temp-badge.fresh{background:transparent;border:1px solid rgba(90,170,255,.4);color:var(--blue-bright);}
+  .cp-temp-badge.frozen{background:transparent;border:1px solid rgba(90,220,255,.4);color:#7CE0FF;}
+  /* 2026-10-10 (user: "deja una por una estas tabs igual que el que acabamos de hacer"): Details is plain ROWS like the list and the Products tab — a divider line, the field name on the left (the list's table-header look), its value on the right */
+  #custTab_details .grid3{display:block;}
+  #custTab_details .grid3 > div{display:flex;align-items:baseline;gap:16px;padding:10px;border-top:1px solid var(--line);}
+  #custTab_details .grid3 > div > .view-label{flex:0 0 200px;margin:0;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--ink-soft);text-transform:uppercase;}
+  #custTab_details .grid3 > div > span,#custTab_details .grid3 > div > a{flex:1;min-width:0;font-size:13px;}
+  #custTab_details .section-title{margin:22px 0 6px;}
+  #custTab_details .section-title:first-child{margin-top:0;}
+  @media (max-width:760px){ #custTab_details .grid3 > div{flex-direction:column;gap:2px;} #custTab_details .grid3 > div > .view-label{flex:none;} }
+  .ab-flat{margin:0;padding:0;}
+  .ab-flat .profile-heading{margin-bottom:6px;}
+  .ab-hint{font-size:11.5px;margin:0 0 12px;}
+  .ab-add{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;}
+  .ab-add textarea{flex:1;min-width:0;height:38px;min-height:38px;resize:vertical;box-sizing:border-box;}
+  .about-insight-actions .bt-select-wrap{width:auto !important;}
+  .cr-flat{margin:0;padding:0;}
+  .cr-flat table{border-collapse:collapse;}
+  .cp-product-list{display:flex;flex-direction:column;gap:0;}
+  /* 2026-10-10 (user: "b tiene que estar como a"): a client's products are plain rows like the customers list — a divider line, no card, no icon tile */
+  .cp-product-card{display:flex;align-items:center;gap:14px;padding:10px;background:none;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;transition:background .12s;}
+  .cp-product-card:hover{background:rgba(255,255,255,.03);box-shadow:none;border-color:var(--line);}
+  .cp-product-card .cp-product-icon{display:none;}
+  .cp-product-icon{flex-shrink:0;width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#E7F0FE,#D5E5FC);color:var(--blue);display:flex;align-items:center;justify-content:center;}
+  .cp-product-icon svg{width:18px;height:18px;}
+  .cp-product-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .cp-product-title{font-weight:600;font-size:13px;color:var(--blue);} /* 2026-10-10: a name inside is the same blue 13px 600 as a name in the list */
+  .cp-product-sub{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  /* Real ask 2026-09-17: "cuando te diga diseno buentrade es asi mismo" — pointed at orders.html's
+     Active Loads table (rounded pill tags with an icon and a colored border per state, plain
+     .btn/.btn.secondary text buttons like its "View") as the exact reference. Reused here: the
+     pill is the same recipe as orders.html's .payment-badge (transparent fill, border+text color
+     carrying the state — blue/set, neutral/not-set), and Edit/Save/Cancel are real .btn buttons
+     (.btn.secondary for Edit/Cancel — the same pairing this page's own profile Edit/Cancel already
+     use — .btn for Save), never bare icon-only squares. */
+  .cp-cadence-display{flex-shrink:0;display:flex;align-items:center;gap:8px;}
+  /* the row whose "How often" menu is open sits above the rows below it, so its options aren't hidden */
+  .cp-product-card:has(.bt-select-wrap.open){position:relative;z-index:60;}
+  .cp-remove-btn{flex-shrink:0;width:36px;height:36px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s,background .15s;}
+  .cp-remove-btn:hover{border-color:var(--red);color:#FF9C8A;background:rgba(196,67,46,.12);}
+  .cp-remove-btn svg{width:13px;height:13px;}
+  .cp-empty-state{display:flex;flex-direction:column;align-items:center;gap:10px;padding:40px 20px;text-align:center;color:var(--ink-soft);}
+  .cp-empty-state svg{width:40px;height:40px;color:#C9D6E8;}
+  .cp-empty-state strong{color:var(--ink);font-size:13.5px;font-weight:600;}
+  .cp-empty-state span{font-size:12.5px;}
+</style>
+<link rel="stylesheet" href="css/bt-ui.css">
+</head>
+<body>
+
+<!-- ============ LOGIN GATE (same Firebase project/login as the Trading Tool) ============ -->
+<style>
+  #authGate{position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#123A6B 100%);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+  .auth-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:32px 30px;box-shadow:0 20px 60px rgba(0,0,0,.35);--ink:#0F1F33;--ink-soft:#64748B;}
+  .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px;}
+  .auth-logo .word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#0B2545;}
+  .auth-logo .word span{color:#1B6FC9;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{display:block;font-size:12px;font-weight:600;color:#5B6B82;margin-bottom:5px;}
+  .auth-field input{width:100%;padding:10px 12px;border:1.5px solid #E1E6ED;border-radius:8px;font-size:14px;font-family:inherit;}
+  .auth-field input:focus{outline:none;border-color:#1B6FC9;}
+  .auth-submit{width:100%;padding:11px;border:none;border-radius:8px;background:#1B6FC9;color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;}
+  .auth-msg{font-size:12.5px;margin-top:12px;padding:9px 11px;border-radius:8px;line-height:1.4;display:none;}
+  .auth-msg.err{background:#FCEBE7;color:#B23A22;display:block;}
+  .auth-msg.ok{background:#E3F6F4;color:#00776F;display:block;}
+  .auth-note{font-size:11px;color:#9AABC2;text-align:center;margin-top:16px;line-height:1.5;}
+</style>
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg viewBox="0 0 44 44" width="30" height="30"><circle cx="22" cy="22" r="21" fill="#123A6B" stroke="#3E7BC4" stroke-width="1.2"/><path d="M6,25 C13,19 17,29 24,23 C30,18 34,24 38,20" stroke="#5FA8E8" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="16" y="14" width="13" height="8" rx="1.4" fill="#00A9A0"/></svg>
+      <div class="word">Buen<span>Trade</span> Trading OS</div>
+    </div>
+    <form id="formSignIn" onsubmit="return doSignIn(event)">
+      <div class="auth-field"><label>Work email</label><input type="email" id="siEmail" required placeholder="name@buentradegroup.com"></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="siPass" required></div>
+      <button class="auth-submit" type="submit">Sign In</button>
+    </form>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="auth-note">Accounts are created from the Trading Tool. Same login works here.</div>
+  </div>
+</div>
+
+<script src="demo-auth.js"></script>
+<script src="js/email-modal.js"></script>
+<script src="js/contact-validation.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "demo",
+  authDomain: "demo.invalid",
+  projectId: "demo",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+// STAGING Trading OS API — see providers.html for the full note. Every read/write here goes
+// through an Edge Function; nothing talks to Postgres directly.
+const API_ROOT = 'https://oqotaxmacwueiutdxgkk.supabase.co/functions/v1/';
+// Run the functions next to the database (us-east-1), not near the browser (2026-09-29, measured: a function
+// running in Europe spent ~830 ms connecting to the US database and 86 ms per query; pinned: 80 ms and 3 ms).
+const API_REGION = '?forceFunctionRegion=us-east-1';
+const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
+
+async function callApi(fn, body){
+  const res = await fetch(API_ROOT + fn + API_REGION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error(data.message || data.error || res.status); err.data = data; throw err; }
+  return data;
+}
+function currentActor(){ return (auth.currentUser && auth.currentUser.email) || 'unknown'; }
+
+function showAuthMsg(text){
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'auth-msg err';
+}
+
+function doSignIn(e){
+  e.preventDefault();
+  const email = document.getElementById('siEmail').value;
+  const pass = document.getElementById('siPass').value;
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(cred => {
+      if(!cred.user.emailVerified){
+        showAuthMsg('Please verify your email first.');
+        auth.signOut();
+      }
+    })
+    .catch(err => showAuthMsg(err.message));
+  return false;
+}
+
+function logout(){ auth.signOut(); }
+
+// Real bug reported live 2026-09-18 ("rebota se sale se brinca de donde estoy" — same one
+// already fixed on Quotes): Firebase refires onAuthStateChanged on its own on every silent
+// ID-token refresh (and on tab refocus/reconnect), not just the real sign-in. loadCustomers() used
+// to run unconditionally on every firing, wiping the page back to "Loading…" mid-session. This
+// flag makes the real load happen exactly once per tab.
+let btAuthLoaded = false;
+auth.onAuthStateChanged(user => {
+  const gate = document.getElementById('authGate');
+  const app = document.getElementById('appContent');
+  if (user && user.emailVerified) {
+    gate.style.display = 'none';
+    app.style.display = 'block';
+    document.getElementById('userBadge').textContent = user.email;
+    if (!btAuthLoaded) { btAuthLoaded = true; loadCustomers(); }
+  } else {
+    gate.style.display = 'flex';
+    app.style.display = 'none';
+  }
+});
+</script>
+<!-- ============ END LOGIN GATE ============ -->
+
+<div id="appContent" style="display:none;">
+<header>
+  <div class="top-row">
+    <a href="dashboard.html" style="position:absolute;left:32px;top:50%;transform:translateY(-50%);text-align:center;text-decoration:none;" title="Go to Dashboard"><div class="brand-word">Buen<span>Trade</span><div style="font-size:14px;letter-spacing:0.1em;color:rgba(255,255,255,.75);margin-top:5px;"><b style="font-weight:800;color:var(--blue-bright);">O</b>perating <b style="font-weight:800;color:var(--blue-bright);">S</b>ystem</div></div></a>
+  </div>
+  <div id="userChip" style="position:absolute;right:32px;bottom:24px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:3px 5px 3px 3px;">
+    <span id="userAvatar" style="width:19px;height:19px;border-radius:50%;background:#1E6ADB;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0;"></span>
+    <span id="userBadge" style="display:none;"></span>
+    <button type="button" class="hdr-logout" onclick="logout()" title="Log Out" aria-label="Log Out"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+  </div>
+  <nav class="nav-row">
+    <a href="quotes.html" class="nav-pill">Quotes</a>
+    <a href="offers.html" class="nav-pill">Offers</a>
+    <a href="orders.html" class="nav-pill">Orders</a>
+    <a href="plants.html" class="nav-pill">Plants</a>
+    <a href="products.html" class="nav-pill">Products</a>
+    <a href="customers.html" class="nav-pill active">Clients</a>
+    <a href="providers.html" class="nav-pill">Logistics</a>
+    <a href="collections.html" class="nav-pill">Pay &amp; Receive</a>
+  </nav>
+</header>
+<script src="js/header-chip.js"></script>
+<script src="js/bt-dialogs.js"></script>
+<script src="js/entity-history.js"></script>
+
+<div class="wrap">
+  <h1 onclick="closeCustomerDetail()" style="cursor:pointer;">Customers</h1>
+
+  <div class="card" id="viewCard" style="display:none;">
+    <!-- ============ Always-visible header — name, city, contact, WhatsApp — regardless of
+         which tab is active below, same "highlights" pattern as the plant profile. ============ -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <!-- Same wide-box logo treatment as Ingredient Suppliers/Providers (2026-08-30) — most real
+             logos are landscape-shaped, a forced square just shrinks them to a thin sliver. -->
+        <div class="pkg-logo-wrap" style="position:relative;width:220px;height:140px;flex-shrink:0;">
+          <div id="v_logo_placeholder" class="pkg-plant-avatar" style="width:220px;height:140px;border-radius:18px;font-size:52px;"></div>
+          <img id="v_logo" class="pkg-plant-avatar pkg-plant-avatar-logo" style="width:220px;max-width:220px;height:140px;border-radius:18px;object-fit:contain;padding:14px;display:none;position:absolute;top:0;left:0;" alt="">
+          <button type="button" class="pkg-logo-edit-btn" onclick="document.getElementById('customerLogoFileInput').click()" title="Change logo" style="position:absolute;bottom:-4px;right:-4px;width:32px;height:32px;border-radius:50%;background:var(--blue);border:2px solid #fff;color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✎</button>
+          <input type="file" id="customerLogoFileInput" accept="image/*" style="display:none;" onchange="uploadCustomerLogo()">
+        </div>
+        <div>
+          <strong id="viewTitle" style="font-size:18px;"></strong>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--ink-soft);">
+            <span id="v_location">—</span>
+            <span id="v_contact_name">—</span>
+            <button class="wa-btn" id="v_waBtn" style="display:none;" onclick="openViewWhatsApp()"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg>Chat</button>
+          </div>
+          <div id="customerLogoMsg" style="font-size:12px;color:var(--ink-soft);margin-top:4px;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn secondary" onclick="editFromView()">Edit</button>
+      </div>
+    </div>
+
+    <!-- credit (2026-09-29): the four cards above the tab bar (same layout as Logistics / Quotes /
+         Pay & Receive), the detail in the Credit tab -->
+    <div id="custCreditCards" style="margin-top:18px;"></div>
+
+    <div class="tab-row">
+      <button type="button" class="tab-btn" id="custTabBtn_credit" onclick="setCustomerTab('credit')">Credit</button>
+      <button type="button" class="tab-btn active" id="custTabBtn_products" onclick="setCustomerTab('products')">Products</button>
+      <button type="button" class="tab-btn" id="custTabBtn_about" onclick="setCustomerTab('about')">About the client</button>
+      <button type="button" class="tab-btn" id="custTabBtn_details" onclick="setCustomerTab('details')">Details</button>
+      <button type="button" class="tab-btn" id="custTabBtn_history" onclick="setCustomerTab('history')">History</button>
+    </div>
+
+    <!-- ============ PRODUCTS THEY BUY — default tab: what does this customer buy, at a
+         glance, editable right here. ============ -->
+    <div id="custTab_credit" style="display:none;"><div id="custCredit"></div></div>
+    <div id="custTab_products">
+      <div class="cp-add-row">
+        <div class="cp-search-box">
+          <svg class="cp-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="cp_search_input" class="cp-search-input" placeholder="Add a product this client buys…" autocomplete="off"
+            oninput="cpRenderSuggestions()" onfocus="cpRenderSuggestions()" onblur="setTimeout(cpHideSuggestions, 150)"
+            onkeydown="if(event.key==='Enter') cpSelectActiveOrFirst();">
+          <div id="cp_suggest_panel" class="cp-suggest-panel"></div>
+        </div>
+      </div>
+      <div id="custProductRows" class="cp-product-list"></div>
+      <div id="custProductsEmpty" class="cp-empty-state" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 12 3 4 7v10l8 4 8-4V7z"/><path d="M12 12 4 7m8 5 8-5m-8 5v9"/></svg>
+        <strong>No products yet</strong>
+        <span>Search above and pick one to add it to this client.</span>
+      </div>
+    </div>
+
+    <!-- ============ DETAILS — everything else. Switching tabs never leaves the record. ============ -->
+    <!-- ABOUT THE CLIENT (2026-09-29): the ONE place to write what we know about the client — every note is
+         dated and Messaging reads them to write messages that catch their attention ("debemos conocer al
+         cliente a fondo… IMPORTANTE"). What they buy and how often stays in the Products tab. -->
+    <div id="custTab_about" style="display:none;"><div id="custAbout"></div></div>
+    <div id="custTab_details" style="display:none;">
+      <div class="section-title" style="margin-top:0;">Identity</div>
+      <div class="grid3" style="row-gap:10px;">
+        <div><label class="view-label">Legal Name</label><span id="v_legal_name">—</span></div>
+        <div><label class="view-label">Address</label><span id="v_address">—</span></div>
+        <div><label class="view-label">Website</label><span id="v_website">—</span></div>
+      </div>
+      <div class="section-title">Contact</div>
+      <div class="grid3" style="row-gap:10px;">
+        <div><label class="view-label">Contact Role</label><span id="v_contact_role">—</span></div>
+        <div><label class="view-label">Email</label><span id="v_email">—</span></div>
+      </div>
+      <div class="section-title">Payments contact</div>
+      <div class="grid3" style="row-gap:10px;">
+        <div><label class="view-label">Payments Contact</label><span id="v_payments_contact_name">—</span></div>
+        <div><label class="view-label">Payments Email</label><span id="v_payments_contact_email">—</span></div>
+        <div><label class="view-label">Payments WhatsApp</label><span id="v_payments_contact_phone">—</span></div>
+      </div>
+      <div class="section-title">Commercial profile</div>
+      <div class="grid3" style="row-gap:10px;">
+        <div><label class="view-label">Business Type</label><span id="v_business_type">—</span></div>
+        <div><label class="view-label">Currency</label><span id="v_preferred_currency">—</span></div>
+        <div><label class="view-label">Delivery Type</label><span id="v_usual_delivery_type">—</span></div>
+        <div><label class="view-label">Payment Days</label><span id="v_payment_days">—</span></div>
+        <div><label class="view-label">Credit Limit</label><span id="v_credit_limit">—</span></div>
+        <div><label class="view-label">Destination</label><span id="v_usual_destination">—</span></div>
+        <div><label class="view-label">Incoterm</label><span id="v_usual_incoterm">—</span></div>
+        <div><label class="view-label">Payment Method</label><span id="v_payment_method">—</span></div>
+        <div><label class="view-label">Customs Agency</label><span id="v_customs_agency">—</span></div>
+      </div>
+    </div>
+
+    <!-- ============ HISTORY — real ask 2026-09-14: "en el momento en el que creo PO SO FO INV
+         debe alojarse en el perfil de cada destinatario" — every SO and Invoice ever created for
+         this customer, in date order. ============ -->
+    <div id="custTab_history" style="display:none;"><div id="custHistory"></div></div>
+  </div>
+
+  <div class="card" id="formCard">
+    <strong id="formTitle">New customer</strong>
+    <input type="hidden" id="custId">
+
+    <!-- Same format as the product/plant/location forms: fill in the fields up top, and the
+         read-only Customer Profile card below consolidates it into one glanceable record as you
+         go — nothing derived/computed here, it's a live mirror of what Save will record. -->
+    <div class="profile-panel" style="margin-top:12px;">
+      <div class="profile-heading">Classification</div>
+
+      <div class="section-title" style="margin-top:0;">The basics</div>
+      <div class="grid5">
+        <div class="field"><label>Trade name *</label><input id="trade_name" required placeholder="e.g. Mi Ranchito" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Legal name</label><input id="legal_name" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Contact name</label><input id="contact_name" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Contact role</label><input id="contact_role" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>WhatsApp</label>
+          <div style="display:flex;gap:6px;">
+            <select id="whatsapp_code" style="width:78px;flex-shrink:0;" onchange="updateCustomerProfile()"></select>
+            <input id="whatsapp_number" placeholder="6621234567" style="flex:1;" oninput="updateCustomerProfile()">
+          </div>
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="field"><label>Email</label><input type="email" id="email" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Website</label><input id="website" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>CC Emails (comma-separated)</label><input id="email_cc" placeholder="compras@cliente.com, pagos@cliente.com" oninput="updateCustomerProfile()"></div>
+      </div>
+
+      <div class="section-title">Address</div>
+      <div class="grid5">
+        <div class="field"><label>Country</label>
+          <select id="country_id" onchange="onCustomerCountryChange();updateCustomerProfile()"><option value="">—</option></select>
+        </div>
+        <div class="field" id="stateSelectField" style="display:none;"><label>State</label>
+          <select id="state_id" onchange="updateCustomerProfile()"><option value="">—</option></select>
+        </div>
+        <div class="field" id="stateTextField"><label>State</label><input id="state" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>City</label><input id="city" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Street address</label><input id="address" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Zip / Postal code</label><input id="postal_code" oninput="updateCustomerProfile()"></div>
+      </div>
+
+      <div class="section-title">Commercial profile</div>
+      <div class="grid5">
+        <!-- Messaging (2026-09-27): what kind of business the client is — set from the first save of the profile. -->
+        <div class="field"><label>Business type *</label>
+          <select id="business_type_id" onchange="updateCustomerProfile()"><option value="">—</option></select>
+        </div>
+        <div class="field"><label>Preferred currency</label>
+          <select id="preferred_currency" onchange="updateCustomerProfile()"><option value="">—</option><option>USD</option><option>COP</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Usual delivery type</label>
+          <select id="usual_delivery_type" onchange="suggestCurrency();updateCustomerProfile()">
+            <option value="">—</option>
+            <option value="Border">Picked up (FOB)</option>
+            <option value="Delivered Colombia">Delivered</option>
+          </select>
+        </div>
+        <div class="field"><label>Payment terms</label>
+          <select id="payment_terms_type" onchange="togglePaymentDaysInput();updateCustomerProfile()">
+            <option value="">—</option>
+            <option value="advance">Advance</option>
+            <option value="credit">Credit</option>
+          </select>
+        </div>
+        <div class="field"><label>Usual destination</label><input id="usual_destination" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Usual Incoterm</label>
+          <select id="usual_incoterm_id" onchange="updateCustomerProfile()"><option value="">—</option></select>
+        </div>
+      </div>
+      <div id="paymentDaysRow" style="display:none;max-width:220px;">
+        <div class="field"><label>Credit days</label><input type="number" id="payment_days" min="1" oninput="updateCustomerProfile()"></div>
+      </div>
+      <div style="max-width:220px;">
+        <div class="field"><label>Credit limit</label><input type="number" id="credit_limit" min="0" step="0.01" oninput="updateCustomerProfile()"></div>
+      </div>
+      <div class="grid4">
+        <div class="field"><label>Incoterm Named Place</label><input id="usual_incoterm_place" placeholder="e.g. Nogales, AZ" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Payment method</label><input id="payment_method" oninput="updateCustomerProfile()"></div>
+        <div class="field"><label>Customs agency (who they clear with)</label>
+          <select id="customs_agency_provider_id" onchange="updateCustomerProfile()"><option value="">—</option></select>
+        </div>
+        <div class="field"><label>Exchange rate preference</label>
+          <select id="preferred_exchange_rate_mode" onchange="updateCustomerProfile()"><option value="">—</option><option value="automatic">Automatic (daily)</option><option value="manual">Manual</option></select>
+        </div>
+      </div>
+
+      <div class="field" style="text-align:left;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;">
+          <input type="checkbox" id="paymentsContactDifferent" onchange="togglePaymentsContact();updateCustomerProfile()" style="width:auto;">
+          Payments contact is different from the buyer
+        </label>
+      </div>
+      <div id="paymentsContactBlock" style="display:none;">
+        <div class="grid3">
+          <div class="field"><label>Payments contact name</label><input id="payments_contact_name" oninput="updateCustomerProfile()"></div>
+          <div class="field"><label>Payments contact email</label><input type="email" id="payments_contact_email" oninput="updateCustomerProfile()"></div>
+          <div class="field"><label>Payments contact WhatsApp</label><input id="payments_contact_whatsapp" oninput="updateCustomerProfile()"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="profile-panel">
+      <div class="profile-heading">Customer Profile</div>
+      <div class="profile-grid">
+        <div class="profile-row"><span class="view-label">Trade Name</span><span class="profile-row-value" id="cv_trade_name">—</span></div>
+        <div class="profile-row"><span class="view-label">Legal Name</span><span class="profile-row-value" id="cv_legal_name">—</span></div>
+        <div class="profile-row"><span class="view-label">Contact Name</span><span class="profile-row-value" id="cv_contact_name">—</span></div>
+        <div class="profile-row"><span class="view-label">Contact Role</span><span class="profile-row-value" id="cv_contact_role">—</span></div>
+        <div class="profile-row"><span class="view-label">Email</span><span class="profile-row-value" id="cv_email">—</span></div>
+        <div class="profile-row"><span class="view-label">WhatsApp</span><span class="profile-row-value" id="cv_whatsapp">—</span></div>
+        <div class="profile-row"><span class="view-label">Country</span><span class="profile-row-value" id="cv_country">—</span></div>
+        <div class="profile-row"><span class="view-label">State</span><span class="profile-row-value" id="cv_state">—</span></div>
+        <div class="profile-row"><span class="view-label">City</span><span class="profile-row-value" id="cv_city">—</span></div>
+        <div class="profile-row"><span class="view-label">Street Address</span><span class="profile-row-value" id="cv_address">—</span></div>
+        <div class="profile-row"><span class="view-label">Zip / Postal Code</span><span class="profile-row-value" id="cv_postal_code">—</span></div>
+        <div class="profile-row"><span class="view-label">Business Type</span><span class="profile-row-value" id="cv_business_type">—</span></div>
+        <div class="profile-row"><span class="view-label">Preferred Currency</span><span class="profile-row-value" id="cv_preferred_currency">—</span></div>
+        <div class="profile-row"><span class="view-label">Usual Delivery Type</span><span class="profile-row-value" id="cv_usual_delivery_type">—</span></div>
+        <div class="profile-row"><span class="view-label">Payment Terms</span><span class="profile-row-value" id="cv_payment_terms">—</span></div>
+        <div class="profile-row"><span class="view-label">Usual Destination</span><span class="profile-row-value" id="cv_usual_destination">—</span></div>
+        <div class="profile-row"><span class="view-label">Usual Incoterm</span><span class="profile-row-value" id="cv_usual_incoterm">—</span></div>
+        <div class="profile-row"><span class="view-label">Payment Method</span><span class="profile-row-value" id="cv_payment_method">—</span></div>
+        <div class="profile-row"><span class="view-label">Customs Agency</span><span class="profile-row-value" id="cv_customs_agency">—</span></div>
+        <div class="profile-row"><span class="view-label">Exchange Rate Preference</span><span class="profile-row-value" id="cv_preferred_exchange_rate_mode">—</span></div>
+        <div class="profile-row"><span class="view-label">CC Emails</span><span class="profile-row-value" id="cv_email_cc">—</span></div>
+        <div class="profile-row"><span class="view-label">Website</span><span class="profile-row-value" id="cv_website">—</span></div>
+        <div class="profile-row"><span class="view-label">Payments Contact</span><span class="profile-row-value" id="cv_payments_contact">—</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn" onclick="saveCustomer()">Save</button>
+      <button class="btn secondary" onclick="closeForm()">Cancel</button>
+    </div>
+    <div id="formMsg" style="font-size:12.5px;margin-top:10px;"></div>
+    <div id="dangerZone" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn danger" onclick="deleteCustomer(document.getElementById('custId').value)">Delete customer</button>
+      <span class="muted" style="font-size:12px;">Only a customer with no loads, offers or payments can be deleted. You'll type its name to confirm.</span>
+    </div>
+  </div>
+
+  <!-- Real ask 2026-09-09 ("ahora en clients"): same stat cards + glass-pill search +
+       transparent table already shipped on Plants/Products/Quotes/Logistics. See
+       renderCustomerStats()/renderCustomers(). -->
+  <div class="stats-row" id="customerStatsRow"></div>
+  <!-- Corrected 2026-09-09 ("la unica que estaba bien era quotes... ve uno por uno y ponlos
+       igual"): Quotes' reference is the search floating OUTSIDE the results card — toolbar moved
+       above customerListCard, not inside it (see openForm/closeForm/viewCustomer/
+       closeCustomerDetail for the matching visibility toggle). -->
+  <div id="customerToolbarRow" style="display:flex;align-items:center;margin:0 0 20px;gap:10px;">
+    <div class="cu-search-wrap">
+      <svg class="cu-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchBox" type="text" placeholder="Search" oninput="renderCustomers()" class="cu-search-input">
+    </div>
+    <button class="btn" onclick="openForm()">+ Add Customer</button>
+  </div>
+  <div class="card" id="customerListCard">
+    <div class="table-scroll">
+      <!-- Real bug found 2026-09-09: min-width is only a FLOOR — table-layout:auto let this
+           column grow arbitrarily wide on a wide screen, centering the icon pair inside whatever
+           leftover gap resulted instead of a tight, consistent-width column. table-layout:fixed
+           makes the un-widthed first column absorb 100% of the remainder deterministically. -->
+      <table style="table-layout:fixed;">
+        <!-- Real bug found 2026-09-09 ("las 4 columnas simetricas... no unas a un lado a otras a
+             otro"): 180px was measured against the OLD 2-part location text (city+country); now
+             that Location shows city+state+country, the longest real value ("Mexicali, Baja
+             California, Colombia") needs ~198px and was wrapping to 2 lines in some rows but not
+             others, breaking uniform row height. Measured every customer's actual rendered
+             location text live and sized the column to the true longest one plus padding. -->
+        <thead><tr><th>Customer</th><th style="width:240px;">Location</th><th style="width:150px;">Credit Limit (USD)</th><th style="width:190px;">Can Sell Today</th><th style="width:110px;">Contact</th></tr></thead>
+        <tbody id="customerRows"></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty" style="display:none;">No customers yet. Click "+ Add Customer" to create the first one.</div>
+  </div>
+</div>
+</div>
+
+<script>
+let customers = [];
+
+function openForm(customer){
+  document.getElementById('viewCard').style.display = 'none';
+  document.getElementById('customerToolbarRow').style.display = 'none';
+  document.getElementById('customerStatsRow').style.display = 'none';
+  document.getElementById('customerListCard').style.display = 'none';
+  document.getElementById('formCard').style.display = 'block';
+  document.getElementById('formTitle').textContent = customer ? 'Edit customer' : 'New customer';
+  document.getElementById('dangerZone').style.display = customer ? 'flex' : 'none';
+  const fields = ['custId','trade_name','legal_name','country_id','state','city','address','postal_code','contact_name',
+    'contact_role','email','email_cc','website',
+    'payments_contact_name','payments_contact_email','payments_contact_whatsapp',
+    'business_type_id','preferred_currency','usual_delivery_type',
+    'usual_destination','usual_incoterm_id','usual_incoterm_place','payment_method','customs_agency_provider_id','preferred_exchange_rate_mode','credit_limit'];
+  fields.forEach(f => document.getElementById(f).value = '');
+  document.getElementById('whatsapp_number').value = '';
+  document.getElementById('whatsapp_code').value = '+52'; // every customer is in Colombia; a blank dropdown made a typed Colombian number "have no country code" (2026-10-13)
+  onCustomerCountryChange(); // resets state_id/state visibility for the blank country above
+  document.getElementById('payment_days').value = '';
+  document.getElementById('payment_terms_type').value = '';
+  document.getElementById('paymentsContactDifferent').checked = false;
+  // Collections module (2026-09-08): "cada cliente va a tener unos dias de credito 30 dias para
+  // empezar todos los clientes" — every NEW customer starts on Credit 30 days by default (still
+  // fully editable before saving); an existing customer being edited keeps showing its own real
+  // saved terms below, untouched.
+  if (!customer){
+    document.getElementById('payment_terms_type').value = 'credit';
+    document.getElementById('payment_days').value = 30;
+    togglePaymentDaysInput();
+  }
+  if (customer){
+    document.getElementById('custId').value = customer.id;
+    fields.slice(1).forEach(f => {
+      if (f === 'preferred_currency'){
+        if (customer.preferred_currency_id) document.getElementById(f).value = customer.preferred_currency_id;
+        return;
+      }
+      if (customer[f] !== undefined && customer[f] !== null) document.getElementById(f).value = customer[f];
+    });
+    onCustomerCountryChange(); // now that country_id is set, populate/reveal the right State field
+    if (customer.state_id) document.getElementById('state_id').value = customer.state_id;
+    // One number per person: prefer whatsapp, fall back to the old phone column for records saved before the merge.
+    const waParts = splitPhone(customer.whatsapp || customer.phone);
+    document.getElementById('whatsapp_code').value = waParts.code || '+52';
+    document.getElementById('whatsapp_number').value = waParts.number;
+    document.getElementById('payments_contact_whatsapp').value = customer.payments_contact_whatsapp || customer.payments_contact_phone || '';
+    if (customer.payment_days === 0){
+      document.getElementById('payment_terms_type').value = 'advance';
+    } else if (customer.payment_days != null){
+      document.getElementById('payment_terms_type').value = 'credit';
+      document.getElementById('payment_days').value = customer.payment_days;
+    }
+    const hasPaymentsContact = ['payments_contact_name','payments_contact_email','payments_contact_phone','payments_contact_whatsapp']
+      .some(f => customer[f]);
+    document.getElementById('paymentsContactDifferent').checked = hasPaymentsContact;
+  }
+  // Real bug found live 2026-09-18 (products.html/plants.html): every .value = above is set
+  // programmatically, which never fires 'change' — the bt-select widget's visible label
+  // (Country/State/Currency/Incoterm/Customs Agency) never updated even though the real value was
+  // set correctly. Explicit resync now.
+  document.querySelectorAll('#formCard select[data-bt-enhanced]').forEach(s => { if (s.btSync) s.btSync(); });
+  togglePaymentDaysInput();
+  togglePaymentsContact();
+  updateCustomerProfile();
+  document.getElementById('formMsg').textContent = '';
+  document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
+}
+
+// Same format as the product/plant/location profile cards: a live, read-only mirror of every
+// field entered above — nothing derived/computed here, just a consolidated glance before Save.
+function updateCustomerProfile(){
+  const setV = (id, val) => { document.getElementById(id).textContent = val || '—'; };
+  const selText = (sel) => sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
+  setV('cv_trade_name', document.getElementById('trade_name').value);
+  setV('cv_legal_name', document.getElementById('legal_name').value);
+  setV('cv_contact_name', document.getElementById('contact_name').value);
+  setV('cv_contact_role', document.getElementById('contact_role').value);
+  setV('cv_email', document.getElementById('email').value);
+  setV('cv_whatsapp', joinPhone(document.getElementById('whatsapp_code').value, document.getElementById('whatsapp_number').value));
+  setV('cv_country', selText(document.getElementById('country_id')));
+  const stateVal = document.getElementById('stateSelectField').style.display !== 'none'
+    ? selText(document.getElementById('state_id'))
+    : document.getElementById('state').value;
+  setV('cv_state', stateVal);
+  setV('cv_city', document.getElementById('city').value);
+  setV('cv_address', document.getElementById('address').value);
+  setV('cv_postal_code', document.getElementById('postal_code').value);
+  setV('cv_business_type', selText(document.getElementById('business_type_id')));
+  const currSel = document.getElementById('preferred_currency');
+  setV('cv_preferred_currency', currSel.value === 'other' ? 'Other' : selText(currSel));
+  setV('cv_usual_delivery_type', selText(document.getElementById('usual_delivery_type')));
+  const termsType = document.getElementById('payment_terms_type').value;
+  const termsLabel = termsType === 'advance' ? 'Advance'
+    : termsType === 'credit' ? (document.getElementById('payment_days').value ? `Credit ${document.getElementById('payment_days').value} days` : 'Credit')
+    : '';
+  setV('cv_payment_terms', termsLabel);
+  setV('cv_usual_destination', document.getElementById('usual_destination').value);
+  const incotermCode = selText(document.getElementById('usual_incoterm_id'));
+  const incotermPlace = document.getElementById('usual_incoterm_place').value;
+  setV('cv_usual_incoterm', [incotermCode, incotermPlace].filter(Boolean).join(' '));
+  setV('cv_payment_method', document.getElementById('payment_method').value);
+  setV('cv_customs_agency', selText(document.getElementById('customs_agency_provider_id')));
+  setV('cv_preferred_exchange_rate_mode', selText(document.getElementById('preferred_exchange_rate_mode')));
+  setV('cv_email_cc', document.getElementById('email_cc').value);
+  setV('cv_website', document.getElementById('website').value);
+  const hasPaymentsContact = document.getElementById('paymentsContactDifferent').checked;
+  setV('cv_payments_contact', hasPaymentsContact
+    ? [document.getElementById('payments_contact_name').value, document.getElementById('payments_contact_email').value,
+       document.getElementById('payments_contact_whatsapp').value]
+        .filter(Boolean).join(' · ')
+    : 'Same as buyer');
+}
+
+function closeForm(){
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('customerToolbarRow').style.display = 'flex';
+  document.getElementById('customerStatsRow').style.display = 'grid';
+  document.getElementById('customerListCard').style.display = 'block';
+}
+
+function closeCustomerDetail(){
+  document.getElementById('viewCard').style.display = 'none';
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('customerToolbarRow').style.display = 'flex';
+  document.getElementById('customerStatsRow').style.display = 'grid';
+  document.getElementById('customerListCard').style.display = 'block';
+  viewingCustomerId = null;
+}
+
+function togglePaymentDaysInput(){
+  const isCredit = document.getElementById('payment_terms_type').value === 'credit';
+  document.getElementById('paymentDaysRow').style.display = isCredit ? 'block' : 'none';
+  if (!isCredit) document.getElementById('payment_days').value = '';
+}
+
+function togglePaymentsContact(){
+  const show = document.getElementById('paymentsContactDifferent').checked;
+  document.getElementById('paymentsContactBlock').style.display = show ? 'block' : 'none';
+  if (!show){
+    ['payments_contact_name','payments_contact_email','payments_contact_whatsapp']
+      .forEach(f => document.getElementById(f).value = '');
+  }
+}
+
+// Border = USD, Delivered Colombia = COP (BUENTRADE Trading OS rule).
+// Suggestion only — the trader can always override it.
+function suggestCurrency(){
+  const delivery = document.getElementById('usual_delivery_type').value;
+  const code = delivery === 'Border' ? 'USD' : delivery === 'Delivered Colombia' ? 'COP' : null;
+  if (!code) return;
+  const match = currencies.find(c => c.code === code);
+  if (match) document.getElementById('preferred_currency').value = match.id;
+}
+
+let customsAgencies = []; // providers with role = customs_broker — each customer clears through their own, not necessarily ours
+
+let currencies = [];
+
+async function loadCustomsAgencies(){
+  const res = await callApi('providers-search', { role: 'customs_broker' });
+  customsAgencies = (res.results || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const sel = document.getElementById('customs_agency_provider_id');
+  sel.innerHTML = '<option value="">—</option>' + customsAgencies.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+}
+
+function applyCurrencies(){
+  const sel = document.getElementById('preferred_currency');
+  sel.innerHTML = '<option value="">—</option>' + currencies.map(c => `<option value="${c.id}">${escapeHtml(c.code)}</option>`).join('') + '<option value="other">Other</option>';
+}
+
+let incoterms = [];
+// Reference tables (currencies, countries, states, incoterms, temperatures, business types) come from ONE lookups-search
+// call per page load, shared by every loader below — each call pays the same fixed connection cost.
+let lookupsPromise = null;
+function loadLookupsOnce(){
+  if (!lookupsPromise) lookupsPromise = callApi('lookups-search', {}).catch(e => { lookupsPromise = null; throw e; });
+  return lookupsPromise;
+}
+let businessTypes = [];
+async function loadIncoterms(){
+  const res = await loadLookupsOnce();
+  incoterms = res.incoterms || [];
+  businessTypes = res.business_types || [];
+  const biz = document.getElementById('business_type_id');
+  biz.innerHTML = '<option value="">—</option>' + businessTypes.map(b => `<option value="${b.id}" data-sub="${escapeHtml(b.name_es || '')}">${escapeHtml(b.name_en)}</option>`).join('');
+  const sel = document.getElementById('usual_incoterm_id');
+  sel.innerHTML = '<option value="">—</option>' + incoterms.map(i => `<option value="${i.id}">${escapeHtml(i.code)}</option>`).join('');
+}
+
+let countries = [];
+let allStates = [];
+
+// Real E.164 calling codes for the countries seeded in `countries` — a closed dropdown next to
+// Phone/WhatsApp so the code can never be mistyped and the WhatsApp deep link always builds a
+// valid number.
+const DIAL_CODES = {
+  US: '+1', CA: '+1', MX: '+52', CL: '+56', BR: '+55', GT: '+502', HN: '+504', SV: '+503',
+  NI: '+505', CR: '+506', PA: '+507', CO: '+57', EC: '+593', PE: '+51', BO: '+591', PY: '+595',
+  UY: '+598', AR: '+54', VE: '+58', DO: '+1',
+};
+
+// One entry per unique dial code, not per country — +1 (US/CA/DO) is the exact same value
+// regardless of which country you'd nominally pick, so listing it three times just invites
+// picking the "wrong" one for no actual difference in the number that gets saved.
+function populateDialCodeSelect(selectEl){
+  const uniqueCodes = [...new Set(Object.values(DIAL_CODES))].sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)));
+  selectEl.innerHTML = uniqueCodes.map(code => `<option value="${code}">${code}</option>`).join('');
+}
+
+// A dial code alone doesn't identify one country (+1 is US/CA/DO), so parsing a stored number
+// back into code+digits just needs the LONGEST matching prefix, not a specific country.
+function splitPhone(full){
+  if (!full) return { code: '', number: '' };
+  const codes = [...new Set(Object.values(DIAL_CODES))].sort((a, b) => b.length - a.length);
+  const match = codes.find(c => full.startsWith(c));
+  if (!match) return { code: '', number: full.replace(/^\+/, '') };
+  return { code: match, number: full.slice(match.length).trim() };
+}
+function joinPhone(code, number){
+  if (!number) return null;
+  return code ? `${code} ${number.trim()}` : number.trim();
+}
+
+function applyCountries(){
+  const sel = document.getElementById('country_id');
+  sel.innerHTML = '<option value="">—</option>' + countries.map(c => `<option value="${c.id}">${escapeHtml(c.name_en)}</option>`).join('');
+  populateDialCodeSelect(document.getElementById('whatsapp_code'));
+}
+
+// Bundles currencies/countries/states into one Edge Function call instead of three — every call
+// pays the same ~1-1.5s Postgres connection cost regardless of query size (measured 2026-08-31),
+// so three small lookups on every page load were paying that fixed cost three times over.
+async function loadCurrenciesCountriesStates(){
+  const res = await loadLookupsOnce();
+  currencies = res.currencies || [];
+  countries = res.countries || [];
+  allStates = res.states || [];
+  applyCurrencies();
+  applyCountries();
+}
+
+function onCustomerCountryChange(){
+  const countryId = document.getElementById('country_id').value;
+  const statesForCountry = allStates.filter(s => s.country_id === countryId);
+  const hasStates = statesForCountry.length > 0;
+  document.getElementById('stateSelectField').style.display = hasStates ? 'block' : 'none';
+  document.getElementById('stateTextField').style.display = hasStates ? 'none' : 'block';
+  const sel = document.getElementById('state_id');
+  sel.innerHTML = '<option value="">—</option>' + statesForCountry.map(s => `<option value="${s.id}">${escapeHtml(s.name_en)}</option>`).join('');
+  if (!hasStates) sel.value = '';
+  else document.getElementById('state').value = '';
+}
+
+// Credit the trader can still use per customer (customers-search credit_for_ids): today, and from
+// each later day a load falls due. Shared by the list and the profile's credit card.
+let customerCredit = {};
+const creditUsd = v => '$' + Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const creditColor = (v, limit) => v <= 0 ? '#FF9C8A' : v < limit * 0.5 ? '#E8B54C' : '#3FCB7E';
+const creditDay = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+// 2026-09-29 (user): the board must say plainly how much room there is to sell more, how much the
+// customer must pay so one more load fits, or that it's over the limit. "One load" = the
+// customer's average load (avg_load, last 10 loads).
+function creditSentence(avail, avgLoad){
+  const load = avgLoad ? ` (~${creditUsd(avgLoad)})` : '';
+  if (avail < 0) return { head: `Over the limit by ${creditUsd(-avail)} — keep offering, ask for payment`, color: '#FF9C8A', pay: avgLoad ? -avail + avgLoad : null, sub: avgLoad ? `To sell one more load${load} the customer must pay ${creditUsd(-avail + avgLoad)} first.` : 'The customer must pay before selling more.' };
+  if (avgLoad && avail < avgLoad) return { head: `Room to sell ${creditUsd(avail)} more`, color: '#E8B54C', pay: avgLoad - avail, sub: `Not enough for one load${load}: the customer must pay ${creditUsd(avgLoad - avail)} first.` };
+  const n = avgLoad ? Math.floor(avail / avgLoad) : null;
+  return { head: `Room to sell ${creditUsd(avail)} more`, color: '#3FCB7E', pay: null, sub: n ? `About ${n} load${n === 1 ? '' : 's'}${load} each.`.replace(' each.', n === 1 ? '.' : ' each.') : '' };
+}
+
+async function loadCustomers(){
+  try {
+    await Promise.all([loadCustomsAgencies(), loadCurrenciesCountriesStates(), loadIncoterms()]);
+    const res = await callApi('customers-search', {});
+    customers = res.results || [];
+    renderCustomers();
+    renderCustomerStats();
+    // ?open=<customer id> (Dashboard "Today" links): open that customer's profile straight away
+    const openId = new URLSearchParams(location.search).get('open');
+    if (openId && customers.some(c => c.id === openId) && !window._openedFromLink){ window._openedFromLink = true; viewCustomer(openId); const t = new URLSearchParams(location.search).get('tab'); if (t && CUST_TABS.includes(t)) setCustomerTab(t); }
+    // what the trader can still sell each one (2026-09-29, "vista rápida del trader para poder ofrecer")
+    try { customerCredit = (await callApi('customers-search', { credit_for_ids: customers.map(c => c.id) })).credit || {}; renderCustomers(); } catch (e) {}
+  } catch (e) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').textContent = 'Error loading customers: ' + e.message;
+  }
+}
+
+// ===== Products a customer buys — customer_products already existed with real data (id,
+// customer_id, product_id, created_at) from an earlier import; this just adds the UI on top,
+// it doesn't touch the table's shape or the 100+ rows already in it. =====
+//
+// Real gap fixed 2026-08-30: the old picker was a native <select> labelled with the bare cut
+// name only (p.name) — six different Bone-In/Boneless, Fresh/Frozen, Box/VAC variants of "Cabeza
+// de lomo" all read identically, forcing a blind guess. full_name_es/full_name_en are the real,
+// already-disambiguated names the trader typed in at product creation — this just surfaces them
+// instead of hiding them, same "always show the full spec, never a bare name" rule as everywhere
+// else products get listed.
+let allCustProducts = null;
+let temperaturesForCust = null;
+async function fetchAllCustProducts(){
+  if (allCustProducts) return allCustProducts;
+  const [prodRes, tempRes] = await Promise.all([
+    callApi('products-search', {}),
+    loadLookupsOnce(), // temperatures (the old one-table temperature-search was folded into this bundle)
+  ]);
+  allCustProducts = (prodRes.results || []).slice().sort((a, b) => custProductLabel(a).localeCompare(custProductLabel(b)));
+  temperaturesForCust = tempRes.temperatures || [];
+  return allCustProducts;
+}
+
+// Some rows are generic (brand null — a canonical cut not tied to one plant), others are a
+// specific plant's catalog row — the brand suffix is what tells them apart in the picker.
+function custProductLabel(p){
+  const base = p.full_name_es || p.name;
+  return p.brand ? `${base} (${p.brand})` : base;
+}
+
+// Decorative only (a colored Fresh/Frozen pill) — reads the real temperature catalog rather than
+// pattern-matching the display text, so it can never disagree with the product's actual field.
+function custTempBadgeClass(temperatureId){
+  const t = (temperaturesForCust || []).find(x => x.id === temperatureId);
+  const name = ((t && (t.name_en || t.name)) || '').toLowerCase();
+  if (name.includes('frozen')) return 'frozen';
+  if (name.includes('fresh')) return 'fresh';
+  return null;
+}
+function custTempBadgeHtml(p){
+  const cls = custTempBadgeClass(p.temperature_id);
+  if (!cls) return '';
+  return `<span class="cp-temp-badge ${cls}">${cls === 'fresh' ? 'Fresh' : 'Frozen'}</span>`;
+}
+const CP_PRODUCT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 12 3 4 7v10l8 4 8-4V7z"/><path d="M12 12 4 7m8 5 8-5m-8 5v9"/></svg>';
+
+let currentCustProducts = [];
+async function loadCustomerProducts(customerId){
+  await fetchAllCustProducts();
+  try {
+    const res = await callApi('customer-products-search', { customer_id: customerId });
+    currentCustProducts = (res.results || [])
+      .map(r => ({ linkId: r.id, product: allCustProducts.find(p => p.id === r.product_id), frequencyDays: r.frequency_days, loadsPerCycle: r.loads_per_cycle }))
+      .filter(r => r.product);
+  } catch (e) {
+    currentCustProducts = [];
+  }
+  renderCustomerProducts();
+}
+
+// How often the client buys a product — ONE dropdown with fixed choices, saved the moment you pick one (2026-09-29,
+// user: "que no haya campo a equivocación" — two free number boxes let the trader put the days where the loads go).
+// Each choice is stored in the same two fields everything reads (frequency_days + loads_per_cycle).
+const CP_CADENCE = [
+  ['7|1', '1 load a week'], ['7|2', '2 loads a week'], ['14|1', '1 load every 2 weeks'],
+  ['30|1', '1 load a month'], ['30|2', '2 loads a month'], ['30|3', '3 loads a month'], ['30|4', '4 loads a month'],
+  ['60|1', '1 load every 2 months'], ['90|1', '1 load every 3 months'],
+];
+function cpCadenceSelectHtml(r){
+  const cur = r.frequencyDays != null && r.loadsPerCycle != null ? `${r.frequencyDays}|${r.loadsPerCycle}` : '';
+  // a cadence saved before this list existed (e.g. every 40 days) stays visible as it is until changed
+  const extra = cur && !CP_CADENCE.some(([v]) => v === cur) ? [[cur, `${r.loadsPerCycle} load${r.loadsPerCycle === 1 ? '' : 's'} every ${r.frequencyDays} days`]] : [];
+  return `<div class="cp-cadence-display"><select class="cp-cadence-select" id="cp_cad_${r.linkId}" style="width:240px;" onchange="cpSetCadence('${r.linkId}', this.value)">
+      <option value=""${cur ? '' : ' selected'}>Product demand</option>
+      ${[...extra, ...CP_CADENCE].map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${escapeHtml(l)}</option>`).join('')}
+    </select><span class="muted" id="cp_cad_ok_${r.linkId}" style="font-size:11.5px;min-width:44px;"></span></div>`;
+}
+async function cpSetCadence(linkId, value){
+  { const el = document.getElementById(`cp_cad_${linkId}`), w = el && el.closest('.bt-select-wrap'); if (w) w.classList.toggle('cp-demand-empty', !value); }
+  const [f, l] = value ? value.split('|').map(Number) : [null, null];
+  const ok = document.getElementById(`cp_cad_ok_${linkId}`);
+  try { await callApi('customer-products-update', { actor: currentActor(), id: linkId, frequency_days: f, loads_per_cycle: l }); }
+  catch (e) { await btAlert('Could not save: ' + e.message); renderCustomerProducts(); return; }
+  const row = currentCustProducts.find(r => r.linkId === linkId);
+  if (row){ row.frequencyDays = f; row.loadsPerCycle = l; }
+  if (ok){ ok.textContent = 'Saved ✓'; ok.style.color = '#3FCB7E'; setTimeout(() => { if (ok) ok.textContent = ''; }, 2500); }
+}
+
+function renderCustomerProducts(){
+  const wrap = document.getElementById('custProductRows');
+  document.getElementById('custProductsEmpty').style.display = currentCustProducts.length ? 'none' : 'flex';
+  wrap.innerHTML = currentCustProducts
+    .slice()
+    .sort((a, b) => custProductLabel(a.product).localeCompare(custProductLabel(b.product)))
+    .map(r => {
+      const p = r.product;
+      const cadenceHtml = cpCadenceSelectHtml(r);
+      return `<div class="cp-product-card">
+        <div class="cp-product-icon">${CP_PRODUCT_ICON_SVG}</div>
+        <div class="cp-product-info">
+          <div class="cp-product-title">${escapeHtml(custProductLabel(p))}</div>
+          <div class="cp-product-sub">${custTempBadgeHtml(p)}<span>${escapeHtml(p.full_name_en || '')}</span></div>
+        </div>
+        ${cadenceHtml}
+        <button class="cp-remove-btn" title="Remove" onclick="removeCustomerProduct('${r.linkId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>`;
+    }).join('');
+  document.querySelectorAll('#custProductRows .cp-cadence-select').forEach(el => btEnhanceSelect(el));
+  document.querySelectorAll('#custProductRows .cp-cadence-select').forEach(el => { const w = el.closest('.bt-select-wrap'); if (w) w.classList.toggle('cp-demand-empty', !el.value); });
+}
+
+// ============ Searchable combobox — replaces the old native <select>. Typing filters by the
+// full disambiguated name (ES and EN); clicking a result adds it immediately, one interaction
+// instead of select-then-click-Add. Already-linked products drop out of the results as they're
+// added, so the same product can't be offered twice. ============
+let cpSuggestions = [];
+
+function cpRenderSuggestions(){
+  const panel = document.getElementById('cp_suggest_panel');
+  const term = document.getElementById('cp_search_input').value.trim().toLowerCase();
+  const linkedIds = new Set(currentCustProducts.map(r => r.product.id));
+  const pool = (allCustProducts || []).filter(p => !linkedIds.has(p.id));
+  const matches = (term
+    ? pool.filter(p => custProductLabel(p).toLowerCase().includes(term) || (p.full_name_en || '').toLowerCase().includes(term))
+    : pool
+  ).slice(0, 8);
+  cpSuggestions = matches;
+  if (!matches.length){
+    panel.innerHTML = `<div class="cp-suggest-empty">${term ? 'No product matches' : (pool.length ? 'Type to search' : 'Every catalog product is already added')}</div>`;
+    panel.classList.add('show');
+    return;
+  }
+  panel.innerHTML = matches.map((p, i) => `
+    <div class="cp-suggest-item" onmousedown="cpSelectSuggestionIdx(${i})">
+      <div class="cp-suggest-main">
+        <div class="cp-suggest-title">${escapeHtml(custProductLabel(p))}</div>
+        <div class="cp-suggest-sub">${escapeHtml(p.full_name_en || '')}</div>
+      </div>
+      ${custTempBadgeHtml(p)}
+    </div>`).join('');
+  panel.classList.add('show');
+}
+
+function cpHideSuggestions(){
+  document.getElementById('cp_suggest_panel').classList.remove('show');
+}
+
+function cpSelectActiveOrFirst(){
+  if (cpSuggestions.length === 1) cpSelectSuggestionIdx(0);
+}
+
+async function cpSelectSuggestionIdx(i){
+  const p = cpSuggestions[i];
+  if (!p || !viewingCustomerId) return;
+  try {
+    const res = await callApi('customer-products-add', { actor: currentActor(), customer_id: viewingCustomerId, product_id: p.id });
+    const link = res.link || res; // already_linked also carries .link
+    currentCustProducts.push({ linkId: link.id, product: p });
+  } catch (e) {
+    await btAlert('Error: ' + e.message);
+    return;
+  }
+  document.getElementById('cp_search_input').value = '';
+  cpHideSuggestions();
+  renderCustomerProducts();
+}
+
+async function removeCustomerProduct(linkId){
+  try {
+    await callApi('customer-products-remove', { actor: currentActor(), id: linkId });
+  } catch (e) {
+    await btAlert('Error: ' + e.message);
+    return;
+  }
+  currentCustProducts = currentCustProducts.filter(r => r.linkId !== linkId);
+  renderCustomerProducts();
+}
+
+const CUST_TABS = ['credit', 'products', 'about', 'details', 'history'];
+function setCustomerTab(tab){
+  CUST_TABS.forEach(t => {
+    document.getElementById('custTab_' + t).style.display = (t === tab) ? 'block' : 'none';
+    document.getElementById('custTabBtn_' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'history') renderCustomerHistory();
+  if (tab === 'about') renderCustomerAbout();
+}
+
+// Real ask 2026-09-14: "yo necesito es que se guarde el pdf" — the real PDF already lands in the
+// order-documents bucket the moment it's actually sent (uploadOrderPdf, orders.html/offers.html),
+// filename always {DOC_TYPE}-BT-{order_number}.pdf at the bucket root. Deterministic, so the link
+// can be built here with no extra backend round-trip — only shown once sent_at proves the file
+// really exists.
+function docPdfUrl(docType, orderNumber){
+  return `https://oqotaxmacwueiutdxgkk.supabase.co/storage/v1/object/public/order-documents/${docType}-BT-${orderNumber}.pdf`;
+}
+// Real bug found live 2026-09-14: "no sirven los links de ordenes" — filenames are saved as
+// "{DOC}-BT-" + btNum(orderNumber) since the 2026-09-14 "BT-BT-" duplicate-prefix fix, but a
+// legacy order (e.g. "BT-0019") could genuinely have been sent BEFORE that fix, meaning its real
+// stored file is still named with the old doubled prefix ("INV-BT-BT-0019.pdf"). No client-side
+// way to know which one applies to a given row without asking, so this tries the current
+// (single-prefix) name first and falls back to the legacy (double-prefix) one.
+function btNum(orderNumber){
+  return String(orderNumber || '').replace(/^BT-/, '');
+}
+async function openDocPdf(docType, orderNumber){
+  const primary = docPdfUrl(docType, btNum(orderNumber));
+  const legacy = docPdfUrl(docType, orderNumber);
+  if (primary === legacy){ window.open(primary, '_blank'); return; }
+  try {
+    const res = await fetch(primary, { method: 'HEAD' });
+    window.open(res.ok ? primary : legacy, '_blank');
+  } catch (e) { window.open(legacy, '_blank'); }
+}
+// Real ask 2026-09-14: "en el momento en el que creo PO SO FO INV debe alojarse en el perfil de
+// cada destinatario... tener el historico por fecha" — every SO and Invoice ever created for this
+// customer, in date order.
+async function renderCustomerHistory(){
+  if (viewingCustomerId) renderEntityHistory('custHistory', 'customer', viewingCustomerId, 'cu');
+}
+
+// Credit line of the open customer: limit, what the unpaid sold loads use, what's available today.
+// A load frees its credit only when it's paid; the date shown is when it's due (entrega + días de
+// crédito). Same list as the offer credit check (customers-search credit_for → customerOpenLoads).
+async function renderCustomerCredit(id){
+  const el = document.getElementById('custCredit'), top = document.getElementById('custCreditCards'); el.innerHTML = ''; top.innerHTML = '';
+  let cr; try { cr = (await callApi('customers-search', { credit_for: id })).credit; } catch (e) { return; }
+  if (viewingCustomerId !== id || !cr) return;
+  const usd = creditUsd, mdy = d => d ? `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)}` : '—';
+  const card = (cls, value, label, sub, icon) => `<div class="stat-card ${cls}"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></div><div style="min-width:0;"><div class="stat-value">${value}</div><div class="stat-label">${label}</div>${sub ? `<div class="muted" style="font-size:11.5px;margin-top:3px;">${sub}</div>` : ''}</div></div>`;
+  const IC = { ok: '<path d="M20 6 9 17l-5-5"/>', stop: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>', pay: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>', stack: '<path d="M3 7h18M3 12h18M3 17h18"/>' };
+  if (cr.credit_limit == null){ top.innerHTML = `<div class="stats-row cr-cards" style="grid-template-columns:1fr;margin:0 0 14px;">${card('warn', 'No limit', 'Credit limit not set', 'Add it in Details', IC.clock)}</div>`; el.innerHTML = '<div class="empty">No credit limit set — add it in Details.</div>'; return; }
+  const limit = Number(cr.credit_limit), loads = (cr.loads || []).map(l => ({ ...l, due: l.due ? String(l.due).slice(0, 10) : null })), used = loads.reduce((n, l) => n + Number(l.amount), 0), avail = limit - used;
+  const cs = creditSentence(avail, cr.avg_load), L = cr.avg_load;
+  const days = d => d ? Math.round((new Date(d + 'T00:00:00Z') - new Date(cr.today + 'T00:00:00Z')) / 86400000) : null;
+  // the first day one more load fits, if every load is paid on time
+  const loadFits = (cr.schedule || []).find(x => x.available >= (L || 1));
+  // 2026-09-29 (user): BuenTrade design — the Clients / Pay & Receive stat cards and Orders' table with pill badges
+  // 2026-10-10 (user: "la A igual que la B"): the same four backgrounds as the customers list, in the same order (blue, green, red, amber); the words say the state
+  const cards = [
+    avail < 0 ? card('hero', usd(-avail), 'Over the limit', 'Keep offering · ask for payment', IC.stop) : card('hero', usd(avail), 'Room to sell', L ? `One load ~${usd(L)}` : '', IC.ok),
+    card('ok', cs.pay ? usd(cs.pay) : '—', 'Pay for 1 more load', cs.pay ? 'Customer must pay first' : 'Not needed', IC.pay),
+    card('danger', usd(used), 'Unpaid now', `Limit ${usd(limit)}`, IC.stack),
+    card('warn', loadFits ? (loadFits.from === cr.today ? 'Today' : creditDay(loadFits.from)) : '—', 'Next load fits', loadFits ? `If paid on time · room ${usd(loadFits.available)}` : 'Only after payments', IC.clock),
+  ].join('');
+  // bar: green up to the limit, red above it ("verde hasta 100, rojo después")
+  let run = 0; const segs = loads.map(l => { const a = Number(l.amount), inside = Math.max(0, Math.min(a, limit - run)); run += a; return { l, inside, over: a - inside }; });
+  const total = Math.max(limit, used) || 1;
+  const bar = `<div style="position:relative;margin:4px 0 26px;">
+      <div style="display:flex;height:10px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.06);">${segs.map(g => (g.inside ? `<div title="${escapeHtml(g.l.order_number)}" style="width:${g.inside / total * 100}%;background:#3FCB7E;border-right:2px solid rgba(15,31,51,.7);"></div>` : '') + (g.over ? `<div title="${escapeHtml(g.l.order_number)} — over the limit" style="width:${g.over / total * 100}%;background:#FF9C8A;border-right:2px solid rgba(15,31,51,.7);"></div>` : '')).join('')}</div>
+      <div style="position:absolute;left:${limit / total * 100}%;top:-4px;width:2px;height:18px;background:var(--ink);"></div>
+      <div class="muted" style="position:absolute;left:${limit / total * 100}%;top:16px;transform:translateX(${used > limit ? '-50%' : '-100%'});font-size:10.5px;white-space:nowrap;">Limit ${usd(limit)}</div></div>`;
+  const badge = l => { const n = days(l.due); return !l.due ? '<span class="payment-badge">No date</span>' : n < 0 ? `<span class="payment-badge overdue">${-n}d overdue</span>` : n <= 7 ? `<span class="payment-badge due-soon">Due in ${n}d</span>` : `<span class="payment-badge active">Due ${mdy(l.due)}</span>`; };
+  const over = new Set(segs.filter(g => g.over > 0).map(g => g.l.order_number));
+  const table = loads.length ? `<div class="table-scroll"><table><thead><tr><th>Order</th><th>Sale</th><th>Delivery</th><th>Due</th><th>Credit</th></tr></thead><tbody>
+      ${loads.map(l => `<tr><td class="order-num">${escapeHtml(l.order_number)}</td><td class="num">${usd(l.amount)}</td><td>${l.delivered ? '<span class="payment-badge ok">Delivered</span>' : '<span class="payment-badge active">In transit</span>'}</td><td>${badge(l)}</td><td>${over.has(l.order_number) ? '<span class="payment-badge overdue">Over limit</span>' : '<span class="payment-badge ok">Within limit</span>'}</td></tr>`).join('')}
+    </tbody></table></div>` : '<div class="empty">No unpaid loads — the full limit is available.</div>';
+  top.innerHTML = `<div class="stats-row cr-cards" style="grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 14px;">${cards}</div>`;
+  // 2026-10-10 (user: "deja una por una estas tabs igual que el que acabamos de hacer"): Credit is plain content like the Products tab — no card around it; same 13px / 11.5px text as the list
+  el.innerHTML = `<div class="cr-flat">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;"><b style="font-size:13px;font-weight:600;color:${cs.color};">${cs.head}</b><span class="muted" style="font-size:11.5px;">${cs.sub}</span></div>
+      ${loads.length ? bar : ''}${table}
+      <div class="muted" style="font-size:11.5px;margin-top:10px;">Credit is freed only when a load is paid. Dates assume payment 30 days after delivery; never more than ${usd(limit)} unpaid at the same time.</div>
+    </div>`;
+  // can't sell a load today → the profile opens on Credit (unless the trader already moved to another tab)
+  if ((avail < 0 || cs.pay) && document.getElementById('custTabBtn_products').classList.contains('active')) setCustomerTab('credit');
+}
+
+// ---------- About the client ----------
+// What they told you: dated notes (customer_notes via the messaging function — the same rows Messaging uses to
+// write its messages; a note already used in a message says so). Business: read from Details.
+// Each note is read by the system (2026-09-29): how often they buy one of their products is saved straight to that
+// product (Products tab) when it can only be one product; anything it can't decide alone waits under the note as
+// Pending for the trader; the rest is kept as what we know about them.
+let aboutData = { notes: [], insights: [], products: [], catalog: [] };
+const ABOUT_TOPIC = { personal: 'Personal', business: 'Business', preference: 'Preference', payment: 'Payment' };
+function aboutInsightHtml(i){
+  const pend = '<span class="payment-badge due-soon">Pending</span>';
+  if (i.kind === 'cadence' && i.status === 'applied')
+    return `<div class="about-insight"><span class="payment-badge ok">Saved to product</span><span>${escapeHtml(i.summary_en)} <span class="muted">→ ${escapeHtml(i.product_name || '')}</span></span><button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','undo')">Undo</button></div>`;
+  if (i.kind === 'cadence' && i.status === 'pending'){
+    const cand = new Set((i.candidates || []).map(c => c.link_id));
+    const prods = [...(i.candidates || []), ...aboutData.products.filter(p => !cand.has(p.link_id))];
+    const cur = i.frequency_days && i.loads_per_cycle ? `${i.frequency_days}|${i.loads_per_cycle}` : '';
+    const extra = cur && !CP_CADENCE.some(([v]) => v === cur) ? [[cur, `${i.loads_per_cycle} load${i.loads_per_cycle === 1 ? '' : 's'} every ${i.frequency_days} days`]] : [];
+    return `<div class="about-insight"><span>${pend}</span><span>${escapeHtml(i.summary_en)} <span style="color:#FFC876;">· ${escapeHtml(i.question_en || '')}</span></span>
+      <div class="about-insight-actions">
+        <select id="ai_p_${i.id}" style="width:320px;"><option value="" selected>Which product?</option>${prods.map(p => `<option value="${p.link_id}">${escapeHtml(p.product_name)}</option>`).join('')}</select>
+        <select id="ai_c_${i.id}" style="width:200px;"><option value=""${cur ? '' : ' selected'}>Product demand</option>${[...extra, ...CP_CADENCE].map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${escapeHtml(l)}</option>`).join('')}</select>
+        <button type="button" class="btn" onclick="aboutApplyCadence('${i.id}')">Apply</button>
+        <button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','dismiss')">Dismiss</button>
+      </div></div>`;
+  }
+  if (i.kind === 'product' && i.status === 'applied')
+    return `<div class="about-insight"><span class="payment-badge ok">${i.created_link ? 'Added to products' : 'In their products'}</span><span>${escapeHtml(i.summary_en)} <span class="muted">→ ${escapeHtml(i.product_name || '')}</span></span>${i.created_link ? `<button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','undo')">Undo</button>` : ''}</div>`;
+  if (i.kind === 'product' && i.status === 'pending'){
+    const cand = new Set((i.product_candidates || []).map(c => c.product_id));
+    const prods = [...(i.product_candidates || []), ...aboutData.catalog.filter(p => !cand.has(p.product_id))];
+    return `<div class="about-insight"><span>${pend}</span><span>${escapeHtml(i.summary_en)} <span style="color:#FFC876;">· ${escapeHtml(i.question_en || '')}</span></span>
+      <div class="about-insight-actions">
+        <select id="ai_x_${i.id}" style="width:320px;"><option value="" selected>Which product?</option>${prods.map(p => `<option value="${p.product_id}">${escapeHtml(p.product_name)}</option>`).join('')}</select>
+        <button type="button" class="btn" onclick="aboutAddProduct('${i.id}')">Add to products</button>
+        <button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','dismiss')">Dismiss</button>
+      </div></div>`;
+  }
+  // a rule from the note (pause until a date / one brand only / when he buys): it gates what Today suggests for him, so it is shown as such and can be undone
+  if (i.kind === 'rule' && i.status === 'applied')
+    return `<div class="about-insight"><span class="payment-badge ok">Rule · used in Today</span><span>${escapeHtml(i.summary_en)}</span><button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','undo')">Undo</button></div>`;
+  if (i.kind === 'rule' && i.status === 'pending')
+    return `<div class="about-insight"><span>${pend}</span><span>${escapeHtml(i.summary_en)} <span style="color:#FFC876;">· ${escapeHtml(i.question_en || '')}</span></span>
+      <div class="about-insight-actions"><button type="button" class="btn" onclick="aboutDecide('${i.id}','keep')">Keep</button><button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','dismiss')">Dismiss</button></div></div>`;
+  if (i.kind === 'fact' && i.status === 'pending')
+    return `<div class="about-insight"><span>${pend}</span><span>${escapeHtml(i.summary_en)} <span style="color:#FFC876;">· ${escapeHtml(i.question_en || '')}</span></span>
+      <div class="about-insight-actions"><button type="button" class="btn" onclick="aboutDecide('${i.id}','keep')">Keep</button><button type="button" class="btn secondary" onclick="aboutDecide('${i.id}','dismiss')">Dismiss</button></div></div>`;
+  if (i.kind === 'fact' && i.status === 'applied')
+    return `<div class="about-insight"><span class="payment-badge neutral">${ABOUT_TOPIC[i.topic] || 'Note'}</span><span>${escapeHtml(i.summary_en)}</span></div>`;
+  return ''; // dismissed / undone: not shown
+}
+function aboutNoteInsightsHtml(n){
+  if (!n.insights_status) return `<div class="about-insight muted" id="about_reading_${n.id}">Reading the note…</div>`;
+  if (n.insights_status === 'failed') return `<div class="about-insight"><span class="payment-badge overdue">Not read</span><span class="muted">The system couldn't read this note.</span><button type="button" class="btn secondary" onclick="aboutRead('${n.id}')">Read again</button></div>`;
+  // what needs the trader first, then what went to the products, then what we learned
+  const rank = i => (i.status === 'pending' ? 0 : i.kind === 'fact' ? 2 : 1);
+  const rows = aboutData.insights.filter(i => i.note_id === n.id).sort((a, b) => rank(a) - rank(b)).map(aboutInsightHtml).filter(Boolean);
+  return rows.length ? rows.join('') : '<div class="about-insight muted">Nothing to save from this note.</div>';
+}
+async function renderCustomerAbout(){
+  const el = document.getElementById('custAbout'), id = viewingCustomerId, c = customers.find(x => x.id === id);
+  if (!c) return;
+  if (!aboutData.notes.length || aboutData.customerId !== id) el.innerHTML = '<div class="empty">Loading…</div>';
+  let d;
+  try { d = await callApi('messaging', { action: 'list_notes', customer_id: id }); } catch (e) { el.innerHTML = `<div class="empty">Couldn't load the notes: ${escapeHtml(e.message)}</div>`; return; }
+  if (viewingCustomerId !== id) return;
+  aboutData = { customerId: id, notes: d.notes || [], insights: d.insights || [], products: d.products || [], catalog: d.catalog || [] };
+  const notes = aboutData.notes;
+  const pending = aboutData.insights.filter(i => i.status === 'pending').length;
+  const biz = (typeof businessTypes !== 'undefined' ? businessTypes : []).find(b => b.id === c.business_type_id);
+  const day = d => { const x = new Date(d); return x.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }); };
+  // 2026-10-10 (user: "te parece bien esto? … me vuelves a preguntar cuando llevamos una hora diciéndolo"): About is plain content like the other tabs — no cards; one short hint; the note box and Save on ONE line; the notes as rows (date | note | used | delete); what needs the trader sits under its note. The Business card is gone: Details already shows it.
+  el.innerHTML = `<div class="ab-flat">
+      <div class="profile-heading">What they told you${pending ? ` <span class="payment-badge due-soon" style="margin-left:8px;">${pending} to confirm</span>` : ''}</div>
+      <div class="muted ab-hint">Anything personal or about their business, and how much they buy (e.g. "2 loads of jowls a month").</div>
+      <div class="ab-add"><textarea id="aboutNote" rows="1" placeholder="e.g. They are building a new plant in León"></textarea><button type="button" class="btn" onclick="addCustomerNote()">Save note</button></div>
+      ${notes.length ? `<div class="table-scroll" style="margin-top:6px;overflow:visible;"><table><thead><tr><th>Date</th><th style="text-align:left;">Note</th><th>Used</th><th></th></tr></thead><tbody>
+        ${notes.map(n => `<tr><td class="muted" style="white-space:nowrap;vertical-align:top;">${day(n.created_at)}</td><td style="text-align:left;">${escapeHtml(n.note)}<div class="about-insights">${aboutNoteInsightsHtml(n)}</div></td><td style="vertical-align:top;">${n.used ? '<span class="payment-badge ok">In a message</span>' : '<span class="payment-badge neutral">Not used yet</span>'}</td><td style="vertical-align:top;"><button type="button" class="btn danger" onclick="deleteCustomerNote('${n.id}')">Delete</button></td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty" style="padding:14px;">No notes yet.</div>'}
+    </div>`;
+  el.querySelectorAll('.about-insight-actions select').forEach(s => { btEnhanceSelect(s); const w = s.closest('.bt-select-wrap'); if (!w) return; w.classList.toggle('cp-demand-empty', !s.value); s.addEventListener('change', () => w.classList.toggle('cp-demand-empty', !s.value)); });
+  // a note saved but not read yet (the page was closed while reading) → read it now
+  notes.filter(n => !n.insights_status).forEach(n => aboutRead(n.id));
+}
+const aboutReading = new Set();
+async function aboutRead(noteId){
+  if (aboutReading.has(noteId)) return; aboutReading.add(noteId);
+  try { await callApi('messaging', { action: 'read_note', actor: currentActor(), note_id: noteId }); } catch (e) { /* shown as "Not read" with Read again */ }
+  aboutReading.delete(noteId);
+  const n = aboutData.notes.find(x => x.id === noteId);
+  if (n && aboutData.customerId === viewingCustomerId) { await renderCustomerAbout(); if (typeof loadCustomerProducts === 'function') loadCustomerProducts(viewingCustomerId); }
+}
+async function aboutDecide(insightId, decision){
+  try { await callApi('messaging', { action: 'decide_insight', actor: currentActor(), id: insightId, decision }); } catch (e) { await btAlert('Could not save: ' + e.message); return; }
+  await renderCustomerAbout();
+  if (decision === 'undo' && typeof loadCustomerProducts === 'function') loadCustomerProducts(viewingCustomerId); // cadence or added product
+}
+async function aboutAddProduct(insightId){
+  const pid = document.getElementById(`ai_x_${insightId}`).value;
+  if (!pid) { await btAlert('Pick which product it is.'); return; }
+  try { await callApi('messaging', { action: 'decide_insight', actor: currentActor(), id: insightId, decision: 'apply', product_id: pid }); }
+  catch (e) { await btAlert('Could not save: ' + e.message); return; }
+  await renderCustomerAbout();
+  if (typeof loadCustomerProducts === 'function') loadCustomerProducts(viewingCustomerId);
+}
+async function aboutApplyCadence(insightId){
+  const link = document.getElementById(`ai_p_${insightId}`).value, cad = document.getElementById(`ai_c_${insightId}`).value;
+  if (!link) { await btAlert('Pick which product it is.'); return; }
+  if (!cad) { await btAlert('Pick how often they buy it.'); return; }
+  const [f, l] = cad.split('|').map(Number);
+  try { await callApi('messaging', { action: 'decide_insight', actor: currentActor(), id: insightId, decision: 'apply', link_id: link, frequency_days: f, loads_per_cycle: l }); }
+  catch (e) { await btAlert('Could not save: ' + e.message); return; }
+  await renderCustomerAbout();
+  if (typeof loadCustomerProducts === 'function') loadCustomerProducts(viewingCustomerId);
+}
+async function addCustomerNote(){
+  const note = (document.getElementById('aboutNote').value || '').trim(); if (!note) return;
+  try { await callApi('messaging', { action: 'add_note', actor: currentActor(), customer_id: viewingCustomerId, note, idempotency_key: `note|${viewingCustomerId}|${note}|${Date.now()}` }); }
+  catch (e) { await btAlert('Could not save the note: ' + e.message); return; }
+  await renderCustomerAbout(); // shows "Reading the note…" and starts reading it
+}
+async function deleteCustomerNote(noteId){
+  if (!(await btConfirm('Delete this note?'))) return;
+  try { await callApi('messaging', { action: 'delete_note', actor: currentActor(), id: noteId }); } catch (e) { await btAlert('Could not delete: ' + e.message); return; }
+  renderCustomerAbout();
+}
+
+function countryName(countryId){
+  const match = countries.find(c => c.id === countryId);
+  return match ? match.name_en : null;
+}
+
+function paymentDaysLabel(days){
+  if (days == null) return null;
+  return days === 0 ? 'Advance' : `Credit ${days}d`;
+}
+
+function renderCustomers(){
+  const wrap = document.getElementById('customerRows');
+  const term = (document.getElementById('searchBox').value || '').trim().toLowerCase();
+  let filtered = term ? customers.filter(c =>
+    [c.trade_name, c.legal_name, c.city, c.contact_name, c.email].some(v => (v || '').toLowerCase().includes(term))
+  ) : customers;
+  // Real ask 2026-09-09 ("el orden que deberian estar es de arriba a abajo orden alfabetico y por
+  // ciudad"): city first (same value the Location column itself leads with — city, or state when
+  // there's no city on file), then the displayed legal name as the tiebreaker within each city.
+  filtered = [...filtered].sort((a, b) => {
+    const cityA = (a.city || a.state || (allStates.find(s => s.id === a.state_id) || {}).name_en || '').toLowerCase();
+    const cityB = (b.city || b.state || (allStates.find(s => s.id === b.state_id) || {}).name_en || '').toLowerCase();
+    if (cityA !== cityB) return cityA.localeCompare(cityB);
+    return (a.legal_name || a.trade_name || '').toLowerCase().localeCompare((b.legal_name || b.trade_name || '').toLowerCase());
+  });
+  document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
+  document.getElementById('emptyState').textContent = customers.length && !filtered.length
+    ? 'No customers match your search.'
+    : 'No customers yet. Click "+ Add Customer" to create the first one.';
+  // Real ask 2026-09-09 ("pon columnas en esta tabla. Customer Location credit limit USD"):
+  // Location and Credit Limit promoted to their own real columns instead of being buried in the
+  // subtitle text; currency/delivery-type/payment-terms/contact-name stay as the smaller subtitle
+  // under the customer name (same "name + secondary facts" pattern as every other converted
+  // table), and the action column keeps both WhatsApp and Email as icon buttons.
+  wrap.innerHTML = filtered.map(c => {
+    // Real bug found 2026-09-09: this never included state, so the many customers with a state
+    // set but no city (Bonnacarne, El Ingrato, Empacadora Murgati, La Blanquita, Los Corrales,
+    // Productos Neza) showed just "Colombia" with no visible change after saving their real state.
+    // Same stateName fallback viewCustomer() already uses (c.state free text, or resolve
+    // c.state_id against the real states catalog).
+    const stateName = c.state || (allStates.find(s => s.id === c.state_id) || {}).name_en || null;
+    const location = [c.city, stateName, countryName(c.country_id)].filter(Boolean).join(', ') || '—';
+    const creditLimit = c.credit_limit != null ? '$' + Number(c.credit_limit).toLocaleString('en-US') : '—';
+    // Real ask 2026-09-09 ("nombre de cliente cambialo por razon social completa... en lugar de
+    // delivered y credit y contacto va a ir el nombre de la aduana y la ciudad donde recibe"):
+    // legal_name replaces trade_name as the primary name; the subtitle now shows the customs
+    // agency + destination city (e.g. "Mcallen · EB International Logistics LLC") instead of
+    // delivery type / payment terms / contact name.
+    const agency = customsAgencies.find(a => a.id === c.customs_agency_provider_id);
+    const sub = [c.usual_destination, agency ? agency.name : null].filter(Boolean).join(' · ');
+    return `<tr>
+      <td>
+        <a class="name-link" onclick="viewCustomer('${c.id}')">${escapeHtml(c.legal_name || c.trade_name || '')}</a>
+        <div class="muted" style="font-size:11.5px;margin-top:2px;">${escapeHtml(sub || '—')}</div>
+      </td>
+      <td class="muted">${escapeHtml(location)}</td>
+      <td class="num">${creditLimit}</td>
+      <td class="num">${(() => { const cr = customerCredit[c.id]; if (!cr) return '<span class="muted">—</span>'; const cs = creditSentence(cr.available_today, cr.avg_load);
+        return `<b style="color:${cs.color};">${cr.available_today < 0 ? 'Over ' + creditUsd(-cr.available_today) : 'Room ' + creditUsd(cr.available_today)}</b>${cs.pay ? `<div class="muted" style="font-size:11px;margin-top:2px;"${(cr.pay_invoices || []).length ? ` title="${escapeHtml(cr.pay_invoices.map(v => `${v.number} ${creditUsd(v.amount)}${v.invoiced ? '' : ' (in transit)'}`).join(' · '))}"` : ''}>Pay ${(cr.pay_invoices || []).length === 1 ? escapeHtml(cr.pay_invoices[0].number) : (cr.pay_invoices || []).length > 1 ? `${cr.pay_invoices.length} loads · ${creditUsd(cr.pay_invoices.reduce((n, v) => n + v.amount, 0))}` : creditUsd(cs.pay)}<br>for 1 more load</div>` : ''}`; })()}</td>
+      <td>
+      <div style="display:flex;justify-content:center;align-items:center;gap:10px;">
+        ${(c.whatsapp || c.phone) ? `<a class="wa-btn" style="padding:6px 10px;" href="https://wa.me/${escapeHtml((c.whatsapp || c.phone).replace(/\D/g,''))}" target="_blank" rel="noopener" title="${escapeHtml(c.whatsapp || c.phone)}"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg></a>` : ''}
+        ${c.email ? `<a class="wa-btn outline" style="padding:6px 10px;" href="${escapeHtml('https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(c.email))}" target="bt_gmail" rel="noopener" title="${escapeHtml(c.email)}"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></a>` : ''}
+      </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Real ask 2026-09-09 ("ahora en clients"): same colored stat-card row as Plants/Products/
+// Logistics — real, already-tracked counts only (Total/With Credit Limit/No Credit Limit/
+// Countries), no invented metrics.
+function renderCustomerStats(){
+  const wrap = document.getElementById('customerStatsRow');
+  if (!wrap) return;
+  const total = customers.length;
+  const withCredit = customers.filter(c => c.credit_limit != null).length;
+  const noCredit = total - withCredit;
+  const countryCount = new Set(customers.map(c => c.country_id).filter(Boolean)).size;
+  const stats = [
+    { value: String(total), label: 'Total Customers', cls: 'hero',
+      icon: '<path d="M20 7h-9m9 5h-9m9 5h-9M5 7h.01M5 12h.01M5 17h.01"/>' },
+    { value: String(withCredit), label: 'With Credit Limit', cls: 'ok',
+      icon: '<path d="M20 6 9 17l-5-5"/>' },
+    { value: String(noCredit), label: 'No Credit Limit', cls: 'danger',
+      icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>' },
+    { value: String(countryCount), label: 'Countries', cls: 'warn',
+      icon: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/>' },
+  ];
+  wrap.innerHTML = stats.map(s => `
+    <div class="stat-card ${s.cls}">
+      <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${s.icon}</svg></div>
+      <div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>
+    </div>`).join('');
+}
+
+function editCustomer(id){
+  const c = customers.find(x => x.id === id);
+  if (c) openForm(c);
+}
+
+let viewingCustomerId = null;
+
+function viewCustomer(id){
+  const viewCard = document.getElementById('viewCard');
+  if (viewingCustomerId === id && viewCard.style.display === 'block'){
+    closeCustomerDetail();
+    return;
+  }
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  viewingCustomerId = id;
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('customerToolbarRow').style.display = 'none';
+  // Real bug found live 2026-09-10 (same pattern confirmed in plants.html/providers.html):
+  // customerStatsRow is a sibling of customerListCard, never nested inside it — hiding the list
+  // alone left the aggregate totals sitting directly under this one customer's own detail view.
+  document.getElementById('customerStatsRow').style.display = 'none';
+  document.getElementById('customerListCard').style.display = 'none';
+  viewCard.style.display = 'block';
+  document.getElementById('viewTitle').textContent = c.trade_name || '';
+  renderCustomerLogo(c);
+  renderCustomerCredit(id);
+  document.getElementById('v_legal_name').textContent = c.legal_name || '—';
+  const stateName = c.state || (allStates.find(s => s.id === c.state_id) || {}).name_en || null;
+  document.getElementById('v_location').textContent = [c.city, stateName, countryName(c.country_id)].filter(Boolean).join(', ') || '—';
+  document.getElementById('v_address').textContent = [c.address, c.postal_code].filter(Boolean).join(' — ') || '—';
+  document.getElementById('v_contact_name').innerHTML = (c.contact_name && c.email) ? `<a href="${escapeHtml('https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(c.email))}" target="bt_gmail" rel="noopener" style="color:var(--blue);text-decoration:none;">${escapeHtml(c.contact_name)}</a>` : escapeHtml(c.contact_name || '—');
+  document.getElementById('v_contact_role').textContent = c.contact_role || '—';
+  document.getElementById('v_email').innerHTML = c.email ? `<a href="${escapeHtml('https://mail.google.com/mail/?view=cm&to=' + encodeURIComponent(c.email))}" target="bt_gmail" rel="noopener" style="color:var(--blue);text-decoration:none;">${escapeHtml(c.email)}</a>` : '—';
+  document.getElementById('v_website').textContent = c.website || '—';
+  document.getElementById('v_payments_contact_name').textContent = c.payments_contact_name || '—';
+  document.getElementById('v_payments_contact_email').textContent = c.payments_contact_email || '—';
+  document.getElementById('v_payments_contact_phone').textContent = c.payments_contact_whatsapp || c.payments_contact_phone || '—';
+  const biz = businessTypes.find(x => x.id === c.business_type_id);
+  document.getElementById('v_business_type').innerHTML = biz ? `${escapeHtml(biz.name_en)}${biz.name_es ? `<span style="display:block;font-size:11.5px;color:var(--ink-soft);">${escapeHtml(biz.name_es)}</span>` : ''}` : '—';
+  const curr = currencies.find(x => x.id === c.preferred_currency_id);
+  document.getElementById('v_preferred_currency').textContent = curr ? curr.code : '—';
+  const deliveryLabels = { 'Border': 'Picked up (FOB)', 'Delivered Colombia': 'Delivered' };
+  document.getElementById('v_usual_delivery_type').textContent = deliveryLabels[c.usual_delivery_type] || c.usual_delivery_type || '—';
+  document.getElementById('v_payment_days').textContent = paymentDaysLabel(c.payment_days) || '—';
+  document.getElementById('v_credit_limit').textContent = c.credit_limit != null ? '$' + Number(c.credit_limit).toLocaleString('en-US') : '—';
+  document.getElementById('v_usual_destination').textContent = c.usual_destination || '—';
+  const incoterm = incoterms.find(x => x.id === c.usual_incoterm_id);
+  document.getElementById('v_usual_incoterm').textContent = [incoterm ? incoterm.code : null, c.usual_incoterm_place].filter(Boolean).join(' ') || '—';
+  document.getElementById('v_payment_method').textContent = c.payment_method || '—';
+  const agency = customsAgencies.find(a => a.id === c.customs_agency_provider_id);
+  document.getElementById('v_customs_agency').textContent = agency ? agency.name : '—';
+  const waNumber = c.whatsapp || c.phone;
+  const waBtn = document.getElementById('v_waBtn');
+  if (waNumber){ waBtn.style.display = 'inline-flex'; waBtn.dataset.number = waNumber; }
+  else { waBtn.style.display = 'none'; waBtn.dataset.number = ''; }
+  setCustomerTab('products'); // always open on what-they-buy, regardless of which tab was open last time
+  loadCustomerProducts(id);
+  document.getElementById('viewCard').scrollIntoView({behavior:'smooth'});
+}
+
+function renderCustomerLogo(c){
+  const img = document.getElementById('v_logo');
+  const placeholder = document.getElementById('v_logo_placeholder');
+  if (c.logo_url){
+    img.src = c.logo_url;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+    placeholder.textContent = (c.trade_name || '?').trim().charAt(0).toUpperCase();
+  }
+}
+
+function uploadCustomerLogo(){
+  const input = document.getElementById('customerLogoFileInput');
+  const file = input.files[0];
+  if (!file || !viewingCustomerId) return;
+  const MAX_BYTES = 5 * 1024 * 1024;
+  if (file.size > MAX_BYTES){
+    document.getElementById('customerLogoMsg').textContent = 'Logo must be 5MB or smaller.';
+    return;
+  }
+  document.getElementById('customerLogoMsg').textContent = 'Uploading…';
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result.split(',')[1];
+    let result;
+    try {
+      result = await callApi('customer-logo-upload', {
+        actor: currentActor(), customer_id: viewingCustomerId,
+        file_name: file.name, file_base64: base64, content_type: file.type || null,
+      });
+    } catch (e) {
+      document.getElementById('customerLogoMsg').textContent = 'Error: ' + e.message;
+      return;
+    }
+    input.value = '';
+    document.getElementById('customerLogoMsg').textContent = '';
+    const idx = customers.findIndex(c => c.id === viewingCustomerId);
+    if (idx !== -1) customers[idx] = result.customer;
+    renderCustomerLogo(result.customer);
+    renderCustomers();
+  };
+  reader.onerror = () => { document.getElementById('customerLogoMsg').textContent = 'Could not read the file.'; };
+  reader.readAsDataURL(file);
+}
+
+function editFromView(){
+  const c = customers.find(x => x.id === viewingCustomerId);
+  if (c) openForm(c);
+}
+
+function deleteFromView(){
+  if (viewingCustomerId) deleteCustomer(viewingCustomerId);
+}
+
+function openViewWhatsApp(){
+  const raw = document.getElementById('v_waBtn').dataset.number || '';
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return;
+  window.open('https://wa.me/' + digits, '_blank');
+}
+
+async function saveCustomer(forceOverride){
+  // a number pasted the way people paste it ("+52 662 123 4567", "044 662…", "521 662…") is fixed before anything is checked; a real problem is said plainly (js/contact-validation.js)
+  const phoneProblem = bcFixPhoneInputs('whatsapp_code', 'whatsapp_number', '+52') || bcFixFullPhoneInput('payments_contact_whatsapp', document.getElementById('whatsapp_code').value || '+52', [...document.getElementById('whatsapp_code').options].map(o => o.value));
+  if (phoneProblem){ document.getElementById('formMsg').textContent = phoneProblem; return; }
+  const id = document.getElementById('custId').value;
+  const currencyVal = document.getElementById('preferred_currency').value;
+  const payload = {
+    trade_name: document.getElementById('trade_name').value,
+    legal_name: document.getElementById('legal_name').value || null,
+    country_id: document.getElementById('country_id').value || null,
+    state_id: document.getElementById('stateSelectField').style.display !== 'none' ? (document.getElementById('state_id').value || null) : null,
+    state: document.getElementById('stateTextField').style.display !== 'none' ? (document.getElementById('state').value || null) : null,
+    city: document.getElementById('city').value || null,
+    address: document.getElementById('address').value || null,
+    postal_code: document.getElementById('postal_code').value || null,
+    contact_name: document.getElementById('contact_name').value || null,
+    contact_role: document.getElementById('contact_role').value || null,
+    email: document.getElementById('email').value || null,
+    email_cc: document.getElementById('email_cc').value || null,
+    // One number per person: the same value fills both the phone and whatsapp columns, since
+    // some other screens still read `phone` alone and others read `whatsapp` alone.
+    phone: joinPhone(document.getElementById('whatsapp_code').value, document.getElementById('whatsapp_number').value),
+    whatsapp: joinPhone(document.getElementById('whatsapp_code').value, document.getElementById('whatsapp_number').value),
+    website: document.getElementById('website').value || null,
+    payments_contact_name: document.getElementById('payments_contact_name').value || null,
+    payments_contact_email: document.getElementById('payments_contact_email').value || null,
+    payments_contact_phone: document.getElementById('payments_contact_whatsapp').value || null,
+    payments_contact_whatsapp: document.getElementById('payments_contact_whatsapp').value || null,
+    business_type_id: document.getElementById('business_type_id').value || null,
+    preferred_currency_id: (currencyVal && currencyVal !== 'other') ? currencyVal : null,
+    usual_delivery_type: document.getElementById('usual_delivery_type').value || null,
+    payment_days: (() => {
+      const termsType = document.getElementById('payment_terms_type').value;
+      if (termsType === 'advance') return 0;
+      if (termsType === 'credit') return document.getElementById('payment_days').value ? Number(document.getElementById('payment_days').value) : null;
+      return null;
+    })(),
+    credit_limit: document.getElementById('credit_limit').value ? Number(document.getElementById('credit_limit').value) : null,
+    usual_destination: document.getElementById('usual_destination').value || null,
+    usual_incoterm_id: document.getElementById('usual_incoterm_id').value || null,
+    usual_incoterm_place: document.getElementById('usual_incoterm_place').value || null,
+    payment_method: document.getElementById('payment_method').value || null,
+    customs_agency_provider_id: document.getElementById('customs_agency_provider_id').value || null,
+    preferred_exchange_rate_mode: document.getElementById('preferred_exchange_rate_mode').value || null,
+  };
+  if (!payload.trade_name){
+    document.getElementById('formMsg').textContent = 'Trade name is required.';
+    return;
+  }
+  if (!payload.business_type_id && businessTypes.length){
+    document.getElementById('formMsg').textContent = 'Business type is required.';
+    return;
+  }
+  // Real ask 2026-09-13 ("blindar mejor los formularios... para que el input no quede con
+  // errores"): nothing below here was checked before today — a bad email or phone saved silently
+  // and only surfaced later as a bounced send. bcIsValid* (js/contact-validation.js) is the one
+  // shared implementation Plants/Carriers use too, so a fix here can't drift out of sync with
+  // theirs the way the email signature already did.
+  if (document.getElementById('email').value && !bcIsValidEmail(document.getElementById('email').value)){
+    document.getElementById('formMsg').textContent = 'Email doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('email_cc').value && !bcIsValidEmailList(document.getElementById('email_cc').value)){
+    document.getElementById('formMsg').textContent = 'One of the CC emails doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('payments_contact_email').value && !bcIsValidEmail(document.getElementById('payments_contact_email').value)){
+    document.getElementById('formMsg').textContent = 'Payments contact email doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('whatsapp_number').value && !bcIsValidPhoneDigits(document.getElementById('whatsapp_number').value)){
+    document.getElementById('formMsg').textContent = 'WhatsApp number doesn\'t look valid — digits only, no country code (that\'s the dropdown next to it).';
+    return;
+  }
+  if (payload.whatsapp && !payload.whatsapp.trim().startsWith('+')){
+    document.getElementById('formMsg').textContent = 'WhatsApp must include the country code, e.g. +52 6621234567.';
+    return;
+  }
+  if (document.getElementById('payments_contact_whatsapp').value && !bcIsValidFullPhone(document.getElementById('payments_contact_whatsapp').value)){
+    document.getElementById('formMsg').textContent = 'Payments contact WhatsApp must include the country code, e.g. +52 6621234567.';
+    return;
+  }
+  if (document.getElementById('payment_terms_type').value === 'credit' && !payload.payment_days){
+    document.getElementById('formMsg').textContent = 'Enter how many credit days.';
+    return;
+  }
+  let createdCustomer = null;
+  try {
+    if (id) await callApi('customers-update', { actor: currentActor(), id, ...payload, override_duplicate_check: !!forceOverride });
+    else {
+      const idempotencyKey = `customers-create|${JSON.stringify(payload)}|${new Date().toISOString().slice(0, 16)}`;
+      const res = await callApi('customers-create', { actor: currentActor(), ...payload, override_duplicate_check: !!forceOverride, idempotency_key: idempotencyKey });
+      createdCustomer = res.customer;
+    }
+  } catch (e) {
+    if (e.data && e.data.error === 'possible_duplicate'){
+      const match = e.data.exact_match || (e.data.near_duplicate_names && e.data.near_duplicate_names[0]);
+      document.getElementById('formMsg').innerHTML = `
+        <div style="background:rgba(255,200,118,.08);border:1px solid rgba(255,200,118,.4);border-radius:8px;padding:10px 12px;color:#FFC876;">
+          ${escapeHtml(e.data.message)}${match ? `<br><strong>${escapeHtml(match.trade_name)}</strong>` : ''}
+          <div style="margin-top:8px;">
+            <button type="button" class="btn small" onclick="saveCustomer(true)">Save anyway — this is genuinely different</button>
+          </div>
+        </div>`;
+      return;
+    }
+    // Real backstop 2026-09-13: the form's own checks (bcIsValid*) already catch this in normal
+    // use — this only fires if something reaches the API without going through them.
+    if (e.data && e.data.error === 'invalid_contact_fields'){
+      document.getElementById('formMsg').textContent = e.data.problems.join(' ');
+      return;
+    }
+    document.getElementById('formMsg').textContent = 'Error: ' + e.message;
+    return;
+  }
+  closeForm();
+  await loadCustomers();
+  if (createdCustomer) viewCustomer(createdCustomer.id);
+}
+
+async function deleteCustomer(id){
+  const c = customers.find(x => x.id === id); if (!c) return;
+  const name = (c.trade_name || '').trim();
+  if (!(await btConfirmTyped(`Delete ${name}? This cannot be undone.\nType the customer's name to confirm:`, name))) return;
+  try {
+    await callApi('customers-delete', { actor: currentActor(), id });
+  } catch (e) {
+    await btAlert('Error deleting: ' + e.message);
+    return;
+  }
+  document.getElementById('formCard').style.display = 'none';
+  document.getElementById('viewCard').style.display = 'none';
+  document.getElementById('customerToolbarRow').style.display = 'flex';
+  document.getElementById('customerStatsRow').style.display = '';
+  document.getElementById('customerListCard').style.display = 'block';
+  viewingCustomerId = null;
+  loadCustomers();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ============ Real ask 2026-09-11 ("hazlo... desde el principio con el diseno buentrade para no
+// tener que repetir trabajo") — same generic replacement as plants.html/products.html for every
+// remaining native <select> (WhatsApp code, Country, State, Currency, Delivery type, Payment
+// terms, Incoterm, Customs agency, Exchange rate mode in the customer edit form). The <select>
+// stays the real source of truth, just hidden; a MutationObserver keeps the visible panel in
+// sync with whatever options get added later. ============
+function btEnhanceSelect(selectEl){
+  if (!selectEl || selectEl.dataset.btEnhanced) return;
+  selectEl.dataset.btEnhanced = '1';
+  const savedStyle = selectEl.getAttribute('style') || '';
+  selectEl.removeAttribute('style');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'bt-select-wrap';
+  if (savedStyle) wrap.setAttribute('style', savedStyle);
+  selectEl.parentNode.insertBefore(wrap, selectEl);
+  wrap.appendChild(selectEl);
+  selectEl.style.display = 'none';
+
+  wrap.insertAdjacentHTML('afterbegin', `
+    <button type="button" class="bt-select-trigger">
+      <span class="bt-select-label"></span>
+      <svg class="bt-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="bt-select-panel" style="display:none;"></div>`);
+  const trigger = wrap.querySelector('.bt-select-trigger');
+  const label = wrap.querySelector('.bt-select-label');
+  const panel = wrap.querySelector('.bt-select-panel');
+  if (selectEl.disabled) trigger.disabled = true;
+
+  const escBt = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  let searchTerm = '';
+
+  function renderPanel(){
+    const opts = [...selectEl.options];
+    const showSearch = opts.length > 8;
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = q ? opts.filter(o => o.textContent.toLowerCase().includes(q)) : opts;
+    panel.innerHTML = (showSearch ? `<input type="text" class="bt-select-search" placeholder="Search…" value="${escBt(searchTerm)}">` : '')
+      + (filtered.length ? filtered.map(o => `
+          <button type="button" class="bt-select-option${o.value === selectEl.value ? ' selected' : ''}" data-value="${escBt(o.value)}">
+            <svg class="bt-select-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${o.dataset.sub ? `<span class="bt-select-two"><span>${escBt(o.textContent)}</span><span class="bt-select-sub">${escBt(o.dataset.sub)}</span></span>` : escBt(o.textContent)}
+          </button>`).join('')
+        : `<div class="bt-select-empty">No matches</div>`);
+    panel.querySelectorAll('.bt-select-option').forEach(btn => {
+      btn.onclick = () => {
+        selectEl.value = btn.dataset.value;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        searchTerm = '';
+        close();
+        sync();
+      };
+    });
+    const search = panel.querySelector('.bt-select-search');
+    if (search){
+      search.addEventListener('click', e => e.stopPropagation());
+      search.addEventListener('input', () => {
+        searchTerm = search.value;
+        const pos = search.selectionStart;
+        renderPanel();
+        const ns = panel.querySelector('.bt-select-search');
+        if (ns){ ns.focus(); ns.setSelectionRange(pos, pos); }
+      });
+    }
+  }
+  function sync(){
+    const opt = selectEl.options[selectEl.selectedIndex];
+    label.textContent = opt ? opt.textContent : '';
+  }
+  function open(){ searchTerm = ''; renderPanel(); panel.style.display = 'block'; wrap.classList.add('open'); const s = panel.querySelector('.bt-select-search'); if (s) s.focus(); }
+  function close(){ panel.style.display = 'none'; wrap.classList.remove('open'); }
+  trigger.onclick = e => { e.stopPropagation(); if (selectEl.disabled) return; panel.style.display === 'none' ? open() : close(); };
+  document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
+  new MutationObserver(sync).observe(selectEl, { childList: true, subtree: true });
+  // Real bug found live 2026-09-18 (products.html/plants.html): the MutationObserver above only
+  // catches <option> nodes being added/removed — setting selectEl.value programmatically (any
+  // form-population code) changes no DOM structure at all, so the visible label never updated even
+  // though the real underlying value was set correctly. A 'change' listener plus this exposed
+  // resync method cover both cases.
+  selectEl.addEventListener('change', sync);
+  selectEl.btSync = sync;
+  sync();
+}
+function btEnhanceAllSelects(root){
+  (root || document).querySelectorAll('select:not([data-bt-enhanced])').forEach(btEnhanceSelect);
+}
+document.addEventListener('DOMContentLoaded', () => btEnhanceAllSelects());
+if (document.readyState !== 'loading') btEnhanceAllSelects();
+</script>
+</body>
+</html>

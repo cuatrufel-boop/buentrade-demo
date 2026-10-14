@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tus tarifas de flete — BuenTrade</title>
+<!-- The carrier's own table of US freight rates to the border (link emailed Mon / Wed / Fri 8 am Miami by provider-rate-update-request).
+     The carrier changes only the rates that moved; they apply directly and every rate is confirmed for today. Approved prototype 2026-10-04. -->
+<meta property="og:title" content="BuenTrade — Tus tarifas de flete">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="shortcut icon" href="/icons/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A2547; --navy-2:#0E3D8F; --blue:#1E6ADB; --blue-bright:#5AAAFF;
+    --bg:#F4F6FB; --card:#FFFFFF; --line:#E2E8F2; --ink:#0F1F33; --ink-soft:#64748B;
+    --green:#0F8A5F; --green-light:rgba(15,138,95,.10); --red:#C4432E; --amber:#B7791F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);padding:20px;display:flex;align-items:center;justify-content:center;}
+  .header .word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;color:#fff;} .header .word span{color:var(--blue-bright);}
+  .page{width:100%;max-width:520px;margin:0 auto;padding:18px 16px 110px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(10,37,71,.05);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin:0 0 6px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;margin:0 0 4px;}
+  .sub{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin:0;}
+  .search{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;margin-top:10px;}
+  .search:focus{outline:none;border-color:var(--blue);}
+  .group{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:6px 2px;}
+  .rate-row{display:grid;grid-template-columns:1fr auto 110px;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .rate-row:last-child{border-bottom:none;}
+  .city{font-weight:600;font-size:14px;} .city small{display:block;font-weight:500;color:var(--ink-soft);font-size:11.5px;margin-top:1px;}
+  .now{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--navy);text-align:right;}
+  .now.struck{color:var(--ink-soft);text-decoration:line-through;font-weight:600;font-size:13px;}
+  .new{width:100%;padding:9px 8px;border:1.5px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;text-align:right;}
+  .new::placeholder{color:#b5c0cf;}
+  .new:focus{outline:none;border-color:var(--blue);}
+  .rate-row.changed{background:#F2F7FF;border-radius:8px;}
+  .rate-row.changed .new{border-color:var(--blue);font-weight:700;}
+  .delta{font-size:11.5px;font-weight:700;margin-top:3px;text-align:right;}
+  .delta.up{color:var(--red);} .delta.down{color:var(--green);}
+  .check{grid-column:1 / -1;font-size:12px;color:var(--amber);font-weight:600;margin-top:-4px;}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 14px rgba(10,37,71,.06);}
+  .bar-in{max-width:520px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center;}
+  .count{font-size:12.5px;color:var(--ink-soft);flex:1;} .count b{color:var(--ink);}
+  .btn{border:none;border-radius:10px;padding:12px 14px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;}
+  .btn.primary{background:linear-gradient(135deg,#12A56E,#0F8A5F);color:#fff;box-shadow:0 4px 14px rgba(15,138,95,.30);}
+  .btn.primary:disabled{opacity:.45;box-shadow:none;cursor:not-allowed;}
+  .btn.ghost{background:#fff;color:var(--blue);border:1.5px solid var(--blue);}
+  .btn:disabled{cursor:not-allowed;}
+  @media (max-width:480px){
+    .bar-in{flex-wrap:wrap;gap:8px;padding:10px 14px 12px;}
+    .count{flex-basis:100%;text-align:center;}
+    .bar-in .btn{flex:1;padding:12px 10px;}
+    .search,.new{font-size:16px;} /* iPhone zooms the page in on any box under 16px */
+  }
+  .center{text-align:center;padding:30px 18px;}
+  .ic{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;}
+  .ic.ok{background:var(--green-light);color:var(--green);} .ic.err{background:rgba(196,67,46,.1);color:var(--red);}
+  .center h2{font-family:'Space Grotesk';font-size:19px;margin:0 0 6px;}
+  .center p{font-size:13.5px;color:var(--ink-soft);margin:0 0 4px;line-height:1.55;}
+  .center ul{list-style:none;padding:0;margin:12px 0 0;text-align:left;font-size:13.5px;}
+  .center li{padding:7px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;}
+  .msg{font-size:12.5px;color:var(--red);font-weight:600;text-align:center;margin:8px 0 0;}
+  .spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:10px auto 16px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  [hidden]{display:none!important;}
+</style>
+</head>
+<body>
+<div class="header"><div class="word">Buen<span>Trade</span></div></div>
+<div class="page">
+
+  <div id="loadingState" class="card center"><div class="spinner"></div><p>Cargando tus tarifas…</p></div>
+
+  <div id="errorState" class="card center" hidden>
+    <div class="ic err">!</div>
+    <h2>Este link no funciona</h2>
+    <p>Usa el último link que te enviamos por correo, o responde ese correo y te lo enviamos de nuevo.</p>
+  </div>
+
+  <div id="formState" hidden>
+    <div class="card">
+      <p class="eyebrow">Flete US · a la frontera</p>
+      <h1 id="carrierName"></h1>
+      <p class="sub" id="lastConfirmed"></p>
+      <input class="search" id="search" placeholder="Buscar ciudad…" oninput="render()">
+    </div>
+    <div class="card" style="padding:10px 12px;"><div id="rows"></div></div>
+    <p class="msg" id="sendMsg" hidden></p>
+  </div>
+
+  <div id="doneState" class="card center" hidden>
+    <div class="ic ok">✓</div>
+    <h2 id="doneTitle"></h2>
+    <p id="doneSub"></p>
+    <ul id="doneList"></ul>
+    <p style="margin-top:16px;">Puedes abrir este mismo link cualquier día para actualizar una tarifa.</p>
+  </div>
+
+</div>
+<div class="bar" id="bar" hidden>
+  <div class="bar-in">
+    <div class="count" id="count"></div>
+    <button class="btn ghost" id="noChange" onclick="submit(true)">Sin cambios hoy</button>
+    <button class="btn primary" id="send" onclick="submit(false)" disabled>Enviar cambios</button>
+  </div>
+</div>
+
+<script>
+const API = 'https://oqotaxmacwueiutdxgkk.supabase.co/functions/v1/provider-rate-update-request?forceFunctionRegion=us-east-1';
+const KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
+const TOKEN = new URLSearchParams(location.search).get('t') || '';
+let RATES = [];
+const edits = {};
+
+async function call(body){
+  const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + KEY, apikey: KEY }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.message || data.error || res.status), { data });
+  return data;
+}
+const money = (n) => '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const show = (id) => ['loadingState', 'errorState', 'formState', 'doneState'].forEach((s) => { document.getElementById(s).hidden = s !== id; });
+
+// A catalog city with no rate yet comes with id null (user 2026-10-05: every city of Locations must show, to be filled) —
+// keyed by its location, shown "Sin tarifa", and whatever the carrier types creates the rate.
+const keyOf = (r) => r.id || 'loc:' + r.location_id;
+const hasRate = (r) => r.rate != null;
+function newValue(r){ const v = edits[keyOf(r)]; const n = Number(v); return v != null && v !== '' && n > 0 && n !== Number(r.rate) ? n : null; }
+function rowHtml(r){
+  const n = newValue(r), k = keyOf(r);
+  const d = n != null && hasRate(r) ? n - Number(r.rate) : 0;
+  const big = n != null && hasRate(r) && (n > Number(r.rate) * 1.4 || n < Number(r.rate) * 0.6);
+  return `<div class="rate-row${n != null ? ' changed' : ''}">
+    <div class="city">${esc(r.origin)}<small>→ Frontera</small></div>
+    <div>${hasRate(r) ? `<div class="now${n != null ? ' struck' : ''}">${money(r.rate)}</div>` : `<div class="now struck" style="text-decoration:none;">Sin tarifa</div>`}${n != null && hasRate(r) ? `<div class="delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${money(Math.abs(d))}</div>` : ''}</div>
+    <input class="new" data-id="${esc(k)}" inputmode="decimal" placeholder="${hasRate(r) ? 'nuevo $' : 'tu tarifa $'}" value="${esc(edits[k] ?? '')}" oninput="edit('${esc(k)}', this)">
+    ${big ? `<div class="check">Es un cambio grande respecto a ${money(r.rate)} — por favor revísalo.</div>` : ''}
+  </div>`;
+}
+function render(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const list = RATES.filter((r) => !q || r.origin.toLowerCase().includes(q));
+  const a = list.filter((r) => r.quoting_now), b = list.filter((r) => !r.quoting_now);
+  document.getElementById('rows').innerHTML =
+    (a.length ? `<div class="group">Ciudades que estamos cotizando</div>` + a.map(rowHtml).join('') : '') +
+    (b.length ? `<div class="group" style="margin-top:12px;">Todas tus demás ciudades</div>` + b.map(rowHtml).join('') : '') +
+    (!list.length ? `<p class="sub" style="padding:10px 4px;">Ninguna ciudad coincide.</p>` : '');
+  updateBar();
+}
+function edit(id, el){
+  const pos = el.selectionStart;
+  edits[id] = el.value.replace(/[^0-9.]/g, '');
+  render();
+  const again = document.querySelector(`.new[data-id="${id}"]`);
+  if (again){ again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
+}
+function changed(){ return RATES.filter((r) => newValue(r) != null); }
+function updateBar(){
+  const n = changed().length;
+  document.getElementById('count').innerHTML = `<b>${n}</b> ${n === 1 ? 'cambiada' : 'cambiadas'} · ${RATES.length - n} igual`;
+  document.getElementById('send').disabled = n === 0;
+}
+async function submit(noChanges){
+  const list = noChanges ? [] : changed();
+  const msg = document.getElementById('sendMsg');
+  msg.hidden = true;
+  document.getElementById('send').disabled = true; document.getElementById('noChange').disabled = true;
+  try {
+    const res = await call({ action: 'carrier_submit', token: TOKEN, changes: list.map((r) => (r.id ? { rate_id: r.id, rate: newValue(r) } : { location_id: r.location_id, rate: newValue(r) })) });
+    const day = new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+    const n = res.changed.length;
+    document.getElementById('doneTitle').textContent = n ? `Gracias — ${n} ${n === 1 ? 'tarifa actualizada' : 'tarifas actualizadas'}` : 'Gracias — sin cambios hoy';
+    document.getElementById('doneSub').textContent = n ? `Las otras ${res.confirmed - n} quedan confirmadas para el ${day}.` : `Tus ${res.confirmed} tarifas quedan confirmadas para el ${day}.`;
+    document.getElementById('doneList').innerHTML = res.changed.map((c) => `<li><span>${esc(c.origin)}</span><span>${c.old_rate == null ? 'nueva' : money(c.old_rate)} → <b>${money(c.new_rate)}</b></span></li>`).join('');
+    document.getElementById('bar').hidden = true;
+    show('doneState');
+  } catch (e) {
+    msg.textContent = (e.data && e.data.message) || 'Algo falló — por favor intenta de nuevo.';
+    msg.hidden = false;
+    document.getElementById('noChange').disabled = false;
+    updateBar();
+  }
+}
+async function init(){
+  if (TOKEN.length < 32){ show('errorState'); return; }
+  try {
+    const d = await call({ action: 'carrier_view', token: TOKEN, all_cities: true });
+    RATES = d.rates;
+    document.getElementById('carrierName').textContent = d.carrier.name;
+    const last = d.carrier.rates_confirmed_at
+      ? `Última confirmación: <b>${new Date(d.carrier.rates_confirmed_at).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</b>. `
+      : '';
+    document.getElementById('lastConfirmed').innerHTML = last + 'Cambia solo las tarifas que subieron o bajaron hoy — deja el resto vacío.';
+    show('formState');
+    document.getElementById('bar').hidden = false;
+    render();
+  } catch (e) { show('errorState'); }
+}
+init();
+</script>
+</body>
+</html>
