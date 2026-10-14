@@ -144,6 +144,12 @@
   .td-card.now{border-color:rgba(255,156,138,.55);background:linear-gradient(90deg,rgba(255,156,138,.12),rgba(255,255,255,.035) 45%);}
   .td-card.now .td-urg{background:rgba(255,156,138,.22);color:#FF9C8A;border-right-color:rgba(255,156,138,.55);animation:tdRail 1.6s ease-in-out infinite;}
   @keyframes tdRail{0%,100%{box-shadow:inset -3px 0 14px -6px rgba(255,156,138,.9);}50%{box-shadow:inset -3px 0 22px 0 rgba(255,156,138,.9);}}
+  /* a price that arrived in the last 24 h (user 2026-10-14: "debe parpadear cada que llegan precios"): the tag blinks until the offer is sent and the line leaves */
+  .tag.td-newtag{color:#3FCB7E;border-color:rgba(63,203,126,.55);background:rgba(63,203,126,.12);animation:tdTagBlink 1.1s ease-in-out infinite;}
+  @keyframes tdTagBlink{0%,100%{opacity:1;}50%{opacity:.35;}}
+  @media (prefers-reduced-motion:reduce){.tag.td-newtag{animation:none;}}
+  .td-table tr.td-newrow td:first-child{box-shadow:inset 3px 0 0 #3FCB7E;}
+  .tag.td-flag{color:var(--ink-soft);border-color:rgba(255,255,255,.28);font-weight:600;white-space:normal;text-align:center;}
   .td-kind{font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);}
   .td-held{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
   .td-hrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.03);}
@@ -454,8 +460,13 @@ function renderToday(gone = []){
     if (m(by('cadence'), /every (\d+) days/)) return `<span class="tag sent">Buys every ${m(by('cadence'), /every (\d+) days/)}d</span>`;
     if (m(by('history'), /(\d+) time/)) return `<span class="tag sent">Bought ${m(by('history'), /(\d+) time/)}×</span>`;
     const o = i.lead && String(i.lead.reason).match(/Offer of (\$[\d.]+)\/lb open since (\d\d\/\d\d)/);
-    return o ? `<span class="tag sent">Has ${o[1]} offer · ${whenOf(o[2])}</span>` : '';
+    if (o) return `<span class="tag sent">Has ${o[1]} offer · ${whenOf(o[2])}</span>`;
+    return i.group === 'sell' ? '<span class="tag sent">Buys this product</span>' : ''; // every customer who buys it is listed; the trader decides
   };
+  // how long ago the price arrived: "3h ago" / "25m ago"
+  const agoOf = at => { const m = Math.max(0, Math.round((Date.now() - new Date(at).getTime()) / 60000)); return m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`; };
+  // facts about HIM shown next to his name (never a reason to hide him): his own pause / one-brand note, and the offers he has had without a bid
+  const flagsOf = i => (i.reasons || []).filter(r => ['pause', 'brand_only', 'no_answer'].includes(r.key)).map(r => `<span class="tag td-flag" title="${escapeHtml(r.label)}">${escapeHtml(r.label.length > 46 ? r.label.slice(0, 44) + '…' : r.label)}</span>`).join('');
   // Only what matters on this screen: which product arrived and which customer needs it (user 2026-10-12: "solo quiero saber que producto llego y que cliente lo necesita").
   // The reason, the note, the history and the rest sit in the tooltip of the customer name.
   // One product, one block: the lines of the same product in a section sit together and the product name is written once (same rule as Offers)
@@ -468,13 +479,14 @@ function renderToday(gone = []){
     const prodCell = (cont ? `<span class="cont-name">${prodLink}</span>` : prodLink)
       + (i.held && i.held.length ? `<div style="margin-top:6px;"><button class="btn secondary small" onclick="toggleHeld(${escapeHtml(JSON.stringify(k))})">${todayHeldOpen.has(k) ? 'Hide' : 'Show'} ${i.held.length} held</button></div>` : '');
     const why = i.group === 'ask' || (i.lead && i.lead.asked) ? '<span class="tag won" title="The customer asked for this product">Asked</span>' : i.group === 'bid' ? '<span class="tag won" title="The customer made a bid">Bid</span>' : '';
-    const pill = names.length ? whyPill(i) : '';
+    const newTag = i.new && i.arrived_at ? `<span class="tag td-newtag" title="A price for this product arrived and has not been sent to him">NEW PRICE · ${agoOf(i.arrived_at)}</span>` : '';
+    const pill = names.length ? newTag + whyPill(i) + flagsOf(i) : '';
     const custCell = names.length ? `<span title="${escapeHtml(tip)}"><b style="font-weight:600;font-size:14px;">${escapeHtml(names[0])}</b>${names.length > 1 ? `<span class="muted" title="${escapeHtml(names.slice(1).join(', '))}"> + ${names.length - 1} more</span>` : ''}</span>${why || pill ? `<div class="td-pills">${why}${pill}</div>` : ''}` : '<span class="muted">—</span>';
     const priceCell = i.options && i.options.length ? i.options.map(money).join('') : '<span class="muted">—</span>';
     const n = i.who && i.who.length > 1 ? i.who.length : 0;
     const btn = cls ? '' : `<a class="wa-btn" href="${i.href}" title="${escapeHtml(i.action || 'Open')}" aria-label="${escapeHtml(i.action || 'Open')}">${i.group === 'bid' || i.group === 'gap' || i.group === 'watch' || !i.product ? ICON_GO : ICON_SEND}${n ? `<span>${n}</span>` : ''}</a>`;
     const held = i.held && i.held.length && todayHeldOpen.has(k) ? `<tr class="td-heldrow"><td colspan="4"><div class="td-held">${i.held.map(h => `<div class="td-hrow"><div><b>${escapeHtml(h.customer)}</b> — ${escapeHtml(h.product)}<span class="m">${escapeHtml(h.price)}${h.reasons && h.reasons.length ? ' · ' + h.reasons.map(escapeHtml).join(' · ') : ''}</span><span class="w">Held: ${escapeHtml(h.why)}</span></div><a class="wa-btn" href="${h.href}" title="Send anyway" aria-label="Send anyway">${ICON_SEND}</a></div>`).join('')}</div></td></tr>` : '';
-    return `<tr class="td-row${cls}${cont ? ' prod-cont' : ''}"><td>${prodCell}</td><td>${custCell}</td><td class="num">${priceCell}</td><td>${btn}</td></tr>${held}`;
+    return `<tr class="td-row${cls}${cont ? ' prod-cont' : ''}${i.new ? ' td-newrow' : ''}"><td>${prodCell}</td><td>${custCell}</td><td class="num">${priceCell}</td><td>${btn}</td></tr>${held}`;
   };
   // what one load of each offer in the section is worth at the trader's own margin (the engine's potential_usd)
   const fmtK = v => v >= 1000 ? '$' + (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : '$' + Math.round(v);
