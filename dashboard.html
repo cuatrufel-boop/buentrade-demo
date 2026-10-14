@@ -446,8 +446,12 @@ function renderToday(gone = []){
   const whenOf = d => !d ? '' : d === NYD ? 'today' : /^\d\d\/\d\d$/.test(d) ? `${MONS[Number(d.slice(0, 2)) - 1]} ${Number(d.slice(3))}` : d;
   const money = o => {
     const was = o.note && /\$/.test(o.note) ? o.note.replace(/^lowered from /i, 'was ') : '', when = whenOf(o.date);
-    return `<div style="white-space:nowrap;"><span class="muted" style="font-size:11.5px;">${escapeHtml(o.plant)}</span> <b class="mono"${o.cheapest ? ' style="color:#3FCB7E;"' : ''} title="${escapeHtml([o.landed != null ? `Border cost $${Number(o.landed).toFixed(3)}/lb` : '', o.freight || '', o.cheapest ? 'Cheapest at the border' : ''].filter(Boolean).join(' · '))}">$${Number(o.price).toFixed(2)}</b>${was || when ? ` <span class="muted" style="font-size:11px;">${[was ? `<s>${escapeHtml(was.replace(/^was /, ''))}</s>` : '', when].filter(Boolean).join(' · ')}</span>` : ''}</div>`;
+    return `<div style="white-space:nowrap;"><span class="muted" style="font-size:11.5px;">${escapeHtml(o.plant)}</span> <b class="mono"${o.cheapest ? ' style="color:#3FCB7E;"' : ''} title="${escapeHtml([o.landed != null ? `Border cost $${Number(o.landed).toFixed(3)}/lb` : '', o.freight || '', o.cheapest ? 'Cheapest at the border' : ''].filter(Boolean).join(' · '))}">$${Number(o.price).toFixed(2)}</b>${was || when ? ` <span class="muted" style="font-size:11px;">${[was ? `<s>${escapeHtml(was.replace(/^was /, ''))}</s>` : '', when].filter(Boolean).join(' · ')}</span>` : ''}${stateOf(o)}</div>`;
   };
+  // the same words Quotes uses for this brand and this customer (one rule, js shared in todayEngine.optionState): Sent $<what he got> · date / → your price + Ready / Confirm in QT
+  const stateOf = o => o.state === 'sent' ? ` <span class="tag sent" title="This customer already received this price">Sent${o.sent && o.sent.price != null ? ' $' + Number(o.sent.price).toFixed(2) : ''}${o.sent && o.sent.at ? ' · ' + whenOf(o.sent.at) : ''}</span>`
+    : o.state === 'ready' ? ` <span class="muted" style="font-size:11px;">→</span> <b class="mono" title="Your price, confirmed in its QT">$${Number(o.sale).toFixed(2)}</b> <span class="tag won" title="Confirmed in its QT — ready to send">Ready</span>`
+    : o.state === 'confirm' ? ' <span class="tag lost" title="Confirm your price in its QT to send it">Confirm in QT</span>' : '';
   // ONE short pill under the customer: why this price makes sense for him (strongest reason first). Everything longer stays in the tooltip.
   const whyPill = i => {
     // the engine's own hook, with its number, is the pill (user 2026-10-13); the older rules below only fill in when a line has none
