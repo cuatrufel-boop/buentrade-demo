@@ -3571,7 +3571,10 @@ async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids =
   rqSelectedPlants = rows.map(r => ({ ...r.confirmed, rqProductId: r.pid, rqLastCalc: r.calc, rqIncludeStale: true }));
   rqMatchedCustomers = customers;
   rqCustomerProductIds = linksByCustomer;
-  const afterSend = () => { rqSheetState.key = ''; setTimeout(() => rqRenderSweepTables(), 1500); };
+  // After ANY completed send the recipients are chosen again: whoever still lacks the prices is marked, the one who just got them is not (user 2026-10-14: "cuando envío a un solo cliente… ya no me deja mandar
+  // después a los clientes que no le mandé… dejar enviado al cliente que envié y los otros que se pueda mandar después"). Before, the panel kept ONLY the customer who had just received it marked, so
+  // every plant read "Sent" and the product looked closed for everybody, with the others one hidden tap away. The Today link's customer belongs to that first send, not to the next one.
+  const afterSend = () => { rqSheetState.key = ''; rqUrlPreselect = null; rqResetRequestSelection(); setTimeout(() => rqRenderSweepTables(), 1500); };
   try {
     if (channel === 'email') await sendOfferEmailToAll(pids, null, { skipChase: true, onSent: afterSend, resend: opts.resend });
     else await sendOfferWhatsAppToAll(pids, null, { skipChase: true, onSent: afterSend, resend: opts.resend });
