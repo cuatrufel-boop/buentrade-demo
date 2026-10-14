@@ -149,6 +149,26 @@
   @keyframes tdTagBlink{0%,100%{opacity:1;}50%{opacity:.35;}}
   @media (prefers-reduced-motion:reduce){.tag.td-newtag{animation:none;}}
   .td-table tr.td-newrow td:first-child{box-shadow:inset 3px 0 0 #3FCB7E;}
+  /* Today board (redesign 2026-10-14): one block per product — what arrived, when, the plants' prices once — and one row per customer: who + why, where each brand stands for him, one labelled button */
+  .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
+  .tdg{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035);overflow:hidden;}
+  .tdg.tdg-new{border-color:rgba(63,203,126,.5);box-shadow:inset 3px 0 0 #3FCB7E;}
+  .tdg-head{display:flex;justify-content:space-between;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:14px 18px 6px;}
+  .tdg-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0;} .tdg-title .name-link{font-size:16px;font-weight:600;} .tdg-count{font-size:12px;} .tdg-from{font-size:12px;}
+  .tdg-prices{display:flex;gap:8px;flex-wrap:wrap;padding:4px 18px 14px;}
+  .tdp{display:inline-flex;align-items:baseline;gap:7px;padding:5px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;font-size:12px;white-space:nowrap;}
+  .tdp i{font-style:normal;color:rgba(255,255,255,.7);} .tdp b{font:700 13px 'IBM Plex Mono',monospace;color:#fff;} .tdp s{opacity:.55;font-size:11px;} .tdp em{font-style:normal;opacity:.6;font-size:11px;}
+  .tdp.low{border-color:rgba(63,203,126,.55);background:rgba(63,203,126,.08);} .tdp.low b{color:#3FCB7E;}
+  .tdg-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1.25fr) auto;gap:10px 16px;align-items:center;padding:12px 18px;border-top:1px solid rgba(255,255,255,.08);}
+  .tdg-name{font-weight:600;font-size:14.5px;overflow-wrap:anywhere;} .tdg-why{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;} .tdg-why .tag{white-space:normal;}
+  .tdg-stand{display:flex;flex-wrap:wrap;gap:6px;}
+  .tds{display:inline-flex;gap:6px;align-items:baseline;padding:3px 10px;border-radius:8px;font-size:11.5px;border:1px solid transparent;white-space:nowrap;} .tds i{font-style:normal;opacity:.7;}
+  .tds.ready{color:#3FCB7E;border-color:rgba(63,203,126,.45);background:rgba(63,203,126,.08);} .tds.confirm{color:#FFC876;border-color:rgba(255,200,118,.45);} .tds.sent{color:rgba(255,255,255,.62);border-color:rgba(255,255,255,.2);}
+  .tdg-act{justify-self:end;} .tdg-go{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:136px;white-space:nowrap;text-decoration:none !important;}
+  .tdl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;padding:12px 18px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);}
+  .tdl-main .name-link{font-weight:600;font-size:14.5px;} .tdl-sub{font-size:12.5px;margin-top:3px;overflow-wrap:anywhere;}
+  .tdg.leaving,.tdl.leaving{background:rgba(63,203,126,.12);border-color:rgba(63,203,126,.5);}
+  @media (max-width:760px){ .tdg-row{grid-template-columns:1fr;} .tdg-act{justify-self:stretch;} .tdg-go{width:100%;} .tdl{grid-template-columns:1fr;} .tdg-head,.tdg-prices,.tdg-row{padding-left:14px;padding-right:14px;} }
   .tag.td-flag{color:var(--ink-soft);border-color:rgba(255,255,255,.28);font-weight:600;white-space:normal;text-align:center;}
   .td-kind{font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);}
   .td-held{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
@@ -433,28 +453,33 @@ function renderToday(gone = []){
   // ONE list, closest to a bid first (the server orders it) — no area tabs (user 2026-10-12: "todo enfocado en bids")
   const items = all, leaving = gone;
   if (!items.length && !leaving.length){ wrap.innerHTML = '<div class="empty">Nothing urgent today — all caught up.</div>'; return; }
-  // a reason the note already says is not repeated as a chip (the % under the average, 'as you asked')
+  // REDESIGN 2026-10-14 (owner: "se repite data, botones se salen de márgenes… que sea claro qué llegó, cuándo, por qué es relevante y a quién; un botón más claro y limpio"): a price that arrives is ONE block per
+  // product — what arrived and when (written once, NEW blinks once), the plants' prices (once) — and under it one row per customer: who, why he makes sense, where each brand stands for HIM, and one
+  // labelled button. Nothing is repeated per customer and nothing overlaps: every row is a grid that wraps. Every other kind of line (collect, pay, needs a price…) is one tidy line with its button.
   const chipsOf = i => (i.reasons || []).filter(r => !(i.note && ((r.key === 'below_avg' && /por debajo/.test(i.note)) || (r.key === 'asked' && /me pediste/.test(i.note)))));
-  // Today is a table, the same one Clients / Offers / Orders use (user 2026-10-12, pointing at Clients: "este es el diseno"): name in blue with a grey line under it,
-  // pills for state, mono values, an outlined .wa-btn icon button. Columns: Product · Customer · Priority · Price · Next.
-  const ICON_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>';
-  const ICON_GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+  const ICON_GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
   const SEC = [[1, 'Do now', 'now'], [2, 'Do today', 'soon'], [3, 'Wait', 'hold'], [4, 'Sent today', 'done']];
-  // Each plant line says what arrived: the plant, its price, what it was before (a price drop) and when it came in.
   const NYD = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', month: '2-digit', day: '2-digit' });
   const MONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const whenOf = d => !d ? '' : d === NYD ? 'today' : /^\d\d\/\d\d$/.test(d) ? `${MONS[Number(d.slice(0, 2)) - 1]} ${Number(d.slice(3))}` : d;
-  const money = o => {
-    const was = o.note && /\$/.test(o.note) ? o.note.replace(/^lowered from /i, 'was ') : '', when = whenOf(o.date);
-    return `<div style="white-space:nowrap;"><span class="muted" style="font-size:11.5px;">${escapeHtml(o.plant)}</span> <b class="mono"${o.cheapest ? ' style="color:#3FCB7E;"' : ''} title="${escapeHtml([o.landed != null ? `Border cost $${Number(o.landed).toFixed(3)}/lb` : '', o.freight || '', o.cheapest ? 'Cheapest at the border' : ''].filter(Boolean).join(' · '))}">$${Number(o.price).toFixed(2)}</b>${was || when ? ` <span class="muted" style="font-size:11px;">${[was ? `<s>${escapeHtml(was.replace(/^was /, ''))}</s>` : '', when].filter(Boolean).join(' · ')}</span>` : ''}${stateOf(o)}</div>`;
+  const agoOf = at => { const m = Math.max(0, Math.round((Date.now() - new Date(at).getTime()) / 60000)); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+  const first = n => String(n || '').trim().split(/\s+/)[0];
+  // a plant's price, written once for the whole product
+  const priceChip = o => {
+    const was = o.note && /\$/.test(o.note) ? o.note.replace(/^lowered from /i, '') : '';
+    const tip = [o.landed != null ? `Border cost $${Number(o.landed).toFixed(3)}/lb` : '', o.freight || '', o.cheapest ? 'Cheapest at the border' : ''].filter(Boolean).join(' · ');
+    return `<span class="tdp${o.cheapest ? ' low' : ''}" title="${escapeHtml(tip)}"><i>${escapeHtml(first(o.plant))}</i><b>$${Number(o.price).toFixed(2)}</b>${was ? `<s>${escapeHtml(was)}</s>` : ''}<em>${escapeHtml(whenOf(o.date))}</em></span>`;
   };
-  // the same words Quotes uses for this brand and this customer (one rule, js shared in todayEngine.optionState): Sent $<what he got> · date / → your price + Ready / Confirm in QT
-  const stateOf = o => o.state === 'sent' ? ` <span class="tag sent" title="This customer already received this price">Sent${o.sent && o.sent.price != null ? ' $' + Number(o.sent.price).toFixed(2) : ''}${o.sent && o.sent.at ? ' · ' + whenOf(o.sent.at) : ''}</span>`
-    : o.state === 'ready' ? ` <span class="muted" style="font-size:11px;">→</span> <b class="mono" title="Your price, confirmed in its QT">$${Number(o.sale).toFixed(2)}</b> <span class="tag won" title="Confirmed in its QT — ready to send">Ready</span>`
-    : o.state === 'confirm' ? ' <span class="tag lost" title="Confirm your price in its QT to send it">Confirm in QT</span>' : '';
-  // ONE short pill under the customer: why this price makes sense for him (strongest reason first). Everything longer stays in the tooltip.
+  // where ONE brand stands for THIS customer — the same three words Quotes uses (optionState): Sent $price · date / Ready · your price / Confirm in QT
+  const standing = o => {
+    const who = `<i>${escapeHtml(first(o.plant))}</i>`;
+    if (o.state === 'sent') return `<span class="tds sent" title="This customer already received this price">${who}Sent${o.sent && o.sent.price != null ? ' $' + Number(o.sent.price).toFixed(2) : ''}${o.sent && o.sent.at ? ' · ' + escapeHtml(whenOf(o.sent.at)) : ''}</span>`;
+    if (o.state === 'ready') return `<span class="tds ready" title="Confirmed in its QT — ready to send at your price">${who}Ready · $${Number(o.sale).toFixed(2)}</span>`;
+    if (o.state === 'confirm') return `<span class="tds confirm" title="Confirm your price in its QT to send it">${who}Confirm in QT</span>`;
+    return '';
+  };
+  // why this customer, strongest reason first: the engine's own hook (with its number) is the pill; the facts about HIM (pause / one brand / offers without a bid) are quiet pills after it
   const whyPill = i => {
-    // the engine's own hook, with its number, is the pill (user 2026-10-13); the older rules below only fill in when a line has none
     if (i.hook && i.hook.label){
       const cls = ['asked', 'window', 'bid_meet', 'beats_last', 'plant_drop'].includes(i.hook.key) ? 'won' : i.hook.key === 'gap' ? 'lost' : 'sent';
       return `<span class="tag ${cls}">${escapeHtml(i.hook.label)}</span>`;
@@ -465,42 +490,58 @@ function renderToday(gone = []){
     if (m(by('history'), /(\d+) time/)) return `<span class="tag sent">Bought ${m(by('history'), /(\d+) time/)}×</span>`;
     const o = i.lead && String(i.lead.reason).match(/Offer of (\$[\d.]+)\/lb open since (\d\d\/\d\d)/);
     if (o) return `<span class="tag sent">Has ${o[1]} offer · ${whenOf(o[2])}</span>`;
-    return i.group === 'sell' ? '<span class="tag sent">Buys this product</span>' : ''; // every customer who buys it is listed; the trader decides
+    return i.group === 'sell' ? '<span class="tag sent">Buys this product</span>' : '';
   };
-  // how long ago the price arrived: "3h ago" / "25m ago"
-  const agoOf = at => { const m = Math.max(0, Math.round((Date.now() - new Date(at).getTime()) / 60000)); return m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`; };
-  // facts about HIM shown next to his name (never a reason to hide him): his own pause / one-brand note, and the offers he has had without a bid
   const flagsOf = i => (i.reasons || []).filter(r => ['pause', 'brand_only', 'no_answer'].includes(r.key)).map(r => `<span class="tag td-flag" title="${escapeHtml(r.label)}">${escapeHtml(r.label.length > 46 ? r.label.slice(0, 44) + '…' : r.label)}</span>`).join('');
-  // Only what matters on this screen: which product arrived and which customer needs it (user 2026-10-12: "solo quiero saber que producto llego y que cliente lo necesita").
-  // The reason, the note, the history and the rest sit in the tooltip of the customer name.
-  // One product, one block: the lines of the same product in a section sit together and the product name is written once (same rule as Offers)
-  const byProduct = arr => { const order = [], by = new Map(); arr.forEach(i => { const k = i.product || ('\u0000' + todayKey(i)); if (!by.has(k)){ by.set(k, []); order.push(k); } by.get(k).push(i); }); return order.flatMap(k => by.get(k)); };
-  const row = (i, cls, cont) => {
-    const k = todayKey(i), chips = chipsOf(i);
-    const names = (i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : []);
-    const tip = [i.lead && i.lead.reason, ...chips.map(r => r.label), i.note && `Note: ${i.note}`, i.why && !(i.lead && (i.group === 'ask' || i.group === 'bid')) ? i.why : '', i.hot].filter(Boolean).join('\n');
-    const prodLink = `<a class="name-link" href="${i.href}"${i.product ? '' : ` title="${escapeHtml(tip)}"`}>${escapeHtml(i.product || i.title)}</a>`;
-    const prodCell = (cont ? `<span class="cont-name">${prodLink}</span>` : prodLink)
-      + (i.held && i.held.length ? `<div style="margin-top:6px;"><button class="btn secondary small" onclick="toggleHeld(${escapeHtml(JSON.stringify(k))})">${todayHeldOpen.has(k) ? 'Hide' : 'Show'} ${i.held.length} held</button></div>` : '');
-    const why = i.group === 'ask' || (i.lead && i.lead.asked) ? '<span class="tag won" title="The customer asked for this product">Asked</span>' : i.group === 'bid' ? '<span class="tag won" title="The customer made a bid">Bid</span>' : '';
-    const newTag = i.new && i.arrived_at ? `<span class="tag td-newtag" title="A price for this product arrived and has not been sent to him">NEW PRICE · ${agoOf(i.arrived_at)}</span>` : '';
-    const pill = names.length ? newTag + whyPill(i) + flagsOf(i) : '';
-    const custCell = names.length ? `<span title="${escapeHtml(tip)}"><b style="font-weight:600;font-size:14px;">${escapeHtml(names[0])}</b>${names.length > 1 ? `<span class="muted" title="${escapeHtml(names.slice(1).join(', '))}"> + ${names.length - 1} more</span>` : ''}</span>${why || pill ? `<div class="td-pills">${why}${pill}</div>` : ''}` : '<span class="muted">—</span>';
-    const priceCell = i.options && i.options.length ? i.options.map(money).join('') : '<span class="muted">—</span>';
-    const n = i.who && i.who.length > 1 ? i.who.length : 0;
-    const btn = cls ? '' : `<a class="wa-btn" href="${i.href}" title="${escapeHtml(i.action || 'Open')}" aria-label="${escapeHtml(i.action || 'Open')}">${i.group === 'bid' || i.group === 'gap' || i.group === 'watch' || !i.product ? ICON_GO : ICON_SEND}${n ? `<span>${n}</span>` : ''}</a>`;
-    const held = i.held && i.held.length && todayHeldOpen.has(k) ? `<tr class="td-heldrow"><td colspan="4"><div class="td-held">${i.held.map(h => `<div class="td-hrow"><div><b>${escapeHtml(h.customer)}</b> — ${escapeHtml(h.product)}<span class="m">${escapeHtml(h.price)}${h.reasons && h.reasons.length ? ' · ' + h.reasons.map(escapeHtml).join(' · ') : ''}</span><span class="w">Held: ${escapeHtml(h.why)}</span></div><a class="wa-btn" href="${h.href}" title="Send anyway" aria-label="Send anyway">${ICON_SEND}</a></div>`).join('')}</div></td></tr>` : '';
-    return `<tr class="td-row${cls}${cont ? ' prod-cont' : ''}${i.new ? ' td-newrow' : ''}"><td>${prodCell}</td><td>${custCell}</td><td class="num">${priceCell}</td><td>${btn}</td></tr>${held}`;
-  };
-  // what one load of each offer in the section is worth at the trader's own margin (the engine's potential_usd)
+  const askedTag = i => i.group === 'ask' || (i.lead && i.lead.asked) ? '<span class="tag won" title="The customer asked for this product">Asked</span>' : i.group === 'bid' ? '<span class="tag won" title="The customer made a bid">Bid</span>' : '';
+  const tipOf = i => [i.lead && i.lead.reason, ...chipsOf(i).map(r => r.label), i.note && `Note: ${i.note}`, i.why && !(i.lead && (i.group === 'ask' || i.group === 'bid')) ? i.why : '', i.hot].filter(Boolean).join('\n');
+  const goBtn = (i, cls = '') => `<a class="btn small tdg-go${cls}" href="${i.href}" title="${escapeHtml(i.action || 'Open')}">${escapeHtml((i.action || 'Open').replace(/^Send the offer$/, 'Send offer').replace(/^Send him options$/, 'Send options'))}${ICON_GO}</a>`;
+  const isPrice = i => (i.group === 'sell' || i.group === 'ask' || i.group === 'watch') && i.product && i.options && i.options.length;
   const fmtK = v => v >= 1000 ? '$' + (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : '$' + Math.round(v);
   const secRow = (label, lvl, count, part = []) => { const pot = part.reduce((n, i) => n + (Number(i.potential_usd) || 0), 0);
-    return `<tr class="td-secrow"><td colspan="4"><div class="td-sec ${lvl}">${label} <b>${count}</b>${pot ? ` <span title="What one load of each offer is worth at your margin" style="opacity:.75;font-weight:600;">· ≈ ${fmtK(pot)}</span>` : ''}</div></td></tr>`; };
-  wrap.innerHTML = `<div class="table-scroll"><table class="td-table"><thead><tr><th style="width:30%;">Product</th><th>Customer</th><th style="width:320px;">Price</th><th style="width:90px;">Next</th></tr></thead><tbody>${leaving.map(i => row(i, ' leaving')).join('')}${SEC.map(([pr, label, lvl]) => {
+    return `<div class="td-sec ${lvl}">${label} <b>${count}</b>${pot ? ` <span title="What one load of each offer is worth at your margin" style="opacity:.75;font-weight:600;">· ≈ ${fmtK(pot)}</span>` : ''}</div>`; };
+  // one customer under a product block
+  const custRow = (i, cls) => {
+    const names = (i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : []);
+    const who = names.length ? `<span class="tdg-name" title="${escapeHtml(tipOf(i))}">${escapeHtml(names[0])}${names.length > 1 ? `<span class="muted" title="${escapeHtml(names.slice(1).join(', '))}"> + ${names.length - 1} more</span>` : ''}</span>` : '<span class="muted">—</span>';
+    const stand = (i.options || []).map(standing).filter(Boolean).join('');
+    return `<div class="tdg-row td-row${cls}${i.new ? ' td-newrow' : ''}"><div class="tdg-who">${who}<div class="tdg-why">${askedTag(i)}${whyPill(i)}${flagsOf(i)}</div></div><div class="tdg-stand">${stand}</div><div class="tdg-act">${goBtn(i)}</div></div>`;
+  };
+  // a product that has prices to offer: ONE block
+  const groupHtml = (list, cls) => {
+    const head = list[0], opts = new Map();
+    list.forEach(m => (m.options || []).forEach(o => { if (!opts.has(o.plant)) opts.set(o.plant, o); }));
+    const isNew = list.some(m => m.new), at = list.map(m => m.arrived_at).filter(Boolean).sort().pop();
+    const dates = [...opts.values()].map(o => o.date).filter(Boolean);
+    const arrival = isNew && at ? `<span class="tag td-newtag" title="A price for this product arrived in the last 24 hours and has not been sent to everyone">NEW PRICE · arrived ${agoOf(at)}</span>` : (dates.length ? `<span class="muted tdg-from">prices from ${escapeHtml(whenOf(dates.sort().pop()))}</span>` : '');
+    const n = list.length;
+    return `<div class="tdg${cls}${isNew ? ' tdg-new' : ''}"><div class="tdg-head"><div class="tdg-title"><a class="name-link" href="${head.href.replace(/&customer=[0-9a-f-]{36}/, '')}">${escapeHtml(head.product)}</a><span class="muted tdg-count">${n} customer${n === 1 ? '' : 's'}</span></div>${arrival}</div><div class="tdg-prices">${[...opts.values()].map(priceChip).join('')}</div>${list.map(m => custRow(m, '')).join('')}</div>`;
+  };
+  // every other line: one tidy line with its button
+  const lineHtml = (i, cls) => {
+    const k = todayKey(i), names = (i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : []);
+    const titleLink = `<a class="name-link" href="${i.href}">${escapeHtml(i.product || i.title)}</a>`;
+    const sub = [i.product && i.title && i.title !== i.product ? i.title : '', i.why || ''].filter(Boolean).join(' · ');
+    const held = i.held && i.held.length ? `<div style="margin-top:6px;"><button class="btn secondary small" onclick="toggleHeld(${escapeHtml(JSON.stringify(k))})">${todayHeldOpen.has(k) ? 'Hide' : 'Show'} ${i.held.length} held</button></div>` : '';
+    const heldList = i.held && i.held.length && todayHeldOpen.has(k) ? `<div class="td-held">${i.held.map(h => `<div class="td-hrow"><div><b>${escapeHtml(h.customer)}</b> — ${escapeHtml(h.product)}<span class="m">${escapeHtml(h.price)}${h.reasons && h.reasons.length ? ' · ' + h.reasons.map(escapeHtml).join(' · ') : ''}</span><span class="w">${escapeHtml(h.why)}</span></div><a class="btn small tdg-go" href="${h.href}">Open${ICON_GO}</a></div>`).join('')}</div>` : '';
+    return `<div class="tdl td-row${cls}"><div class="tdl-main" title="${escapeHtml(tipOf(i))}">${titleLink}${sub ? `<div class="tdl-sub muted">${escapeHtml(sub.length > 160 ? sub.slice(0, 158) + '…' : sub)}</div>` : ''}${names.length ? `<div class="tdg-why">${names.slice(0, 4).map(n => `<span class="tag sent">${escapeHtml(n)}</span>`).join('')}${names.length > 4 ? `<span class="muted"> + ${names.length - 4} more</span>` : ''}</div>` : ''}${held}</div><div class="tdg-act">${goBtn(i)}</div></div>${heldList}`;
+  };
+  // a section: the price lines of one product together as ONE block (first appearance keeps the server's order), the rest as lines
+  const sectionBody = (part, cls = '') => {
+    const out = [], groups = new Map();
+    part.forEach(i => {
+      if (isPrice(i)){
+        if (!groups.has(i.product)){ const g = []; groups.set(i.product, g); out.push({ g }); }
+        groups.get(i.product).push(i);
+      } else out.push({ line: i });
+    });
+    return out.map(x => x.g ? groupHtml(x.g, cls) : lineHtml(x.line, cls)).join('');
+  };
+  const leavingHtml = leaving.length ? `<div class="td-leaving">${leaving.map(i => isPrice(i) ? groupHtml([i], ' leaving') : lineHtml(i, ' leaving')).join('')}</div>` : '';
+  wrap.innerHTML = `<div class="tdboard">${leavingHtml}${SEC.map(([pr, label, lvl]) => {
     // the products customers buy that no plant has priced are their own block inside "Do today" (they are asks to the plants, not offers to send)
     const blocks = pr === 2 ? [[label, items.filter(i => i.prio === pr && i.group !== 'gap')], ['Needs a price', items.filter(i => i.prio === pr && i.group === 'gap')]] : [[label, items.filter(i => i.prio === pr)]];
-    return blocks.map(([lb, part]) => { const ordered = byProduct(part);
-      return part.length ? secRow(lb, lvl, part.length, part) + ordered.map((i, k) => row(i, '', k > 0 && i.product && ordered[k - 1].product === i.product)).join('') : ''; }).join(''); }).join('')}</tbody></table></div>`;
+    return blocks.map(([lb, part]) => part.length ? secRow(lb, lvl, part.length, part) + sectionBody(part) : '').join(''); }).join('')}</div>`;
 }
 
 
