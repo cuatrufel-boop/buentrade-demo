@@ -99,6 +99,7 @@
     opacity:.55;
   }
   #qbBar.qb-centered{display:flex !important; justify-content:center;}
+  @media (max-width:760px){ #qbBar.qb-centered{justify-content:flex-start !important;} #qbBar{display:flex !important;justify-content:flex-start !important;gap:14px !important;} #qbBar > div{justify-content:flex-start !important;flex:0 0 auto !important;} .quickbar .qb-item{width:128px !important;} /* iOS needs 16px in a field; at 92px the last digit of 0.0417 / 18.48 was cut */ } /* the bar scrolls sideways on a phone: centred, its first items were cut off on the left and could not be scrolled back to; the grid (1fr auto 1fr) squeezed the left group into a half-width cell that overflowed to the LEFT, past the edge, where nothing can scroll to it: on a phone the bar is a plain row that scrolls */
   .qb-group{display:flex; flex-direction:column; align-items:center; gap:6px; padding:2px 10px; flex-shrink:0;}
   .qb-group-label{
     font-size:8.5px; color:rgba(255,255,255,.6); font-family:'Inter',sans-serif;
