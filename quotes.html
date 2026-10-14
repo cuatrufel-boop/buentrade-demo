@@ -676,6 +676,17 @@
   .rq-req2-meta span b{font:500 13px 'IBM Plex Mono',monospace;color:#fff;}
   .rq-req2-meta span.sale b{color:#3FCB7E;}
   .rq-req2-meta span.rq-req2-old,.rq-req2-meta span.rq-req2-old b{color:var(--amber);}
+  /* Send panel redesign 2026-10-14 (owner: "aquí también falta diseño"): what needs you is a card, who has not answered is a quiet compact list, the customers are one row each (nothing runs off the panel) */
+  .rq-req2-grp{font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:18px 0 4px;} .rq-req2-grp:first-of-type{margin-top:12px;}
+  .rq-req2-grp.ready-to-send{color:#3FCB7E;} .rq-req2-grp.confirm-your-price{color:#FFC876;}
+  .rq-req2-row.ready,.rq-req2-row.confirm{padding:14px 16px;margin:6px 0;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);}
+  .rq-req2-row.ready{border-color:rgba(63,203,126,.45);background:rgba(63,203,126,.07);} .rq-req2-row.confirm{border-color:rgba(255,200,118,.4);background:rgba(255,200,118,.05);}
+  .rq-req2-row.ready .rq-req2-meta span b,.rq-req2-row.confirm .rq-req2-meta span b{font-size:14px;}
+  .rq-req2-row.waiting,.rq-req2-row.idle{padding:8px 0;gap:12px;} .rq-req2-row.waiting .rq-req2-info b,.rq-req2-row.idle .rq-req2-info b{font-size:12.5px;font-weight:500;} .rq-req2-row.waiting .rq-req2-meta,.rq-req2-row.idle .rq-req2-meta{margin-top:1px;}
+  html body .rq-req2-row.waiting .pkg-trigger-btn,html body .rq-req2-row.idle .pkg-trigger-btn,html body .rq-req2-listhead .pkg-trigger-btn{min-height:30px;padding:4px 14px;font-size:12px;}
+  .rq-req2-chips{gap:6px;} .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"]{flex:1 0 100%;display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 12px;font-size:12.5px;white-space:normal;text-align:left;overflow-wrap:anywhere;}
+  .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"] small{margin-left:auto;white-space:nowrap;opacity:.85 !important;font-size:11px;}
+  .rq-req2-chips > .chip:not([onclick^="rqToggleReqCustomer"]){background:transparent;border-style:dashed;color:rgba(255,255,255,.7);}
   .rq-req2-send{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:16px;background:rgba(255,255,255,.04);position:sticky;top:12px;}
   .rq-req2-send.can{border-color:rgba(63,203,126,.45);background:linear-gradient(180deg,rgba(63,203,126,.1),rgba(255,255,255,.03));}
   .rq-req2-sum{display:flex;align-items:baseline;gap:8px;margin:2px 0 12px;font-size:12px;color:rgba(255,255,255,.6);}
@@ -3294,6 +3305,9 @@ function rqRenderRequestView(rows){
   const stepOf = (cls, n, label) => `<div class="rq-req2-step ${cls}"><i></i><span><b>${n}</b> ${label}</span></div>`;
   const pricesIn = priced.filter(r => !r.stale && !r.na).length; // a live price, not an old one that has to be asked again
   const steps = `<div class="rq-req2-steps">${stepOf(pricesIn ? 'on' : '', pricesIn, pricesIn === 1 ? 'price in' : 'prices in')}${stepOf(confirmN ? 'go' : '', confirmN, 'to confirm')}${stepOf(readyN ? 'go' : '', readyN, 'ready')}${stepOf(sentRows.length ? 'on' : '', sentRows.length, 'sent')}</div>`;
+  // the plants in plain groups (redesign 2026-10-14): what needs you first (confirm / ready to send), then who has not answered, then what already went out
+  const GRP = { 0: 'Confirm your price', 1: 'Ready to send', 2: 'Waiting on plants', 3: 'Waiting on plants', 5: 'Waiting on plants', 4: 'Old prices', 6: 'Already sent', 7: 'Not available' };
+  const grpOf = o => GRP[o] || 'Plants'; let lastGrp = '';
   const html = `<div class="rq-req rq-glass">
     <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div>
       <div class="rq-req-sub">${fromToday ? `Offer for <b class="rq-req-asker">${nm(fromToday)}</b> ${pill('ok', 'From Today')} <span>— confirm your price below and send</span>` : primary ? `Asked by <b class="rq-req-asker">${nm(primary)}</b> ${pill('ok', 'Asked')}${askedAt ? ` <span>${rqFmtArrival(askedAt)}</span>` : ''}${askers.length > 1 ? ` <span>+${askers.length - 1} more</span>` : ''}` : 'Nobody marked as having asked — pick who asked in “Who asked for it?” just above'}</div></div>
@@ -3301,7 +3315,7 @@ function rqRenderRequestView(rows){
     <div class="rq-req2-body">
       <div class="rq-req2-plants">
         <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindIds.length} plants →</button>` : ''}${askN ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
-        ${items.length ? items.map(i => i.html).join('') : '<div class="rq-req-empty">No plant carries this product yet.</div>'}
+        ${items.length ? items.map(i => { const g = grpOf(i.o), h = g !== lastGrp ? `<div class="rq-req2-grp ${g.toLowerCase().replace(/[^a-z]+/g, '-')}">${g}</div>` : ''; lastGrp = g; return h + i.html; }).join('') : '<div class="rq-req-empty">No plant carries this product yet.</div>'}
       </div>
       <aside class="rq-req2-send${canSend ? ' can' : ''}${fromToday ? ' focus' : ''}">
         <div class="rq-req2-lbl">Send to — the customer who asked goes first</div>
