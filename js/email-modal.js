@@ -140,7 +140,15 @@ async function emailModalConfirm(){
   const to = document.getElementById('emailModalTo').value;
   const cc = document.getElementById('emailModalCc').value;
   const subject = document.getElementById('emailModalSubject').value;
-  const text = document.getElementById('emailModalBody').value;
+  let text = document.getElementById('emailModalBody').value;
+  // the price in the message is the QT's (js/price-lock.js): put back, and the trader presses Send again
+  const lockE = btLockPricesInText(text, (bcEmailModalOpts || {}).lockPrices);
+  if (lockE.changed){
+    document.getElementById('emailModalBody').value = lockE.text; btFitAll('emailModalOverlay');
+    document.getElementById('emailModalErr').textContent = btPriceLockNote(lockE.changes);
+    document.getElementById('emailModalErr').style.display = '';
+    return;
+  }
   const finalTo = to.split(',').map(s => s.trim()).filter(Boolean);
   const finalCc = cc.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -203,6 +211,8 @@ function emailModalDone(){
 function emailModalSendWhatsApp(){
   if (!bcEmailModalWaInfo) return;
   const message = document.getElementById('emailModalWaBody').value;
+  const lockW = btLockPricesInText(message, (bcEmailModalOpts || {}).lockPrices);
+  if (lockW.changed){ document.getElementById('emailModalWaBody').value = lockW.text; btFitAll('emailModalOverlay'); (typeof btAlert === 'function' ? btAlert : alert)(btPriceLockNote(lockW.changes)); return; }
   const { phone, filename, content, contentType } = bcEmailModalWaInfo;
   if (content && typeof downloadBase64File === 'function') downloadBase64File(filename, content, contentType);
   bcConfirmWaSend(phone, message, content ? filename : null, { ask: false });
@@ -217,7 +227,7 @@ function emailModalSendWhatsApp(){
 // the rest of this exact modal family instead of a new, invented look. Resolves { cancelled: true }
 // | { sent: true } — same two-outcome contract as bcOpenEmailModal, so callers can log a real send
 // the same way for both channels.
-let bcWaOnlyModalResolve = null;
+let bcWaOnlyModalResolve = null, bcWaOnlyModalLocks = null;
 function bcEnsureWaOnlyModal(){
   if (document.getElementById('waOnlyModalOverlay')) return;
   const wrap = document.createElement('div');
@@ -244,6 +254,7 @@ function bcEnsureWaOnlyModal(){
 function bcOpenWaOnlyModal(opts){
   opts = opts || {};
   bcEnsureWaOnlyModal();
+  bcWaOnlyModalLocks = opts.lockPrices || null;
   document.getElementById('waOnlyModalTitle').textContent = opts.title || 'Review before sending';
   document.getElementById('waOnlyModalPhone').textContent = opts.phone || '';
   document.getElementById('waOnlyModalBody').value = opts.message || '';
@@ -260,6 +271,8 @@ async function waOnlyModalConfirm(){
   const phone = document.getElementById('waOnlyModalPhone').textContent;
   const message = document.getElementById('waOnlyModalBody').value;
   const label = (document.getElementById('waOnlyModalTitle').textContent || '').replace(/^WhatsApp\s*—\s*/, '') || phone;
+  const lock = btLockPricesInText(message, bcWaOnlyModalLocks);
+  if (lock.changed){ document.getElementById('waOnlyModalBody').value = lock.text; btFitAll('waOnlyModalOverlay'); (typeof btAlert === 'function' ? btAlert : alert)(btPriceLockNote(lock.changes)); return; } // put back, press again
   document.getElementById('waOnlyModalOverlay').style.display = 'none';
   const resolve = bcWaOnlyModalResolve; bcWaOnlyModalResolve = null;
   const sent = await bcConfirmWaSend(phone, message, null, { label });
@@ -420,7 +433,7 @@ async function bcSendEmailApi(opts){
 
   const outcome = await bcOpenEmailModal({
     fromAlias: opts.fromAlias, to: opts.to, cc: opts.cc, subject: opts.subject, text: opts.text,
-    attachments, fromDisplay: opts.fromDisplay, waInfo: waInfoWithFile, title: opts.title,
+    attachments, fromDisplay: opts.fromDisplay, waInfo: waInfoWithFile, title: opts.title, lockPrices: opts.lockPrices,
   });
   if (outcome.cancelled){
     const cancelErr = new Error('Cancelled by user');

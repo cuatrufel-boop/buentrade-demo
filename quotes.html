@@ -12,6 +12,7 @@
 <link rel="shortcut icon" href="/icons/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
+<script src="js/price-lock.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -7103,6 +7104,7 @@ function rqRenderWaModal(){
 function rqWaModalOpenOne(i){
   const it = rqWaModalItems[i];
   if (!it) return;
+  if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const firstTime = !it.opened;
   if (firstTime) (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename));
   window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body), '_blank');
@@ -7112,6 +7114,13 @@ function rqWaModalOpenOne(i){
 }
 // A WhatsApp is recorded (offer registered, price request logged, customer marked as told) only after the trader confirms he sent it (user 2026-10-12: "las cosas se
 // mandan una vez y el sistema debe saberlo"; no WhatsApp API, so the one reliable signal is asking once, right when he comes back to this tab or closes the window).
+// The price in a WhatsApp card is the QT's, never another: js/price-lock.js puts it back when WhatsApp is about to open (and the trader presses again).
+function rqLockPrices(it){
+  const r = btLockPricesInText(it.body, (it.sentOffers || []).map(({ offer, plantName }) => ({ plant: plantName, price: offer.sale_per_lb, decimals: 4 })));
+  if (!r.changed) return false;
+  it.body = r.text; rqShowNotice(btPriceLockNote(r.changes));
+  return true;
+}
 const rqWaWatching = new Set(); let rqWaLeft = false, rqWaAskP = null;
 function rqWaAsk(){
   if (rqWaAskP) return rqWaAskP;
@@ -7232,6 +7241,7 @@ async function sendOfferWhatsAppTo(customerId){
     items.push({
       id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, phone,
       body: buildCustomerOfferTextWithLinks(rqFirstName(c.contact_name || c.trade_name), full, offersByPlantId, warnings.length ? warnings : false, signalLine),
+      sentOffers: full.map(({ plant }) => ({ offer: offersByPlantId.get(plant.id), plantName: plant.name })).filter(x => x.offer),
       onOpened: () => rqConfirmBullets(c.id, 'whatsapp'),
     });
   }
@@ -7354,6 +7364,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       body: isUpdate
         ? buildCustomerUpdateText(rqFirstName(c.contact_name || c.trade_name), full, newKeys, offersByPlantId, true)
         : buildCustomerOfferTextWithLinks(rqFirstName(c.contact_name || c.trade_name), full, offersByPlantId, warnings.length ? warnings : false, signalLine),
+      sentOffers: full.map(({ plant }) => ({ offer: offersByPlantId.get(plant.id), plantName: plant.name })).filter(x => x.offer),
       onOpened: () => { rqConfirmBullets(c.id, 'whatsapp'); if (opts.onSent) opts.onSent(c); },
     });
   }

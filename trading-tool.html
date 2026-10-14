@@ -534,6 +534,7 @@
 <script src="js/pdf-base.js"></script>
 <script src="js/invoice-pdf.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/price-lock.js"></script>
 <script src="js/email-modal.js"></script>
 <script src="js/bt-dialogs.js"></script>
 <script src="js/pickup-picker.js"></script>
@@ -2837,8 +2838,8 @@ const EMAIL_SIGNATURE = BC_EMAIL_SIGNATURE;
 
 // This file's own signature is unchanged (7 args, cc last, no fromDisplay) — every real call
 // site stays as-is.
-async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc){
-  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc });
+async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc, lockPrices){
+  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc, lockPrices });
 }
 
 // Message to the plant is English — plants are US-based (same rule as the PO/FO documents).
@@ -3018,7 +3019,7 @@ async function negoSendToCustomer(channel){
   // this product, each plant with the price the customer has now — this offer with the price reviewed in this QT — highest price first.
   const drop = negoOffer.status === 'sent' && negoOffer.price_drop ? negoOffer.price_drop : null;
   const productEs = negoOffer.product_spec_es || negoOffer.product_name_es || negoOffer.product_spec || negoOffer.product_name;
-  let body;
+  let body, lockPrices = [{ price, decimals: 4 }]; // the message carries the price confirmed in this QT, whatever is typed in the review window (js/price-lock.js)
   if (drop){
     let rows = [];
     try { rows = (await callApi('sent-offers-search', { customer_id: negoOffer.customer_id, product_id: negoOffer.product_id, status: 'sent' })).results || []; } catch (e) {}
@@ -3033,6 +3034,7 @@ async function negoSendToCustomer(channel){
     }
     const lines = rows.filter(r => r.id !== negoOffer.id).map(r => ({ plant: r.plant_name, price: negoCustomerPriceOf(r) }));
     lines.push({ plant: negoOffer.plant_name, price });
+    lockPrices = lines.map(l => ({ plant: l.plant, price: l.price, decimals: 4 }));
     body = negoPriceDropBody(contact, productEs, lines, channel === 'whatsapp') + creditHoldLine;
   } else {
     body = `Hola ${contact},\n\nLe confirmamos ${price.toFixed(4)} USD/lb frontera.${signalBlock}${creditHoldLine}`;
@@ -3042,7 +3044,7 @@ async function negoSendToCustomer(channel){
     // Same follow-up gap as negoSendToPlant above — waInfo was never passed here either.
     const customerPhone = (negoCustomer.whatsapp || negoCustomer.phone || '').replace(/\D/g, '');
     try {
-      await sendEmailApi('offers', negoCustomer.email, 'Cotización', body, [], customerPhone ? { phone: customerPhone, message: body } : null);
+      await sendEmailApi('offers', negoCustomer.email, 'Cotización', body, [], customerPhone ? { phone: customerPhone, message: body } : null, undefined, lockPrices);
       // sent from the review modal = confirmed by the trader → these Market Flash bullets now count as delivered
       if (negoLastSignal) await mfLogSends(callApi, negoLastSignal.marketNote, negoOffer.customer_id, 'email', currentActor());
     } catch(e){
@@ -3053,7 +3055,7 @@ async function negoSendToCustomer(channel){
     const phone = (negoCustomer.whatsapp || negoCustomer.phone || '').replace(/\D/g, '');
     if (!phone){ document.getElementById('negoMsg').textContent = 'This customer has no phone/WhatsApp on file.'; return; }
     // Reviewed and confirmed by the trader in the app before WhatsApp opens (same shared confirm window as the other modules)
-    const waResult = await bcOpenWaOnlyModal({ title: `WhatsApp — ${negoCustomer.trade_name || negoCustomer.name || ''}`, phone, message: body });
+    const waResult = await bcOpenWaOnlyModal({ title: `WhatsApp — ${negoCustomer.trade_name || negoCustomer.name || ''}`, phone, message: body, lockPrices });
     if (waResult && waResult.cancelled) return;
     if (negoLastSignal) await mfLogSends(callApi, negoLastSignal.marketNote, negoOffer.customer_id, 'whatsapp', currentActor());
   }

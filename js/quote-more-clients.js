@@ -131,12 +131,12 @@ async function qmcRun(opts){
     if (c.email){
       outcome = await bcOpenEmailModal({
         title: `Quote more clients — ${c.trade_name}`, fromAlias: 'offers', fromDisplay,
-        to: [c.email], subject: `Precio cerrado — ${productLabel}`, text: message,
+        to: [c.email], subject: `Precio cerrado — ${productLabel}`, text: message, lockPrices: [{ price: offer.sale_per_lb, decimals: 2 }],
         waInfo: phone ? { phone, message } : null,
       });
       channel = 'email';
     } else if (phone){
-      outcome = await bcOpenWaOnlyModal({ title: `Quote more clients — ${c.trade_name}`, phone, message });
+      outcome = await bcOpenWaOnlyModal({ title: `Quote more clients — ${c.trade_name}`, phone, message, lockPrices: [{ price: offer.sale_per_lb, decimals: 2 }] });
       channel = 'whatsapp';
     } else {
       continue; // no email, no phone on file — nothing to send this one
