@@ -146,8 +146,10 @@ function rowHtml(r){
 function render(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   const list = RATES.filter((r) => !q || r.origin.toLowerCase().includes(q));
-  const a = list.filter((r) => r.quoting_now), b = list.filter((r) => !r.quoting_now);
+  const m = list.filter(isMissing), rest = list.filter((r) => !isMissing(r));
+  const a = rest.filter((r) => r.quoting_now), b = rest.filter((r) => !r.quoting_now);
   document.getElementById('rows').innerHTML =
+    (m.length ? `<div class="group">Falta tu tarifa</div>` + m.map(rowHtml).join('') : '') +
     (a.length ? `<div class="group">Ciudades que estamos cotizando</div>` + a.map(rowHtml).join('') : '') +
     (b.length ? `<div class="group" style="margin-top:12px;">Todas tus demás ciudades</div>` + b.map(rowHtml).join('') : '') +
     (!list.length ? `<p class="sub" style="padding:10px 4px;">Ninguna ciudad coincide.</p>` : '');
@@ -160,13 +162,19 @@ function edit(id, el){
   const again = document.querySelector(`.new[data-id="${id}"]`);
   if (again){ again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
 }
+// A city with no rate yet must get one before the table can be sent — "Sin cambios hoy" included.
+function isMissing(r){ return !hasRate(r) && newValue(r) == null; }
+function missing(){ return RATES.filter(isMissing); }
 function changed(){ return RATES.filter((r) => newValue(r) != null); }
 function updateBar(){
   const n = changed().length;
-  document.getElementById('count').innerHTML = `<b>${n}</b> ${n === 1 ? 'cambiada' : 'cambiadas'} · ${RATES.length - n} igual`;
-  document.getElementById('send').disabled = n === 0;
+  const f = missing().length;
+  document.getElementById('count').innerHTML = `<b>${n}</b> ${n === 1 ? 'cambiada' : 'cambiadas'} · ${RATES.length - n} igual` + (f ? ` · <b>${f}</b> sin tarifa` : '');
+  document.getElementById('send').disabled = n === 0 || f > 0;
+  document.getElementById('noChange').disabled = f > 0;
 }
 async function submit(noChanges){
+  if (missing().length){ const msg = document.getElementById('sendMsg'); msg.textContent = 'Falta tu tarifa de: ' + missing().map((r) => r.origin).join(', ') + '.'; msg.hidden = false; return; }
   const list = noChanges ? [] : changed();
   const msg = document.getElementById('sendMsg');
   msg.hidden = true;
