@@ -56,6 +56,8 @@
       '.cp-remove-btn{position:absolute !important;top:10px;right:10px;width:32px !important;height:32px !important;}' +
       // tables inside their scroll box keep a readable width and size their columns to what is in them, sliding sideways instead of
       // squeezing fixed columns until the numbers run over each other (Offers' "$1.3500 → $1.5400" ran over its Sent tag at 285px)
+      // the sign-in card kept 0 px of margin on a phone (user 2026-10-15: localhost orders.html): it touched both screen edges
+      '#authGate{padding:16px;box-sizing:border-box;}' + '.auth-box{padding:26px 20px !important;box-sizing:border-box;}' +
       '.table-scroll > table{min-width:600px;table-layout:auto !important;}' +
       // Tables on a phone are CARDS (user 2026-10-10: "el cel no está responsive, todas las tablas se chocan para los lados, se cortan"): a table that
       // slides sideways hides its right-hand columns (price, status, the buttons). Each row becomes a card, each cell its own line with its column
@@ -71,6 +73,8 @@
       'table.bt-stack tr > td[data-long]{flex-direction:column;align-items:flex-start;gap:4px;text-align:left !important;}' +
       'table.bt-stack tr > td[data-first]{display:block;text-align:left !important;font-weight:600;font-size:14.5px;padding-top:10px !important;}' +
       'table.bt-stack tr > td[data-first]::before{display:none;}' +
+      // the pulsing red rail of a late load (Pay & Receive) sits on this cell's left edge: keep the order number off it; the product line has room on a card, so it wraps instead of cutting at 170px
+      'table.bt-stack tr > td[data-first]{padding-left:14px !important;padding-bottom:10px !important;}' + 'table.bt-stack .pr-product{max-width:none !important;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;}' +
       'table.bt-stack tr > td[colspan]{display:block;text-align:left !important;}' +
       'table.bt-stack tr > td:empty{display:none;}' +
     '}';
