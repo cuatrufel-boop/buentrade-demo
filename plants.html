@@ -1481,6 +1481,8 @@ async function loadEverything(){
   plantProteins = {};
   (linksRes.results || []).forEach(link => {
     if (!link.product) return;
+    // A product the plant declined (Off-Spec: it does not make it) is not what the plant sells — it never decides the protein shown (Cooper Farms, 2026-10-15: turkey only, its 3 wrongly loaded chicken lines kept showing "Chicken").
+    if (link.declined_at) return;
     // English throughout the OS — categories only has category/name and category_en/name_en as
     // separate lookup rows (products carries category_id, not its own category_en column), so this
     // has to go through the same categories table lookup as categoryEnById does everywhere else.
