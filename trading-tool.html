@@ -2215,6 +2215,18 @@ document.addEventListener('click', (e) => {
 // before reading the numbers of a version in the background (window.ttIsSettled).
 let ttFreightAttempted = !__qp.get('plantId');
 window.ttIsSettled = () => ttStateReady && ttFreightAttempted;
+// The city this price ships from (sent by Quotes as shipLocationId) is always in the picker, even when the plant has never had it on its own
+// locations list (user 2026-10-15, Gold Creek "fob Gainesville, GA": the plant had no locations, so the picker said "No locations on file yet" and the
+// price's own city never showed). The catalog supplies its name; it shows "No rate on file yet" until a carrier quotes it. Never invents a rate.
+async function ttEnsureShipCity(plantId){
+  const ship = __qp.get('shipLocationId');
+  if (!plantId || !ship || ttFreightLocations.some(l => l.plant_id === plantId && l.location_id === ship)) return;
+  try {
+    const lr = await callApi('locations-search', { limit: 500 });
+    const c = (lr.results || []).find(x => x.id === ship);
+    if (c) ttFreightLocations.push({ plant_id: plantId, location_id: ship, location_name: `${c.city}, ${c.state}` });
+  } catch (e) {} // the plant's own cities still show
+}
 async function ttInitFreightPicker(plantId){
   if (!plantId || ttFreightPlantId === plantId) return;
   ttFreightPlantId = plantId;
@@ -2226,6 +2238,7 @@ async function ttInitFreightPicker(plantId){
     ttFreightLocations = locRes.results || [];
     ttRegionTerms = locRes.region_terms || [];
     ttFreightRates = rateRes.results || [];
+    await ttEnsureShipCity(plantId);
   } catch (e) {
     ttFreightPlantId = null; // fetch failed — keep the plain input, never show a broken picker
     ttFreightAttempted = true;
