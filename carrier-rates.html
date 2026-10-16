@@ -143,15 +143,20 @@ function rowHtml(r){
     ${big ? `<div class="check">Es un cambio grande respecto a ${money(r.rate)} — por favor revísalo.</div>` : ''}
   </div>`;
 }
+// One block per U.S. state, states A→Z by name, cities A→Z inside (owner 2026-10-16: "por estado en orden alfabético, todas las TX juntas, IA juntas").
+const STATE_NAMES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Colombia', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
+function stateGroups(rows){
+  const by = {};
+  rows.forEach((r) => { const st = (String(r.origin).match(/\b([A-Z]{2})$/) || [])[1] || ''; (by[st] = by[st] || []).push(r); });
+  return Object.keys(by).map((st) => ({ name: STATE_NAMES[st] || st || 'Otras', rows: by[st].sort((x, y) => x.origin.localeCompare(y.origin)) })).sort((x, y) => (x.name === 'Otras') - (y.name === 'Otras') || x.name.localeCompare(y.name));
+}
 function render(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   const list = RATES.filter((r) => !q || r.origin.toLowerCase().includes(q));
   const m = list.filter(isMissing), rest = list.filter((r) => !isMissing(r));
-  const a = rest.filter((r) => r.quoting_now), b = rest.filter((r) => !r.quoting_now);
   document.getElementById('rows').innerHTML =
-    (m.length ? `<div class="group">Falta tu tarifa</div>` + m.map(rowHtml).join('') : '') +
-    (a.length ? `<div class="group">Ciudades que estamos cotizando</div>` + a.map(rowHtml).join('') : '') +
-    (b.length ? `<div class="group" style="margin-top:12px;">Todas tus demás ciudades</div>` + b.map(rowHtml).join('') : '') +
+    (m.length ? `<div class="group">Falta tu tarifa</div>` + stateGroups(m).flatMap((g) => g.rows).map(rowHtml).join('') : '') +
+    stateGroups(rest).map((g, i) => `<div class="group"${i || m.length ? ' style="margin-top:12px;"' : ''}>${esc(g.name)}</div>` + g.rows.map(rowHtml).join('')).join('') +
     (!list.length ? `<p class="sub" style="padding:10px 4px;">Ninguna ciudad coincide.</p>` : '');
   updateBar();
 }
