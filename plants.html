@@ -456,6 +456,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/contact-validation.js"></script>
 <script src="js/price-lock.js"></script>
+<script src="js/money-field.js"></script>
 <script src="js/email-modal.js"></script>
 <script>
 const firebaseConfig = {
@@ -689,7 +690,7 @@ auth.onAuthStateChanged(user => {
           <div class="grid3">
             <div class="field"><label>Location Name</label><input id="loc_name" oninput="updateLocationProfile()" placeholder="e.g. Fremont, Nebraska"></div>
             <div class="field"><label>Protein</label><input id="loc_protein" oninput="updateLocationProfile()" placeholder="e.g. Cerdo"></div>
-            <div class="field"><label>Freight to Border (USD)</label><input id="loc_freight" type="number" step="0.01" oninput="updateLocationProfile()"></div>
+            <div class="field"><label>Freight to Border (USD)</label><input id="loc_freight" data-money oninput="updateLocationProfile()"></div>
           </div>
           <div class="grid3">
             <div class="field"><label>Contact Name</label><input id="loc_contact_name" oninput="updateLocationProfile()"></div>
@@ -4279,6 +4280,13 @@ async function saveLocation(){
   if (!payload.location_name){
     document.getElementById('locationFormMsg').textContent = 'Location name is required.';
     return;
+  }
+  // Freight to the border is a real USD amount, reviewed "before → now" when it is new or changed (js/money-field.js)
+  if (payload.freight_to_border_usd != null){
+    if (!btMoney.check(document.getElementById('loc_freight'), { positive: false })) return;
+    const prevLoc = id ? plantLocations.find(l => l.id === id) : null;
+    const prevFreight = prevLoc && prevLoc.freight_to_border_usd != null ? Number(prevLoc.freight_to_border_usd) : null;
+    if (prevFreight !== payload.freight_to_border_usd && !(await btMoney.confirmChange([{ label: payload.location_name + ' → Border', before: prevFreight, after: payload.freight_to_border_usd }]))) return;
   }
   // Real ask 2026-09-13 ("blindar mejor los formularios... para que el input no quede con
   // errores"): upgraded from a bare "+"-prefix check to the shared full-number validator

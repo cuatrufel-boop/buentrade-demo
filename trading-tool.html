@@ -536,6 +536,7 @@
 <script src="js/invoice-pdf.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/price-lock.js"></script>
+<script src="js/money-field.js"></script>
 <script src="js/email-modal.js"></script>
 <script src="js/bt-dialogs.js"></script>
 <script src="js/pickup-picker.js"></script>
@@ -777,7 +778,7 @@ if (FIREBASE_READY) {
       <div class="qb-group-row">
         <div class="qb-item">
           <label style="visibility:hidden;">Exchange Rate</label>
-          <div class="inputwrap qb-fx"><span class="pfx">$</span><input type="number" id="fxRate" value="" placeholder="0" step="0.01" oninput="onFxRateInput(true)" onblur="roundFxRateUp()"><span class="sfx">COP</span></div>
+          <div class="inputwrap qb-fx"><span class="pfx">$</span><input data-money="4" id="fxRate" value="" placeholder="0" oninput="onFxRateInput(true)" onblur="roundFxRateUp()"><span class="sfx">COP</span></div>
           <span id="fxRateStatus" style="display:block;text-align:center;font-size:9px;line-height:1.2;color:rgba(255,255,255,.55);white-space:normal;cursor:pointer;margin-top:1px;" onclick="fxRateManuallySet=false;fetchExchangeRate();" title="Click to retry">↻ <span id="fxRateStatusText"></span></span>
         </div>
       </div>
@@ -913,50 +914,50 @@ if (FIREBASE_READY) {
           <div class="section-label">Shared — applies to both</div>
           <div class="field" id="freightField">
             <label>US Freight (USD)</label>
-            <div class="inputwrap" id="freightPlainWrap"><span class="pfx">$</span><input type="number" id="freight" value="0" oninput="calc()"></div>
+            <div class="inputwrap" id="freightPlainWrap"><span class="pfx">$</span><input data-money id="freight" value="0" oninput="calc()"></div>
             <div id="freightDdownWrap" style="display:none;flex:1 1 auto;gap:6px;align-items:center;"></div>
           </div>
           <div class="field" id="mexicanFreightField">
             <label>Colombian Freight</label>
-            <div class="inputwrap"><span class="pfx">MX$</span><input type="number" id="freightMx" value="" placeholder="0" oninput="buildProductRows();calc();"></div>
+            <div class="inputwrap"><span class="pfx">MX$</span><input data-money id="freightMx" value="" placeholder="0" oninput="buildProductRows();calc();"></div>
           </div>
           <div id="freightMxUsdHint" style="font-size:10.5px;color:var(--ink-soft);text-align:right;margin:-4px 0 8px;"></div>
           <div class="field" id="inspectionCasesField">
             <label>Inspection — Cases (USD)</label>
-            <div class="inputwrap"><span class="pfx">$</span><input type="number" id="inspectionCases" value="" placeholder="0" oninput="calc()"></div>
+            <div class="inputwrap"><span class="pfx">$</span><input data-money id="inspectionCases" value="" placeholder="0" oninput="calc()"></div>
           </div>
           <div class="field" id="inspectionCombosField">
             <label>Inspection — Combos (USD)</label>
-            <div class="inputwrap"><span class="pfx">$</span><input type="number" id="inspectionCombos" value="" placeholder="0" oninput="calc()"></div>
+            <div class="inputwrap"><span class="pfx">$</span><input data-money id="inspectionCombos" value="" placeholder="0" oninput="calc()"></div>
           </div>
           <div class="field" id="importCostField">
             <label>Import Cost (USD)</label>
-            <div class="inputwrap"><span class="pfx">$</span><input type="number" id="importCost" value="" placeholder="0" oninput="buildProductRows();calc();"></div>
+            <div class="inputwrap"><span class="pfx">$</span><input data-money id="importCost" value="" placeholder="0" oninput="buildProductRows();calc();"></div>
           </div>
         </div>
 
         <div id="customsBrokerageSection">
           <div class="divider"></div>
           <div class="section-label">Customs brokerage — optional</div>
-          <div class="field" id="tramiteAduanalField"><label>Customs Processing (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="tramiteAduanal" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="bodegaAmericanaField"><label>US Warehouse Handling (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="bodegaAmericana" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="lumperFeeField"><label>Lumper fee (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="lumperFee" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="inbondReleaseField"><label>INBOND Release (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="inbondRelease" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="tramiteAduanalField"><label>Customs Processing (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="tramiteAduanal" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="bodegaAmericanaField"><label>US Warehouse Handling (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="bodegaAmericana" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="lumperFeeField"><label>Lumper fee (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="lumperFee" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="inbondReleaseField"><label>INBOND Release (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="inbondRelease" value="" placeholder="0" oninput="calc()"></div></div>
         </div>
 
         <div id="coldStorageSection">
           <div class="divider"></div>
           <div class="section-label">Cold storage & USDA — optional</div>
-          <div class="field" id="labelsCostField"><label>Labels (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="labelsCost" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="plasticWrapField"><label>Plastic wrap (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="plasticWrap" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="inLieuField"><label>IN-LIEU (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="inLieu" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="storageOvernightField"><label>Storage — Overnight (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="storageOvernight" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="storageWeekendField"><label>Storage — Weekend (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="storageWeekend" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="storageShortTermField"><label>Storage — Short term (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="storageShortTerm" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="storageMidTermField"><label>Storage — Mid term (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="storageMidTerm" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="storageLongTermField"><label>Storage — Long term (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="storageLongTerm" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="storageExtraLongField"><label>Storage — Extra long (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="storageExtraLong" value="" placeholder="0" oninput="calc()"></div></div>
-          <div class="field" id="freshToFrozenField"><label>Fresh to Frozen conversion (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="number" id="freshToFrozen" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="labelsCostField"><label>Labels (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="labelsCost" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="plasticWrapField"><label>Plastic wrap (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="plasticWrap" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="inLieuField"><label>IN-LIEU (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="inLieu" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="storageOvernightField"><label>Storage — Overnight (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="storageOvernight" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="storageWeekendField"><label>Storage — Weekend (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="storageWeekend" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="storageShortTermField"><label>Storage — Short term (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="storageShortTerm" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="storageMidTermField"><label>Storage — Mid term (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="storageMidTerm" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="storageLongTermField"><label>Storage — Long term (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="storageLongTerm" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="storageExtraLongField"><label>Storage — Extra long (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="storageExtraLong" value="" placeholder="0" oninput="calc()"></div></div>
+          <div class="field" id="freshToFrozenField"><label>Fresh to Frozen conversion (USD)</label><div class="inputwrap"><span class="pfx">$</span><input data-money id="freshToFrozen" value="" placeholder="0" oninput="calc()"></div></div>
         </div>
 
       </div>
@@ -1387,10 +1388,10 @@ function buildProductRows(){
           <div class="inputwrap"><span class="pfx" style="visibility:hidden;">#</span><input type="number" id="prodWeight${i}" value="${p.weight}" oninput="updateProd(${i},'weight',this.value)"></div>
         </div>
         <div class="mini"><span>Purchase $/lb (USD)</span>
-          <div class="inputwrap"><span class="pfx">$</span><input type="number" id="prodCost${i}" step="0.01" value="${p.cost}" ${priceDisabled} oninput="updateProd(${i},'cost',this.value)" onblur="this.value=(parseFloat(this.value)||0)"></div>
+          <div class="inputwrap"><span class="pfx">$</span><input data-money="4" id="prodCost${i}" value="${p.cost}" ${priceDisabled} oninput="updateProd(${i},'cost',this.value)" onblur="this.value=(parseFloat(this.value)||0)"></div>
         </div>
         <div class="mini"><span>Selling $/lb (USD)</span>
-          <div class="inputwrap"><span class="pfx">$</span><input type="number" id="prodSellBorder${i}" step="0.01" value="${p.sellBorder}" ${priceDisabled} oninput="updateProd(${i},'sellBorder',this.value)" onblur="this.value=(parseFloat(this.value)||0)"></div>
+          <div class="inputwrap"><span class="pfx">$</span><input data-money="4" id="prodSellBorder${i}" value="${p.sellBorder}" ${priceDisabled} oninput="updateProd(${i},'sellBorder',this.value)" onblur="this.value=(parseFloat(this.value)||0)"></div>
         </div>
       </div>
       ${showMx ? `
@@ -1404,7 +1405,7 @@ function buildProductRows(){
           <div class="inputwrap"><span class="pfx">$</span><input type="text" id="prodSellAdjUsd${i}" value="0.0000" disabled></div>
         </div>
         <div class="mini"><span>Selling COP/kg</span>
-          <div class="inputwrap"><span class="pfx">MX$</span><input type="number" id="prodSellMx${i}" step="0.01" value="${p.sellMx}" ${priceDisabled} oninput="updateProd(${i},'sellMx',this.value)"></div>
+          <div class="inputwrap"><span class="pfx">MX$</span><input data-money="4" id="prodSellMx${i}" value="${p.sellMx}" ${priceDisabled} oninput="updateProd(${i},'sellMx',this.value)"></div>
           <span class="autocalc-link" onclick="autoCalcMxSell(${i})">↻ From Border price</span>
         </div>
       </div>
@@ -2155,7 +2156,7 @@ function ttFreightDdownHtml(){
       </button>
       ${ttFreightDdownOpen ? `<div class="rq-ddown-panel" style="${panelStyle}">${optionsHtml}</div>` : ''}
     </div>
-    <div class="inputwrap rq-ddown-amount"><span class="pfx">$</span><input type="number" id="freightAmountInput" value="${amount}" oninput="ttFreightManualEdit(this.value)"></div>`;
+    <div class="inputwrap rq-ddown-amount"><span class="pfx">$</span><input data-money id="freightAmountInput" value="${amount}" oninput="ttFreightManualEdit(this.value)"></div>`;
 }
 function ttRenderFreightDdown(){
   const el = document.getElementById('freightDdownWrap');
@@ -3283,7 +3284,7 @@ async function negoSaveDefinitive(overrideCreditCheck, confirmedDeliveryDate, ca
       <div id="ttCarrierDdownWrap"></div>
     </div>
     <div class="email-modal-field"><label>US Freight Rate (USD)</label>
-      <input type="number" id="ttCarrierModalRate" autocomplete="off" step="0.01" min="0">
+      <input data-money id="ttCarrierModalRate" autocomplete="off">
     </div>
     <div class="email-modal-actions">
       <button onclick="ttCarrierModalResolve(null)" style="background:transparent;color:var(--blue-bright);border:1.5px solid var(--blue);border-radius:8px;padding:9px 16px;font-weight:600;font-size:13px;cursor:pointer;">Cancel</button>

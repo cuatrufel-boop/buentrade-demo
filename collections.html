@@ -485,6 +485,7 @@
   .inputwrap{width:100%;display:flex;align-items:center;height:38px;border:1.5px solid rgba(90,170,255,.4);border-radius:7px;background:rgba(255,255,255,.05);overflow:hidden;transition:border-color .12s,box-shadow .12s;}
   .inputwrap:focus-within{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(90,170,255,.2);}
   .inputwrap .pfx{padding:0 10px;height:100%;display:flex;align-items:center;color:var(--ink-soft);font-size:12.5px;font-family:'IBM Plex Mono',monospace;background:rgba(255,255,255,.04);border-right:1px solid var(--line);flex-shrink:0;}
+  .inputwrap .sfx{padding:0 10px;height:100%;display:flex;align-items:center;color:var(--ink-soft);font-size:12.5px;font-family:'IBM Plex Mono',monospace;background:rgba(255,255,255,.04);border-left:1px solid var(--line);flex-shrink:0;}
   .inputwrap input{border:none !important;outline:none;height:100%;width:100%;padding:0 10px !important;background:transparent !important;color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:13.5px;text-align:right;box-shadow:none !important;}
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   input[type=number]{-moz-appearance:textfield;appearance:textfield;}
@@ -687,7 +688,7 @@ auth.onAuthStateChanged(user => {
     <h3 id="rpTitle">Apply Payment</h3>
     <div class="email-modal-from" id="rpHelp"></div>
     <div class="email-modal-field"><label id="rpFromLabel">From</label><select id="rpFrom" onchange="rpRender()"></select></div>
-    <div class="email-modal-field"><label id="rpAmtLabel">Amount received (USD)</label><div class="inputwrap"><span class="pfx">$</span><input id="rpAmt" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" onfocus="this.value=this.value.replace(/,/g,'')" onblur="moneyFormat(this)" oninput="this.value=this.value.replace(/[^0-9.]/g,'');rpRender()"></div></div>
+    <div class="email-modal-field"><label id="rpAmtLabel">Amount received (USD)</label><div class="inputwrap"><span class="pfx">$</span><input id="rpAmt" type="text" data-money autocomplete="off" placeholder="0.00" oninput="rpRender()"><span class="sfx">USD</span></div></div>
     <div class="email-modal-field"><label>Bank date</label><input id="rpDate" type="date"></div>
     <div class="email-modal-field"><label>Account</label><select id="rpAccount"><option value="">Select account...</option><option value="Buentrade">Buentrade</option><option value="Summar">Summar</option></select></div>
     <div class="email-modal-field"><label>Method (optional)</label><input id="rpMethod" placeholder="Wire, check..."></div>
@@ -740,7 +741,7 @@ auth.onAuthStateChanged(user => {
     <div class="email-modal-from" id="surSub"></div>
     <div class="email-modal-field"><label>Bill</label><select id="surKind"><option value="freight">Freight (carrier)</option><option value="customs">Customs</option></select></div>
     <div class="email-modal-field"><label>Surcharge</label><select id="surType"></select></div>
-    <div class="email-modal-field"><label>Amount (USD)</label><input id="surAmt" class="mono" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="email-modal-field"><label>Amount (USD)</label><input id="surAmt" class="mono" data-money placeholder="0.00"></div>
     <div class="email-modal-field"><label>Note (required for Other)</label><input id="surNotes" placeholder="What the carrier / customs charged it for"></div>
     <div id="surMsg" style="font-size:12.5px;margin-top:6px;"></div>
     <div class="email-modal-actions"><button class="btn secondary" onclick="surClose()">Cancel</button><button class="wa-btn" id="surSaveBtn" onclick="surSave()">Add Surcharge</button></div>
@@ -750,6 +751,7 @@ auth.onAuthStateChanged(user => {
 <div class="toast-stack" id="toastStack"></div>
 
 <script src="js/price-lock.js"></script>
+<script src="js/money-field.js"></script>
 <script src="js/email-modal.js"></script>
 <script src="js/bt-dialogs.js"></script>
 <script>
@@ -1522,7 +1524,7 @@ async function invApprove(){
 
 // ---------- USD money field — same recipe as the Trading Tool ($ prefix, no arrows), shown as
 // 1,234.56 once typed; readMoney() gives the number back ----------
-function moneyInputHtml(id, value){ return `<div class="inputwrap"><span class="pfx">$</span><input id="${id}" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${value != null && value !== '' ? Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}" onfocus="this.value=this.value.replace(/,/g,'')" onblur="moneyFormat(this)" oninput="this.value=this.value.replace(/[^0-9.]/g,'')"></div>`; }
+function moneyInputHtml(id, value){ return `<div class="inputwrap"><span class="pfx">$</span><input id="${id}" type="text" data-money autocomplete="off" placeholder="0.00" value="${value != null && value !== '' ? Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}"><span class="sfx">USD</span></div>`; }
 function moneyFormat(el){ const v = parseFloat(String(el.value).replace(/,/g, '')); el.value = v > 0 || v === 0 ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''; }
 function readMoney(id){ const el = document.getElementById(id); return el ? parseFloat(String(el.value).replace(/,/g, '')) || 0 : 0; }
 function setMoney(id, v){ const el = document.getElementById(id); if (el){ el.value = v === '' || v == null ? '' : String(v); moneyFormat(el); } }

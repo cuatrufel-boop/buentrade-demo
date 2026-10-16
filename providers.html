@@ -327,6 +327,7 @@
 
 <script src="demo-auth.js"></script>
 <script src="js/price-lock.js"></script>
+<script src="js/money-field.js"></script>
 <script src="js/email-modal.js"></script>
 <script src="js/contact-validation.js"></script>
 <script>
@@ -1748,7 +1749,7 @@ function renderRateListReview(){
         const typeOptions = CUSTOMS_TYPES.map(t => `<option value="${t.value}" ${row.serviceType === t.value ? 'selected' : ''}>${t.label}</option>`).join('');
         return `<div class="pkg-row" style="flex-wrap:wrap;">
           <select id="rateListEdit_type_${i}" style="flex:1;min-width:180px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">${typeOptions}</select>
-          <input id="rateListEdit_price_${i}" type="number" step="0.01" value="${row.price}" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+          <input id="rateListEdit_price_${i}" data-money value="${row.price}" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
           <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveRateListEdit(${i})">Save</button>
           <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="rateListEditingIndex=null;renderRateListReview();">Cancel</button>
         </div>`;
@@ -1765,7 +1766,7 @@ function renderRateListReview(){
     if (rateListEditingIndex === i){
       return `<div class="pkg-row" style="flex-wrap:wrap;">
         <input id="rateListEdit_place_${i}" value="${escapeHtml(row.place)}" placeholder="City, State" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
-        <input id="rateListEdit_price_${i}" type="number" step="0.01" value="${row.price}" placeholder="Price (USD)" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+        <input id="rateListEdit_price_${i}" data-money value="${row.price}" placeholder="Price (USD)" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
         <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveRateListEdit(${i})">Save</button>
         <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="rateListEditingIndex=null;renderRateListReview();">Cancel</button>
       </div>`;
@@ -1784,6 +1785,7 @@ function saveRateListEdit(i){
   const row = rateListRows[i];
   const isCustoms = currentRateTab === 'customs';
   const priceInput = document.getElementById(`rateListEdit_price_${i}`);
+  if (!btMoney.check(priceInput)) return; // a price must be a real USD amount (js/money-field.js)
   row.price = parseFloat(priceInput.value) || 0;
   if (isCustoms){
     row.serviceType = document.getElementById(`rateListEdit_type_${i}`).value;
@@ -2004,7 +2006,7 @@ function renderRateEditFicha(r){
     : `<input id="rateEdit_place_${key}" value="${escapeHtml(r.place || '')}" placeholder="Destination" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">`;
   return `<div class="pkg-row" style="flex-wrap:wrap;">
     ${placeField}
-    <input id="rateEdit_rate_${key}" type="number" step="0.01" value="${r.rate == null ? '' : r.rate}" placeholder="Rate (USD)" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
+    <input id="rateEdit_rate_${key}" data-money value="${r.rate == null ? '' : r.rate}" placeholder="Rate (USD)" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
     <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveRateInline('${key}', ${r.locationId ? `'${r.locationId}'` : 'null'})">Save</button>
     <button class="btn secondary" style="padding:6px 12px;font-size:12.5px;" onclick="cancelRateEdit()">Cancel</button>
   </div>`;
@@ -2033,7 +2035,15 @@ function cancelRateEdit(){
 async function saveRateInline(key, locationId){
   const isUs = currentRateTab === 'us_freight';
   const rateInput = document.getElementById(`rateEdit_rate_${key}`);
+  if (!btMoney.check(rateInput)) return; // blank or 0 never saves as a rate (js/money-field.js)
   const rate = parseFloat(rateInput.value) || 0;
+  // Review "before → now" before a changed rate is saved: an extra or a missing zero is seen here.
+  const prevRate = allRates.find(r => locationId ? (r.location_id === locationId && r.service_type === 'us_freight') : r.id === key);
+  const prevAmount = prevRate && prevRate.rate != null ? Number(prevRate.rate) : null;
+  if (prevAmount !== rate){
+    const place = locationId ? ((allLocations.find(l => l.id === locationId) || {}).city || '') + ' ' + ((allLocations.find(l => l.id === locationId) || {}).state || '') : (document.getElementById(`rateEdit_place_${key}`) || {}).value || 'Rate';
+    if (!(await btMoney.confirmChange([{ label: place.trim(), before: prevAmount, after: rate }]))) return;
+  }
   const placeInput = document.getElementById(`rateEdit_place_${key}`);
   const place = locationId ? null : (placeInput ? placeInput.value.trim() : null);
   if (!locationId && !place){ if (placeInput) placeInput.style.borderColor = 'var(--red)'; return; }
@@ -2120,7 +2130,7 @@ function buildCustomsRow(r){
   const typeOptions = CUSTOMS_TYPES.map(t => `<option value="${t.value}" ${r.service_type === t.value ? 'selected' : ''}>${t.label}</option>`).join('');
   tr.innerHTML = `
     <td style="width:220px;"><select class="rate-input" onchange="saveRateField('${r.id}','service_type',this.value,this)">${typeOptions}</select></td>
-    <td style="width:100px;"><input class="rate-input" type="number" step="0.01" value="${r.rate}" onblur="saveRateField('${r.id}','rate',parseFloat(this.value)||0,this)"></td>
+    <td style="width:100px;"><input class="rate-input" data-money value="${r.rate}" onblur="saveRateField('${r.id}','rate',parseFloat(this.value)||0,this)"></td>
     <td style="width:80px;"><input class="rate-input" value="${escapeHtml(r.currency || 'USD')}" onblur="saveRateField('${r.id}','currency',this.value,this)"></td>
     <td><input class="rate-input" value="${escapeHtml(r.notes || '')}" onblur="saveRateField('${r.id}','notes',this.value,this)"></td>
     <td><button class="btn danger" onclick="deleteRate('${r.id}')">×</button></td>`;
@@ -2131,6 +2141,13 @@ async function saveRateField(rateId, field, value, inputEl){
   const row = allRates.find(r => r.id === rateId);
   if (!row) return;
   if (row[field] === value) return;
+  if (field === 'rate' && Number(row.rate) !== value){
+    // Review "before → now" before the new rate is saved; "Fix" puts the old number back (js/money-field.js)
+    if (!(await btMoney.confirmChange([{ label: row.destination || row.origin || 'Rate', before: row.rate == null ? null : Number(row.rate), after: value }]))){
+      if (inputEl) inputEl.value = row.rate == null ? '' : row.rate;
+      return;
+    }
+  }
   try {
     await callApi('provider-rates-update', { actor: currentActor(), id: rateId, [field]: value });
   } catch (e) {
