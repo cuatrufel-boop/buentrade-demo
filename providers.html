@@ -847,7 +847,7 @@ function renderLocationsList(){
   // (grouped by state, same order as the table itself) as a literal fill-in list, one line per
   // city, so replying is just filling in numbers next to a name they were already given.
   actionRow.innerHTML = carriers.map((c, i) => {
-    // Carriers keep their own table current (carrier-rates.html, emailed Mon / Wed / Fri 8 am Miami): when it was last sent and confirmed.
+    // Carriers keep their own table current (carrier-rates.html, emailed Tuesdays 8 am Miami): when it was last sent and confirmed.
     const dayOf = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const whenText = (d) => { const days = rateAgeDays(d); return days === 0 ? 'today ' + new Date(d).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : days === 1 ? 'yesterday' : `${days}d ago`; };
     const noteParts = [];
@@ -928,7 +928,7 @@ let rateListOpenedFromLocations = false;
 // WhatsApp/mailto links built in renderLocationsList do the actual "opening" now, exactly like
 // the Carriers list's own contact icons; this only stamps that it was asked, fired in the
 // background from that link's own onclick — never blocks or replaces the link's normal behavior.
-// The trader's WhatsApp / email to a carrier: points it to its own rate table (the same private link the Mon / Wed / Fri email carries), so
+// The trader's WhatsApp / email to a carrier: points it to its own rate table (the same private link the Tuesday email carries), so
 // what it updates there loads straight into the system — no list to fill in by hand.
 // The carrier's WhatsApp (Spanish, tú — user 2026-10-04): only asks to update them in the email; it never talks about the system.
 function carrierWhatsAppText(c, link){
@@ -946,7 +946,7 @@ async function askCarrierRates(providerId){
 }
 
 // The rate table sent by hand, through the same email window as every other BuenTrade email (review / edit, WhatsApp inside, signature, BCC
-// info@): the same text the Mon / Wed / Fri 8 am automatic email carries. "Send to all carriers" opens it carrier by carrier.
+// info@): the same text the Tuesday 8 am automatic email carries. "Send to all carriers" opens it carrier by carrier.
 async function sendCarrierRateTable(providerId){
   const ids = providerId ? [providerId]
     : providers.filter(p => allRates.some(r => r.provider_id === p.id && r.service_type === 'us_freight') && String(p.email || '').includes('@')).map(p => p.id);
