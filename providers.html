@@ -960,7 +960,7 @@ async function sendCarrierRateTable(providerId){
     if (!mail.to.length){ await btAlert(`${c.name} has no email on file.`); continue; }
     const phone = c.whatsapp || c.phone;
     try {
-      await bcSendEmailApi({ fromAlias: 'logistics', fromDisplay: 'Logistics BuenTrade <logistics@buentradegroup.com>', to: mail.to, cc: mail.cc.join(','), subject: mail.subject, text: mail.text,
+      await bcSendEmailApi({ fromAlias: 'logistics', fromDisplay: 'Logistics BuenTrade <logistics@buentradegroup.com>', to: mail.to, cc: mail.cc.join(','), subject: mail.subject, text: mail.text, html: mail.html,
         waInfo: phone ? { phone, message: carrierWhatsAppText(c, mail.link) } : null, title: `Rate table — ${c.name}` });
     } catch (e) {
       if (e.cancelled) continue;

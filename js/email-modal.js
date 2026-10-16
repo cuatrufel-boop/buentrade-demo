@@ -166,6 +166,8 @@ async function emailModalConfirm(){
       body: JSON.stringify({
         from: opts.fromAlias, to: finalTo, cc: finalCc.length ? finalCc : undefined,
         subject, text, attachments: opts.attachments || [],
+        // a designed body (the carriers' card) goes only while the trader has not edited the text it was made from
+        html: opts.html && opts.htmlText === text ? opts.html : undefined,
       }),
     });
     if (!res.ok){
@@ -434,6 +436,7 @@ async function bcSendEmailApi(opts){
   const outcome = await bcOpenEmailModal({
     fromAlias: opts.fromAlias, to: opts.to, cc: opts.cc, subject: opts.subject, text: opts.text,
     attachments, fromDisplay: opts.fromDisplay, waInfo: waInfoWithFile, title: opts.title, lockPrices: opts.lockPrices,
+    html: opts.html, htmlText: opts.text,
   });
   if (outcome.cancelled){
     const cancelErr = new Error('Cancelled by user');
