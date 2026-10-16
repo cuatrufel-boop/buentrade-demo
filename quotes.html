@@ -3799,7 +3799,7 @@ function rqLiveRowHtml(p){
     : '<span class="muted">Nobody buys it yet</span>';
   const prices = sending
     ? (() => { const m = new Map(); p.toSend.forEach(e => e.fresh.forEach(f => { if (!m.has(f.a.plant_id)) m.set(f.a.plant_id, { plant: rqLqPlantName(f.a.plant_id), price: Number(f.a.price), at: String(f.a.arrived_at) }); }));
-        return [...m.values()].sort((x, y) => y.price - x.price).map(x => `<div style="white-space:nowrap;"><span class="muted" style="font-size:11.5px;">${escapeHtml(x.plant)}</span> <b class="mono">$${x.price.toFixed(2)}</b> <span class="muted" style="font-size:11px;">${escapeHtml(rqAgo(x.at))}</span></div>`).join(''); })()
+        return [...m.values()].sort((x, y) => y.price - x.price).map(x => `<div style="white-space:normal;overflow-wrap:anywhere;"><span class="muted" style="font-size:11.5px;">${escapeHtml(x.plant)}</span> <span style="white-space:nowrap;"><b class="mono">$${x.price.toFixed(2)}</b> <span class="muted" style="font-size:11px;">${escapeHtml(rqAgo(x.at))}</span></span></div>`).join(''); })()
     : (p.plants.filter(x => x.state === 'waiting').map(x => escapeHtml(rqLqPlantName(x.plant_id))).join(', ') ? `<span class="muted" style="font-size:12px;white-space:normal;display:block;">waiting: ${p.plants.filter(x => x.state === 'waiting').map(x => escapeHtml(rqLqPlantName(x.plant_id))).join(', ')}${p.askedAt ? ' · asked ' + escapeHtml(rqAgo(p.askedAt)) : ''}</span>` : '<span class="muted">—</span>');
   const n = sending ? p.toSend.length : 0;
   const btn = `<button type="button" class="wa-btn" title="${sending ? 'Send' : 'Open'}" aria-label="${sending ? 'Send' : 'Open'}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')">${RQ_SEND_ICON}${n > 1 ? `<span>${n}</span>` : ''}</button>`;

@@ -310,3 +310,11 @@ html body .bt-toolbar .seg-btn { display: inline-flex; align-items: center; }
   html body .btn, html body .pkg-trigger-btn, html body .wa-btn { min-height: 40px; }
   html body .btn.small, html body td .btn, html body td .pkg-trigger-btn, html body td .wa-btn { min-height: 34px; }
 }
+
+/* ONE BuenTrade blue on every screen, on the phone too (owner 2026-10-17: Quotes showed a different, darker blue than the Dashboard on the iPhone).
+   The pages paint their gradient on <body> with `background-attachment: fixed`, and iPhone Safari ignores `fixed`: on a long page (Quotes) the gradient stretched over the whole
+   page, so scrolled down you saw its dark end, while a short page (Dashboard) showed the bright start. The same gradient on a fixed layer behind the page is the same blue at every
+   scroll position, on every screen and every device. */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px), linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%);}
+
