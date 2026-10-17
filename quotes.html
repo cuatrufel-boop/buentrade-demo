@@ -1250,6 +1250,7 @@ auth.onAuthStateChanged(user => {
 <script src="js/product-picker.js"></script>
 <script src="js/bt-dialogs.js"></script>
 <script src="js/market-flash-send.js"></script>
+<script src="js/weekly-card.js"></script>
 
 <div class="wrap">
   <h1 id="rq_page_title">Quotes</h1>
@@ -2127,6 +2128,7 @@ function qmWeeklyRender(){
     </div></td></tr>`).join('');
   document.getElementById('qm_rows').innerHTML = rqTableSection(rows, ['Client', 'Message', 'Send']);
 }
+const qmWeeklyLabel = c => String(c.subject || '').replace('Resumen de la semana pasada · ', '');
 function qmWeeklyFind(cid){ return qmWeekly && qmWeekly.clients.find(x => x.id === cid); }
 async function qmWeeklyLogSend(c, message, channel){
   const r = await callApi('messaging', {
@@ -2138,14 +2140,15 @@ async function qmWeeklyLogSend(c, message, channel){
 }
 function qmWeeklySendEmail(cid){
   const c = qmWeeklyFind(cid); if (!c || !c.email) return;
-  const item = { id: c.id, label: c.trade_name.trim(), to: c.email, subject: c.subject, body: c.message, fromAlias: 'offers' };
+  const item = { id: c.id, label: c.trade_name.trim(), to: c.email, subject: c.subject, body: c.message, fromAlias: 'offers', html: BTWeeklyCard.weeklyCardHtml(c, qmWeeklyLabel(c)), htmlText: c.message }; // the BuenTrade card; the text is what shows if the trader edits it
   const edited = () => ((rqEmailModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
   item.onSent = async () => { try { await qmWeeklyLogSend(c, edited(), 'email'); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
   rqOpenEmailModal(`Email — ${c.trade_name.trim()}`, [item], true, 'Send');
 }
-function qmWeeklySendWa(cid){
+async function qmWeeklySendWa(cid){
   const c = qmWeeklyFind(cid); if (!c || !c.phone) return;
-  const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: c.message };
+  let card = null; try { card = await BTWeeklyCard.weeklyCardPng(c, qmWeeklyLabel(c)); } catch (e){ console.error('weekly card image failed', e); } // WhatsApp has no HTML: the card is an image that downloads to drag into the chat
+  const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: card ? c.message.split('\n').slice(0, 2).join('\n') : c.message, downloadFiles: card ? [{ bytes: card.bytes, filename: card.filename, type: 'image/png' }] : undefined };
   const edited = () => ((rqWaModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
   item.onOpened = async () => { try { await qmWeeklyLogSend(c, edited(), 'whatsapp'); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
   rqOpenWaModal(`WhatsApp — ${c.trade_name.trim()}`, [item], false);
@@ -6343,8 +6346,8 @@ function rqCustomerOfferPlantsFor(customerId, filterProductIds, filterPlantIds){
 // Same download-then-drag-in pattern as offers.html's WhatsApp cards — a wa.me link can only
 // pre-fill text, never attach a real file, for anyone, ever. This is the closest a browser can
 // get: the actual combined PDF lands in Downloads right as the chat opens, ready to drag in.
-function rqDownloadBytes(bytes, filename){
-  const blob = new Blob([bytes], { type: 'application/pdf' });
+function rqDownloadBytes(bytes, filename, type){
+  const blob = new Blob([bytes], { type: type || 'application/pdf' });
   const objUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = objUrl;
@@ -7071,7 +7074,7 @@ async function rqEmailModalSendOne(i){
   if (!rqEmailModalIsOffer) return; // the plain-ask case is a real <a> now — nothing for JS to do
   const ccList = (it.cc || '').split(',').map(s => s.trim()).filter(Boolean);
   try {
-    await sendEmailApiRaw(it.fromAlias, it.to, it.subject, it.body, it.html, it.attachments, ccList.join(','));
+    await sendEmailApiRaw(it.fromAlias, it.to, it.subject, it.body, it.html && (it.htmlText == null || it.htmlText === it.body) ? it.html : undefined, it.attachments, ccList.join(',')); // an html card is sent only while its text is untouched (an edit sends the edited text)
     it.sent = true;
     if (it.onSent) await it.onSent();
   } catch(e){
@@ -7102,7 +7105,7 @@ async function rqEmailModalOpenFallback(i){
   // link is clicked, so the file is already sitting in Downloads by the time Gmail's compose window
   // finishes opening — one drag-and-drop into it is the actual attach step, same motion WhatsApp
   // already asks for.
-  (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename));
+  (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename, f.type));
   it.sent = true;
   if (it.onSent) await it.onSent();
   rqRenderEmailModal();
@@ -7179,7 +7182,7 @@ function rqWaModalOpenOne(i){
   if (!it) return;
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const firstTime = !it.opened;
-  if (firstTime) (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename));
+  if (firstTime) (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename, f.type));
   window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body), '_blank');
   it.opened = true;
   if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; } // NOT recorded yet: WhatsApp never says whether the message went out, so the trader says so when he is back
