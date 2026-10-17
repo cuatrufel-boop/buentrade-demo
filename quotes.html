@@ -7048,7 +7048,9 @@ function rqRenderEmailModal(){
       <div class="rq-email-field"><label>CC (optional — e.g. add yourself to confirm it actually sends)</label><input type="text" ${it.sent ? 'disabled' : ''} value="${escapeHtml(it.cc || '')}" placeholder="name@example.com, name2@example.com" oninput="rqEmailModalItems[${i}].cc=this.value" autocomplete="off" name="bt-cc-${i}"></div>
       </div>
       <div class="rq-email-field"><label>Subject</label><input type="text" ${it.sent ? 'disabled' : ''} value="${escapeHtml(it.subject)}" oninput="rqEmailModalItems[${i}].subject=this.value" autocomplete="off" name="bt-subj-${i}"></div>
-      <div class="rq-email-field"><label>Message</label><textarea ${it.sent ? 'disabled' : ''} oninput="rqEmailModalItems[${i}].body=this.value;rqWaFit(this)" autocomplete="off">${escapeHtml(it.body)}</textarea></div>
+      ${it.html && (it.htmlText == null || it.htmlText === it.body)
+        ? `<div class="rq-email-field"><label>Message — the BuenTrade card${it.sent ? '' : ' <a href="#" style="text-transform:none;letter-spacing:0;margin-left:8px;" onclick="rqEmailModalEditText(${i});return false;">Edit as text</a>'}</label><div style="background:#e9eef7;border-radius:10px;padding:14px;overflow:auto;">${it.html}</div></div>`
+        : `<div class="rq-email-field"><label>Message</label><textarea ${it.sent ? 'disabled' : ''} oninput="rqEmailModalItems[${i}].body=this.value;rqWaFit(this)" autocomplete="off">${escapeHtml(it.body)}</textarea></div>`}
       ${it.attachments && it.attachments.length ? `<div class="rq-email-field"><label>Attachments</label><div style="display:flex;flex-wrap:wrap;gap:6px;">${it.attachments.map(a => `<span class="chip" style="cursor:default;">📎 ${escapeHtml(a.filename)}</span>`).join('')}</div></div>` : ''}
       ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:4px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — drag ${it.downloadFiles.length > 1 ? 'them' : 'it'} into the Gmail window that opens</div>` : ''}
       <div class="rq-msg-foot">${actionHtml}</div>
@@ -7068,6 +7070,8 @@ function rqRenderEmailModal(){
       : rqEmailModalIsOffer ? `${RQ_EMAIL_ICON} Make All Offers (${remaining})` : `${RQ_EMAIL_ICON} Emailing All (${remaining})`)
     : sendLabel;
 }
+// A message that goes as a designed card (html) is shown as that card; "Edit as text" drops the card and sends the text the trader edits.
+function rqEmailModalEditText(i){ const it = rqEmailModalItems[i]; if (!it || it.sent) return; it.html = undefined; rqRenderEmailModal(); }
 async function rqEmailModalSendOne(i){
   const it = rqEmailModalItems[i];
   if (!it || it.sent || it.gmailFallbackUrl) return;
