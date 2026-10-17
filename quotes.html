@@ -1251,6 +1251,7 @@ auth.onAuthStateChanged(user => {
 <script src="js/bt-dialogs.js"></script>
 <script src="js/market-flash-send.js"></script>
 <script src="js/weekly-card.js"></script>
+<script src="js/quote-pesos.js"></script>
 
 <div class="wrap">
   <h1 id="rq_page_title">Quotes</h1>
@@ -6102,7 +6103,7 @@ function buildCustomerOfferText(customerFirstName, plantsOverride, overCreditLim
   const lines = withCalc.map(({ plant, calc }) => {
     const delivery = rqDeliveryDatesText();
     // (user 2026-10-10: no "subject to confirmation" note on any price line of an offer text)
-    return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — $${calc.salePerLb.toFixed(4)} USD/lb frontera${delivery ? ' — Entrega ' + delivery : ''}`;
+    return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${rqOfferPriceText(calc)}${delivery ? ' — Entrega ' + delivery : ''}`;
   }).join('\n\n');
   // A plant left out because its price is old/missing isn't just silently absent — the customer
   // is told there may be more coming, instead of assuming this is every option that exists.
@@ -6126,8 +6127,8 @@ function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPl
   const lines = withCalc.map(({ plant, calc }, i) => {
     const delivery = rqDeliveryDatesText();
     const offer = offersByPlantId.get(plant.id);
-    const link = offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
-    const price = `$${calc.salePerLb.toFixed(4)} USD/lb frontera`;
+    const link = !calc.mxn && offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
+    const price = rqOfferPriceText(calc);
     return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${link}`;
   }).join('\n\n');
   const pending = rqPendingNote();
@@ -6148,8 +6149,8 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
     const lines = items.map(({ plant, calc }, i) => {
       const isNew = newKeys.has(plant.id + '|' + plant.rqProductId) ? ' (nuevo)' : '';
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
-      const link = offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
-      const price = `$${calc.salePerLb.toFixed(4)} USD/lb frontera`;
+      const link = !calc.mxn && offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
+      const price = rqOfferPriceText(calc);
       return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${isNew}${link}`;
     }).join('\n\n');
     return title + '\n\n' + lines;
@@ -6178,7 +6179,7 @@ function buildCustomerOfferHtml(customerFirstName, plantsOverride, overCreditLim
   const delivery = rqDeliveryDatesText();
   const cheapest = rqCheapestSet(withCalc.map(({ calc }) => calc.salePerLb));
   const blocks = withCalc.map(({ plant, calc }, i) => {
-    const price = `$${calc.salePerLb.toFixed(4)} USD/lb frontera`;
+    const price = rqOfferPriceText(calc);
     return `<div>${escapeHtml(plant.name)} — ${escapeHtml(rqSpecEsForPlant(plant) || '')} — ${cheapest.has(i) ? '<b>' + price + '</b>' : price}${delivery ? ' — Entrega ' + escapeHtml(delivery) : ''}</div>`;
   }).join('<div style="margin:14px 0;"></div>');
   const pending = rqPendingNote();
@@ -6206,8 +6207,8 @@ async function rqBuildCombinedPdf(plant, calc){
   const rows = [
     ['Planta', plant.name],
     ['Producto', specEs || ''],
-    ['Precio', `$${calc.salePerLb.toFixed(4)} USD/lb frontera`],
-    ['Total', `$${calc.totalSale.toLocaleString('en-US', { maximumFractionDigits: 0 })}`],
+    ['Precio', rqOfferPriceText(calc)],
+    ['Total', rqOfferTotalText(calc)],
   ];
   if (delivery) rows.push(['Entrega estimada', delivery]);
   rows.forEach(([label, value]) => {
@@ -6340,7 +6341,7 @@ function rqUnsentPlantsFor(customerId, sentByCustomer, filterProductIds, filterP
 function rqCustomerOfferPlantsFor(customerId, filterProductIds, filterPlantIds){
   const ownedProductIds = rqCustomerProductIds[customerId];
   return rqPricedPlantsSorted(filterProductIds, filterPlantIds).filter(({ plant }) =>
-    !ownedProductIds || ownedProductIds.has(plant.rqProductId));
+    !ownedProductIds || ownedProductIds.has(plant.rqProductId)).map(it => rqWithPesos(customerId, it));
 }
 
 // Same download-then-drag-in pattern as offers.html's WhatsApp cards — a wa.me link can only
@@ -7273,9 +7274,11 @@ async function sendOfferEmailTo(customerId){
   const cards = [];
   for (const pid of rqOfferProductIds()){
     if (!rqUnsentPlantsFor(c.id, sentByCustomer, [pid]).length) continue;
-    const full = rqCustomerOfferPlantsFor(c.id, [pid]);
+    const full = await rqRequirePesos(c, pid); // a customer who buys in pesos needs his pesos price confirmed first
+    if (!full) return;
     const filesByPlant = await rqPrepareOfferFilesByPlant([pid]);
-    const attachments = full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean);
+    const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
+    const attachments = pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean);
     const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
     const subject = `Cotización — ${subjectSpecs.join(' / ')}`;
     // Real ask 2026-09-16: the credit-hold line needs to know overCreditLimit before the body is
@@ -7285,7 +7288,7 @@ async function sendOfferEmailTo(customerId){
     warnings.forEach(w => rqShowNotice(w.message));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
     const body = buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine);
-    const downloadFiles = full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean);
+    const downloadFiles = pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean);
     cards.push({
       id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: c.email, subject, body, fromAlias: 'offers', attachments, downloadFiles,
       onSent: async () => { await rqConfirmBullets(c.id, 'email'); rqShowNotice(`Cotización enviada a ${c.email}.`); },
@@ -7308,7 +7311,8 @@ async function sendOfferWhatsAppTo(customerId){
   const items = [];
   for (const pid of rqOfferProductIds()){ // one product per message (see rqOfferProductIds)
     if (!rqUnsentPlantsFor(c.id, sentByCustomer, [pid]).length) continue;
-    const full = rqCustomerOfferPlantsFor(c.id, [pid]);
+    const full = await rqRequirePesos(c, pid); // a customer who buys in pesos needs his pesos price confirmed first
+    if (!full) return;
     // Real ask 2026-09-15: the message body itself now needs each plant's short product-card link
     // (see buildCustomerOfferTextWithLinks), which only exists once sent_offers has actually logged
     // the row — so this now logs BEFORE opening the modal, same order sendOfferEmailTo already uses
@@ -7371,8 +7375,10 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
         if (rqCustomerBuys(c, pid) && rqCustomerOfferPlantsFor(c.id, [pid], filterPlantIds).length) skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'email') });
         continue;
       }
-      const full = rqCustomerOfferPlantsFor(c.id, [pid], filterPlantIds);
+      const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos needs his pesos price confirmed first
+      if (!full) return;
       const firstName = rqFirstName(c.contact_name || c.trade_name);
+      const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
       const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
       // 2026-09-26: credit check only (dry run) — the offer itself is logged when the trader confirms the send (onSent below).
       const { warnings } = await rqLogSentOffersRows(full, [c], 'email', true);
@@ -7383,8 +7389,8 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       toSend.push({
         id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: c.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
         body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, c,
-        attachments: full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
-        downloadFiles: full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
+        attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
+        downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
       });
     }
   }
@@ -7432,7 +7438,8 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       if (rqCustomerBuys(c, pid) && rqCustomerOfferPlantsFor(c.id, [pid], filterPlantIds).length) skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'whatsapp') });
       continue;
     }
-    const full = rqCustomerOfferPlantsFor(c.id, [pid], filterPlantIds);
+    const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos needs his pesos price confirmed first
+    if (!full) return;
     const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp');
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
