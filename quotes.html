@@ -1899,13 +1899,16 @@ const QM_TABS = [
     icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
   { kind: 'sent', label: 'Messages Sent Today', cls: 'ok', title: 'Sent today', sub: 'No reply yet? Send another angle later in the day.',
     icon: '<path d="M20 6 9 17l-5-5"/>' },
+  { kind: 'weekly', label: 'Monday Summary', cls: 'hero', title: 'Last week’s summary', sub: 'One message per client: what we offered him last week.',
+    icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
   { kind: 'market', label: 'Market Flash & News', cls: 'hero', title: 'What the messages are built from', sub: 'The Market Flash bulletin and today’s news, each with its source.',
     icon: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' },
 ];
 const QM_ANGLE_LABEL = { personal: 'Personal', news: 'News', market: 'Market', offer: 'Our offer', followup: 'Follow-up', rebuy: 'Buying cycle', season: 'Calendar', business: 'Business', volume: 'Volume' };
-const QM_KIND_LABEL = { cycle: 'Buying cycle', personal: 'Personal', ask_volume: 'Volume', market: 'Market', news: 'News', offer: 'Our offer', followup: 'Follow-up', season: 'Calendar', business: 'Business' };
+const QM_KIND_LABEL = { weekly: 'Monday summary', cycle: 'Buying cycle', personal: 'Personal', ask_volume: 'Volume', market: 'Market', news: 'News', offer: 'Our offer', followup: 'Follow-up', season: 'Calendar', business: 'Business' };
 let qmData = null, qmLoading = false, qmTab = 'todo', qmOpen = null, qmTabPicked = false; // qmOpen = client id expanded
 let qmNews = null;
+let qmWeekly = null, qmWeeklyLoading = false; // the Monday summary: one message per client with what we offered him last week
 const qmComposing = new Set();
 
 async function qmLoad(force){
@@ -1920,6 +1923,7 @@ async function qmLoad(force){
   }
   qmRender();
   qmFetchDrafts();
+  qmWeeklyLoad();
 }
 function qmPending(c){ return c.compose && (!c.sentToday.length || c.compose.after_send); }
 function qmItems(kind){
@@ -1933,9 +1937,9 @@ const qmTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minu
 
 function qmRender(){
   if (!qmData) return;
-  document.getElementById('qm_stats_row').style.gridTemplateColumns = '1.3fr 1fr 1fr';
+  document.getElementById('qm_stats_row').style.gridTemplateColumns = '1.3fr 1fr 1fr 1fr';
   document.getElementById('qm_stats_row').innerHTML = QM_TABS.map(t => {
-    const n = t.kind === 'market' ? (qmNews ? qmNews.length : '·') : qmItems(t.kind).length;
+    const n = t.kind === 'market' ? (qmNews ? qmNews.length : '·') : t.kind === 'weekly' ? (qmWeekly ? qmWeekly.clients.filter(c => !c.sent).length : '·') : qmItems(t.kind).length;
     return `<div class="stat-card ${t.cls}${t.kind === qmTab ? ' active' : ''}" onclick="qmTab='${t.kind}';qmTabPicked=true;qmOpen=null;qmRender();qmFetchDrafts()" style="cursor:pointer;" title="Show ${t.label}">
       <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg></div>
       <div><div class="stat-value">${n}</div><div class="stat-label">${t.label}</div></div></div>`;
@@ -1950,6 +1954,7 @@ function qmRender(){
   document.getElementById('qm_title').textContent = tab.title;
   document.getElementById('qm_sub').style.display = 'none'; // 2026-10-10 ("reseñas innecesarias"): no explanatory sentence under the title
   if (qmTab === 'market'){ qmRenderNews(); return; }
+  if (qmTab === 'weekly'){ qmWeeklyRender(); return; }
   const items = qmItems(qmTab);
   document.getElementById('qm_count').textContent = `${items.length} client${items.length === 1 ? '' : 's'}`;
   if (!items.length){ document.getElementById('qm_rows').innerHTML = `<div class="empty">${qmTab === 'sent' ? 'Nothing sent yet today.' : 'Everyone has their message for today.'}</div>`; return; }
@@ -2094,6 +2099,55 @@ function qmSendWa(cid){
   const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: d.edited ?? d.message };
   const edited = () => ((rqWaModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
   item.onOpened = async () => { try { await qmLogSend(c, edited(), 'whatsapp'); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
+  rqOpenWaModal(`WhatsApp — ${c.trade_name.trim()}`, [item], false);
+}
+// ---- Monday Summary (owner 2026-10-17): every Monday 2 pm, ONE message per client with what we offered him last week — up to 5 of his most-offered
+// products, the lowest price offered minus 3 cents, and the city it was for. Built by the `messaging` function (action `weekly_summary`, _shared/weeklySummary.ts).
+// It says "Precio", never "cierre": an offer is not a sale. Nothing goes out by itself: the trader reviews it in the same Email / WhatsApp modals and sends it.
+async function qmWeeklyLoad(force){
+  if (qmWeeklyLoading || (qmWeekly && !force)) return;
+  qmWeeklyLoading = true;
+  try { qmWeekly = await callApi('messaging', { action: 'weekly_summary', actor: currentActor() }); }
+  catch (e){ console.error('weekly summary failed', e); qmWeekly = { week: null, reason_key: '', clients: [], failed: true }; }
+  qmWeeklyLoading = false;
+  qmRender();
+}
+function qmWeeklyRender(){
+  if (!qmWeekly){ document.getElementById('qm_count').textContent = ''; document.getElementById('qm_rows').innerHTML = '<div class="empty">Loading…</div>'; qmWeeklyLoad(); return; }
+  const list = qmWeekly.clients;
+  document.getElementById('qm_count').textContent = `${list.length} client${list.length === 1 ? '' : 's'}${qmWeekly.week ? ` · ${qmWeekly.week.from} → ${qmWeekly.week.to}` : ''}`;
+  if (!list.length){ document.getElementById('qm_rows').innerHTML = `<div class="empty">${qmWeekly.failed ? 'Couldn’t load the Monday summary.' : 'No offers were sent last week.'}</div>`; return; }
+  const off = t => `style="padding:7px 10px;opacity:.35;cursor:default;" disabled title="${t}"`;
+  const rows = list.map(c => `<tr data-qmw-key="${escapeHtml(c.id)}">
+    <td style="min-width:170px;"><b style="color:var(--blue);font-weight:600;">${escapeHtml(c.trade_name.trim())}</b><span class="muted" style="display:block;font-size:11.5px;">${escapeHtml([c.first_name, c.city].filter(Boolean).join(' · '))}</span>${c.sent ? `<span class="rq-sheet-pill ok" style="margin-top:4px;">${c.sent.channel === 'email' ? 'Email' : 'WhatsApp'} · ${qmTime(c.sent.sent_at)}</span>` : ''}</td>
+    <td style="text-align:left;max-width:460px;"><span style="display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.45;white-space:pre-line;">${escapeHtml(c.message)}</span></td>
+    <td><div class="rq-sheet-actions" style="justify-content:center;">
+      <button type="button" class="wa-btn outline" ${!c.email ? off('No email on file') : 'style="padding:7px 10px;" title="Review and send by email"'} onclick="qmWeeklySendEmail('${c.id}')"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></button>
+      <button type="button" class="wa-btn" ${!c.phone ? off('No WhatsApp on file') : 'style="padding:7px 10px;" title="Review and open WhatsApp"'} onclick="qmWeeklySendWa('${c.id}')">${RQ_WA_ICON.replace('fill="#fff"', 'fill="currentColor"').replace('width:12px;height:12px', 'width:13px;height:13px')}</button>
+    </div></td></tr>`).join('');
+  document.getElementById('qm_rows').innerHTML = rqTableSection(rows, ['Client', 'Message', 'Send']);
+}
+function qmWeeklyFind(cid){ return qmWeekly && qmWeekly.clients.find(x => x.id === cid); }
+async function qmWeeklyLogSend(c, message, channel){
+  const r = await callApi('messaging', {
+    action: 'send', actor: currentActor(), customer_id: c.id, reason_key: qmWeekly.reason_key, message, draft: c.message, reason_why: 'Monday summary', channel,
+    idempotency_key: `messaging|${c.id}|${qmWeekly.reason_key}|${channel}`,
+  });
+  c.sent = { sent_at: r.message.sent_at, channel, message: r.message.message };
+  qmRender();
+}
+function qmWeeklySendEmail(cid){
+  const c = qmWeeklyFind(cid); if (!c || !c.email) return;
+  const item = { id: c.id, label: c.trade_name.trim(), to: c.email, subject: c.subject, body: c.message, fromAlias: 'offers' };
+  const edited = () => ((rqEmailModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
+  item.onSent = async () => { try { await qmWeeklyLogSend(c, edited(), 'email'); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
+  rqOpenEmailModal(`Email — ${c.trade_name.trim()}`, [item], true, 'Send');
+}
+function qmWeeklySendWa(cid){
+  const c = qmWeeklyFind(cid); if (!c || !c.phone) return;
+  const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: c.message };
+  const edited = () => ((rqWaModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
+  item.onOpened = async () => { try { await qmWeeklyLogSend(c, edited(), 'whatsapp'); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
   rqOpenWaModal(`WhatsApp — ${c.trade_name.trim()}`, [item], false);
 }
 async function qmReloadKeepingDrafts(){
