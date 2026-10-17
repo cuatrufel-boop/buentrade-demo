@@ -541,7 +541,6 @@ auth.onAuthStateChanged(user => {
         <div><label class="view-label">Business Type</label><span id="v_business_type">—</span></div>
         <div><label class="view-label">Currency</label><span id="v_preferred_currency">—</span></div>
         <div><label class="view-label">Delivery Type</label><span id="v_usual_delivery_type">—</span></div>
-        <div><label class="view-label">How they buy</label><span id="v_buys_at">—</span></div>
         <div><label class="view-label">Payment Days</label><span id="v_payment_days">—</span></div>
         <div><label class="view-label">Credit Limit</label><span id="v_credit_limit">—</span></div>
         <div><label class="view-label">Destination</label><span id="v_usual_destination">—</span></div>
@@ -616,12 +615,6 @@ auth.onAuthStateChanged(user => {
             <option value="Delivered Colombia">Delivered</option>
           </select>
         </div>
-        <div class="field"><label>How they buy</label>
-          <select id="buys_at" onchange="updateCustomerProfile()">
-            <option value="border_usd_lb">Border — USD/lb</option>
-            <option value="destination_mxn_kg">Destination — COP/kg</option>
-          </select>
-        </div>
         <div class="field"><label>Payment terms</label>
           <select id="payment_terms_type" onchange="togglePaymentDaysInput();updateCustomerProfile()">
             <option value="">—</option>
@@ -684,7 +677,6 @@ auth.onAuthStateChanged(user => {
         <div class="profile-row"><span class="view-label">Business Type</span><span class="profile-row-value" id="cv_business_type">—</span></div>
         <div class="profile-row"><span class="view-label">Preferred Currency</span><span class="profile-row-value" id="cv_preferred_currency">—</span></div>
         <div class="profile-row"><span class="view-label">Usual Delivery Type</span><span class="profile-row-value" id="cv_usual_delivery_type">—</span></div>
-        <div class="profile-row"><span class="view-label">How They Buy</span><span class="profile-row-value" id="cv_buys_at">—</span></div>
         <div class="profile-row"><span class="view-label">Payment Terms</span><span class="profile-row-value" id="cv_payment_terms">—</span></div>
         <div class="profile-row"><span class="view-label">Usual Destination</span><span class="profile-row-value" id="cv_usual_destination">—</span></div>
         <div class="profile-row"><span class="view-label">Usual Incoterm</span><span class="profile-row-value" id="cv_usual_incoterm">—</span></div>
@@ -759,10 +751,9 @@ function openForm(customer){
   const fields = ['custId','trade_name','legal_name','country_id','state','city','address','postal_code','contact_name',
     'contact_role','email','email_cc','website',
     'payments_contact_name','payments_contact_email','payments_contact_whatsapp',
-    'business_type_id','preferred_currency','usual_delivery_type','buys_at',
+    'business_type_id','preferred_currency','usual_delivery_type',
     'usual_destination','usual_incoterm_id','usual_incoterm_place','payment_method','customs_agency_provider_id','preferred_exchange_rate_mode','credit_limit'];
   fields.forEach(f => document.getElementById(f).value = '');
-  document.getElementById('buys_at').value = 'border_usd_lb'; // every customer buys at the border in USD/lb unless the profile says otherwise
   document.getElementById('whatsapp_number').value = '';
   document.getElementById('whatsapp_code').value = '+52'; // every customer is in Colombia; a blank dropdown made a typed Colombian number "have no country code" (2026-10-13)
   onCustomerCountryChange(); // resets state_id/state visibility for the blank country above
@@ -839,7 +830,6 @@ function updateCustomerProfile(){
   const currSel = document.getElementById('preferred_currency');
   setV('cv_preferred_currency', currSel.value === 'other' ? 'Other' : selText(currSel));
   setV('cv_usual_delivery_type', selText(document.getElementById('usual_delivery_type')));
-  setV('cv_buys_at', selText(document.getElementById('buys_at')));
   const termsType = document.getElementById('payment_terms_type').value;
   const termsLabel = termsType === 'advance' ? 'Advance'
     : termsType === 'credit' ? (document.getElementById('payment_days').value ? `Credit ${document.getElementById('payment_days').value} days` : 'Credit')
@@ -1571,7 +1561,6 @@ function viewCustomer(id){
   document.getElementById('v_preferred_currency').textContent = curr ? curr.code : '—';
   const deliveryLabels = { 'Border': 'Picked up (FOB)', 'Delivered Colombia': 'Delivered' };
   document.getElementById('v_usual_delivery_type').textContent = deliveryLabels[c.usual_delivery_type] || c.usual_delivery_type || '—';
-  document.getElementById('v_buys_at').textContent = c.buys_at === 'destination_mxn_kg' ? 'Destination — COP/kg' : 'Border — USD/lb';
   document.getElementById('v_payment_days').textContent = paymentDaysLabel(c.payment_days) || '—';
   document.getElementById('v_credit_limit').textContent = c.credit_limit != null ? '$' + Number(c.credit_limit).toLocaleString('en-US') : '—';
   document.getElementById('v_usual_destination').textContent = c.usual_destination || '—';
@@ -1691,7 +1680,6 @@ async function saveCustomer(forceOverride){
       return null;
     })(),
     credit_limit: document.getElementById('credit_limit').value ? Number(document.getElementById('credit_limit').value) : null,
-    buys_at: document.getElementById('buys_at').value || 'border_usd_lb',
     usual_destination: document.getElementById('usual_destination').value || null,
     usual_incoterm_id: document.getElementById('usual_incoterm_id').value || null,
     usual_incoterm_place: document.getElementById('usual_incoterm_place').value || null,
