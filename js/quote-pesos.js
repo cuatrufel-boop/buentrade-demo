@@ -157,13 +157,19 @@ function rqPesosFillQt(id){
   const p = rqSelectedPlants.find(x => x.id === id);
   if (!p) return;
   clearInterval(p.rqPesosTimer);
+  p.rqPesosImportDone = false;
   if (!p.rqPesosCtx) return;
-  let lastSet = null;
+  let lastSet = null, ticks = 0;
   p.rqPesosTimer = setInterval(() => {
     if (!p.rqCalculatorOpen || !p.rqPesosCtx){ clearInterval(p.rqPesosTimer); return; }
     const fr = document.getElementById('rq_iframe_' + id); let win; try { win = fr && fr.contentWindow; } catch (e) { return; }
     if (!win || !win.__calc || !win.document) return;
-    const el = win.document.getElementById('freightMx'), fx = parseFloat((win.document.getElementById('fxRate') || {}).value) || 0;
+    ticks++;
+    if (ticks < 8 && !(win.ttIsSettled && win.ttIsSettled())) return; // wait until the QT has read its own saved version (it can bring a 0 over the address)
+    const el = win.document.getElementById('freightMx'), imp = win.document.getElementById('importCost'), fx = parseFloat((win.document.getElementById('fxRate') || {}).value) || 0;
+    // Import Cost: the QT's saved version can bring its own 0/blank over the address — fill 625 once, then it is the trader's
+    if (imp && !p.rqPesosImportDone && (parseFloat(imp.value) || 0) === 0){ imp.value = RQ_PESOS_IMPORT_COST_USD; win.buildProductRows(); win.calc(); }
+    if (imp) p.rqPesosImportDone = true;
     if (!el || !(fx > 0)) return;
     const want = (Math.round(p.rqPesosCtx.usd * fx * 100) / 100).toFixed(2), cur = parseFloat(el.value) || 0;
     // only touch the field while it still holds nothing, or what we put there (the trader's own number stays)
