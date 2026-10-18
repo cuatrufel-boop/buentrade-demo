@@ -296,25 +296,31 @@ function rqGenericQtSwitch(frame){
     const g = d.createElement('div'); g.className = 'qb-group'; g.id = 'pt_switch';
     g.innerHTML = '<div class="qb-group-label">Quote in</div><div class="qb-group-row"><div id="pt_sw" role="switch" aria-checked="false" tabindex="0" style="display:inline-flex;height:30px;border:1px solid rgba(255,255,255,.28);border-radius:8px;overflow:hidden;cursor:pointer;font:700 12.5px inherit;"><span id="pt_sw_usd" style="padding:0 14px;display:flex;align-items:center;">USD</span><span id="pt_sw_mxn" style="padding:0 14px;display:flex;align-items:center;">COP</span></div></div>';
     d.querySelector('#qbBar > div[style*="grid-column:3"]').insertBefore(g, d.querySelector('#qbBar > div[style*="grid-column:3"]').firstChild);
-    let on = false, setImport = false, timer = null;
+    let on = false, autoImport = false, timer = null;
     const paint = () => { const a = el('pt_sw_usd'), b = el('pt_sw_mxn'), sw = el('pt_sw'); sw.setAttribute('aria-checked', on ? 'true' : 'false');
       [[a, !on], [b, on]].forEach(([n, act]) => { n.style.background = act ? '#E8B54C' : 'transparent'; n.style.color = act ? '#10203a' : 'rgba(255,255,255,.85)'; }); };
     const pushFreight = () => { // the freight typed in USD goes into the QT's own MX$ field at the QT's own rate ('0' counts as filled: the pesos panel shows from the first moment)
       const fx = parseFloat(el('fxRate').value) || 0, v = el('pt_freight_usd_val'); if (!v) return;
       const amt = parseFloat(String(v.value).replace(/,/g, '')) || 0, want = fx > 0 ? rqPesosFreightMx(amt, 'USD', fx) : 0, cur = parseFloat(el('freightMx').value);
       if (el('freightMx').value === '' || Math.abs((isNaN(cur) ? -1 : cur) - want) > 0.005){ el('freightMx').value = want.toFixed(2); win.buildProductRows(); win.calc(); } };
+    // Import Cost 625 goes in once there is a purchase price (an empty quote has nothing to import: with 625 and no product the only number left is the finance on that 625, a small loss);
+    // before that it is 0, which keeps the pesos panel on. A number the trader typed himself is never touched.
+    const syncImport = () => { if (!autoImport) return;
+      const imp = el('importCost'), cur = parseFloat(imp.value) || 0, want = (parseFloat(el('prodCost0').value) || 0) > 0 ? RQ_PESOS_IMPORT_COST_USD : 0;
+      if (cur === want && imp.value !== '') return;
+      if (imp.value === '' || cur === 0 || cur === RQ_PESOS_IMPORT_COST_USD){ imp.value = want; win.buildProductRows(); win.calc(); } else autoImport = false; };
     const apply = () => {
       if (on){
         rqPesosApplyView(win, 0, 'USD');
         const v = el('pt_freight_usd_val'); v.disabled = false; v.placeholder = '0';
         if (!v.__wired){ v.__wired = true; v.addEventListener('input', () => { el('freightMx').value = ''; pushFreight(); }); }
-        if (!(parseFloat(el('importCost').value) > 0)){ el('importCost').value = RQ_PESOS_IMPORT_COST_USD; setImport = true; }
+        autoImport = !(parseFloat(el('importCost').value) > 0); syncImport();
         el('freightMx').value = ''; pushFreight();
-        clearInterval(timer); timer = setInterval(() => { if (on) pushFreight(); }, 700); // follows the day's rate
+        clearInterval(timer); timer = setInterval(() => { if (on){ syncImport(); pushFreight(); } }, 700); // follows the day's rate
       } else {
         clearInterval(timer);
         rqPesosRemoveView(win);
-        if (setImport){ el('importCost').value = ''; setImport = false; }
+        if (autoImport){ el('importCost').value = ''; autoImport = false; }
         el('freightMx').value = '';
         win.buildProductRows(); win.calc();
       }
