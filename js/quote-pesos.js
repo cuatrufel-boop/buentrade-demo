@@ -179,17 +179,8 @@ function rqPesosMirror(win){
     else a.textContent = b.textContent;
     if (/k-val/.test(b.className)) a.className = b.className; // keeps its red / amber state
   });
-  const hero = el('borderHeroKpi');
-  if (hero){
-    const hl = hero.querySelector('.k-label'); if (hl && hl.textContent !== 'Profit (Direct)') hl.textContent = 'Profit (Direct)';
-    if (!el('pt_summar_hero')){
-      const h2 = d.createElement('div'); h2.className = 'kpi hero-sm'; h2.id = 'pt_summar_hero';
-      h2.innerHTML = '<span class="k-label">Profit (Summar)</span><span class="k-val" id="pt_summar_profit">$0.00</span>';
-      hero.parentNode.insertBefore(h2, hero.nextSibling);
-    }
-  }
-  // Direct profit and Summar profit together (owner 2026-10-18): the Factoring card follows the destination too — sale, cost and direct costs of the destination (dollars), the card's own
-  // fee percentages — and the "Profit after Summar" is also shown right under the direct profit.
+  // The Factoring card follows the destination too (sale, cost and direct costs of the destination in dollars, the card's own fee percentages) and so does the "Profit (Summar)"
+  // shown right under the direct profit (the QT itself puts both there).
   const num = (id) => { const e = el(id); return e ? parseFloat(String(e.textContent).replace(/[^0-9.\-]/g, '')) : NaN; };
   const sale = num('outSellTotalMx') / fx, cost = num('outProdCostMx') / fx, direct = num('outDirectMx') / fx;
   const pct = num('summarFeeTransit') + num('summarFeeBase') + num('summarFeeExtra');
@@ -198,7 +189,7 @@ function rqPesosMirror(win){
     const put = (id, v) => { const e = el(id); if (e) e.textContent = fmt(v); };
     put('summarProfitBefore', gross); put('summarSOValue', sale); put('summarFeeAmount', fee); put('summarProfitAfter', after);
     const sa = el('summarProfitAfter'); if (sa) sa.className = 'k-val' + (after < 0 ? ' neg' : '');
-    const h = el('pt_summar_profit'); if (h){ h.textContent = fmt(after); h.className = 'k-val' + (after < 0 ? ' neg' : ''); }
+    const h = el('summarHeroVal'); if (h){ h.textContent = fmt(after); h.className = 'k-val' + (after < 0 ? ' neg' : ''); } // the hero under the direct profit (it lives in the QT)
   }
   const lab = (id, text) => { const e = el(id); const l = e && e.previousElementSibling; if (l && l.textContent !== text) l.textContent = text; };
   lab('outProfitLb', 'Profit / Kg');

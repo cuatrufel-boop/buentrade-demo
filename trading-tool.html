@@ -860,7 +860,8 @@ if (FIREBASE_READY) {
       <div class="card-body profit-cols" id="profitCols">
         <div class="profit-col">
           <div class="section-label">Border (USD)</div>
-          <div class="kpi hero" id="borderHeroKpi"><span class="k-label">Profit</span><span class="k-val" id="outProfit">$0</span></div>
+          <div class="kpi hero" id="borderHeroKpi"><span class="k-label" id="outProfitLabel">Profit</span><span class="k-val" id="outProfit">$0</span></div>
+          <div class="kpi hero-sm" id="summarHeroKpi" style="display:none;"><span class="k-label">Profit (Summar)</span><span class="k-val" id="summarHeroVal">$0</span></div>
           <div class="kpi"><span class="k-label">Net Margin</span><span class="k-val" id="outNetMargin">0%</span></div>
           <div class="totals-mini" style="grid-template-columns:1fr;">
             <div class="t"><span>Product Cost</span><b id="outProdCost">$0</b></div>
@@ -1377,6 +1378,7 @@ function buildProductRows(){
   // would be more confusing than useful — that one always shows everything.
   const qbMxFxWrap = document.getElementById('qbMxFxWrap');
   if (qbMxFxWrap) qbMxFxWrap.style.display = (window.self === window.top || showMx) ? 'contents' : 'none';
+  { const mxChip = document.getElementById('financeOutTopMx'); if (mxChip && mxChip.parentElement) mxChip.parentElement.style.display = (window.self === window.top || showMx) ? '' : 'none'; } // no Colombia finance chip on a dollar quote
   products.forEach((p,i)=>{
     const div = document.createElement('div');
     div.className='prod-row';
@@ -1852,7 +1854,8 @@ function updateSummarImpactCard(){
   // versión y muestra su profit directo vs su profit Summar").
   let showCard = false;
   try { showCard = !isReadOnlyEmbed() && (!!negoOffer || __qp.get('embed') === '1'); } catch (e) { showCard = !isReadOnlyEmbed() && __qp.get('embed') === '1'; }
-  if (!showCard || !window.__calc){ if (card) card.style.display = 'none'; return; }
+  const heroS = document.getElementById('summarHeroKpi'), heroL = document.getElementById('outProfitLabel');
+  if (!showCard || !window.__calc){ if (card) card.style.display = 'none'; if (heroS) heroS.style.display = 'none'; if (heroL) heroL.textContent = 'Profit'; return; }
   card.style.display = 'block';
 
   // Real bug caught live 2026-09-20 (screenshots, real numbers): profitBorder already has the
@@ -1876,6 +1879,9 @@ function updateSummarImpactCard(){
   const afterEl = document.getElementById('summarProfitAfter');
   afterEl.textContent = fmt$(profitAfter);
   afterEl.className = 'k-val' + (profitAfter < 0 ? ' neg' : '');
+  // Direct profit and Summar profit together under the Profitability title (owner 2026-10-18)
+  if (heroS){ heroS.style.display = ''; document.getElementById('summarHeroVal').textContent = fmt$(profitAfter); document.getElementById('summarHeroVal').className = 'k-val' + (profitAfter < 0 ? ' neg' : ''); }
+  if (heroL) heroL.textContent = 'Profit (Direct)';
 }
 
 document.addEventListener('focusin', function(e){
@@ -1959,7 +1965,8 @@ function applyEmbedParams(qp){
   rqShow('customsBrokerageSection', !['tramiteAduanalField','bodegaAmericanaField','lumperFeeField','inbondReleaseField'].every(id => document.getElementById(id).style.display === 'none'));
   rqShow('coldStorageSection', !['labelsCostField','plasticWrapField','inLieuField','storageOvernightField','storageWeekendField','storageShortTermField','storageMidTermField','storageLongTermField','storageExtraLongField','freshToFrozenField'].every(id => document.getElementById(id).style.display === 'none'));
   // Always shown, same reasoning as Customs Processing/US Warehouse above.
-  rqShow('mexicanFreightField', true);
+  // A dollar quote has no Colombian freight (owner 2026-10-18): it shows only when Quotes / Offers ask for it (hideColombianFreight=0), or when the number is not zero.
+  rqShow('mexicanFreightField', qp.get('hideColombianFreight') === '0' || Number(qp.get('freightMx')) > 0 || (parseFloat(document.getElementById('freightMx').value) || 0) > 0);
   // Colombian Freight is stored in USD in Master Data; Quotes converts it to COP itself before
   // sending it here, since this field has always been COP-denominated.
   if (qp.has('freightMx')) document.getElementById('freightMx').value = Number(qp.get('freightMx')) || 0;
@@ -2348,6 +2355,8 @@ function ttApplyState(st){
     if (st.fx_manual && st.fx_rate != null){ fxRateManuallySet = true; const fx = document.getElementById('fxRate'); if (fx) fx.value = st.fx_rate; }
     // every cost this version carries is on screen — nothing in it stays hidden
     EXTRA_COST_FIELD_IDS.forEach(id => { if ((parseFloat(inp[id]) || 0) !== 0){ const f = document.getElementById(id + 'Field'); if (f) f.style.display = ''; } });
+    // a version that carries a Colombian freight shows it
+    if ((parseFloat(inp.freightMx) || 0) !== 0){ const mf = document.getElementById('mexicanFreightField'); if (mf) mf.style.display = ''; }
     const shared = document.getElementById('sharedCostsSection');
     if (shared) shared.style.display = '';
     ttPendingFreightPick = typeof st.freight_pick === 'string' ? st.freight_pick : null;
