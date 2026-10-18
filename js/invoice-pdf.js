@@ -11,7 +11,8 @@ const INVOICE_TERMS = "This Invoice is issued by BuenTrade LLC. By signing in ac
 function bcRenderInvoice(inv, orderNumber, signature){
   const num = 'INV-BT-' + String(orderNumber || '').replace(/^BT-/, '');
   const day = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? `${m[2]}/${m[3]}/${m[1]}` : null; };
-  const money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pesos = !!(inv.line_item && inv.line_item.unit === 'kg'); // a customer invoiced in pesos: kilos and MX$
+  const money = (n) => (pesos ? 'MX$' : '$') + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const doc = pdfDoc();
   pdfHeader(doc, 'Invoice', num, CONTACT_EMAIL_SO);
 
@@ -40,8 +41,8 @@ function bcRenderInvoice(inv, orderNumber, signature){
   const li = inv.line_item;
   doc.autoTable({
     startY: Math.max(yLeft, yRight) + 8,
-    head: [['Item Description', 'Qty LBS', 'USD / LBS', 'Amount']],
-    body: [[li.description || '', Number(li.weight || 0).toLocaleString('en-US'), '$' + Number(li.price || 0).toFixed(4), money(li.total)]],
+    head: [['Item Description', pesos ? 'Qty KG' : 'Qty LBS', pesos ? 'COP / KG' : 'USD / LBS', 'Amount']],
+    body: [[li.description || '', Number(li.weight || 0).toLocaleString('en-US'), (pesos ? 'MX$' : '$') + Number(li.price || 0).toFixed(pesos ? 2 : 4), money(li.total)]],
     theme: 'grid',
     headStyles: { fillColor: [30, 106, 219], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
     styles: { fontSize: 10.5, cellPadding: { top: 9, bottom: 9, left: 7, right: 7 } },

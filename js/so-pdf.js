@@ -34,12 +34,12 @@ function bcRenderSO(s, orderNumber){
   const li = s.line_item;
   doc.autoTable({
     startY: Math.max(yLeft, yRight) + 22,
-    head: [['Item Description', 'Qty LBS', 'USD / LBS', 'Amount', 'DEL Date', 'Sales Rep']],
+    head: [['Item Description', li.unit === 'kg' ? 'Qty KG' : 'Qty LBS', li.unit === 'kg' ? 'COP / KG' : 'USD / LBS', 'Amount', 'DEL Date', 'Sales Rep']], // a customer invoiced in pesos: kilos and MX$
     body: [[
       li.description || '',
       (li.weight || 0).toLocaleString('en-US'),
-      '$' + (li.price || 0).toFixed(4),
-      '$' + (li.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+      (li.unit === 'kg' ? 'MX$' : '$') + (li.price || 0).toFixed(li.unit === 'kg' ? 2 : 4),
+      (li.unit === 'kg' ? 'MX$' : '$') + (li.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
       fmtDateStr(s.delivery_date) || 'TBD',
       s.sales_rep || '',
     ]],

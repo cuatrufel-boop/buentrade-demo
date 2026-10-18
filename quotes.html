@@ -6884,6 +6884,8 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
         sale_per_lb: calc.salePerLb,
         total_cost: calc.totalCost,
         total_sale: calc.totalSale,
+        // a customer who buys in pesos: the pesos price per kg, its total and the rate it was quoted at travel with the offer (the order and the invoice are in pesos; the PO and the FO stay in dollars)
+        ...(calc.mxn ? { sale_currency: 'COP', sale_per_kg_mxn: Math.round(calc.mxn.perKg * 100) / 100, total_sale_mxn: Math.round(calc.mxn.total * 100) / 100, fx_rate: calc.mxn.fx } : {}),
         delivery_dates: [...rqDeliveryDates],
         // Real ask 2026-09-15: sending an offer over WhatsApp used to mean downloading the photo
         // and dragging it into the chat by hand — now sent-offers-create mints a short_code from
