@@ -161,7 +161,7 @@ function rqPesosToolParams(p, params){
 // The pesos QT (owner 2026-10-18): the exchange rate comes from the web (the QT's own), Weight in kilos, Purchase price in dollars, Selling price in pesos (Selling COP/kg =
 // Selling $/lb (adj.) × 2.20462 × the rate — the QT's own Colombia formula), US freight, Inspection and Import Cost in dollars, Colombian freight in the currency of the carrier's own
 // tariff (USD or COP). Profitability stays in dollars. View only, no formula touched.
-const RQ_PESOS_VIEW_CSS = '#mxProfitBlock, #profitColDivider, .qb-item.qb-out:has(#financeOutTopMx), .prod-row > .prod-top + .section-label, .prod-row > .divider, .prod-row > .prod-grid .mini:has(#prodWeight0), .prod-row > .prod-grid .mini:has(#prodSellBorder0) { display: none !important; }';
+const RQ_PESOS_VIEW_CSS = '#mxProfitBlock, #profitColDivider, .qb-item.qb-out:has(#financeOutTopMx), .prod-row > .prod-top + .section-label, .prod-row > .divider, .prod-row > .prod-grid .mini:has(#prodWeight0), .prod-row > .prod-grid .mini:has(#prodSellBorder0) { display: none !important; } .prod-row > .prod-grid { grid-template-columns: minmax(0, 1fr) !important; justify-items: center; } .prod-row > .prod-grid .mini { width: 60%; } .prod-row > .prod-grid { margin-bottom: 12px; }';
 function rqPesosApplyView(win, amount, cur){
   const doc = win.document;
   if (!doc.getElementById('rq_pesos_only_css')){ const st = doc.createElement('style'); st.id = 'rq_pesos_only_css'; st.textContent = RQ_PESOS_VIEW_CSS; doc.head.appendChild(st); }
