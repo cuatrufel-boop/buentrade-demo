@@ -294,11 +294,12 @@ function rqGenericQtSwitch(frame){
     const d = win.document, el = (id) => d.getElementById(id);
     if (el('pt_switch')) return;
     const g = d.createElement('div'); g.className = 'qb-group'; g.id = 'pt_switch';
-    g.innerHTML = '<div class="qb-group-label">Quote in</div><div class="qb-group-row"><div id="pt_sw" role="switch" aria-checked="false" tabindex="0" style="display:inline-flex;height:30px;border:1px solid rgba(255,255,255,.28);border-radius:8px;overflow:hidden;cursor:pointer;font:700 12.5px inherit;"><span id="pt_sw_usd" style="padding:0 14px;display:flex;align-items:center;">USD</span><span id="pt_sw_mxn" style="padding:0 14px;display:flex;align-items:center;">COP</span></div></div>';
+    // same look as the bar's own fields: 27px high, 1px white-22% border, 8px radius, IBM Plex Mono 12px bold, 92px wide like the Finance chips; the chosen side takes the BuenTrade gold of the chips
+    g.innerHTML = '<div class="qb-group-label">Quote in</div><div class="qb-group-row"><div class="qb-item"><label style="visibility:hidden;">Quote</label><div id="pt_sw" role="switch" aria-checked="false" aria-label="Quote in USD or COP" tabindex="0" style="display:inline-flex;box-sizing:border-box;width:92px;height:27px;border:1px solid rgba(255,255,255,.22);border-radius:8px;background:rgba(255,255,255,.035);overflow:hidden;cursor:pointer;font-family:\'IBM Plex Mono\',monospace;font-size:12px;font-weight:700;"><span id="pt_sw_usd" style="flex:1;display:flex;align-items:center;justify-content:center;">USD</span><span id="pt_sw_mxn" style="flex:1;display:flex;align-items:center;justify-content:center;">COP</span></div></div></div>';
     d.querySelector('#qbBar > div[style*="grid-column:3"]').insertBefore(g, d.querySelector('#qbBar > div[style*="grid-column:3"]').firstChild);
     let on = false, autoImport = false, timer = null;
     const paint = () => { const a = el('pt_sw_usd'), b = el('pt_sw_mxn'), sw = el('pt_sw'); sw.setAttribute('aria-checked', on ? 'true' : 'false');
-      [[a, !on], [b, on]].forEach(([n, act]) => { n.style.background = act ? '#E8B54C' : 'transparent'; n.style.color = act ? '#10203a' : 'rgba(255,255,255,.85)'; }); };
+      [[a, !on], [b, on]].forEach(([n, act]) => { n.style.background = act ? 'rgba(232,181,76,.30)' : 'transparent'; n.style.color = act ? '#fff' : 'rgba(255,255,255,.55)'; n.style.boxShadow = act ? 'inset 0 0 0 1px rgba(232,181,76,.6)' : 'none'; }); };
     const pushFreight = () => { // the freight typed in USD goes into the QT's own MX$ field at the QT's own rate ('0' counts as filled: the pesos panel shows from the first moment)
       const fx = parseFloat(el('fxRate').value) || 0, v = el('pt_freight_usd_val'); if (!v) return;
       const amt = parseFloat(String(v.value).replace(/,/g, '')) || 0, want = fx > 0 ? rqPesosFreightMx(amt, 'USD', fx) : 0, cur = parseFloat(el('freightMx').value);
