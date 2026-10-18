@@ -165,6 +165,9 @@ const RQ_PESOS_VIEW_CSS = '#mxProfitBlock, #profitColDivider, .qb-item.qb-out:ha
 function rqPesosApplyView(win, amount, cur){
   const doc = win.document;
   if (!doc.getElementById('rq_pesos_only_css')){ const st = doc.createElement('style'); st.id = 'rq_pesos_only_css'; st.textContent = RQ_PESOS_VIEW_CSS; doc.head.appendChild(st); }
+  // top bar balanced around Confirm Price: Terms on one side, Exchange Rate + Finance Cost on the other (with the Colombia chip out of sight the left side was twice as long)
+  const fxWrap = doc.getElementById('qbMxFxWrap'), rightCell = doc.querySelector('#qbBar > div[style*="grid-column:3"]');
+  if (fxWrap && rightCell && fxWrap.parentNode !== rightCell) rightCell.insertBefore(fxWrap, rightCell.firstChild);
   const anchor = doc.getElementById('mexicanFreightField'), hint = doc.getElementById('freightMxUsdHint');
   let box = doc.getElementById('pt_freight_usd');
   if (cur === 'COP'){ // the carrier quotes in pesos: the QT's own MX$ field stays
