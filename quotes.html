@@ -5517,7 +5517,6 @@ function rqBuildToolParams(p){
   if (p.rqProductLocationId) params.set('shipLocationId', p.rqProductLocationId);
   if (p.rqProductShipRegion) params.set('shipRegion', p.rqProductShipRegion);
   params.set('fob', p.rqFreightIncluded ? '0' : '1');
-  rqPesosToolParams(p, params); // a customer who buys in pesos buys this product: his city's Colombian freight + Import Cost are in the QT (js/quote-pesos.js)
   return params;
 }
 
@@ -5739,7 +5738,6 @@ function rqToolFreightChanged(){
 }
 
 function rqOnIframeLoaded(id){
-  rqPesosFillQt(id);
   setTimeout(() => {
     rqPrefillSellingPrice(id);
   }, 300);
@@ -5851,7 +5849,6 @@ function rqCalcRow(p, qtWin){
     p.rqLastCalc.tramiteAduanal = tramiteInp ? (parseFloat(tramiteInp.value) || 0) : 0;
     p.rqLastCalc.bodegaAmericana = bodegaInp ? (parseFloat(bodegaInp.value) || 0) : 0;
   }
-  if (p.rqLastCalc) rqPesosCaptureCalc(p, win); // the pesos numbers this QT shows (only when a pesos customer buys the product)
   return p.rqLastCalc || null;
 }
 
