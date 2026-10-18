@@ -113,7 +113,7 @@ function rqConfirmInPesos(plant, productId, c, borderCalc){
         el('importCost').value = RQ_PESOS_IMPORT_COST_USD;
         win.buildProductRows(); win.calc();
       }
-      rqPesosApplyView(win);
+      rqPesosApplyView(win, usd);
       const fx = parseFloat(el('fxRate').value) || 0;
       const want = fx > 0 ? (Math.round(usd * fx * 100) / 100).toFixed(2) : '';
       if (want && parseFloat(el('freightMx').value) !== parseFloat(want)){ el('freightMx').value = want; win.buildProductRows(); win.calc(); }
@@ -154,25 +154,22 @@ function rqPesosToolParams(p, params){
   if (typeof rqCachedFxRate === 'number' && rqCachedFxRate > 0) params.set('freightMx', String(Math.round(p.rqPesosCtx.usd * rqCachedFxRate * 100) / 100));
 }
 // keeps Colombian freight exact against the QT's own (rounded-up) rate while the QT is open; never overwrites a number the trader typed
-// The pesos QT is the dollar QT with the pesos data (view only, no formula touched): the border side and the lb/USD helper lines are out of sight and the product card reads
-// Weight (kg) · Purchase MX$/kg · Selling COP/kg, like the dollar one reads Weight · Purchase · Selling.
-const RQ_PESOS_VIEW_CSS = '.profit-col:not(#mxProfitBlock), #profitColDivider, .prod-row > .prod-top + .section-label, .prod-row > .prod-grid, .prod-row > .divider, .prod-row > .prod-grid2 ~ *, .prod-grid2 .autocalc-link, .prod-grid2 .mini:has(#prodSellAdjUsd0), .qb-item.qb-out:has(#financeOutTop) { display: none !important; }';
-function rqPesosApplyView(win){
+// The pesos QT is the dollar QT, everything in dollars as always (product cost, border costs, profit) with the pesos selling price added: Selling COP/kg =
+// Selling $/lb (adj.) × 2.20462 × the day's rate (the QT's own Colombia formula). View only, no formula touched: the Colombia profit column and its finance chip are out of sight,
+// the weight reads in kg and Colombian freight reads in USD (the carrier tariff).
+const RQ_PESOS_VIEW_CSS = '#mxProfitBlock, #profitColDivider, .qb-item.qb-out:has(#financeOutTopMx), #mexicanFreightField, #freightMxUsdHint { display: none !important; }';
+function rqPesosApplyView(win, usd){
   const doc = win.document;
   if (!doc.getElementById('rq_pesos_only_css')){ const st = doc.createElement('style'); st.id = 'rq_pesos_only_css'; st.textContent = RQ_PESOS_VIEW_CSS; doc.head.appendChild(st); }
-  const grid = doc.querySelector('.prod-grid2');
-  if (!grid) return;
-  let cost = doc.getElementById('pt_cost_mxkg');
-  if (!cost){
-    const mini = doc.createElement('div'); mini.className = 'mini';
-    mini.innerHTML = '<span>Purchase MX$/kg</span><div class="inputwrap"><span class="pfx">MX$</span><input type="text" id="pt_cost_mxkg" disabled style="text-align:center;"></div>';
-    grid.insertBefore(mini, grid.children[1] || null);
-    cost = mini.querySelector('input');
+  let box = doc.getElementById('pt_freight_usd');
+  const anchor = doc.getElementById('mexicanFreightField');
+  if (!box && anchor){
+    box = doc.createElement('div'); box.className = 'field'; box.id = 'pt_freight_usd';
+    box.innerHTML = '<label>Colombian Freight (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="text" id="pt_freight_usd_val" disabled style="text-align:right;"></div>';
+    anchor.parentNode.insertBefore(box, anchor);
   }
-  try {
-    const st = win.ttGetState(), fx = parseFloat((doc.getElementById('fxRate') || {}).value) || 0, c = st && st.products && st.products[0] ? Number(st.products[0].cost) || 0 : 0;
-    cost.value = fx > 0 && c > 0 ? (c * 2.20462 * fx).toFixed(2) : '';
-  } catch (e) { /* the QT is still loading */ }
+  const v = doc.getElementById('pt_freight_usd_val');
+  if (v && usd > 0) v.value = Number(usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function rqPesosFillQt(id){
   const p = rqSelectedPlants.find(x => x.id === id);
@@ -186,7 +183,7 @@ function rqPesosFillQt(id){
     const fr = document.getElementById('rq_iframe_' + id); let win; try { win = fr && fr.contentWindow; } catch (e) { return; }
     if (!win || !win.__calc || !win.document) return;
     ticks++;
-    rqPesosApplyView(win); // the pesos look is there from the first moment
+    rqPesosApplyView(win, p.rqPesosCtx.usd); // the pesos look is there from the first moment
     if (ticks < 8 && !(win.ttIsSettled && win.ttIsSettled())) return; // the costs wait until the QT has read its own saved version (it can bring a 0 over the address)
     const el = win.document.getElementById('freightMx'), imp = win.document.getElementById('importCost'), fx = parseFloat((win.document.getElementById('fxRate') || {}).value) || 0;
     // Import Cost: the QT's saved version can bring its own 0/blank over the address — fill 625 once, then it is the trader's
