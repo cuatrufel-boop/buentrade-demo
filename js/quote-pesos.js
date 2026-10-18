@@ -168,6 +168,7 @@ const RQ_PESOS_MIRROR = [ // [dollar-column output, Colombia output it shows, ho
   ['outWeight', 'outWeightMx', 'text'],
 ];
 function rqPesosMirror(win){
+  if (win.__rqPesosOff) return; // the generic tool's switch is on USD
   const d = win.document, el = (id) => d.getElementById(id);
   const fx = parseFloat((el('fxRate') || {}).value) || 0;
   if (!(fx > 0)) return;
@@ -210,6 +211,7 @@ function rqPesosWatch(win){
 const RQ_PESOS_VIEW_CSS = '#mxProfitBlock, #profitColDivider, .qb-item.qb-out:has(#financeOutTopMx), .prod-row > .prod-top + .section-label, .prod-row > .divider, .prod-row > .prod-grid .mini:has(#prodWeight0), .prod-row > .prod-grid .mini:has(#prodSellBorder0) { display: none !important; } .prod-row > .prod-grid { grid-template-columns: minmax(0, 1fr) !important; justify-items: center; } .prod-row > .prod-grid .mini { width: 60%; } .prod-row > .prod-grid { margin-bottom: 12px; }';
 function rqPesosApplyView(win, amount, cur){
   const doc = win.document;
+  win.__rqPesosOff = false;
   if (!doc.getElementById('rq_pesos_only_css')){ const st = doc.createElement('style'); st.id = 'rq_pesos_only_css'; st.textContent = RQ_PESOS_VIEW_CSS; doc.head.appendChild(st); }
   // top bar balanced around Confirm Price: Terms on one side, Exchange Rate + Finance Cost on the other (with the Colombia chip out of sight the left side was twice as long)
   const fxWrap = doc.getElementById('qbMxFxWrap'), rightCell = doc.querySelector('#qbBar > div[style*="grid-column:3"]');
@@ -265,6 +267,63 @@ function rqPesosCaptureCalc(p, win){
   delete p.rqLastCalc.pesosQt;
   if (!p.rqPesosCtx || !k || !k.inp || !(k.totalSaleMx > 0) || !(k.inp.fxRate > 0) || !(k.totalWeightKg > 0) || !k.inp.importCostFilled || !k.inp.freightMxFilled) return;
   p.rqLastCalc.pesosQt = { perKg: k.totalSaleMx / k.totalWeightKg, total: k.totalSaleMx, fx: k.inp.fxRate, dest: p.rqPesosCtx.dest, rateId: p.rqPesosCtx.rateId, freightAmount: p.rqPesosCtx.usd, freightCurrency: p.rqPesosCtx.cur, importCost: k.inp.importCost };
+}
+
+// ---- The generic Quoting Tool (Quotes tab): ONE switch, USD | COP, to quote without sending anywhere (owner 2026-10-18). USD is the QT exactly as it is; COP is the same pesos view
+// a pesos customer gets (kilos, Selling COP/kg, Import Cost 625, destination profit) with the Colombian freight typed in USD. Turning it back to USD restores the dollar QT's own numbers.
+function rqPesosRemoveView(win){
+  const d = win.document;
+  win.__rqPesosOff = true;
+  const st = d.getElementById('rq_pesos_only_css'); if (st) st.remove();
+  const box = d.getElementById('pt_freight_usd'); if (box) box.remove();
+  const anchor = d.getElementById('mexicanFreightField'), hint = d.getElementById('freightMxUsdHint');
+  if (anchor) anchor.style.setProperty('display', 'none'); // a dollar quote has no Colombian freight box
+  if (hint) hint.style.removeProperty('display');
+  const fxWrap = d.getElementById('qbMxFxWrap'), leftCell = d.querySelector('#qbBar > div[style*="grid-column:1"]');
+  if (fxWrap && leftCell && fxWrap.parentNode !== leftCell) leftCell.appendChild(fxWrap);
+  const sec = d.querySelector('.profit-col .section-label'); if (sec) sec.textContent = 'Border (USD)';
+  const lb = d.getElementById('outProfitLb'); if (lb && lb.previousElementSibling) lb.previousElementSibling.textContent = 'Profit / Lb';
+}
+function rqGenericQtSwitch(frame){
+  let tries = 0;
+  const wait = setInterval(() => {
+    let win; try { win = frame.contentWindow; } catch (e) { return; }
+    if (++tries > 80){ clearInterval(wait); return; }
+    if (!win || !win.__calc || !win.document.getElementById('qbBar') || !win.document.querySelector('#qbBar > div[style*="grid-column:3"]')) return;
+    clearInterval(wait);
+    const d = win.document, el = (id) => d.getElementById(id);
+    if (el('pt_switch')) return;
+    const g = d.createElement('div'); g.className = 'qb-group'; g.id = 'pt_switch';
+    g.innerHTML = '<div class="qb-group-label">Quote in</div><div class="qb-group-row"><div id="pt_sw" role="switch" aria-checked="false" tabindex="0" style="display:inline-flex;height:30px;border:1px solid rgba(255,255,255,.28);border-radius:8px;overflow:hidden;cursor:pointer;font:700 12.5px inherit;"><span id="pt_sw_usd" style="padding:0 14px;display:flex;align-items:center;">USD</span><span id="pt_sw_mxn" style="padding:0 14px;display:flex;align-items:center;">COP</span></div></div>';
+    d.querySelector('#qbBar > div[style*="grid-column:3"]').insertBefore(g, d.querySelector('#qbBar > div[style*="grid-column:3"]').firstChild);
+    let on = false, setImport = false, timer = null;
+    const paint = () => { const a = el('pt_sw_usd'), b = el('pt_sw_mxn'), sw = el('pt_sw'); sw.setAttribute('aria-checked', on ? 'true' : 'false');
+      [[a, !on], [b, on]].forEach(([n, act]) => { n.style.background = act ? '#E8B54C' : 'transparent'; n.style.color = act ? '#10203a' : 'rgba(255,255,255,.85)'; }); };
+    const pushFreight = () => { // the freight typed in USD goes into the QT's own MX$ field at the QT's own rate ('0' counts as filled: the pesos panel shows from the first moment)
+      const fx = parseFloat(el('fxRate').value) || 0, v = el('pt_freight_usd_val'); if (!v) return;
+      const amt = parseFloat(String(v.value).replace(/,/g, '')) || 0, want = fx > 0 ? rqPesosFreightMx(amt, 'USD', fx) : 0, cur = parseFloat(el('freightMx').value);
+      if (el('freightMx').value === '' || Math.abs((isNaN(cur) ? -1 : cur) - want) > 0.005){ el('freightMx').value = want.toFixed(2); win.buildProductRows(); win.calc(); } };
+    const apply = () => {
+      if (on){
+        rqPesosApplyView(win, 0, 'USD');
+        const v = el('pt_freight_usd_val'); v.disabled = false; v.placeholder = '0';
+        if (!v.__wired){ v.__wired = true; v.addEventListener('input', () => { el('freightMx').value = ''; pushFreight(); }); }
+        if (!(parseFloat(el('importCost').value) > 0)){ el('importCost').value = RQ_PESOS_IMPORT_COST_USD; setImport = true; }
+        el('freightMx').value = ''; pushFreight();
+        clearInterval(timer); timer = setInterval(() => { if (on) pushFreight(); }, 700); // follows the day's rate
+      } else {
+        clearInterval(timer);
+        rqPesosRemoveView(win);
+        if (setImport){ el('importCost').value = ''; setImport = false; }
+        el('freightMx').value = '';
+        win.buildProductRows(); win.calc();
+      }
+      paint();
+    };
+    el('pt_sw').addEventListener('click', () => { on = !on; apply(); });
+    el('pt_sw').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); on = !on; apply(); } });
+    paint();
+  }, 300);
 }
 
 setTimeout(() => { rqLoadMxnCurrency(); }, 1500); // learned in the background as soon as the page is up

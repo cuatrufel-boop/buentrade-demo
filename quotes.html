@@ -1884,7 +1884,7 @@ function setQuoteTab(tab){
   if (tab === 'messaging') qmLoad();
   if (tab === 'quotingtool'){
     const frame = document.getElementById('qQuotingToolFrame');
-    if (!frame.src) frame.src = 'trading-tool.html?embed=1&v=' + Date.now();
+    if (!frame.src){ frame.src = 'trading-tool.html?embed=1&v=' + Date.now(); frame.addEventListener('load', () => rqGenericQtSwitch(frame)); } // the generic tool gets its one USD | COP switch (js/quote-pesos.js)
   }
 }
 
