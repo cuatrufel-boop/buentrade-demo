@@ -467,7 +467,7 @@
   /* Standalone, the quickbar sits flush under the navy top navbar (no gap to round against).
      Embedded, it's the first thing visible inside the rounded card — round its own corners
      and pull it in a touch so it doesn't look like a flush, sharp-edged banner. */
-  html.embed-mode .quickbar{border-radius:14px; margin:0 4px;}
+  html.embed-mode .quickbar{border-radius:14px; margin:0 18px;} /* the bar's left and right edges are the cards' (the grid has 18px sides): it was 14px wider than the cards on each side — design only (owner 2026-10-18) */
   /* Real ask 2026-09-26 ("el close es mediocre", picked option D): icon-only round close in Market Flash's bright blue —
      blue ring + tinted glass, fills solid blue with a glow on hover. Same rule on every page that has it. */
   .tt-overlay-close{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:rgba(30,106,219,.25);border:1.5px solid #5AAAFF;color:#5AAAFF;transition:background .18s,box-shadow .18s,color .18s;}
