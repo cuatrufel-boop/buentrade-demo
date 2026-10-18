@@ -5772,8 +5772,12 @@ function rqPrefillSellingPrice(id){
   const current = parseFloat(inp.value) || 0;
   if (current > 0 && (!p || current !== p.rqAutoSuggestedSell)) return; // trader's own number — leave it
   const k = calc.inp.payDays * (calc.inp.financeRate / 100);
-  const saleNeeded = (RQ_TARGET_PROFIT_USD + calc.totalCostUSD + calc.directCostsBorder) / (1 - k);
-  const sellBorder = saleNeeded / calc.totalWeight;
+  let sellBorder = (RQ_TARGET_PROFIT_USD + calc.totalCostUSD + calc.directCostsBorder) / (1 - k) / calc.totalWeight;
+  // a pesos QT (js/quote-pesos.js): the $1,000 is the DESTINATION profit — what it shows — so the border price is solved against the destination numbers once its Colombian freight and Import Cost are in
+  if (p && p.rqPesosCtx && calc.inp.fxRate > 0 && calc.inp.importCostFilled && calc.inp.freightMxFilled){
+    const fr = calc.inp.freightMx / calc.inp.fxRate, saleB = (RQ_TARGET_PROFIT_USD + calc.totalCostUSD + calc.directCostsBorder + fr) / (1 - k) - (calc.inp.importCost + fr);
+    sellBorder = saleB / calc.totalWeight;
+  }
   if (!isFinite(sellBorder) || sellBorder <= 0) return;
   // 4 decimals, not 2 — at a 40,000 lb load a single cent/lb swings total profit by $400, so
   // rounding to cents alone was landing hundreds of dollars off the $1000 target.

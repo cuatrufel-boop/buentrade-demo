@@ -179,6 +179,27 @@ function rqPesosMirror(win){
     else a.textContent = b.textContent;
     if (/k-val/.test(b.className)) a.className = b.className; // keeps its red / amber state
   });
+  const hero = el('borderHeroKpi');
+  if (hero){
+    const hl = hero.querySelector('.k-label'); if (hl && hl.textContent !== 'Profit (Direct)') hl.textContent = 'Profit (Direct)';
+    if (!el('pt_summar_hero')){
+      const h2 = d.createElement('div'); h2.className = 'kpi hero-sm'; h2.id = 'pt_summar_hero';
+      h2.innerHTML = '<span class="k-label">Profit (Summar)</span><span class="k-val" id="pt_summar_profit">$0.00</span>';
+      hero.parentNode.insertBefore(h2, hero.nextSibling);
+    }
+  }
+  // Direct profit and Summar profit together (owner 2026-10-18): the Factoring card follows the destination too — sale, cost and direct costs of the destination (dollars), the card's own
+  // fee percentages — and the "Profit after Summar" is also shown right under the direct profit.
+  const num = (id) => { const e = el(id); return e ? parseFloat(String(e.textContent).replace(/[^0-9.\-]/g, '')) : NaN; };
+  const sale = num('outSellTotalMx') / fx, cost = num('outProdCostMx') / fx, direct = num('outDirectMx') / fx;
+  const pct = num('summarFeeTransit') + num('summarFeeBase') + num('summarFeeExtra');
+  if ([sale, cost, direct, pct].every((n) => !isNaN(n))){
+    const gross = sale - cost - direct, fee = sale * pct / 100, after = gross - fee;
+    const put = (id, v) => { const e = el(id); if (e) e.textContent = fmt(v); };
+    put('summarProfitBefore', gross); put('summarSOValue', sale); put('summarFeeAmount', fee); put('summarProfitAfter', after);
+    const sa = el('summarProfitAfter'); if (sa) sa.className = 'k-val' + (after < 0 ? ' neg' : '');
+    const h = el('pt_summar_profit'); if (h){ h.textContent = fmt(after); h.className = 'k-val' + (after < 0 ? ' neg' : ''); }
+  }
   const lab = (id, text) => { const e = el(id); const l = e && e.previousElementSibling; if (l && l.textContent !== text) l.textContent = text; };
   lab('outProfitLb', 'Profit / Kg');
   const sec = d.querySelector('.profit-col .section-label'); if (sec && sec.textContent !== 'Destination (USD)') sec.textContent = 'Destination (USD)';
@@ -236,13 +257,13 @@ function rqPesosFillQt(id){
     if (ticks < 8 && !(win.ttIsSettled && win.ttIsSettled())) return; // the costs wait until the QT has read its own saved version (it can bring a 0 over the address)
     const el = win.document.getElementById('freightMx'), imp = win.document.getElementById('importCost'), fx = parseFloat((win.document.getElementById('fxRate') || {}).value) || 0;
     // Import Cost: the QT's saved version can bring its own 0/blank over the address — fill 625 once, then it is the trader's
-    if (imp && !p.rqPesosImportDone && (parseFloat(imp.value) || 0) === 0){ imp.value = RQ_PESOS_IMPORT_COST_USD; win.buildProductRows(); win.calc(); }
+    if (imp && !p.rqPesosImportDone && (parseFloat(imp.value) || 0) === 0){ imp.value = RQ_PESOS_IMPORT_COST_USD; win.buildProductRows(); win.calc(); rqPrefillSellingPrice(id); }
     if (imp) p.rqPesosImportDone = true;
     if (!el || !(fx > 0)) return;
     const want = rqPesosFreightMx(p.rqPesosCtx.usd, p.rqPesosCtx.cur, fx).toFixed(2), cur = parseFloat(el.value) || 0;
     // only touch the field while it still holds nothing, or what we put there (the trader's own number stays)
     if (Math.abs(cur - parseFloat(want)) > 0.005 && (cur === 0 || (lastSet !== null && Math.abs(cur - lastSet) < 0.005) || p.rqPesosParamValue === cur)){
-      el.value = want; lastSet = parseFloat(want); win.buildProductRows(); win.calc();
+      el.value = want; lastSet = parseFloat(want); win.buildProductRows(); win.calc(); rqPrefillSellingPrice(id);
     }
   }, 700);
 }
