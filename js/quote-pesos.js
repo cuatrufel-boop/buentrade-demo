@@ -158,6 +158,40 @@ function rqPesosToolParams(p, params){
   if (f0 > 0) params.set('freightMx', String(f0));
 }
 // keeps Colombian freight exact against the QT's own (rounded-up) rate while the QT is open; never overwrites a number the trader typed
+// The Profitability of the pesos QT is the DESTINATION profit, in dollars (owner 2026-10-18: "si le muevo números no me cambia el profit… ese profit no es border sino destino"):
+// the QT's own Colombia outputs (what the Selling COP/kg, Colombian freight, import… produce) divided by the day's rate, shown in the dollar column. Display only — the QT's formulas
+// are not touched and its Border numbers are still computed; they are just not what this view shows.
+const RQ_PESOS_MIRROR = [ // [dollar-column output, Colombia output it shows, how]
+  ['outProfit', 'outProfitMx', 'usd'], ['outProdCost', 'outProdCostMx', 'usd'], ['outProfitLb', 'outProfitKgMx', 'usd'], ['outMarkup', 'outMarkupMx', 'usd'],
+  ['outSellTotal', 'outSellTotalMx', 'usd'], ['outProdProfit', 'outProdProfitMx', 'usd'], ['outDirect', 'outDirectMx', 'usd'], ['outAdditional', 'outAdditionalMx', 'usd'],
+  ['financeOutTop', 'financeOutTopMx', 'usd'], ['outNetMargin', 'outNetMarginMx', 'text'], ['outGrossMargin', 'outGrossMarginMx', 'text'], ['outMarkupPct', 'outMarkupPctMx', 'text'],
+  ['outWeight', 'outWeightMx', 'text'],
+];
+function rqPesosMirror(win){
+  const d = win.document, el = (id) => d.getElementById(id);
+  const fx = parseFloat((el('fxRate') || {}).value) || 0;
+  if (!(fx > 0)) return;
+  const fmt = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  RQ_PESOS_MIRROR.forEach(([to, from, how]) => {
+    const a = el(to), b = el(from);
+    if (!a || !b || !String(b.textContent).trim()) return;
+    if (how === 'usd'){ const n = parseFloat(String(b.textContent).replace(/[^0-9.\-]/g, '')); if (isNaN(n)) return; a.textContent = fmt(n / fx); }
+    else a.textContent = b.textContent;
+    if (/k-val/.test(b.className)) a.className = b.className; // keeps its red / amber state
+  });
+  const lab = (id, text) => { const e = el(id); const l = e && e.previousElementSibling; if (l && l.textContent !== text) l.textContent = text; };
+  lab('outProfitLb', 'Profit / Kg');
+  const sec = d.querySelector('.profit-col .section-label'); if (sec && sec.textContent !== 'Destination (USD)') sec.textContent = 'Destination (USD)';
+}
+function rqPesosWatch(win){
+  if (win.__rqPesosWatch) return;
+  win.__rqPesosWatch = true;
+  const run = () => { try { rqPesosMirror(win); } catch (e) { /* the QT is still loading */ } };
+  const obs = new win.MutationObserver(run); // watches only the Colombia outputs, which the mirror never writes: no loop
+  RQ_PESOS_MIRROR.forEach(([, from]) => { const b = win.document.getElementById(from); if (b) obs.observe(b, { childList: true, characterData: true, subtree: true }); });
+  run();
+}
+
 // The pesos QT (owner 2026-10-18): the exchange rate comes from the web (the QT's own), Weight in kilos, Purchase price in dollars, Selling price in pesos (Selling COP/kg =
 // Selling $/lb (adj.) × 2.20462 × the rate — the QT's own Colombia formula), US freight, Inspection and Import Cost in dollars, Colombian freight in the currency of the carrier's own
 // tariff (USD or COP). Profitability stays in dollars. View only, no formula touched.
@@ -168,6 +202,7 @@ function rqPesosApplyView(win, amount, cur){
   // top bar balanced around Confirm Price: Terms on one side, Exchange Rate + Finance Cost on the other (with the Colombia chip out of sight the left side was twice as long)
   const fxWrap = doc.getElementById('qbMxFxWrap'), rightCell = doc.querySelector('#qbBar > div[style*="grid-column:3"]');
   if (fxWrap && rightCell && fxWrap.parentNode !== rightCell) rightCell.insertBefore(fxWrap, rightCell.firstChild);
+  rqPesosWatch(win); // the Profitability follows the destination numbers (see rqPesosMirror)
   const anchor = doc.getElementById('mexicanFreightField'), hint = doc.getElementById('freightMxUsdHint');
   let box = doc.getElementById('pt_freight_usd');
   if (cur === 'COP'){ // the carrier quotes in pesos: the QT's own MX$ field stays
