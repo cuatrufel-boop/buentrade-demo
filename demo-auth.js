@@ -1,7 +1,11 @@
 // Demo login: replaces Firebase. Nothing here reaches the real BUENTRADE system.
 (function(){
   var KEY = 'bt_demo_session';
-  var EMAIL = "invitado@buentrade.demo", HASH = "912b1ae1e94aa5ce8ef040ff85b3417a9a19d3638dcfba189d81457e197eac41";
+  // email -> SHA-256 of its password. "invitado" is the friend's login and never changes; "felipe" is the owner's.
+  var ACCOUNTS = {
+    "invitado@buentrade.demo": "912b1ae1e94aa5ce8ef040ff85b3417a9a19d3638dcfba189d81457e197eac41",
+    "felipe@buentrade.demo": "140719f7228f5f898e8059194584b6b2bdf2f3db6d984b86700637df54eaa3d0"
+  };
   var listeners = [];
   function mk(email){ return { email: email, emailVerified: true, uid: 'demo-user', displayName: 'Demo', getIdToken: function(){ return Promise.resolve('demo'); } }; }
   var current = null;
@@ -24,9 +28,10 @@
     },
     signInWithEmailAndPassword: function(email, pass){
       return sha256(String(pass || '')).then(function(h){
-        if (String(email || '').trim().toLowerCase() === EMAIL && h === HASH) {
-          current = mk(EMAIL);
-          try { localStorage.setItem(KEY, EMAIL); } catch(e){}
+        var em = String(email || '').trim().toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(ACCOUNTS, em) && ACCOUNTS[em] === h) {
+          current = mk(em);
+          try { localStorage.setItem(KEY, em); } catch(e){}
           setTimeout(fire, 0);
           return { user: current };
         }
