@@ -1227,7 +1227,7 @@ function loadTTPanel(id){
     hideExtras: '1', showExtras: (o.extra_fields || []).join(','),
     tramiteAduanal: String(o.tramite_aduanal_amount || 0), bodegaAmericana: String(o.bodega_americana_amount || 0),
     hideCustomsBrokerage: imported ? '0' : '1',
-    hideColombianFreight: imported ? '0' : '1', freightMx: String(o.mexican_freight_mxn || 0),
+    hideMexicanFreight: imported ? '0' : '1', freightMx: String(o.mexican_freight_mxn || 0),
     label: `${o.product_spec || o.product_name || ''} — ${o.plant_name || ''}`.slice(0, 70),
     offerId: o.id, plantId: o.plant_id || '',
     v: String(Date.now()),
@@ -1248,7 +1248,7 @@ async function markOffer(id, status){
 
 // Winning is the real event — sent_offers.markWon is one atomic transaction on the API side:
 // stamps a consecutive order number, flips the offer, and creates the PO (plant), SO (customer),
-// a freight_order per leg actually part of this deal (US and/or Colombian, each resolved from the
+// a freight_order per leg actually part of this deal (US and/or Mexican, each resolved from the
 // same provider_rates row the offer itself was built from), and any customs costs charged. This
 // used to be ~55 lines of that same logic duplicated here (and diverging from trading-tool.html's
 // own copy, which only ever handled the US leg) — now there's exactly one implementation.
@@ -1306,7 +1306,7 @@ async function markWon(id, overrideCreditCheck, confirmedDeliveryDate){
 // isn't really an order until its required documents actually go out, right at the moment it's
 // won, not left for the trader to remember from the row menu later. PO (plant), SO (customer), and
 // customs always apply. FO (carrier) is the ONE conditional one — only when this deal actually has
-// a US and/or Colombian freight leg booked (a Seaboard-style self-delivered load has neither, so
+// a US and/or Mexican freight leg booked (a Seaboard-style self-delivered load has neither, so
 // there's no carrier to send anything to — explicit ask: "solo si tiene un flete americano hacemos
 // FO"). Customs is NOT conditional — corrected 2026-09-05 after wrongly gating it on an agency
 // being on file ("nunca dije solo si hay doc de aduana SIEMPRE hay que avisar y mandar a aduana"):

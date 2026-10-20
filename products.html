@@ -436,7 +436,7 @@ auth.onAuthStateChanged(user => {
     <!-- No Photo/Spec Sheet/Brand here on purpose — this is the SHARED product identity, the same
          cut many different plants offer. Those three are per-plant (a given cut has a different
          brand/photo/spec at every plant that sells it) — set them from that plant's own product
-         row in Ingredient Suppliers, not here. -->
+         row in Meat Packers, not here. -->
     <!-- Every selection first, all together — then the panel below just shows what got filled
          in. Nothing to type until you've picked everything that can be picked. -->
     <div class="section-title">Classification</div>
@@ -557,7 +557,7 @@ auth.onAuthStateChanged(user => {
   <div class="card" id="productListCard">
     <!-- Real ask 2026-09-09 ("depende de planta no de producto... dejalo como estaba antes, una
          sola columna"): a Spec/photo link was tried here, but that data lives per-plant
-         (plant_products.spec_url/photo_url, uploaded from Ingredient Suppliers) — showing it on the
+         (plant_products.spec_url/photo_url, uploaded from Meat Packers) — showing it on the
          shared product row would misrepresent it as belonging to the product itself. Back to one
          column, same transparent table convention as collections.html/quotes.html. -->
     <div class="prod-table-wrap table-scroll">
@@ -1438,7 +1438,7 @@ function checkNameDuplicate(){
     return `${escapeHtml(p.name_en || p.name)} — ${escapeHtml(bits.join(', '))}`;
   };
   // Informational only here — no plant context on this screen to link an existing product to
-  // (that action lives in Ingredient Suppliers' own "New product for this plant" form instead).
+  // (that action lives in Meat Packers' own "New product for this plant" form instead).
   warningEl.innerHTML = '⚠️ Possible duplicate — already in the catalog: ' + matches.map(p => `<strong>${specFor(p)}</strong>`).join('; ');
 }
 

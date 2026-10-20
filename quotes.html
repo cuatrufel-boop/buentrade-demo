@@ -1657,7 +1657,7 @@ function rqInlineSessionOpen(){
 // same screen at once, qOpenPendingPlantInline just adds its one plant alongside whatever's
 // already there (see there) instead, so there's no separate session state left to track here.
 
-// loadsPhrase already reads e.g. "need 3 loads delivered to the border (Buenaventura/Cartagena) on
+// loadsPhrase already reads e.g. "need 3 loads delivered to the border (McAllen/Laredo) on
 // Aug 22, 26 and 31" — one consolidated ask per plant, never split across separate messages.
 const RQ_EMAIL_TEMPLATES = [
   (spec, loadsPhrase) => `Hi {name}, I'm looking for ${spec} — ${loadsPhrase}. Let me know your availability and if docs are included.`,
@@ -1884,7 +1884,7 @@ function setQuoteTab(tab){
   if (tab === 'messaging') qmLoad();
   if (tab === 'quotingtool'){
     const frame = document.getElementById('qQuotingToolFrame');
-    if (!frame.src){ frame.src = 'trading-tool.html?embed=1&v=' + Date.now(); frame.addEventListener('load', () => rqGenericQtSwitch(frame)); } // the generic tool gets its one USD | COP switch (js/quote-pesos.js)
+    if (!frame.src){ frame.src = 'trading-tool.html?embed=1&v=' + Date.now(); frame.addEventListener('load', () => rqGenericQtSwitch(frame)); } // the generic tool gets its one USD | MXN switch (js/quote-pesos.js)
   }
 }
 
@@ -2170,7 +2170,7 @@ async function qmRenderNews(){
     qmRender(); return;
   }
   document.getElementById('qm_count').textContent = `${qmNews.length} news item${qmNews.length === 1 ? '' : 's'} (last 14 days)`;
-  const TOPIC = { avian_flu: 'Avian flu', border: 'Border', mx_prices: 'Colombia prices', us_industry: 'US industry' };
+  const TOPIC = { avian_flu: 'Avian flu', border: 'Border', mx_prices: 'Mexico prices', us_industry: 'US industry' };
   el.innerHTML = qmNews.length ? rqTableSection(qmNews.map(n => `<tr>
       <td style="white-space:nowrap;"><span class="rq-sheet-pill ${n.topic === 'avian_flu' ? 'exp' : n.topic === 'border' ? 'wait' : 'ok'}">${escapeHtml(TOPIC[n.topic] || n.topic)}</span></td>
       <td style="text-align:left;font-size:12.5px;line-height:1.45;">${escapeHtml(n.fact_es)}<span class="muted" style="display:block;font-size:11px;">${escapeHtml([...(n.mx_states || []), ...(n.us_states || [])].join(', '))}</span></td>
@@ -4696,7 +4696,7 @@ async function rqFetchPlantLinksForProduct(productId){
     // was silently invisible here.
     return rqPlantOfferObj(plant, link, link.product_id);
   }).filter(Boolean);
-  // Each price row's own ship-from city (set on Ingredient Suppliers' Products & Prices tab) picks the
+  // Each price row's own ship-from city (set on Meat Packers' Products & Prices tab) picks the
   // cheapest carrier for that exact city automatically — same rule the user gave 2026-08-30
   // ("Denison IA, KGL $5000 vs EBI $4900, escoge la mas baja"). A price with no city on file yet
   // falls back to the conservative average-of-all-rates default instead, never a number that
@@ -4887,7 +4887,7 @@ function removeRqPlant(plantId){
 // toggle here to keep in sync with it.
 // Purchase $/lb, Location, Documents, Delivery location — same fields, same onchange handlers,
 // used to render inline in the closed list row; now only rendered inside the full-screen
-// overlay's own controls bar (see rqToggleCalculator), since rqSetUsFreightRate/rqSetColombianDest/
+// overlay's own controls bar (see rqToggleCalculator), since rqSetUsFreightRate/rqSetMexicanDest/
 // rqToggleDocs already push live updates into an open calculator via rqSyncOpenCalculator — they
 // were always meant to be adjusted while the Trading Tool is on screen, not before opening it.
 // Custom dropdown state — which one (if any) is open, keyed 'usf:<plantId>' / 'mx:<plantId>' so
@@ -4930,9 +4930,9 @@ function rqPickUsFreightRate(plantId, rateId){
   rqSetUsFreightRate(plantId, rateId); // already calls renderRqPlants() + rqSyncOpenCalculator()
   rqRefreshDropdownHosts();
 }
-function rqPickColombianDest(plantId, rateId){
+function rqPickMexicanDest(plantId, rateId){
   rqOpenDropdownKey = null;
-  rqSetColombianDest(plantId, rateId);
+  rqSetMexicanDest(plantId, rateId);
   rqRefreshDropdownHosts();
 }
 
@@ -4975,11 +4975,11 @@ function rqUsFreightDropdownHtml(p){
     </div>`;
 }
 
-function rqColombianDestDropdownHtml(p){
+function rqMexicanDestDropdownHtml(p){
   const key = 'mx:' + p.id;
   const isOpen = rqOpenDropdownKey === key;
-  const rates = rqColombianFreightRates();
-  const selected = p.rqColombianDestRateId;
+  const rates = rqMexicanFreightRates();
+  const selected = p.rqMexicanDestRateId;
   const hasValue = !!selected;
   let labelHtml = `Border <span class="rq-ddown-price">$0</span>`;
   if (selected){
@@ -4987,12 +4987,12 @@ function rqColombianDestDropdownHtml(p){
     if (r) labelHtml = `${escapeHtml(r.destination || 'Destination')} <span class="rq-ddown-price">$${Number(r.rate).toFixed(2)}</span>`;
   }
   const optionsHtml = `
-    <div class="rq-ddown-option${!selected ? ' selected' : ''}" onclick="rqPickColombianDest('${p.id}','')">
+    <div class="rq-ddown-option${!selected ? ' selected' : ''}" onclick="rqPickMexicanDest('${p.id}','')">
       <span class="rq-ddown-option-name">Border</span>
       <span class="rq-ddown-option-price">$0</span>
     </div>
     ${rates.length ? `<div class="rq-ddown-divider"></div>${rates.map(r => `
-    <div class="rq-ddown-option${selected === r.id ? ' selected' : ''}" onclick="rqPickColombianDest('${p.id}','${r.id}')">
+    <div class="rq-ddown-option${selected === r.id ? ' selected' : ''}" onclick="rqPickMexicanDest('${p.id}','${r.id}')">
       <span class="rq-ddown-option-name">${escapeHtml(r.destination || 'Destination')}</span>
       <span class="rq-ddown-option-price">$${Number(r.rate).toFixed(2)}</span>
     </div>`).join('')}` : `<div class="rq-ddown-empty">No delivered destinations on file yet.</div>`}
@@ -5017,10 +5017,10 @@ function rqColombianDestDropdownHtml(p){
 // Emptied out 2026-09-07: US Freight, Documents (docs on/off), and Delivery location all used to
 // float here as a separate control bar above the calculator. Every one of them just drove a
 // number the calculator's own Direct Costs already shows — Inspection Cases/Combos (Documents),
-// Colombian Freight/Customs Processing/US Warehouse Handling (Delivery location) — real, freely
+// Mexican Freight/Customs Processing/US Warehouse Handling (Delivery location) — real, freely
 // editable $ fields there now, no separate picker needed (see applyEmbedParams in
 // trading-tool.html: those three fields are unconditionally visible). rqToggleDocs,
-// rqColombianDestDropdownHtml, rqSetColombianDest etc. are left defined but unused rather than
+// rqMexicanDestDropdownHtml, rqSetMexicanDest etc. are left defined but unused rather than
 // deleted, same as rqUsFreightDropdownHtml — nothing here was asked to change beyond this.
 function rqPlantFieldsHtml(p){
   return '';
@@ -5349,23 +5349,23 @@ function rqCustomsRate(serviceType, providerId){
 // The customer matched to this plant's Delivery location (if any) is whose customs agency
 // applies — same match used to show "Customer: ..." under the field.
 function rqCustomsAgencyForPlant(p){
-  if (!p.rqColombianDestRateId) return null;
-  const rate = rqColombianFreightRates().find(r => r.id === p.rqColombianDestRateId);
+  if (!p.rqMexicanDestRateId) return null;
+  const rate = rqMexicanFreightRates().find(r => r.id === p.rqMexicanDestRateId);
   const customer = rate ? rqCustomersForDestination(rate.destination)[0] : null;
   return customer ? customer.customs_agency_provider_id : null;
 }
 
-function rqColombianFreightRates(){
+function rqMexicanFreightRates(){
   return rqAllProviderRates
     .filter(r => r.service_type === 'mexican_freight')
     .slice()
     .sort((a, b) => (a.destination || '').localeCompare(b.destination || ''));
 }
 
-function rqSetColombianDest(plantId, rateId){
+function rqSetMexicanDest(plantId, rateId){
   const p = rqSelectedPlants.find(x => x.id === plantId);
   if (!p) return;
-  p.rqColombianDestRateId = rateId || null;
+  p.rqMexicanDestRateId = rateId || null;
   rqInvalidateCalc(p);
   renderRqPlants();
   rqSyncOpenCalculator(p);
@@ -5375,7 +5375,7 @@ function rqSetColombianDest(plantId, rateId){
 // and the system tells you which matched customer(s) buy there, instead of making the trader
 // pick a customer by hand just to look up their city. Case-insensitive, either string containing
 // the other, since city names are typed slightly differently in different places (e.g. "CDMX"
-// vs "Bogotá").
+// vs "Mexico City").
 function rqCustomersForDestination(destText){
   const dest = (destText || '').trim().toLowerCase();
   if (!dest) return [];
@@ -5386,15 +5386,15 @@ function rqCustomersForDestination(destText){
   });
 }
 
-// Colombian Freight is stored in USD in Master Data — converted to COP here using a live rate
-// (same public sources trading-tool.html itself uses), since the Trading Tool's Colombian Freight
-// field has always been COP-denominated. If the rate hasn't loaded yet, this stays null and the
+// Mexican Freight is stored in USD in Master Data — converted to MXN here using a live rate
+// (same public sources trading-tool.html itself uses), since the Trading Tool's Mexican Freight
+// field has always been MXN-denominated. If the rate hasn't loaded yet, this stays null and the
 // field is simply left for the trader to fill in by hand inside the real Trading Tool.
 let rqCachedFxRate = null;
 async function rqFetchExchangeRate(){
   const sources = [
     'https://open.er-api.com/v6/latest/USD',
-    'https://api.frankfurter.dev/v1/latest?from=USD&to=COP',
+    'https://api.frankfurter.dev/v1/latest?from=USD&to=MXN',
     'https://api.exchangerate-api.com/v4/latest/USD',
   ];
   for (const url of sources){
@@ -5402,14 +5402,14 @@ async function rqFetchExchangeRate(){
       const res = await fetch(url);
       if (!res.ok) continue;
       const data = await res.json();
-      const rate = data && data.rates && data.rates.COP;
+      const rate = data && data.rates && data.rates.MXN;
       if (rate){ rqCachedFxRate = rate; return; }
     } catch(e){ /* try next source */ }
   }
 }
 
-function rqColombianFreightMxnForPlant(p){
-  const rate = rqAllProviderRates.find(r => r.id === p.rqColombianDestRateId);
+function rqMexicanFreightMxnForPlant(p){
+  const rate = rqAllProviderRates.find(r => r.id === p.rqMexicanDestRateId);
   if (!rate || !rqCachedFxRate) return null;
   return Math.round(rate.rate * rqCachedFxRate * 100) / 100;
 }
@@ -5446,14 +5446,14 @@ function rqBuildToolParams(p){
   // already clean 2-decimal money, so this is a no-op in practice, just a defensive floor.
   const freight = showFreight ? Math.round((rqFreightForPlant(p) || 0) * 100) / 100 : 0;
   const inspection = rqInspectionForPlant(p);
-  // "Border" (the default) on Delivery location means no customs, no Colombian Freight — same
+  // "Border" (the default) on Delivery location means no customs, no Mexican Freight — same
   // one-control pattern as US Freight above. Picking an actual destination implies Imported and
-  // pulls both customs costs plus that destination's Colombian Freight rate.
-  const imported = !!p.rqColombianDestRateId;
+  // pulls both customs costs plus that destination's Mexican Freight rate.
+  const imported = !!p.rqMexicanDestRateId;
   const customsAgencyId = imported ? rqCustomsAgencyForPlant(p) : null;
   const tramiteAduanal = imported ? rqCustomsRate('tramite_aduanal', customsAgencyId) : 0;
   const bodegaAmericana = imported ? rqCustomsRate('bodega_americana', customsAgencyId) : 0;
-  const freightMx = imported ? rqColombianFreightMxnForPlant(p) : null;
+  const freightMx = imported ? rqMexicanFreightMxnForPlant(p) : null;
   // Same rate lookup as tramiteAduanal/bodegaAmericana, same customs agency, and same "only when
   // actually importing" gate — these used to run unconditionally with providerId null, which
   // pulled whichever provider happened to have a rate on file even for a Border-only (not
@@ -5487,10 +5487,10 @@ function rqBuildToolParams(p){
     inspection: String(inspection),
     hideInspection: inspection > 0 ? '0' : '1',
     hideImportCost: '1', // generic Import Cost field stays out of the Quotes flow entirely
-    // The Trading Tool only activates its real Colombia (COP/kg) price panel once both Import
-    // Cost and Colombian Freight are filled in — Quotes never shows/edits Import Cost itself
+    // The Trading Tool only activates its real Mexico (MXN/kg) price panel once both Import
+    // Cost and Mexican Freight are filled in — Quotes never shows/edits Import Cost itself
     // (customs costs come from tramiteAduanal/bodegaAmericana instead), so without this the
-    // Colombian Freight number sat in Direct Costs without ever affecting any total. Forcing a
+    // Mexican Freight number sat in Direct Costs without ever affecting any total. Forcing a
     // real $0 (not a fake dollar amount) just satisfies that gate once a destination is picked.
     forceImportCostZero: imported ? '1' : '0',
     // Lumper fee, INBOND Release, and every Cold storage & USDA field stay out of view by
@@ -5503,9 +5503,9 @@ function rqBuildToolParams(p){
     lumperFee: String(lumperFee),
     inbondRelease: String(inbondRelease),
     hideCustomsBrokerage: imported ? '0' : '1',
-    // Imported Load OFF = Border scenario only, no Colombia costs at all. ON = the Colombia-delivery
-    // scenario, so Colombian Freight belongs in view alongside the customs costs above.
-    hideColombianFreight: imported ? '0' : '1',
+    // Imported Load OFF = Border scenario only, no Mexico costs at all. ON = the Mexico-delivery
+    // scenario, so Mexican Freight belongs in view alongside the customs costs above.
+    hideMexicanFreight: imported ? '0' : '1',
     freightMx: String(freightMx || 0),
     label: `${rqSpecEnForPlant(p) || ''} — ${p.name}`.slice(0, 70),
   });
@@ -5517,7 +5517,7 @@ function rqBuildToolParams(p){
   if (p.rqProductLocationId) params.set('shipLocationId', p.rqProductLocationId);
   if (p.rqProductShipRegion) params.set('shipRegion', p.rqProductShipRegion);
   params.set('fob', p.rqFreightIncluded ? '0' : '1');
-  rqPesosToolParams(p, params); // the customer marked first buys in pesos: this QT comes out as a pesos QT — his city's Colombian freight + Import Cost 625, pesos side only (js/quote-pesos.js)
+  rqPesosToolParams(p, params); // the customer marked first buys in pesos: this QT comes out as a pesos QT — his city's Mexican freight + Import Cost 625, pesos side only (js/quote-pesos.js)
   return params;
 }
 
@@ -5773,7 +5773,7 @@ function rqPrefillSellingPrice(id){
   if (current > 0 && (!p || current !== p.rqAutoSuggestedSell)) return; // trader's own number — leave it
   const k = calc.inp.payDays * (calc.inp.financeRate / 100);
   let sellBorder = (RQ_TARGET_PROFIT_USD + calc.totalCostUSD + calc.directCostsBorder) / (1 - k) / calc.totalWeight;
-  // a pesos QT (js/quote-pesos.js): the $1,000 is the DESTINATION profit — what it shows — so the border price is solved against the destination numbers once its Colombian freight and Import Cost are in
+  // a pesos QT (js/quote-pesos.js): the $1,000 is the DESTINATION profit — what it shows — so the border price is solved against the destination numbers once its Mexican freight and Import Cost are in
   if (p && p.rqPesosCtx && calc.inp.fxRate > 0 && calc.inp.importCostFilled && calc.inp.freightMxFilled){
     const fr = calc.inp.freightMx / calc.inp.fxRate, saleB = (RQ_TARGET_PROFIT_USD + calc.totalCostUSD + calc.directCostsBorder + fr) / (1 - k) - (calc.inp.importCost + fr);
     sellBorder = saleB / calc.totalWeight;
@@ -5837,7 +5837,7 @@ function rqCalcRow(p, qtWin){
     if (p.rqLastCalc) p.rqLastCalc.freight = parseFloat(freightInp.value) || 0;
   }
   // Same reasoning as US Freight above, extended 2026-09-07 when the "Delivery location" picker
-  // (the only thing that used to say "this load is going into Colombia") was removed: Colombian
+  // (the only thing that used to say "this load is going into Mexico") was removed: Mexican
   // Freight/Customs Processing/US Warehouse Handling are now always-visible, freely editable
   // fields in Direct Costs (see trading-tool.html's applyEmbedParams) — read live off the iframe
   // the same way, so whatever the trader actually typed lands on the sent_offer.
@@ -6448,7 +6448,7 @@ function rqRenderCustomersList(){
         <button type="button" class="rq-customer-btn whatsapp" onclick="sendOfferWhatsAppTo('${c.id}')" ${(c.whatsapp || c.phone) ? '' : 'disabled title="No phone on file"'}><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.4c0-4.55 3.7-8.25 8.26-8.25 2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.84c0 4.55-3.71 8.25-8.26 8.25zm4.52-6.18c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.28z"/></svg>WhatsApp</button>
       </div>
     </div>`).join('');
-  // Refresh so the "Customer: ..." match under Delivery location (Colombian Freight) picks up the
+  // Refresh so the "Customer: ..." match under Delivery location (Mexican Freight) picks up the
   // list — this fetch runs async and often finishes after the plant rows already rendered once.
   if (rqSelectedPlants.length) renderRqPlants();
   rqRenderCustomerSignals();
@@ -6839,10 +6839,10 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
     const loggedProductName = matchedProduct ? (matchedProduct.name_en || matchedProduct.name) + (matchedProduct.subcategory_en ? ' ' + matchedProduct.subcategory_en : '') : '';
     const loggedProductNameEs = matchedProduct ? matchedProduct.name + (matchedProduct.subcategory ? ' ' + matchedProduct.subcategory : '') : '';
     // "Imported" no longer comes from a picker (Delivery location was removed) — it's inferred
-    // from whether the trader actually put a real number in one of the Colombia-side Direct Costs
+    // from whether the trader actually put a real number in one of the Mexico-side Direct Costs
     // fields. A Border-only quote leaves all three at 0/blank, same as always.
-    const wentToColombia = !!(calc && (calc.freightMx > 0 || calc.tramiteAduanal > 0 || calc.bodegaAmericana > 0));
-    const agencyId = wentToColombia ? rqCustomsAgencyForPlant(plant) : null;
+    const wentToMexico = !!(calc && (calc.freightMx > 0 || calc.tramiteAduanal > 0 || calc.bodegaAmericana > 0));
+    const agencyId = wentToMexico ? rqCustomsAgencyForPlant(plant) : null;
     customers.forEach(c => {
       // Deterministic, not random — a genuine double-click/double-fire of this exact same send
       // (same plant, customer, product, channel) within the same minute reuses the same key, so
@@ -6872,7 +6872,7 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
         // destination row to reference anymore, only whatever the trader typed directly into
         // Direct Costs (read live in rqCalcRow above, same pattern as US Freight).
         mexican_dest_rate_id: null,
-        mexican_freight_mxn: wentToColombia ? (calc.freightMx || 0) : null,
+        mexican_freight_mxn: wentToMexico ? (calc.freightMx || 0) : null,
         customs_agency_provider_id: agencyId,
         tramite_aduanal_amount: calc ? (calc.tramiteAduanal || 0) : 0,
         bodega_americana_amount: calc ? (calc.bodegaAmericana || 0) : 0,
@@ -6885,7 +6885,7 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
         total_cost: calc.totalCost,
         total_sale: calc.totalSale,
         // a customer who buys in pesos: the pesos price per kg, its total and the rate it was quoted at travel with the offer (the order and the invoice are in pesos; the PO and the FO stay in dollars)
-        ...(calc.mxn ? { sale_currency: 'COP', sale_per_kg_mxn: Math.round(calc.mxn.perKg * 100) / 100, total_sale_mxn: Math.round(calc.mxn.total * 100) / 100, fx_rate: calc.mxn.fx } : {}),
+        ...(calc.mxn ? { sale_currency: 'MXN', sale_per_kg_mxn: Math.round(calc.mxn.perKg * 100) / 100, total_sale_mxn: Math.round(calc.mxn.total * 100) / 100, fx_rate: calc.mxn.fx } : {}),
         delivery_dates: [...rqDeliveryDates],
         // Real ask 2026-09-15: sending an offer over WhatsApp used to mean downloading the photo
         // and dragging it into the chat by hand — now sent-offers-create mints a short_code from
@@ -7661,12 +7661,12 @@ function rqDeliveryDatesText(){
 }
 
 // The full ask phrase that goes in the message — "need 3 loads delivered to the border
-// (Buenaventura/Cartagena) on Aug 22, 26 and 31", falling back to a generic ask if no date was set yet.
+// (McAllen/Laredo) on Aug 22, 26 and 31", falling back to a generic ask if no date was set yet.
 function rqLoadsPhrase(){
-  if (!rqDeliveryDates.length) return 'need it delivered to the border (Buenaventura/Cartagena) next week';
+  if (!rqDeliveryDates.length) return 'need it delivered to the border (McAllen/Laredo) next week';
   const dateStr = rqDeliveryDatesText();
   const loadWord = rqDeliveryDates.length === 1 ? 'load' : 'loads';
-  return `need ${rqDeliveryDates.length} ${loadWord} delivered to the border (Buenaventura/Cartagena) on ${dateStr}`;
+  return `need ${rqDeliveryDates.length} ${loadWord} delivered to the border (McAllen/Laredo) on ${dateStr}`;
 }
 
 // Shared by both bulk-ask buttons — same "missing OR stale, and not already asked within the

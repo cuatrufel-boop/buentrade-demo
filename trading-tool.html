@@ -780,11 +780,11 @@ if (FIREBASE_READY) {
 
     <div id="qbMxFxWrap" style="display:contents;">
     <div class="qb-group">
-      <div class="qb-group-label">Exchange Rate <span style="color:#E8B54C;">COP</span></div>
+      <div class="qb-group-label">Exchange Rate <span style="color:#E8B54C;">MXN</span></div>
       <div class="qb-group-row">
         <div class="qb-item">
           <label style="visibility:hidden;">Exchange Rate</label>
-          <div class="inputwrap qb-fx"><span class="pfx">$</span><input data-money="4" id="fxRate" value="" placeholder="0" oninput="onFxRateInput(true)" onblur="roundFxRateUp()"><span class="sfx">COP</span></div>
+          <div class="inputwrap qb-fx"><span class="pfx">$</span><input data-money="4" id="fxRate" value="" placeholder="0" oninput="onFxRateInput(true)" onblur="roundFxRateUp()"><span class="sfx">MXN</span></div>
           <span id="fxRateStatus" style="display:block;text-align:center;font-size:9px;line-height:1.2;color:rgba(255,255,255,.55);white-space:normal;cursor:pointer;margin-top:1px;" onclick="fxRateManuallySet=false;fetchExchangeRate();" title="Click to retry">↻ <span id="fxRateStatusText"></span></span>
         </div>
       </div>
@@ -807,8 +807,8 @@ if (FIREBASE_READY) {
           <div class="qb-val" id="financeOutTop">$0.00</div>
         </div>
         <div class="qb-item qb-out">
-          <label>Colombia</label>
-          <div class="qb-val" id="financeOutTopMx">$0.00 COP</div>
+          <label>Mexico</label>
+          <div class="qb-val" id="financeOutTopMx">$0.00 MXN</div>
         </div>
       </div>
     </div>
@@ -886,7 +886,7 @@ if (FIREBASE_READY) {
         <div class="profit-col-divider" id="profitColDivider" style="display:none;"></div>
 
         <div class="profit-col" id="mxProfitBlock" style="display:none;">
-          <div class="section-label">Colombia (COP)</div>
+          <div class="section-label">Mexico (MXN)</div>
           <div class="kpi hero-sm"><span class="k-label">Profit (USD eq.)</span><span class="k-val" id="outProfitUsd">$0</span></div>
           <div class="kpi"><span class="k-label">Net Margin</span><span class="k-val" id="outNetMarginMx">0%</span></div>
           <div class="totals-mini" style="grid-template-columns:1fr;">
@@ -894,7 +894,7 @@ if (FIREBASE_READY) {
           </div>
           <div class="profit-details">
             <div class="kpi-grid">
-              <div class="kpi"><span class="k-label">Profit (COP)</span><span class="k-val" id="outProfitMx">MX$0</span></div>
+              <div class="kpi"><span class="k-label">Profit (MXN)</span><span class="k-val" id="outProfitMx">MX$0</span></div>
               <div class="kpi"><span class="k-label">Profit / Kg</span><span class="k-val" id="outProfitKgMx">MX$0</span></div>
               <div class="kpi"><span class="k-label">Gross Margin</span><span class="k-val" id="outGrossMarginMx">0%</span></div>
               <div class="kpi"><span class="k-label">Markup</span><span class="k-val" id="outMarkupMx">MX$0</span></div>
@@ -925,7 +925,7 @@ if (FIREBASE_READY) {
             <div id="freightDdownWrap" style="display:none;flex:1 1 auto;gap:6px;align-items:center;"></div>
           </div>
           <div class="field" id="mexicanFreightField">
-            <label>Colombian Freight</label>
+            <label>Mexican Freight</label>
             <div class="inputwrap"><span class="pfx">MX$</span><input data-money id="freightMx" value="" placeholder="0" oninput="buildProductRows();calc();"></div>
           </div>
           <div id="freightMxUsdHint" style="font-size:10.5px;color:var(--ink-soft);text-align:right;margin:-4px 0 8px;"></div>
@@ -1372,13 +1372,13 @@ function buildProductRows(){
   const freightMxFilled = document.getElementById('freightMx').value.trim() !== '';
   const showMx = fxRate>0 && importCostFilled && freightMxFilled;
   // Transit (FX exposure) + Exchange Rate only mean anything once this load actually has a
-  // Colombian-peso leg — same condition Colombia pricing itself already waits on (showMx above).
+  // Mexican-peso leg — same condition Mexico pricing itself already waits on (showMx above).
   // Only hidden when embedded inside Offers/Quotes though: the standalone Trading Tool tab is
   // the general-purpose calculator, where hiding a section the moment inputs are still empty
   // would be more confusing than useful — that one always shows everything.
   const qbMxFxWrap = document.getElementById('qbMxFxWrap');
   if (qbMxFxWrap) qbMxFxWrap.style.display = (window.self === window.top || showMx) ? 'contents' : 'none';
-  { const mxChip = document.getElementById('financeOutTopMx'); if (mxChip && mxChip.parentElement) mxChip.parentElement.style.display = (window.self === window.top || showMx) ? '' : 'none'; } // no Colombia finance chip on a dollar quote
+  { const mxChip = document.getElementById('financeOutTopMx'); if (mxChip && mxChip.parentElement) mxChip.parentElement.style.display = (window.self === window.top || showMx) ? '' : 'none'; } // no Mexico finance chip on a dollar quote
   products.forEach((p,i)=>{
     const div = document.createElement('div');
     div.className='prod-row';
@@ -1404,7 +1404,7 @@ function buildProductRows(){
       </div>
       ${showMx ? `
       <div class="divider"></div>
-      <div class="section-label" style="margin:0 0 6px;">🇲🇽 Colombia</div>
+      <div class="section-label" style="margin:0 0 6px;">🇲🇽 Mexico</div>
       <div class="prod-grid2" style="grid-template-columns:repeat(auto-fit, minmax(90px,1fr));">
         <div class="mini"><span>Weight (kg)</span>
           <div class="inputwrap"><input type="text" value="${fmtNum(Math.round(weightKg))}" disabled style="text-align:center;"></div>
@@ -1412,7 +1412,7 @@ function buildProductRows(){
         <div class="mini"><span>Selling $/lb (adj. USD)</span>
           <div class="inputwrap"><span class="pfx">$</span><input type="text" id="prodSellAdjUsd${i}" value="0.0000" disabled></div>
         </div>
-        <div class="mini"><span>Selling COP/kg</span>
+        <div class="mini"><span>Selling MXN/kg</span>
           <div class="inputwrap"><span class="pfx">MX$</span><input data-money="4" id="prodSellMx${i}" value="${p.sellMx}" ${priceDisabled} oninput="updateProd(${i},'sellMx',this.value)"></div>
           <span class="autocalc-link" onclick="autoCalcMxSell(${i})">↻ From Border price</span>
         </div>
@@ -1423,7 +1423,7 @@ function buildProductRows(){
       <div class="prod-out" style="grid-template-columns:${showMx ? 'repeat(2,1fr)' : 'repeat(2,1fr)'};">
         <div class="o">Cost (Border)<b id="prodCostOut${i}">$0</b></div>
         <div class="o">Sale (Border)<b id="prodSaleOut${i}">$0</b></div>
-        ${showMx ? `<div class="o">Sale (Colombia)<b id="prodSaleMxOut${i}">MX$0</b></div>` : ''}
+        ${showMx ? `<div class="o">Sale (Mexico)<b id="prodSaleMxOut${i}">MX$0</b></div>` : ''}
         <div class="o">Markup %<b id="prodMarkupPctOut${i}">0%</b></div>
         <div class="o">Net Margin<b id="prodNetMarginPctOut${i}">0%</b></div>
       </div>
@@ -1561,7 +1561,7 @@ function rebalanceWeights(){
   });
 }
 
-// Selling Price Colombia (COP/kg) = Selling Price Border (USD/lb) × 2.20462 × Exchange Rate
+// Selling Price Mexico (MXN/kg) = Selling Price Border (USD/lb) × 2.20462 × Exchange Rate
 // Resets to auto-tracking mode: keeps recalculating live as Border price or Exchange Rate change.
 function autoCalcMxSell(i){
   products[i].sellMxManual = false;
@@ -1593,10 +1593,10 @@ function onFxRateInput(manual){
   calc();
 }
 
-// Cushion scales with real transit time (Border + Colombia destino), not payment terms — that's
-// the actual window the FX rate needs to hold. US -> border and border -> Colombia destino are
+// Cushion scales with real transit time (Border + Mexico destino), not payment terms — that's
+// the actual window the FX rate needs to hold. US -> border and border -> Mexico destino are
 // always ~2 days each (never a per-load variable, no reason to expose it as an editable field)
-// — 4 days total, fixed. Based on typical USD/COP movement (~$0.03/day), with a $0.10 floor so
+// — 4 days total, fixed. Based on typical USD/MXN movement (~$0.03/day), with a $0.10 floor so
 // short transits still get some protection.
 const TRANSIT_DAYS_TO_BORDER = 2;
 const TRANSIT_DAYS_TO_MX_DESTINO = 2;
@@ -1625,9 +1625,9 @@ async function fetchExchangeRate(){
   if(statusEl) statusEl.textContent = 'loading…';
 
   const sources = [
-    { url: 'https://open.er-api.com/v6/latest/USD', getRate: d => d && d.rates && d.rates.COP },
-    { url: 'https://api.frankfurter.dev/v1/latest?from=USD&to=COP', getRate: d => d && d.rates && d.rates.COP },
-    { url: 'https://api.exchangerate-api.com/v4/latest/USD', getRate: d => d && d.rates && d.rates.COP },
+    { url: 'https://open.er-api.com/v6/latest/USD', getRate: d => d && d.rates && d.rates.MXN },
+    { url: 'https://api.frankfurter.dev/v1/latest?from=USD&to=MXN', getRate: d => d && d.rates && d.rates.MXN },
+    { url: 'https://api.exchangerate-api.com/v4/latest/USD', getRate: d => d && d.rates && d.rates.MXN },
   ];
 
   const errors = [];
@@ -1688,8 +1688,8 @@ function getInputs(){
 
 function calc(){
   const inp = getInputs();
-  // Colombia price only calculates once Exchange Rate is set AND both Import Cost and
-  // Colombian Freight have been manually filled in — a Colombia-delivered price is not
+  // Mexico price only calculates once Exchange Rate is set AND both Import Cost and
+  // Mexican Freight have been manually filled in — a Mexico-delivered price is not
   // valid without those two costs, even if either of them happens to be $0.
   const mxCostsReady = inp.importCostFilled && inp.freightMxFilled;
   const showMx = inp.fxRate>0 && mxCostsReady;
@@ -1729,8 +1729,8 @@ function calc(){
   document.getElementById('outDirect').textContent = fmt$(directCostsBorder);
   document.getElementById('outAdditional').textContent = fmt$(financeBorder);
 
-  // ---- Colombia (COP) — direct unit conversion from Border price, unless manually overridden ----
-  // Sale COP/kg = Sale USD/lb x 2.20462 x Exchange Rate  (same for Cost)
+  // ---- Mexico (MXN) — direct unit conversion from Border price, unless manually overridden ----
+  // Sale MXN/kg = Sale USD/lb x 2.20462 x Exchange Rate  (same for Cost)
   const mxBlock = document.getElementById('mxProfitBlock');
   const mxDivider = document.getElementById('profitColDivider');
   const profitCols = document.getElementById('profitCols');
@@ -1744,10 +1744,10 @@ function calc(){
     const k = inp.payDays * (inp.financeRate/100);
 
     // STEP 1: build the adjusted USD/lb price FIRST — Border price + Import Cost/lb +
-    // Colombian Freight/lb (converted to USD) — before any USD-to-COP conversion happens.
-    // STEP 2: only then convert that adjusted USD/lb price to COP/kg (x2.20462 x FX rate).
+    // Mexican Freight/lb (converted to USD) — before any USD-to-MXN conversion happens.
+    // STEP 2: only then convert that adjusted USD/lb price to MXN/kg (x2.20462 x FX rate).
     const importCostPerLb = totalWeight>0 ? inp.importCost/totalWeight : 0;
-    const freightMxInUsd = inp.fxRate>0 ? inp.freightMx/inp.fxRate : 0; // COP -> USD FIRST
+    const freightMxInUsd = inp.fxRate>0 ? inp.freightMx/inp.fxRate : 0; // MXN -> USD FIRST
     const freightMxPerLbUsd = totalWeight>0 ? freightMxInUsd/totalWeight : 0;
 
     const freightMxHintEl = document.getElementById('freightMxUsdHint');
@@ -1762,7 +1762,7 @@ function calc(){
       const adjEl = document.getElementById('prodSellAdjUsd'+i);
       if(adjEl) adjEl.value = adjustedSellBorder.toFixed(4);
       if(!p.sellMxManual){
-        p.sellMx = adjustedSellBorder * LB_PER_KG * inp.fxRate; // STEP 2: convert to COP/kg
+        p.sellMx = adjustedSellBorder * LB_PER_KG * inp.fxRate; // STEP 2: convert to MXN/kg
         const el = document.getElementById('prodSellMx'+i);
         if(el && document.activeElement!==el){ el.value = p.sellMx.toFixed(2); }
         const hint = document.getElementById('prodSellMxHint'+i);
@@ -1922,10 +1922,10 @@ function applyEmbedParams(qp){
   // Docs are always on screen, to put or take off in any QT (user 2026-10-06: "quitar y poner docs") — hideInspection no longer hides them.
   rqShow('inspectionCasesField', true);
   rqShow('inspectionCombosField', true);
-  // Import Cost's emptiness (not "0") is what gates whether Colombia pricing shows at all, so only
+  // Import Cost's emptiness (not "0") is what gates whether Mexico pricing shows at all, so only
   // set a value when there actually is one — never force "0" as a side effect of some other
   // prefill. forceImportCostZero is the one deliberate exception: Quotes sends it only when the
-  // trader picked a real Colombian destination (so Colombia pricing genuinely should activate) and
+  // trader picked a real Mexican destination (so Mexico pricing genuinely should activate) and
   // already accounts for customs via tramiteAduanal/bodegaAmericana — Import Cost itself stays a
   // real $0 here, not a stand-in dollar amount, so there's no double-counting.
   if (qp.has('importCost') && Number(qp.get('importCost')) > 0) document.getElementById('importCost').value = Number(qp.get('importCost'));
@@ -1942,7 +1942,7 @@ function applyEmbedParams(qp){
   // Always shown now (2026-09-07) — Quotes' "Delivery location" picker, the only thing that used
   // to say "this load is imported" and gate these on/off, was removed (see quotes.html's
   // rqPlantFieldsHtml). A Border-only quote just leaves them at $0/blank; the trader fills them
-  // in directly for an actual Colombia-delivered load. hideCustomsBrokerage still arrives from
+  // in directly for an actual Mexico-delivered load. hideCustomsBrokerage still arrives from
   // Quotes but is stale by construction now, so it's ignored rather than acted on.
   rqShow('tramiteAduanalField', true);
   rqShow('bodegaAmericanaField', true);
@@ -1965,10 +1965,10 @@ function applyEmbedParams(qp){
   rqShow('customsBrokerageSection', !['tramiteAduanalField','bodegaAmericanaField','lumperFeeField','inbondReleaseField'].every(id => document.getElementById(id).style.display === 'none'));
   rqShow('coldStorageSection', !['labelsCostField','plasticWrapField','inLieuField','storageOvernightField','storageWeekendField','storageShortTermField','storageMidTermField','storageLongTermField','storageExtraLongField','freshToFrozenField'].every(id => document.getElementById(id).style.display === 'none'));
   // Always shown, same reasoning as Customs Processing/US Warehouse above.
-  // A dollar quote has no Colombian freight (owner 2026-10-18): it shows only when Quotes / Offers ask for it (hideColombianFreight=0), or when the number is not zero.
-  rqShow('mexicanFreightField', qp.get('hideColombianFreight') === '0' || Number(qp.get('freightMx')) > 0 || (parseFloat(document.getElementById('freightMx').value) || 0) > 0);
-  // Colombian Freight is stored in USD in Master Data; Quotes converts it to COP itself before
-  // sending it here, since this field has always been COP-denominated.
+  // A dollar quote has no Mexican freight (owner 2026-10-18): it shows only when Quotes / Offers ask for it (hideMexicanFreight=0), or when the number is not zero.
+  rqShow('mexicanFreightField', qp.get('hideMexicanFreight') === '0' || Number(qp.get('freightMx')) > 0 || (parseFloat(document.getElementById('freightMx').value) || 0) > 0);
+  // Mexican Freight is stored in USD in Master Data; Quotes converts it to MXN itself before
+  // sending it here, since this field has always been MXN-denominated.
   if (qp.has('freightMx')) document.getElementById('freightMx').value = Number(qp.get('freightMx')) || 0;
   rqShow('sharedCostsSection', !['freightField','mexicanFreightField','inspectionCasesField','inspectionCombosField','importCostField'].every(id => document.getElementById(id).style.display === 'none'));
 }
@@ -2314,7 +2314,7 @@ function isReadOnlyEmbed(){
 // ===== The QT's last version (2026-10-06) =====
 // User: "todo lo que yo mueva dentro de un QT debo poder enviarlo y salvarlo que cuando vuelva continúe con el flujo en el que lo dejé, no con
 // valores predeterminados — los valores son los que yo voy haciendo". Every number of this calculator — the product rows, US freight (a
-// carrier picked, a number typed, or none), inspection, payment days, finance rate, Colombia costs and every extra cost — is one version. It
+// carrier picked, a number typed, or none), inspection, payment days, finance rate, Mexico costs and every extra cost — is one version. It
 // saves itself after each change, to its one owner, and the next time this QT opens it applies over the defaults:
 //   • an offer still being negotiated (?offerId, status sent) → that offer only — the negotiation with that one customer, nobody else;
 //   • a plant × product in Quotes (?ppId) → its own version — never the plant's price for everyone (that only changes when the plant
@@ -2355,7 +2355,7 @@ function ttApplyState(st){
     if (st.fx_manual && st.fx_rate != null){ fxRateManuallySet = true; const fx = document.getElementById('fxRate'); if (fx) fx.value = st.fx_rate; }
     // every cost this version carries is on screen — nothing in it stays hidden
     EXTRA_COST_FIELD_IDS.forEach(id => { if ((parseFloat(inp[id]) || 0) !== 0){ const f = document.getElementById(id + 'Field'); if (f) f.style.display = ''; } });
-    // a version that carries a Colombian freight shows it
+    // a version that carries a Mexican freight shows it
     if ((parseFloat(inp.freightMx) || 0) !== 0){ const mf = document.getElementById('mexicanFreightField'); if (mf) mf.style.display = ''; }
     const shared = document.getElementById('sharedCostsSection');
     if (shared) shared.style.display = '';
@@ -2517,7 +2517,7 @@ async function negoInit(){
     }
     // Real bug found live 2026-09-07: "no me trajo los numeros que traia de atras freight docs" —
     // the fix above only ever restored the product's own price/weight. Direct Costs (US Freight,
-    // Colombian Freight, Inspection, Customs Processing, US Warehouse Handling) all have real, saved
+    // Mexican Freight, Inspection, Customs Processing, US Warehouse Handling) all have real, saved
     // columns on this same offer (us_freight_amount/us_freight_rate_id/mexican_freight_mxn/
     // inspection_amount/tramite_aduanal_amount/bodega_americana_amount — see sent-offers-create)
     // but nothing here ever read them back — every Direct Cost field just sat at its blank/zero
@@ -3176,7 +3176,7 @@ async function negoSaveDefinitive(overrideCreditCheck, confirmedDeliveryDate, ca
   // The carrier picker's own rate field is the last, most authoritative number the trader
   // confirmed — if they edited it there, that wins over whatever the freight box said before.
   const finalFreightAmount = carrierChoice ? carrierChoice.rate : us_freight_amount;
-  // the order IS this QT's last version (2026-10-06): docs, customs, Colombian freight and every extra cost go with it — with the freight
+  // the order IS this QT's last version (2026-10-06): docs, customs, Mexican freight and every extra cost go with it — with the freight
   // rate just confirmed with the carrier, so the order's QT reopens with the same freight the order has
   const version = ttGetState();
   if (carrierChoice) version.inputs.freight = String(finalFreightAmount);

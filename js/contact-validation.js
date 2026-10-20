@@ -39,13 +39,13 @@ function bcIsValidFullPhone(full){
 }
 
 // ---------------------------------------------------------------------------------------------
-// Phone numbers the way people really type or paste them (user 2026-10-13: a Colombian number was
+// Phone numbers the way people really type or paste them (user 2026-10-13: a Mexican number was
 // "not recognized" when saving a new customer). The form splits a number into a country-code
 // dropdown + digits; people paste "+52 662 123 4567", "52 1 662…", "044 662…" or just "6621234567"
 // with the dropdown left blank. One normalizer fixes what is unambiguous and says plainly what is
 // not — it never invents digits.
 //   • "+" or "00" in front: the country code is read from the typed number and moved to the dropdown.
-//   • Colombia (+52): old dial prefixes (044 / 045 / 01), a typed 52 / 521 country prefix and the old
+//   • Mexico (+52): old dial prefixes (044 / 045 / 01), a typed 52 / 521 country prefix and the old
 //     mobile "1" are dropped; the national number is always exactly 10 digits.
 //   • any other country: only spaces / dashes / dots / parentheses are removed (length is checked by
 //     bcIsValidPhoneDigits as before).
@@ -65,7 +65,7 @@ function bcNormalizePhone(code, typed, dialCodes, defaultCode){
     if (digits.length === 13 && digits.startsWith('521')) digits = digits.slice(3);
     else if (digits.length === 12 && digits.startsWith('52')) digits = digits.slice(2);
     else if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
-    if (digits.length !== 10) return { error: 'Colombian numbers have 10 digits (for example 662 123 4567) — check for a missing or extra digit.' };
+    if (digits.length !== 10) return { error: 'Mexican numbers have 10 digits (for example 662 123 4567) — check for a missing or extra digit.' };
   }
   return { code: c, number: digits };
 }

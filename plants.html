@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BuenTrade Trading OS — Ingredient Suppliers</title>
+<title>BuenTrade Trading OS — Meat Packers</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 <link rel="shortcut icon" href="/icons/favicon.ico">
@@ -559,7 +559,7 @@ auth.onAuthStateChanged(user => {
 <script src="js/entity-history.js"></script>
 
 <div class="wrap">
-  <h1 onclick="closePlantView()" style="cursor:pointer;">Ingredient Suppliers</h1>
+  <h1 onclick="closePlantView()" style="cursor:pointer;">Meat Packers</h1>
 
   <div class="card" id="plantCard" style="display:none;">
     <!-- ============ Always-visible header — logo, name, Edit/Delete — regardless of which tab
@@ -2305,7 +2305,7 @@ async function selectPlant(id){
   renderPlantLogo(plant);
   plantCard.style.display = 'block';
   // Viewing one plant's full profile — the list of every other plant underneath is just noise
-  // until you come back to it (click the "Ingredient Suppliers" title). Real bug found live 2026-09-10:
+  // until you come back to it (click the "Meat Packers" title). Real bug found live 2026-09-10:
   // plantStatsRow is a sibling of plantListCard, not nested inside it — hiding the list alone left
   // the OTHER plants' totals ("10 Total Plants", "3 Pending Matches"...) sitting directly under
   // this one plant's own tabs, reading as a broken layout bleeding two screens together.
@@ -3584,7 +3584,7 @@ function knownPlantRegions(){
 // "Denison, IA Backribs" and line "$2.48" — losing the product entirely. Requiring a trailing
 // [A-Z]{2} that's a REAL state (not just two capital letters — see US_STATE_CODES above) is also
 // the correct restriction here, not just a fix: this only ever feeds the US locations catalog
-// (city + 2-letter state), so a country name ("FOB Colombia") correctly stays unmatched instead of
+// (city + 2-letter state), so a country name ("FOB Mexico") correctly stays unmatched instead of
 // being captured as something unusable downstream.
 const LINE_FOB_RE = /\b[Ff][Oo][Bb][ \t]+([A-Z][A-Za-z.]*(?:[ \t]+[A-Z][A-Za-z.]*)*?,?[ \t]+[A-Z]{2})\b/;
 function extractLineFobLocation(line){

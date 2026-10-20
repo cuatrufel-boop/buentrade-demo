@@ -459,7 +459,7 @@ auth.onAuthStateChanged(user => {
          which tab is active below, same "highlights" pattern as the plant profile. ============ -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <!-- Same wide-box logo treatment as Ingredient Suppliers/Providers (2026-08-30) — most real
+        <!-- Same wide-box logo treatment as Meat Packers/Providers (2026-08-30) — most real
              logos are landscape-shaped, a forced square just shrinks them to a thin sliver. -->
         <div class="pkg-logo-wrap" style="position:relative;width:220px;height:140px;flex-shrink:0;">
           <div id="v_logo_placeholder" class="pkg-plant-avatar" style="width:220px;height:140px;border-radius:18px;font-size:52px;"></div>
@@ -608,13 +608,13 @@ auth.onAuthStateChanged(user => {
           <select id="business_type_id" onchange="updateCustomerProfile()"><option value="">—</option></select>
         </div>
         <div class="field"><label>Preferred currency</label>
-          <select id="preferred_currency" onchange="updateCustomerProfile()"><option value="">—</option><option>USD</option><option>COP</option><option>Other</option></select>
+          <select id="preferred_currency" onchange="updateCustomerProfile()"><option value="">—</option><option>USD</option><option>MXN</option><option>Other</option></select>
         </div>
         <div class="field"><label>Usual delivery type</label>
           <select id="usual_delivery_type" onchange="suggestCurrency();updateCustomerProfile()">
             <option value="">—</option>
             <option value="Border">Picked up (FOB)</option>
-            <option value="Delivered Colombia">Delivered</option>
+            <option value="Delivered Mexico">Delivered</option>
           </select>
         </div>
         <div class="field"><label>Payment terms</label>
@@ -727,7 +727,7 @@ auth.onAuthStateChanged(user => {
         <!-- Real bug found 2026-09-09 ("las 4 columnas simetricas... no unas a un lado a otras a
              otro"): 180px was measured against the OLD 2-part location text (city+country); now
              that Location shows city+state+country, the longest real value ("Mexicali, Baja
-             California, Colombia") needs ~198px and was wrapping to 2 lines in some rows but not
+             California, Mexico") needs ~198px and was wrapping to 2 lines in some rows but not
              others, breaking uniform row height. Measured every customer's actual rendered
              location text live and sized the column to the true longest one plus padding. -->
         <thead><tr><th>Customer</th><th style="width:240px;">Location</th><th style="width:150px;">Credit Limit (USD)</th><th style="width:190px;">Can Sell Today</th><th style="width:110px;">Contact</th></tr></thead>
@@ -757,7 +757,7 @@ function openForm(customer){
     'usual_destination','usual_incoterm_id','usual_incoterm_place','payment_method','customs_agency_provider_id','preferred_exchange_rate_mode','credit_limit'];
   fields.forEach(f => document.getElementById(f).value = '');
   document.getElementById('whatsapp_number').value = '';
-  document.getElementById('whatsapp_code').value = '+52'; // every customer is in Colombia; a blank dropdown made a typed Colombian number "have no country code" (2026-10-13)
+  document.getElementById('whatsapp_code').value = '+52'; // every customer is in Mexico; a blank dropdown made a typed Mexican number "have no country code" (2026-10-13)
   onCustomerCountryChange(); // resets state_id/state visibility for the blank country above
   document.getElementById('payment_days').value = '';
   document.getElementById('payment_terms_type').value = '';
@@ -885,11 +885,11 @@ function togglePaymentsContact(){
   }
 }
 
-// Border = USD, Delivered Colombia = COP (BUENTRADE Trading OS rule).
+// Border = USD, Delivered Mexico = MXN (BUENTRADE Trading OS rule).
 // Suggestion only — the trader can always override it.
 function suggestCurrency(){
   const delivery = document.getElementById('usual_delivery_type').value;
-  const code = delivery === 'Border' ? 'USD' : delivery === 'Delivered Colombia' ? 'COP' : null;
+  const code = delivery === 'Border' ? 'USD' : delivery === 'Delivered Mexico' ? 'MXN' : null;
   if (!code) return;
   const match = currencies.find(c => c.code === code);
   if (match) document.getElementById('preferred_currency').value = match.id;
@@ -1460,7 +1460,7 @@ function renderCustomers(){
   wrap.innerHTML = filtered.map(c => {
     // Real bug found 2026-09-09: this never included state, so the many customers with a state
     // set but no city (Bonnacarne, El Ingrato, Empacadora Murgati, La Blanquita, Los Corrales,
-    // Productos Neza) showed just "Colombia" with no visible change after saving their real state.
+    // Productos Neza) showed just "Mexico" with no visible change after saving their real state.
     // Same stateName fallback viewCustomer() already uses (c.state free text, or resolve
     // c.state_id against the real states catalog).
     const stateName = c.state || (allStates.find(s => s.id === c.state_id) || {}).name_en || null;
@@ -1561,7 +1561,7 @@ function viewCustomer(id){
   document.getElementById('v_business_type').innerHTML = biz ? `${escapeHtml(biz.name_en)}${biz.name_es ? `<span style="display:block;font-size:11.5px;color:var(--ink-soft);">${escapeHtml(biz.name_es)}</span>` : ''}` : '—';
   const curr = currencies.find(x => x.id === c.preferred_currency_id);
   document.getElementById('v_preferred_currency').textContent = curr ? curr.code : '—';
-  const deliveryLabels = { 'Border': 'Picked up (FOB)', 'Delivered Colombia': 'Delivered' };
+  const deliveryLabels = { 'Border': 'Picked up (FOB)', 'Delivered Mexico': 'Delivered' };
   document.getElementById('v_usual_delivery_type').textContent = deliveryLabels[c.usual_delivery_type] || c.usual_delivery_type || '—';
   document.getElementById('v_payment_days').textContent = paymentDaysLabel(c.payment_days) || '—';
   document.getElementById('v_credit_limit').textContent = c.credit_limit != null ? '$' + Number(c.credit_limit).toLocaleString('en-US') : '—';

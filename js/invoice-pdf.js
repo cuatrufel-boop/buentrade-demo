@@ -41,7 +41,7 @@ function bcRenderInvoice(inv, orderNumber, signature){
   const li = inv.line_item;
   doc.autoTable({
     startY: Math.max(yLeft, yRight) + 8,
-    head: [['Item Description', pesos ? 'Qty KG' : 'Qty LBS', pesos ? 'COP / KG' : 'USD / LBS', 'Amount']],
+    head: [['Item Description', pesos ? 'Qty KG' : 'Qty LBS', pesos ? 'MXN / KG' : 'USD / LBS', 'Amount']],
     body: [[li.description || '', Number(li.weight || 0).toLocaleString('en-US'), (pesos ? 'MX$' : '$') + Number(li.price || 0).toFixed(pesos ? 2 : 4), money(li.total)]],
     theme: 'grid',
     headStyles: { fillColor: [30, 106, 219], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },

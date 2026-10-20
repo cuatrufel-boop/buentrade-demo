@@ -34,7 +34,7 @@ function bcRenderSO(s, orderNumber){
   const li = s.line_item;
   doc.autoTable({
     startY: Math.max(yLeft, yRight) + 22,
-    head: [['Item Description', li.unit === 'kg' ? 'Qty KG' : 'Qty LBS', li.unit === 'kg' ? 'COP / KG' : 'USD / LBS', 'Amount', 'DEL Date', 'Sales Rep']], // a customer invoiced in pesos: kilos and MX$
+    head: [['Item Description', li.unit === 'kg' ? 'Qty KG' : 'Qty LBS', li.unit === 'kg' ? 'MXN / KG' : 'USD / LBS', 'Amount', 'DEL Date', 'Sales Rep']], // a customer invoiced in pesos: kilos and MX$
     body: [[
       li.description || '',
       (li.weight || 0).toLocaleString('en-US'),
@@ -53,7 +53,7 @@ function bcRenderSO(s, orderNumber){
   let ty = doc.lastAutoTable.finalY + 34;
   if (s.mxn_equivalent){
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(100, 116, 139);
-    doc.text('COP EQUIVALENT: $' + Number(s.mxn_equivalent.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ` (FX rate ${s.mxn_equivalent.rate})`, 40, ty - 10);
+    doc.text('MXN EQUIVALENT: $' + Number(s.mxn_equivalent.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ` (FX rate ${s.mxn_equivalent.rate})`, 40, ty - 10);
     ty += 18;
   }
 

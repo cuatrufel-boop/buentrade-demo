@@ -234,7 +234,7 @@
   .name-link{color:var(--blue);font-weight:600;text-decoration:none;cursor:pointer;}
   .name-link:hover{text-decoration:underline;}
   .role-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:transparent;border:1px solid rgba(90,170,255,.4);color:var(--blue-bright);margin-right:4px;white-space:nowrap;}
-  /* Same card-row language as Quotes/Pending/Offers/Ingredient Suppliers — bordered rounded row with an
+  /* Same card-row language as Quotes/Pending/Offers/Meat Packers — bordered rounded row with an
      avatar instead of a plain table row. */
   .pkg-table-wrap{display:flex;flex-direction:column;gap:0;}
   /* 2026-10-10 (user: "has todos los cambios iguales aquí"): a row is a plain list row like Clients — a divider line, no card, no icon tile (a real logo stays) */
@@ -491,7 +491,7 @@ auth.onAuthStateChanged(user => {
     <div id="locationsEmptyMsg" class="empty" style="display:none;">No locations in the catalog yet.</div>
   </div>
 
-  <!-- Just enough to create the record — same two-step pattern as Ingredient Suppliers' "+ New Plant":
+  <!-- Just enough to create the record — same two-step pattern as Meat Packers' "+ New Plant":
        classify it here, then the full Profile (contact, WhatsApp, address, rates) opens right
        after for everything else. -->
   <div class="card" id="newProviderCard" style="display:none;">
@@ -518,11 +518,11 @@ auth.onAuthStateChanged(user => {
   </div>
 
   <!-- ============ Unified Provider Profile — same "always-visible header, tabs below" pattern
-       as Ingredient Suppliers' plant card: Edit/Delete never depend on which tab happens to be open. ============ -->
+       as Meat Packers' plant card: Edit/Delete never depend on which tab happens to be open. ============ -->
   <div class="card" id="providerCard" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <!-- Same wide-box logo treatment as Ingredient Suppliers (2026-08-30 fix) — most real logos are
+        <!-- Same wide-box logo treatment as Meat Packers (2026-08-30 fix) — most real logos are
              landscape-shaped, and a forced square just shrinks them to a thin sliver. -->
         <div class="pkg-logo-wrap" style="position:relative;width:220px;height:140px;flex-shrink:0;">
           <div id="pv_provider_logo_placeholder" class="pkg-plant-avatar" style="width:220px;height:140px;border-radius:18px;font-size:52px;"></div>
@@ -639,15 +639,15 @@ auth.onAuthStateChanged(user => {
     <div id="provTab_rates" style="display:none;">
       <div class="tab-row">
         <button class="tab-btn active" id="rateTabBtn_us_freight" data-svc="us_freight" onclick="switchRateTab('us_freight')">US Freight</button>
-        <button class="tab-btn" id="rateTabBtn_mexican_freight" data-svc="mexican_freight" onclick="switchRateTab('mexican_freight')">Colombian Freight</button>
+        <button class="tab-btn" id="rateTabBtn_mexican_freight" data-svc="mexican_freight" onclick="switchRateTab('mexican_freight')">Mexican Freight</button>
         <button class="tab-btn" id="rateTabBtn_customs" data-svc="customs" onclick="switchRateTab('customs')">Customs &amp; Fees</button>
       </div>
-      <!-- Same row/alignment as Ingredient Suppliers' "Load Prices" + "+ Add New Product" (both left-
+      <!-- Same row/alignment as Meat Packers' "Load Prices" + "+ Add New Product" (both left-
            aligned, together, right under the tabs) — this used to have "Cargar precios" alone,
            right-aligned, above the tabs, and the per-tab "+ Add" button in a second right-aligned
            row further down; two separate rows in two different places read as visually inconsistent
            next to the rest of the app (real feedback: "no lo veo igual"). rateAddBtnSlot is filled
-           in by renderRateTable() per active tab (label/handler differ for US/Colombian/Customs). -->
+           in by renderRateTable() per active tab (label/handler differ for US/Mexican/Customs). -->
       <div style="display:flex;gap:10px;margin:14px 0;">
         <button class="btn secondary small" id="loadRatesBtn" onclick="openRateListPanel()">📋 Load Prices</button>
         <span id="rateAddBtnSlot"></span>
@@ -695,7 +695,7 @@ let providers = [];
 let providerRolesMap = {}; // provider_id -> [role,...]
 let allRates = [];
 let allLocations = [];
-// A per-STATE carrier quote ("IA to Buenaventura/Cartagena - $5200") expands to every real catalog city in
+// A per-STATE carrier quote ("IA to McAllen/Laredo - $5200") expands to every real catalog city in
 // that state (see 20260830040000_create_locations_catalog.sql and rowsForUsFreightCatalog above) —
 // built straight from allLocations (the real table, fetched fresh in loadEverything), grouped by
 // state, so it's always the SAME single source of truth the US Freight tab itself renders from.
@@ -1327,13 +1327,13 @@ function selectProvider(id){
   document.getElementById('profileEdit').style.display = 'none';
   renderProviderProfileView(p);
   document.getElementById('formMsg').textContent = '';
-  // Rates is the daily-use tab (same reasoning as Ingredient Suppliers defaulting to Products & Prices) —
+  // Rates is the daily-use tab (same reasoning as Meat Packers defaulting to Products & Prices) —
   // Profile is set-once information, Rates is what actually gets updated often.
   setProvCardTab('rates');
   document.getElementById('providerCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// Edit lives in the always-visible header, same pattern as Ingredient Suppliers' plant profile — clicking
+// Edit lives in the always-visible header, same pattern as Meat Packers' plant profile — clicking
 // it from the Rates tab jumps to Profile and enters edit mode in one click.
 function editProviderProfile(){
   const p = providers.find(x => x.id === currentProviderId);
@@ -1505,7 +1505,7 @@ function switchRateTab(svc){
 // ============ CARGAR PRECIOS (bulk paste, same pattern as plants.html's price-list intake) ============
 // US Freight rate sheets arrive as an Excel export (Price, Ship Name, Ship City, Ship State columns)
 // — pasted straight from Excel that comes through tab-separated, which is what this parses.
-// Colombian Freight rate sheets arrive as a PDF (DESTINO / Currency / Dolares columns) — pasted as
+// Mexican Freight rate sheets arrive as a PDF (DESTINO / Currency / Dolares columns) — pasted as
 // plain text, one "CITY USD $ 1,234.00" line per destination. Tested against real EBI Transfer
 // rate sheets (Aug 2026) before shipping — both formats confirmed working against actual data.
 let rateListRows = [];
@@ -1515,7 +1515,7 @@ async function openRateListPanel(){
   const isCustoms = currentRateTab === 'customs';
   document.getElementById('rateListTitle').textContent = 'Load Price List';
   document.getElementById('rateListHint').textContent = isUs
-    ? 'Paste from Excel (columns: Price, Name, City, State), or a plain-text list like "IA to Buenaventura/Cartagena - $5200 + lumper" — one row per line. Nothing is saved until you review and confirm.'
+    ? 'Paste from Excel (columns: Price, Name, City, State), or a plain-text list like "IA to McAllen/Laredo - $5200 + lumper" — one row per line. Nothing is saved until you review and confirm.'
     : isCustoms
     ? 'Paste the cost list as it arrived — one line per cost, with its type and price (e.g. "Customs processing: $400"). Nothing is saved until you review and confirm.'
     : 'Paste the PDF text as it is — one line per destination ("CITY USD $ 1,234.00"). Nothing is saved until you review and confirm.';
@@ -1573,7 +1573,7 @@ function parseUsFreightLine(line){
   }
   // Real second real carrier format, confirmed live 2026-08-30: a blanket rate per ORIGIN STATE
   // (not a specific city — this carrier quotes one number for the whole state) to a combined
-  // Buenaventura/Cartagena destination, as a bulleted plain-text list ("• IA to mcallen / Cartagena - $5200 +
+  // McAllen/Laredo destination, as a bulleted plain-text list ("• IA to mcallen / Laredo - $5200 +
   // lumper"), copy-pasted straight out of an email/Word doc rather than an Excel sheet.
   //
   // Deliberately NOT one strict regex over the whole line — a first version of this used
@@ -1618,7 +1618,7 @@ function parseUsFreightLine(line){
 
 // PDF text comes through as "DESTINATION NAME  USD  $ 1,234.00" per line — destination kept
 // exactly as written (existing rows are already uppercase, matching the source PDF's own case).
-function parseColombianFreightLine(line){
+function parseMexicanFreightLine(line){
   const m = line.match(/^(.+?)\s+USD\s+\$\s*([\d,]+\.?\d*)/i);
   if (!m) return null;
   const destination = m[1].trim();
@@ -1676,7 +1676,7 @@ function processRateListText(){
       const bareState = line.match(/^([A-Za-z]{2})$/);
       if (bareState){ currentState = bareState[1].toUpperCase(); continue; }
     }
-    let parsed = isCustoms ? parseCustomsLine(line) : (isUs ? parseUsFreightLine(line) : parseColombianFreightLine(line));
+    let parsed = isCustoms ? parseCustomsLine(line) : (isUs ? parseUsFreightLine(line) : parseMexicanFreightLine(line));
     if (!parsed && isUs && currentState){
       const cityPrice = line.match(/^([A-Za-z .\/]+?)\s*:\s*\$?\s*([\d,]+\.?\d*)\s*$/);
       if (cityPrice){
@@ -1687,7 +1687,7 @@ function processRateListText(){
       }
     }
     if (!parsed) continue; // not a data row (header, note, blank) — silently skipped, never guessed
-    // A per-STATE quote ("IA to Buenaventura/Cartagena - $5320") is never saved as one literal "IA" row —
+    // A per-STATE quote ("IA to McAllen/Laredo - $5320") is never saved as one literal "IA" row —
     // confirmed real requirement 2026-08-30: it must apply to EVERY real city already known in
     // that state, so a future quote for ANY of them finds this carrier's real number. If no city
     // is known yet for that state (a state this carrier is the very first to ever mention), one
@@ -1697,8 +1697,8 @@ function processRateListText(){
       rateListRows.push({ raw: line, ...parsed });
       continue;
     }
-    // US and Colombian rows are normalized to the same {place, price, notes} shape from here on —
-    // "place" is whichever field actually applies (origin for US, destination for Colombian) — so
+    // US and Mexican rows are normalized to the same {place, price, notes} shape from here on —
+    // "place" is whichever field actually applies (origin for US, destination for Mexican) — so
     // the review/expansion logic below never needs to branch on isUs again; applyRateList() maps
     // it back to the real origin/destination column names only once, right before saving.
     const place = isUs ? parsed.origin : parsed.destination;
@@ -1871,7 +1871,7 @@ function renderRateTable(){
   const wrap = document.getElementById('rateTableWrap');
   const rows = ratesForCurrentTab();
   // Lives in the static "Cargar precios" row right under the tabs (same left-aligned, side-by-side
-  // placement as Ingredient Suppliers' "Load Prices" + "+ Add New Product") — never a second, separately
+  // placement as Meat Packers' "Load Prices" + "+ Add New Product") — never a second, separately
   // positioned button further down, which is what made this screen look inconsistent with the rest
   // of the app (real feedback: "no lo veo igual").
   const addSlot = document.getElementById('rateAddBtnSlot');
@@ -1922,7 +1922,7 @@ function renderRateTable(){
 
 // Grouped by state first ("IA together, TX together"), city alphabetical within each state — a
 // real Excel-paste load has no natural order of its own (arrives sorted however the sheet was),
-// so 21+ scattered rows read as a wall of random cities without this. Colombian Freight destinations
+// so 21+ scattered rows read as a wall of random cities without this. Mexican Freight destinations
 // don't carry a US state suffix the same way, so those just sort alphabetically by destination.
 function sortRatesByPlace(rows, isUs){
   const stateOf = (place) => {
@@ -1942,9 +1942,9 @@ function sortRatesByPlace(rows, isUs){
 
 // Every row is now {locationId, place, rateId, rate, notes} regardless of tab — locationId is set
 // (and place is fixed, non-editable text) for US Freight rows, since those are always a real
-// catalog row; null for Colombian Freight, which stays free-text since it has no catalog yet.
+// catalog row; null for Mexican Freight, which stays free-text since it has no catalog yet.
 // rate === null means "this carrier has no price for this real place yet" (US Freight only, since
-// Colombian/Customs rows only ever exist once someone has actually added one).
+// Mexican/Customs rows only ever exist once someone has actually added one).
 function renderRateRows(rows){
   const listWrap = document.getElementById('rateRowsWrap');
   const isUs = currentRateTab === 'us_freight';
@@ -2000,7 +2000,7 @@ function renderRateEditFicha(r){
   const isUs = currentRateTab === 'us_freight';
   const key = r.locationId || r.rateId || 'NEW';
   // A US Freight row's place is a real, fixed catalog entry — never retyped here, only its price.
-  // Colombian Freight (no catalog yet) keeps the free-text place field.
+  // Mexican Freight (no catalog yet) keeps the free-text place field.
   const placeField = (isUs && r.locationId)
     ? `<div class="pkg-plant-info"><span class="pkg-plant-name">${escapeHtml(r.place)}</span></div>`
     : `<input id="rateEdit_place_${key}" value="${escapeHtml(r.place || '')}" placeholder="Destination" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">`;
@@ -2020,7 +2020,7 @@ function editRateInline(key){
 }
 
 // US Freight no longer needs a generic "+ Add Origin" — every real city already has a row, priced
-// or pending. Only Colombian Freight (no catalog yet) still adds a genuinely new destination this way.
+// or pending. Only Mexican Freight (no catalog yet) still adds a genuinely new destination this way.
 function startAddRate(serviceType){
   editingRateKey = 'NEW';
   currentRateTab = serviceType;

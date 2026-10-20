@@ -50,7 +50,7 @@ function pdfHeader(doc, docTitle, orderNumber, contactEmail){
 }
 
 // Real bug found live 2026-09-06 checking the Factura against the real MBG reference: a long
-// Colombian address (common — full street + colonia + CP + city) ran past this column's width and
+// Mexican address (common — full street + colonia + CP + city) ran past this column's width and
 // bled straight into the second column's text with no line break, making both unreadable. Each
 // line now wraps to the column width instead of printing as one unbroken run.
 function pdfInfoBlock(doc, x, y, label, lines, o = {}){

@@ -972,8 +972,8 @@ function paymentBadge(order){
 }
 
 // The one fixed rule this whole business runs on, confirmed by the user 2026-09-05: every load
-// crosses in exactly 2 calendar days, no exceptions — 3 border crossings (San Diego/Buenaventura/
-// Cartagena). Ship date + 2 calendar days, weekend rolls to Monday.
+// crosses in exactly 2 calendar days, no exceptions — 3 border crossings (San Diego/McAllen/
+// Laredo). Ship date + 2 calendar days, weekend rolls to Monday.
 function computeBorderArrivalDate(fromDateStr){
   if (!fromDateStr) return null;
   const d = new Date(fromDateStr + 'T00:00:00');
@@ -2889,7 +2889,7 @@ async function markDocSent(orderNumber, docType){
 }
 
 // Real ask 2026-09-05: at the moment a load is marked Delivered, generate a real invoice (US-side
-// commercial invoice, never a Colombian CFDI — confirmed by the user) and have the customer sign it
+// commercial invoice, never a Mexican CFDI — confirmed by the user) and have the customer sign it
 // right there as proof of delivery + acceptance ("la firma es aceptando factura"). Real correction
 // 2026-09-06: "numeros de po so van con precio de qt original pero invoice va con ajustados de
 // aduana cuando recibe la carga numeros reales" — PO and SO are NEVER touched by this function.

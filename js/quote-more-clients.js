@@ -5,8 +5,8 @@
 // that customer, so if one of them bites it is worked from Offers like any other quote (expires in 10 days like any
 // other). No frequency cap: two closed loads = two messages.
 //
-// sale_per_lb is always the BORDER price (the calculator stores sellBorder there, never the Colombia-side price). A load
-// that carried Colombian freight or customs costs is refused, so "frontera" is never said about a price that isn't one.
+// sale_per_lb is always the BORDER price (the calculator stores sellBorder there, never the Mexico-side price). A load
+// that carried Mexican freight or customs costs is refused, so "frontera" is never said about a price that isn't one.
 
 const QMC_MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -24,7 +24,7 @@ function qmcFmtDateEs(d){
 function qmcFirstName(name){
   return (name || '').trim().split(/\s+/)[0] || '';
 }
-function qmcHasColombianCosts(o){
+function qmcHasMexicanCosts(o){
   return !!(o.mexican_dest_rate_id || Number(o.mexican_freight_mxn) > 0 || Number(o.tramite_aduanal_amount) > 0 || Number(o.bodega_americana_amount) > 0);
 }
 
@@ -34,7 +34,7 @@ async function qmcLoad(callApi, offerId){
   try { offer = ((await callApi('sent-offers-search', { id: offerId })).results || [])[0] || null; } catch (e) {}
   if (!offer) return { error: 'Could not load this offer.' };
   if (!offer.product_id) return { error: 'This order has no catalog product linked.' };
-  if (qmcHasColombianCosts(offer)) return { error: 'This load includes Colombian freight or customs costs, so its price is not a border price.' };
+  if (qmcHasMexicanCosts(offer)) return { error: 'This load includes Mexican freight or customs costs, so its price is not a border price.' };
 
   let links = [];
   try { links = (await callApi('customer-products-search', { product_ids: [offer.product_id] })).results || []; } catch (e) {}
@@ -58,7 +58,7 @@ function qmcMessage(offer, customer, buyerCity){
     + `. Si te interesa, avísame y revisamos con la planta si tienen más cargas. ¡Saludos!`;
 }
 
-// The new customer's offer: same product, plant, border price and US-side costs as the closed load. Colombian-side
+// The new customer's offer: same product, plant, border price and US-side costs as the closed load. Mexican-side
 // fields stay empty (a border price has none). Idempotency key per closed load + customer, so re-running this for
 // the same load never creates the same offer twice.
 function qmcOfferRow(offer, customer, channel, actor){

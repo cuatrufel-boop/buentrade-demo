@@ -1,11 +1,11 @@
 // Customers who buy in pesos (owner 2026-10-18). The price is still confirmed at the border, in USD, and sent to the border customers exactly as before.
-// A customer whose profile Currency is COP gets his offer in MX$/kg delivered to his city, and the system makes the trader confirm that price FIRST:
-// the same QT version (US freight, docs, payment days… as confirmed at the border) opens with his city's Colombian freight (the carrier tariff, USD) and the
+// A customer whose profile Currency is MXN gets his offer in MX$/kg delivered to his city, and the system makes the trader confirm that price FIRST:
+// the same QT version (US freight, docs, payment days… as confirmed at the border) opens with his city's Mexican freight (the carrier tariff, USD) and the
 // Import Cost filled in, the trader confirms the pesos price, and only then is the message built. Nothing here edits the QT or the border price: the pesos QT
 // is opened WITHOUT its plant × product / offer link, so it saves nothing anywhere (trading-tool ttStateOwner() = null).
 // Used by quotes.html (the send functions, the message builders and the offer PDF).
 
-const RQ_PESOS_IMPORT_COST_USD = 625; // Import Cost of a load that goes into Colombia — set by the owner (2026-10-18)
+const RQ_PESOS_IMPORT_COST_USD = 625; // Import Cost of a load that goes into Mexico — set by the owner (2026-10-18)
 let rqMxnCurrencyId = null;
 try { rqMxnCurrencyId = localStorage.getItem('bt_mxn_currency_id') || null; } catch (e) {} // last known, so a slow lookup never holds a send
 const rqPesosConfirmed = {}; // `plantId|productId|customerId` → what was confirmed in pesos
@@ -13,23 +13,23 @@ const rqPesosConfirmed = {}; // `plantId|productId|customerId` → what was conf
 async function rqLoadMxnCurrency(){
   try {
     const res = await callApi('lookups-search', {});
-    const mxn = (res.currencies || []).find(x => x.code === 'COP');
+    const mxn = (res.currencies || []).find(x => x.code === 'MXN');
     if (mxn){ rqMxnCurrencyId = mxn.id; try { localStorage.setItem('bt_mxn_currency_id', mxn.id); } catch (e) {} }
   } catch (e) { /* keeps the last known one, if any */ }
   return rqMxnCurrencyId;
 }
 function rqIsPesosCustomer(c){ return !!(rqMxnCurrencyId && c && c.preferred_currency_id === rqMxnCurrencyId); }
 
-// The customer's city → his Colombian freight tariff (USD). Exact name first, then "starts with", then "contains"; the cheapest of the carriers that quote it.
-// Colombian freight is in the currency of the carrier's own tariff (USD or COP, as its profile says); the QT's field is MX$, so a USD tariff goes in at the QT's own rate
-const rqPesosRateCur = (rate) => String((rate && rate.currency) || 'USD').toUpperCase() === 'COP' ? 'COP' : 'USD';
-const rqPesosFreightMx = (amount, cur, fx) => cur === 'COP' ? Math.round(amount * 100) / 100 : (fx > 0 ? Math.round(amount * fx * 100) / 100 : 0);
+// The customer's city → his Mexican freight tariff (USD). Exact name first, then "starts with", then "contains"; the cheapest of the carriers that quote it.
+// Mexican freight is in the currency of the carrier's own tariff (USD or MXN, as its profile says); the QT's field is MX$, so a USD tariff goes in at the QT's own rate
+const rqPesosRateCur = (rate) => String((rate && rate.currency) || 'USD').toUpperCase() === 'MXN' ? 'MXN' : 'USD';
+const rqPesosFreightMx = (amount, cur, fx) => cur === 'MXN' ? Math.round(amount * 100) / 100 : (fx > 0 ? Math.round(amount * fx * 100) / 100 : 0);
 function rqPesosDestRate(c){
   const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
   const dest = norm(c && c.usual_destination);
   if (!dest) return null;
   const score = (r) => { const d = norm(r.destination), head = d.split(',')[0].trim(); return head === dest || d === dest ? 3 : (d.startsWith(dest) || dest.startsWith(head) ? 2 : (d.includes(dest) || dest.includes(head) ? 1 : 0)); };
-  const found = rqColombianFreightRates().filter(r => r.destination && Number(r.rate) > 0 && score(r) > 0);
+  const found = rqMexicanFreightRates().filter(r => r.destination && Number(r.rate) > 0 && score(r) > 0);
   if (!found.length) return null;
   const best = Math.max(...found.map(score));
   return found.filter(r => score(r) === best).sort((a, b) => Number(a.rate) - Number(b.rate))[0];
@@ -48,7 +48,7 @@ function rqWithPesos(customerId, it){
   return { ...it, calc: { ...it.calc, mxn: { perKg: m.perKg, total: m.total, dest: m.dest, fx: m.fx } } };
 }
 const rqOfferPriceText = (calc) => calc.mxn
-  ? `$${calc.mxn.perKg.toFixed(2)} COP/kg — entregado en ${calc.mxn.dest}`
+  ? `$${calc.mxn.perKg.toFixed(2)} MXN/kg — entregado en ${calc.mxn.dest}`
   : `$${calc.salePerLb.toFixed(4)} USD/lb frontera`;
 const rqOfferTotalText = (calc) => calc.mxn
   ? `MX$${calc.mxn.total.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
@@ -86,7 +86,7 @@ async function rqPesosFiles(full){
 function rqConfirmInPesos(plant, productId, c, borderCalc){
   return new Promise((resolve) => {
     const rate = rqPesosDestRate(c);
-    if (!rate){ btAlert(`There is no Colombian freight tariff for ${c.usual_destination || 'this customer\'s city'} — add it in the carrier's profile (Rates → Colombian Freight) before quoting ${c.trade_name} in pesos.`); resolve(false); return; }
+    if (!rate){ btAlert(`There is no Mexican freight tariff for ${c.usual_destination || 'this customer\'s city'} — add it in the carrier's profile (Rates → Mexican Freight) before quoting ${c.trade_name} in pesos.`); resolve(false); return; }
     const link = rqAllPlantProductRows.find(r => r.plant_id === plant.id && r.product_id === productId);
     const pricing = rqBrandPricing(link, plant, productId);
     const state = pricing && pricing.snapshot && pricing.snapshot.rqLastState;
@@ -104,7 +104,7 @@ function rqConfirmInPesos(plant, productId, c, borderCalc){
     let timer = null, done = false, applied = false;
     const finish = (ok) => { if (done) return; done = true; clearInterval(timer); ov.remove(); resolve(ok); };
     ov.querySelector('#rq_pesos_close').onclick = () => finish(false);
-    // one tick: the version is applied once the QT is up; then Import Cost is set and Colombian freight follows the QT's own rate (USD × that rate, so it comes back exact)
+    // one tick: the version is applied once the QT is up; then Import Cost is set and Mexican freight follows the QT's own rate (USD × that rate, so it comes back exact)
     timer = setInterval(() => {
       let win; try { win = frame.contentWindow; } catch (e) { return; }
       if (!win || !win.__calc || !win.ttApplyState) return;
@@ -125,7 +125,7 @@ function rqConfirmInPesos(plant, productId, c, borderCalc){
       let win; try { win = frame.contentWindow; } catch (e) { return; }
       const k = win && win.__calc;
       const fx = k && k.inp ? k.inp.fxRate : 0;
-      if (!k || !(k.totalSaleMx > 0) || !(fx > 0) || !(k.totalWeightKg > 0)){ rqShowNotice("The pesos price is not ready yet — wait for today's exchange rate and the Colombia costs to fill in."); return; }
+      if (!k || !(k.totalSaleMx > 0) || !(fx > 0) || !(k.totalWeightKg > 0)){ rqShowNotice("The pesos price is not ready yet — wait for today's exchange rate and the Mexico costs to fill in."); return; }
       rqPesosConfirmed[plant.id + '|' + productId + '|' + c.id] = {
         perKg: k.totalSaleMx / k.totalWeightKg, total: k.totalSaleMx, fx, dest: destName, freightAmount: usd, freightCurrency: cur, importCost: RQ_PESOS_IMPORT_COST_USD,
         borderSale: borderCalc.salePerLb, cost: borderCalc.costPerLb, at: new Date().toISOString(),
@@ -136,8 +136,8 @@ function rqConfirmInPesos(plant, productId, c, borderCalc){
 }
 
 // ---- The pesos numbers INSIDE the plant's own QT (owner 2026-10-18: "poder ver números en el QT y confirmar como siempre").
-// When a customer who buys in pesos buys this product (the one marked in the send panel first), the QT opens with his city's Colombian freight (the carrier tariff in USD,
-// shown in the QT's own MX$ field at the QT's own rate) and Import Cost 625 filled in, so the QT's Colombia panel shows the pesos numbers next to the border ones. The trader
+// When a customer who buys in pesos buys this product (the one marked in the send panel first), the QT opens with his city's Mexican freight (the carrier tariff in USD,
+// shown in the QT's own MX$ field at the QT's own rate) and Import Cost 625 filled in, so the QT's Mexico panel shows the pesos numbers next to the border ones. The trader
 // confirms as always; the pesos price he saw is saved with that confirmation (calc.pesosQt) and the send uses it. A product no pesos customer buys is opened exactly as before.
 function rqPesosCustomerFor(p){
   if (!p || !p.rqProductId || !rqMxnCurrencyId) return null;
@@ -147,21 +147,21 @@ function rqPesosCustomerFor(p){
   const ctxCustomer = marked.find(c => asked.has(c.id)) || marked[0]; // the customer who asked (marked), else the first marked: HE decides which QT this is
   return rqIsPesosCustomer(ctxCustomer) && rqPesosDestRate(ctxCustomer) ? ctxCustomer : null;
 }
-// the QT's address: Import Cost shown and filled, Colombian freight filled (USD tariff × the rate Quotes already has)
+// the QT's address: Import Cost shown and filled, Mexican freight filled (USD tariff × the rate Quotes already has)
 function rqPesosToolParams(p, params){
   const c = rqPesosCustomerFor(p);
   if (!c) { p.rqPesosCtx = null; return; }
   const rate = rqPesosDestRate(c);
   p.rqPesosCtx = { customerId: c.id, rateId: rate.id, usd: Number(rate.rate), cur: rqPesosRateCur(rate), dest: (c.usual_destination || rate.destination || '').trim() };
-  params.set('hideImportCost', '0'); params.set('importCost', String(RQ_PESOS_IMPORT_COST_USD)); params.set('hideColombianFreight', '0');
+  params.set('hideImportCost', '0'); params.set('importCost', String(RQ_PESOS_IMPORT_COST_USD)); params.set('hideMexicanFreight', '0');
   const f0 = rqPesosFreightMx(p.rqPesosCtx.usd, p.rqPesosCtx.cur, typeof rqCachedFxRate === 'number' ? rqCachedFxRate : 0);
   if (f0 > 0) params.set('freightMx', String(f0));
 }
-// keeps Colombian freight exact against the QT's own (rounded-up) rate while the QT is open; never overwrites a number the trader typed
+// keeps Mexican freight exact against the QT's own (rounded-up) rate while the QT is open; never overwrites a number the trader typed
 // The Profitability of the pesos QT is the DESTINATION profit, in dollars (owner 2026-10-18: "si le muevo números no me cambia el profit… ese profit no es border sino destino"):
-// the QT's own Colombia outputs (what the Selling COP/kg, Colombian freight, import… produce) divided by the day's rate, shown in the dollar column. Display only — the QT's formulas
+// the QT's own Mexico outputs (what the Selling MXN/kg, Mexican freight, import… produce) divided by the day's rate, shown in the dollar column. Display only — the QT's formulas
 // are not touched and its Border numbers are still computed; they are just not what this view shows.
-const RQ_PESOS_MIRROR = [ // [dollar-column output, Colombia output it shows, how]
+const RQ_PESOS_MIRROR = [ // [dollar-column output, Mexico output it shows, how]
   ['outProfit', 'outProfitMx', 'usd'], ['outProdCost', 'outProdCostMx', 'usd'], ['outProfitLb', 'outProfitKgMx', 'usd'], ['outMarkup', 'outMarkupMx', 'usd'],
   ['outSellTotal', 'outSellTotalMx', 'usd'], ['outProdProfit', 'outProdProfitMx', 'usd'], ['outDirect', 'outDirectMx', 'usd'], ['outAdditional', 'outAdditionalMx', 'usd'],
   ['financeOutTop', 'financeOutTopMx', 'usd'], ['outNetMargin', 'outNetMarginMx', 'text'], ['outGrossMargin', 'outGrossMarginMx', 'text'], ['outMarkupPct', 'outMarkupPctMx', 'text'],
@@ -200,33 +200,33 @@ function rqPesosWatch(win){
   if (win.__rqPesosWatch) return;
   win.__rqPesosWatch = true;
   const run = () => { try { rqPesosMirror(win); } catch (e) { /* the QT is still loading */ } };
-  const obs = new win.MutationObserver(run); // watches only the Colombia outputs, which the mirror never writes: no loop
+  const obs = new win.MutationObserver(run); // watches only the Mexico outputs, which the mirror never writes: no loop
   RQ_PESOS_MIRROR.forEach(([, from]) => { const b = win.document.getElementById(from); if (b) obs.observe(b, { childList: true, characterData: true, subtree: true }); });
   run();
 }
 
-// The pesos QT (owner 2026-10-18): the exchange rate comes from the web (the QT's own), Weight in kilos, Purchase price in dollars, Selling price in pesos (Selling COP/kg =
-// Selling $/lb (adj.) × 2.20462 × the rate — the QT's own Colombia formula), US freight, Inspection and Import Cost in dollars, Colombian freight in the currency of the carrier's own
-// tariff (USD or COP). Profitability stays in dollars. View only, no formula touched.
+// The pesos QT (owner 2026-10-18): the exchange rate comes from the web (the QT's own), Weight in kilos, Purchase price in dollars, Selling price in pesos (Selling MXN/kg =
+// Selling $/lb (adj.) × 2.20462 × the rate — the QT's own Mexico formula), US freight, Inspection and Import Cost in dollars, Mexican freight in the currency of the carrier's own
+// tariff (USD or MXN). Profitability stays in dollars. View only, no formula touched.
 const RQ_PESOS_VIEW_CSS = '#mxProfitBlock, #profitColDivider, .qb-item.qb-out:has(#financeOutTopMx), .prod-row > .prod-top + .section-label, .prod-row > .divider, .prod-row > .prod-grid .mini:has(#prodWeight0), .prod-row > .prod-grid .mini:has(#prodSellBorder0) { display: none !important; } .prod-row > .prod-grid { grid-template-columns: minmax(0, 1fr) !important; justify-items: center; } .prod-row > .prod-grid .mini { width: 60%; } .prod-row > .prod-grid { margin-bottom: 12px; }';
 function rqPesosApplyView(win, amount, cur){
   const doc = win.document;
   win.__rqPesosOff = false;
   if (!doc.getElementById('rq_pesos_only_css')){ const st = doc.createElement('style'); st.id = 'rq_pesos_only_css'; st.textContent = RQ_PESOS_VIEW_CSS; doc.head.appendChild(st); }
-  // top bar balanced around Confirm Price: Terms on one side, Exchange Rate + Finance Cost on the other (with the Colombia chip out of sight the left side was twice as long)
+  // top bar balanced around Confirm Price: Terms on one side, Exchange Rate + Finance Cost on the other (with the Mexico chip out of sight the left side was twice as long)
   const fxWrap = doc.getElementById('qbMxFxWrap'), rightCell = doc.querySelector('#qbBar > div[style*="grid-column:3"]');
   if (fxWrap && rightCell && fxWrap.parentNode !== rightCell) rightCell.insertBefore(fxWrap, rightCell.firstChild);
   rqPesosWatch(win); // the Profitability follows the destination numbers (see rqPesosMirror)
   const anchor = doc.getElementById('mexicanFreightField'), hint = doc.getElementById('freightMxUsdHint');
   let box = doc.getElementById('pt_freight_usd');
-  if (cur === 'COP'){ // the carrier quotes in pesos: the QT's own MX$ field stays
+  if (cur === 'MXN'){ // the carrier quotes in pesos: the QT's own MX$ field stays
     if (box) box.remove();
     if (anchor) anchor.style.removeProperty('display');
     return;
   }
   if (!box && anchor){
     box = doc.createElement('div'); box.className = 'field'; box.id = 'pt_freight_usd';
-    box.innerHTML = '<label>Colombian Freight (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="text" id="pt_freight_usd_val" disabled style="text-align:right;"></div>';
+    box.innerHTML = '<label>Mexican Freight (USD)</label><div class="inputwrap"><span class="pfx">$</span><input type="text" id="pt_freight_usd_val" disabled style="text-align:right;"></div>';
     anchor.parentNode.insertBefore(box, anchor);
   }
   if (anchor) anchor.style.setProperty('display', 'none', 'important');
@@ -269,15 +269,15 @@ function rqPesosCaptureCalc(p, win){
   p.rqLastCalc.pesosQt = { perKg: k.totalSaleMx / k.totalWeightKg, total: k.totalSaleMx, fx: k.inp.fxRate, dest: p.rqPesosCtx.dest, rateId: p.rqPesosCtx.rateId, freightAmount: p.rqPesosCtx.usd, freightCurrency: p.rqPesosCtx.cur, importCost: k.inp.importCost };
 }
 
-// ---- The generic Quoting Tool (Quotes tab): ONE switch, USD | COP, to quote without sending anywhere (owner 2026-10-18). USD is the QT exactly as it is; COP is the same pesos view
-// a pesos customer gets (kilos, Selling COP/kg, Import Cost 625, destination profit) with the Colombian freight typed in USD. Turning it back to USD restores the dollar QT's own numbers.
+// ---- The generic Quoting Tool (Quotes tab): ONE switch, USD | MXN, to quote without sending anywhere (owner 2026-10-18). USD is the QT exactly as it is; MXN is the same pesos view
+// a pesos customer gets (kilos, Selling MXN/kg, Import Cost 625, destination profit) with the Mexican freight typed in USD. Turning it back to USD restores the dollar QT's own numbers.
 function rqPesosRemoveView(win){
   const d = win.document;
   win.__rqPesosOff = true;
   const st = d.getElementById('rq_pesos_only_css'); if (st) st.remove();
   const box = d.getElementById('pt_freight_usd'); if (box) box.remove();
   const anchor = d.getElementById('mexicanFreightField'), hint = d.getElementById('freightMxUsdHint');
-  if (anchor) anchor.style.setProperty('display', 'none'); // a dollar quote has no Colombian freight box
+  if (anchor) anchor.style.setProperty('display', 'none'); // a dollar quote has no Mexican freight box
   if (hint) hint.style.removeProperty('display');
   const fxWrap = d.getElementById('qbMxFxWrap'), leftCell = d.querySelector('#qbBar > div[style*="grid-column:1"]');
   if (fxWrap && leftCell && fxWrap.parentNode !== leftCell) leftCell.appendChild(fxWrap);
@@ -296,7 +296,7 @@ function rqGenericQtSwitch(frame){
     const g = d.createElement('div'); g.className = 'qb-group'; g.id = 'pt_switch';
     // BuenTrade look: a dark glass track like the bar's fields (27px high, 92px wide, 1px white-22% border, 8px radius) with a sliding thumb in the same blue gradient as the "+" button
     // (var(--blue) → #3E7BC4, its blue glow), white IBM Plex Mono 12px bold text centred in each half; the unchosen half is quiet white
-    g.innerHTML = '<div class="qb-group-label">Quote in</div><div class="qb-group-row"><div class="qb-item"><label style="visibility:hidden;">Quote</label><div id="pt_sw" role="switch" aria-checked="false" aria-label="Quote in USD or COP" tabindex="0" style="position:relative;display:flex;box-sizing:border-box;width:92px;height:28px;padding:2px;border:1px solid rgba(255,255,255,.22);border-radius:8px;background:rgba(255,255,255,.035);cursor:pointer;user-select:none;font-family:\'IBM Plex Mono\',monospace;font-size:12px;font-weight:700;line-height:1;"><span id="pt_sw_thumb" style="position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:6px;background:linear-gradient(135deg,var(--blue) 0%,#3E7BC4 100%);box-shadow:0 2px 7px rgba(30,106,219,.35);transition:transform .18s ease;"></span><span id="pt_sw_usd" style="position:relative;flex:1;display:flex;align-items:center;justify-content:center;transition:color .18s;">USD</span><span id="pt_sw_mxn" style="position:relative;flex:1;display:flex;align-items:center;justify-content:center;transition:color .18s;">COP</span></div></div></div>';
+    g.innerHTML = '<div class="qb-group-label">Quote in</div><div class="qb-group-row"><div class="qb-item"><label style="visibility:hidden;">Quote</label><div id="pt_sw" role="switch" aria-checked="false" aria-label="Quote in USD or MXN" tabindex="0" style="position:relative;display:flex;box-sizing:border-box;width:92px;height:28px;padding:2px;border:1px solid rgba(255,255,255,.22);border-radius:8px;background:rgba(255,255,255,.035);cursor:pointer;user-select:none;font-family:\'IBM Plex Mono\',monospace;font-size:12px;font-weight:700;line-height:1;"><span id="pt_sw_thumb" style="position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:6px;background:linear-gradient(135deg,var(--blue) 0%,#3E7BC4 100%);box-shadow:0 2px 7px rgba(30,106,219,.35);transition:transform .18s ease;"></span><span id="pt_sw_usd" style="position:relative;flex:1;display:flex;align-items:center;justify-content:center;transition:color .18s;">USD</span><span id="pt_sw_mxn" style="position:relative;flex:1;display:flex;align-items:center;justify-content:center;transition:color .18s;">MXN</span></div></div></div>';
     d.querySelector('#qbBar > div[style*="grid-column:3"]').insertBefore(g, d.querySelector('#qbBar > div[style*="grid-column:3"]').firstChild);
     let on = false, autoImport = false, timer = null;
     const paint = () => { const a = el('pt_sw_usd'), b = el('pt_sw_mxn'), sw = el('pt_sw'); sw.setAttribute('aria-checked', on ? 'true' : 'false');
