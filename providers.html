@@ -609,21 +609,21 @@ auth.onAuthStateChanged(user => {
               <div class="profile-panel kcard">
                 <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>Contact</div>
                 <div class="kgrid">
-                  <div class="field"><label>Contact Name</label><input id="p_contact_name"></div>
-                  <div class="field"><label>Contact Email</label><input id="p_email" type="email"></div>
-                  <div class="field"><label>Phone</label>
+                  <div class="field kwide"><label>Contact Name</label><input id="p_contact_name"></div>
+                  <div class="field kwide"><label>Contact Email</label><input id="p_email" type="email"></div>
+                  <div class="field kwide"><label>Phone</label>
                     <div style="display:flex;gap:6px;">
                       <select id="p_phone_code" style="width:88px;flex-shrink:0;"></select>
                       <input id="p_phone_number" placeholder="6621234567" style="flex:1;">
                     </div>
                   </div>
-                  <div class="field"><label>WhatsApp</label>
+                  <div class="field kwide"><label>WhatsApp</label>
                     <div style="display:flex;gap:6px;">
                       <select id="p_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
                       <input id="p_whatsapp_number" placeholder="6621234567" style="flex:1;">
                     </div>
                   </div>
-                  <div class="field kwide"><label>CC Emails (comma-separated)</label><input id="p_email_cc" placeholder="dispatch@carrier.com, billing@carrier.com"></div>
+                  <div class="field kfull"><label>CC Emails (comma-separated)</label><input id="p_email_cc" placeholder="dispatch@carrier.com, billing@carrier.com"></div>
                 </div>
               </div>
               <div class="profile-panel kcard">
@@ -631,7 +631,7 @@ auth.onAuthStateChanged(user => {
                 <div class="kgrid k3">
                   <div class="field"><label>Country</label><select id="p_country_id"><option value="">—</option></select></div>
                   <div class="field"><label>City</label><input id="p_city"></div>
-                  <div class="field kfull"><label>Address</label><input id="p_address" placeholder="Street address"></div>
+                  <div class="field kwide"><label>Address</label><input id="p_address" placeholder="Street address"></div>
                 </div>
               </div>
             </div>

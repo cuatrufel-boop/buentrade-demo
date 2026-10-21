@@ -22,8 +22,9 @@
     var title = form.querySelector('.kname input');
     if (title && title.offsetParent !== null){
       var fs = 23; title.style.setProperty('font-size', fs + 'px', 'important');
-      while (title.scrollWidth > title.clientWidth + 1 && fs > 12){ fs--; title.style.setProperty('font-size', fs + 'px', 'important'); }
+      while (title.scrollWidth > title.clientWidth + 1 && fs > 11){ fs--; title.style.setProperty('font-size', fs + 'px', 'important'); }
     }
+    if (title) title.title = title.value;
     if (box) box.innerHTML = need.map(function(n){ return '<div><i class="' + (val(n[0]) ? 'ok' : '') + '"></i>' + n[1] + '</div>'; }).join('');
   }
   function refreshAll(){ document.querySelectorAll('.kform').forEach(refresh); }

@@ -595,17 +595,17 @@ auth.onAuthStateChanged(user => {
           <div class="profile-panel kcard">
             <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>Contact</div>
             <div class="kgrid">
-              <div class="field"><label>Contact name</label><input id="contact_name" oninput="updateCustomerProfile()"></div>
-              <div class="field"><label>Contact role</label><input id="contact_role" oninput="updateCustomerProfile()"></div>
-              <div class="field"><label>WhatsApp</label>
+              <div class="field kwide"><label>Contact name</label><input id="contact_name" oninput="updateCustomerProfile()"></div>
+              <div class="field kwide"><label>Contact role</label><input id="contact_role" oninput="updateCustomerProfile()"></div>
+              <div class="field kwide"><label>WhatsApp</label>
                 <div style="display:flex;gap:6px;">
                   <select id="whatsapp_code" style="width:78px;flex-shrink:0;" onchange="updateCustomerProfile()"></select>
                   <input id="whatsapp_number" placeholder="6621234567" style="flex:1;" oninput="updateCustomerProfile()">
                 </div>
               </div>
-              <div class="field"><label>Email</label><input type="email" id="email" oninput="updateCustomerProfile()"></div>
-              <div class="field"><label>Website</label><input id="website" oninput="updateCustomerProfile()"></div>
-              <div class="field"><label>CC Emails (comma-separated)</label><input id="email_cc" placeholder="compras@cliente.com, pagos@cliente.com" oninput="updateCustomerProfile()"></div>
+              <div class="field kwide"><label>Email</label><input type="email" id="email" oninput="updateCustomerProfile()"></div>
+              <div class="field kwide"><label>CC Emails (comma-separated)</label><input id="email_cc" placeholder="compras@cliente.com, pagos@cliente.com" oninput="updateCustomerProfile()"></div>
+              <div class="field kwide"><label>Website</label><input id="website" oninput="updateCustomerProfile()"></div>
             </div>
           </div>
           <div class="profile-panel kcard">
@@ -620,7 +620,7 @@ auth.onAuthStateChanged(user => {
               <div class="field" id="stateTextField"><label>State</label><input id="state" oninput="updateCustomerProfile()"></div>
               <div class="field"><label>City</label><input id="city" oninput="updateCustomerProfile()"></div>
               <div class="field"><label>Zip / Postal code</label><input id="postal_code" oninput="updateCustomerProfile()"></div>
-              <div class="field kwide"><label>Street address</label><input id="address" oninput="updateCustomerProfile()"></div>
+              <div class="field kfull"><label>Street address</label><input id="address" oninput="updateCustomerProfile()"></div>
             </div>
           </div>
         </div>
@@ -653,7 +653,7 @@ auth.onAuthStateChanged(user => {
                 <select id="usual_incoterm_id" onchange="updateCustomerProfile()"><option value="">—</option></select>
               </div>
               <div class="field"><label>Incoterm Named Place</label><input id="usual_incoterm_place" placeholder="e.g. Nogales, AZ" oninput="updateCustomerProfile()"></div>
-              <div class="field"><label>Usual destination</label><input id="usual_destination" oninput="updateCustomerProfile()"></div>
+              <div class="field kwide"><label>Usual destination</label><input id="usual_destination" oninput="updateCustomerProfile()"></div>
             </div>
           </div>
           <div class="profile-panel kcard">
