@@ -18,6 +18,12 @@
       var nm = nameId ? val(nameId) : '';
       mark.textContent = nm ? nm.split(/\s+/).map(function(w){ return w[0]; }).slice(0, 2).join('').toUpperCase() : '+';
     }
+    // a long name shrinks to fit the passport instead of being cut (design only: nothing is written to the field)
+    var title = form.querySelector('.kname input');
+    if (title && title.offsetParent !== null){
+      var fs = 23; title.style.setProperty('font-size', fs + 'px', 'important');
+      while (title.scrollWidth > title.clientWidth + 1 && fs > 12){ fs--; title.style.setProperty('font-size', fs + 'px', 'important'); }
+    }
     if (box) box.innerHTML = need.map(function(n){ return '<div><i class="' + (val(n[0]) ? 'ok' : '') + '"></i>' + n[1] + '</div>'; }).join('');
   }
   function refreshAll(){ document.querySelectorAll('.kform').forEach(refresh); }

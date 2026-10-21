@@ -49,6 +49,10 @@
       if (String(url).indexOf('/functions/v1/messaging') !== -1) {
         return Promise.resolve(new Response(JSON.stringify({ clients: [], bulletins: [], items: [], sections: [], demo: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       }
+      // Emails: the demo has no mail service. The OS email window gets an instant "sent" so the whole flow can be seen; nothing leaves, nobody receives anything.
+      if (String(url).indexOf('/.netlify/functions/send-email') !== -1) {
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, demo: true, id: 'demo-not-sent' }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
     } catch(e){}
     return realFetch(url, opts);
   };

@@ -507,7 +507,7 @@ auth.onAuthStateChanged(user => {
         <div class="kcol">
           <div class="profile-panel kcard">
             <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
-            <div class="kgrid">
+            <div class="kgrid k3">
               <div class="field"><label>Country</label><select id="np_country_id"><option value="">—</option></select></div>
               <div class="field"><label>City</label><input id="np_city"></div>
             </div>
@@ -627,19 +627,15 @@ auth.onAuthStateChanged(user => {
                 </div>
               </div>
               <div class="profile-panel kcard">
-                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 11h8M8 15h6"/></svg></span>Notes</div>
-                <div class="field"><textarea id="p_notes" rows="2"></textarea></div>
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
+                <div class="kgrid k3">
+                  <div class="field"><label>Country</label><select id="p_country_id"><option value="">—</option></select></div>
+                  <div class="field"><label>City</label><input id="p_city"></div>
+                  <div class="field kfull"><label>Address</label><input id="p_address" placeholder="Street address"></div>
+                </div>
               </div>
             </div>
             <div class="kcol">
-              <div class="profile-panel kcard">
-                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
-                <div class="kgrid">
-                  <div class="field"><label>Country</label><select id="p_country_id"><option value="">—</option></select></div>
-                  <div class="field"><label>City</label><input id="p_city"></div>
-                  <div class="field kwide"><label>Address</label><input id="p_address" placeholder="Street address"></div>
-                </div>
-              </div>
               <div class="profile-panel kcard">
                 <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5M17 5a3.5 3.5 0 010 7M22 20c-.4-2.5-1.8-4-4-4.6"/></svg></span>Roles</div>
                 <div class="field">
@@ -649,6 +645,10 @@ auth.onAuthStateChanged(user => {
                     <label class="role-check"><input type="checkbox" value="customs_broker" class="role-cb"> Customs Broker</label>
                   </div>
                 </div>
+              </div>
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 11h8M8 15h6"/></svg></span>Notes</div>
+                <div class="field"><textarea id="p_notes" rows="2"></textarea></div>
               </div>
             </div>
           </div>
