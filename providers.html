@@ -425,6 +425,7 @@ auth.onAuthStateChanged(user => {
 </header>
 <script src="js/header-chip.js"></script>
 <script src="js/bt-dialogs.js"></script>
+<script src="js/form-passport.js"></script>
 <script src="js/entity-history.js"></script>
 
 <div class="wrap">
@@ -496,17 +497,33 @@ auth.onAuthStateChanged(user => {
        after for everything else. -->
   <div class="card" id="newProviderCard" style="display:none;">
     <strong>New provider</strong>
-    <div class="profile-panel" style="margin-top:12px;">
-      <div class="grid3">
-        <div class="field"><label>Name *</label><input id="np_name"></div>
-        <div class="field"><label>Country</label><select id="np_country_id"><option value="">—</option></select></div>
-        <div class="field"><label>City</label><input id="np_city"></div>
-      </div>
-      <div class="field">
-        <label>Roles — a provider can be one or both</label>
-        <div class="grid2" style="grid-template-columns:1fr 1fr;gap:8px;">
-          <label class="role-check"><input type="checkbox" value="carrier" class="np-role-cb"> Carrier</label>
-          <label class="role-check"><input type="checkbox" value="customs_broker" class="np-role-cb"> Customs Broker</label>
+    <div class="kform" data-kp-name="np_name" data-kp-need="np_name:Name" data-kp-fields="np_name,np_country_id,np_city">
+      <aside class="kpass">
+        <div class="kring"><div class="kmark">+</div><span class="kpct">0%</span></div>
+        <div class="field kname"><label class="kvh">Name *</label><input class="kbare" id="np_name" placeholder="Provider name"></div>
+        <div class="kneed"></div>
+      </aside>
+      <div class="kcols">
+        <div class="kcol">
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
+            <div class="kgrid">
+              <div class="field"><label>Country</label><select id="np_country_id"><option value="">—</option></select></div>
+              <div class="field"><label>City</label><input id="np_city"></div>
+            </div>
+          </div>
+        </div>
+        <div class="kcol">
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5M17 5a3.5 3.5 0 010 7M22 20c-.4-2.5-1.8-4-4-4.6"/></svg></span>Roles</div>
+            <div class="field">
+              <label>A provider can be one or both</label>
+              <div class="kgrid">
+                <label class="role-check"><input type="checkbox" value="carrier" class="np-role-cb"> Carrier</label>
+                <label class="role-check"><input type="checkbox" value="customs_broker" class="np-role-cb"> Customs Broker</label>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -577,51 +594,64 @@ auth.onAuthStateChanged(user => {
       </div>
 
       <div id="profileEdit" style="display:none;">
-        <div class="profile-panel" style="margin-top:0;">
-          <div class="profile-heading">Classification</div>
-          <div class="grid3">
-            <div class="field"><label>Name *</label><input id="p_name" required></div>
-            <div class="field"><label>Country</label><select id="p_country_id"><option value="">—</option></select></div>
-            <div class="field"><label>City</label><input id="p_city"></div>
-          </div>
-          <div class="field"><label>Address</label><input id="p_address" placeholder="Street address"></div>
-          <div class="field">
-            <label>Roles — a provider can be one or both</label>
-            <div class="grid2" style="grid-template-columns:1fr 1fr;gap:8px;">
-              <label class="role-check"><input type="checkbox" value="carrier" class="role-cb"> Carrier</label>
-              <label class="role-check"><input type="checkbox" value="customs_broker" class="role-cb"> Customs Broker</label>
+        <div class="kform" data-kp-name="p_name" data-kp-need="p_name:Name" data-kp-fields="p_name,p_country_id,p_city,p_address,p_contact_name,p_email,p_phone_number,p_whatsapp_number,p_email_cc,p_payment_days,p_notes">
+          <aside class="kpass">
+            <div class="kring"><div class="kmark">+</div><span class="kpct">0%</span></div>
+            <div class="field kname"><label class="kvh">Name *</label><input class="kbare" id="p_name" required placeholder="Provider name"></div>
+            <div class="kmoney">
+              <label>We pay them</label>
+              <select id="p_payment_days"><option value="">Not set</option><option value="0">At delivery</option><option value="30">30 days after delivery</option></select>
             </div>
-          </div>
-        </div>
-        <div class="profile-panel">
-          <div class="profile-heading">Contact</div>
-          <div class="grid2">
-            <div class="field"><label>Contact Name</label><input id="p_contact_name"></div>
-            <div class="field"><label>Contact Email</label><input id="p_email" type="email"></div>
-          </div>
-          <div class="grid2">
-            <div class="field"><label>Phone</label>
-              <div style="display:flex;gap:6px;">
-                <select id="p_phone_code" style="width:88px;flex-shrink:0;"></select>
-                <input id="p_phone_number" placeholder="6621234567" style="flex:1;">
+            <div class="kneed"></div>
+          </aside>
+          <div class="kcols">
+            <div class="kcol">
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>Contact</div>
+                <div class="kgrid">
+                  <div class="field"><label>Contact Name</label><input id="p_contact_name"></div>
+                  <div class="field"><label>Contact Email</label><input id="p_email" type="email"></div>
+                  <div class="field"><label>Phone</label>
+                    <div style="display:flex;gap:6px;">
+                      <select id="p_phone_code" style="width:88px;flex-shrink:0;"></select>
+                      <input id="p_phone_number" placeholder="6621234567" style="flex:1;">
+                    </div>
+                  </div>
+                  <div class="field"><label>WhatsApp</label>
+                    <div style="display:flex;gap:6px;">
+                      <select id="p_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
+                      <input id="p_whatsapp_number" placeholder="6621234567" style="flex:1;">
+                    </div>
+                  </div>
+                  <div class="field kwide"><label>CC Emails (comma-separated)</label><input id="p_email_cc" placeholder="dispatch@carrier.com, billing@carrier.com"></div>
+                </div>
+              </div>
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 11h8M8 15h6"/></svg></span>Notes</div>
+                <div class="field"><textarea id="p_notes" rows="2"></textarea></div>
               </div>
             </div>
-            <div class="field"><label>WhatsApp</label>
-              <div style="display:flex;gap:6px;">
-                <select id="p_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
-                <input id="p_whatsapp_number" placeholder="6621234567" style="flex:1;">
+            <div class="kcol">
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
+                <div class="kgrid">
+                  <div class="field"><label>Country</label><select id="p_country_id"><option value="">—</option></select></div>
+                  <div class="field"><label>City</label><input id="p_city"></div>
+                  <div class="field kwide"><label>Address</label><input id="p_address" placeholder="Street address"></div>
+                </div>
+              </div>
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5M17 5a3.5 3.5 0 010 7M22 20c-.4-2.5-1.8-4-4-4.6"/></svg></span>Roles</div>
+                <div class="field">
+                  <label>A provider can be one or both</label>
+                  <div class="kgrid">
+                    <label class="role-check"><input type="checkbox" value="carrier" class="role-cb"> Carrier</label>
+                    <label class="role-check"><input type="checkbox" value="customs_broker" class="role-cb"> Customs Broker</label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="field"><label>CC Emails (comma-separated)</label><input id="p_email_cc" placeholder="dispatch@carrier.com, billing@carrier.com"></div>
-        </div>
-        <div class="profile-panel">
-          <div class="profile-heading">Payment Terms</div>
-          <div class="field"><label>We pay them</label><select id="p_payment_days"><option value="">Not set</option><option value="0">At delivery</option><option value="30">30 days after delivery</option></select></div>
-        </div>
-        <div class="profile-panel">
-          <div class="profile-heading">Notes</div>
-          <div class="field"><textarea id="p_notes" rows="2"></textarea></div>
         </div>
         <div style="display:flex;gap:10px;margin-top:8px;">
           <button class="btn" onclick="saveProviderProfile()">Save</button>

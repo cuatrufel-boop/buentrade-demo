@@ -420,6 +420,7 @@ auth.onAuthStateChanged(user => {
 </header>
 <script src="js/header-chip.js"></script>
 <script src="js/bt-dialogs.js"></script>
+<script src="js/form-passport.js"></script>
 
 <div class="wrap">
   <h1 onclick="closeForm()" style="cursor:pointer;">Products</h1>
@@ -439,11 +440,29 @@ auth.onAuthStateChanged(user => {
          row in Meat Packers, not here. -->
     <!-- Every selection first, all together — then the panel below just shows what got filled
          in. Nothing to type until you've picked everything that can be picked. -->
-    <div class="section-title">Classification</div>
-    <div class="grid5">
+    <!-- Product Profile — the 12 fields every product profile MUST carry (6 English, 6 Spanish).
+         Every value here is DERIVED from a Classification selection above, rendered as plain
+         summary text (not disabled form fields pretending to be editable) — each real value held
+         in a paired hidden input so saveProduct()/editing keep reading
+         document.getElementById(id).value exactly as before. Full Name is the one exception,
+         typed by hand (see the note where it's defined). -->
+    <div class="kform" data-kp-need="category:Category,temperature_id:Temperature,packaging_id:Packaging,cut_name_id:Cut name" data-kp-fields="category,temperature_id,packaging_id,cut_name_id">
+      <aside class="kpass">
+        <div class="kring"><div class="kmark"><svg style="width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></div><span class="kpct">0%</span></div>
+        <div class="kpname">
+          <div class="profile-row half"><span class="view-label">Full English Product Name (for PO &amp; FO)</span><span class="profile-row-value" id="full_name_en_view">—</span><input type="hidden" id="full_name_en"></div>
+          <div class="profile-row half"><span class="view-label">Full Spanish Product Name (for SO)</span><span class="profile-row-value" id="full_name_es_view">—</span><input type="hidden" id="full_name_es"></div>
+        </div>
+        <div class="kneed"></div>
+      </aside>
+      <div class="kcols">
+        <div class="kcol">
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>Classification</div>
+    <div class="kgrid">
       <div class="field"><label>Category *</label><select id="category" required onchange="onCategoryChanged()"><option value="">—</option></select></div>
       <div class="field"><label>Temperature *</label><select id="temperature_id" required onchange="renderPackagingOptions();updateProfileDisplays()"><option value="">—</option></select></div>
-      <div class="field">
+      <div class="field kwide">
         <label>Packaging *</label>
         <div style="display:flex;gap:6px;">
           <select id="packaging_id" required onchange="updateProfileDisplays()" style="flex:1;min-width:0;"><option value="">—</option></select>
@@ -451,7 +470,7 @@ auth.onAuthStateChanged(user => {
           <button type="button" class="btn-add-inline" onclick="managePackaging()" title="Remove a packaging type" style="font-size:15px;">🗑</button>
         </div>
       </div>
-      <div class="field">
+      <div class="field kwide">
         <label>Cut Name *</label>
         <div style="display:flex;gap:6px;">
           <select id="cut_name_id" required onchange="updateProfileDisplays()" style="flex:1;min-width:0;"><option value="">—</option></select>
@@ -468,7 +487,7 @@ auth.onAuthStateChanged(user => {
          selection can't represent, but the catalog can grow to 15-20+ entries over time and a
          flat checkbox row doesn't scale. Checked boxes join in catalog order to build
          subcategory/subcategory_en. -->
-      <div class="field" style="text-align:left;position:relative;">
+      <div class="field kwide" style="text-align:left;position:relative;">
         <label style="text-align:left;">Variation</label>
         <div style="display:flex;gap:6px;">
           <button type="button" onclick="toggleVariationDropdown()" id="variationDropdownBtn" style="flex:1;min-width:0;text-align:left;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:var(--card);color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
@@ -483,15 +502,11 @@ auth.onAuthStateChanged(user => {
       </div>
     </div>
     <div id="nameDupWarning" style="display:none;background:rgba(255,200,118,.08);border:1px solid rgba(255,200,118,.4);border-radius:7px;padding:8px 10px;margin-top:6px;font-size:12.5px;color:#FFC876;"></div>
-
-    <!-- Product Profile — the 12 fields every product profile MUST carry (6 English, 6 Spanish).
-         Every value here is DERIVED from a Classification selection above, rendered as plain
-         summary text (not disabled form fields pretending to be editable) — each real value held
-         in a paired hidden input so saveProduct()/editing keep reading
-         document.getElementById(id).value exactly as before. Full Name is the one exception,
-         typed by hand (see the note where it's defined). -->
-    <div class="profile-panel">
-      <div class="profile-heading" style="font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px;">Product Profile</div>
+          </div>
+        </div>
+        <div class="kcol">
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></span>Product profile</div>
       <div class="profile-grid">
         <div class="profile-row"><span class="view-label">Category (EN)</span><span class="profile-row-value" id="category_en_display_view">—</span><input type="hidden" id="category_en_display"></div>
         <div class="profile-row"><span class="view-label">Category (ES)</span><span class="profile-row-value" id="category_es_display_view">—</span><input type="hidden" id="category_es_display"></div>
@@ -504,19 +519,10 @@ auth.onAuthStateChanged(user => {
         <div class="profile-row"><span class="view-label">Packing (EN)</span><span class="profile-row-value" id="packing_en_display_view">—</span><input type="hidden" id="packing_en_display"></div>
         <div class="profile-row"><span class="view-label">Packing (ES)</span><span class="profile-row-value" id="packing_es_display_view">—</span><input type="hidden" id="packing_es_display"></div>
       </div>
-      <!-- Composed automatically now that every ingredient (Category, Cut Name, Variation,
-           Temperature, Packaging) is itself a closed selection — no longer typed by hand.
-           EN order: Temperature Category Variation CutName, Packaging.
-           ES order: CutName Variation Temperature, Packaging.
-           (matches the real PO/SO text conventions in each language, verified against the
-           original "Frozen Pork Bone in Butt, Box" / "Cabeza de lomo con hueso Congelado, Caja"
-           examples). -->
-      <div class="profile-grid" style="margin-top:14px;">
-        <div class="profile-row half"><span class="view-label">Full English Product Name (for PO &amp; FO)</span><span class="profile-row-value" id="full_name_en_view">—</span><input type="hidden" id="full_name_en"></div>
-        <div class="profile-row half"><span class="view-label">Full Spanish Product Name (for SO)</span><span class="profile-row-value" id="full_name_es_view">—</span><input type="hidden" id="full_name_es"></div>
+          </div>
+        </div>
       </div>
     </div>
-
     <div style="display:flex;gap:10px;margin-top:8px;align-items:center;">
       <button class="btn" onclick="saveProduct()">Save</button>
       <button class="btn secondary" onclick="closeForm()">Cancel</button>
@@ -881,6 +887,7 @@ function updateProfileDisplays(){
     setProfileField('full_name_es', '');
   }
   if (typeof checkNameDuplicate === 'function') checkNameDuplicate();
+  if (window.btPassport) btPassport.refreshAll();
 }
 
 let variations = [];

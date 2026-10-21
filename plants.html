@@ -556,6 +556,7 @@ auth.onAuthStateChanged(user => {
 <script src="js/header-chip.js"></script>
 <script src="js/product-picker.js"></script>
 <script src="js/bt-dialogs.js"></script>
+<script src="js/form-passport.js"></script>
 <script src="js/entity-history.js"></script>
 
 <div class="wrap">
@@ -796,61 +797,83 @@ auth.onAuthStateChanged(user => {
       </div>
 
       <div id="profileEdit" style="display:none;">
-        <div class="grid3">
-          <div class="field"><label>Country</label><select id="pe_country_id" onchange="onPlantCountryChange('pe')"><option value="">—</option></select></div>
-          <div class="field" id="pe_stateSelectField" style="display:none;"><label>State</label><select id="pe_state_id"><option value="">—</option></select></div>
-          <div class="field" id="pe_stateTextField"><label>State</label><input id="pe_state"></div>
-          <div class="field"><label>City</label><input id="pe_city"></div>
-        </div>
-        <div class="field"><label>Address</label><input id="pe_address"></div>
-        <div class="grid3">
-          <div class="field"><label>Contact Name</label><input id="pe_contact_name"></div>
-          <div class="field"><label>Email</label><input id="pe_email" type="email"></div>
-          <div class="field"><label>Phone</label>
-            <div style="display:flex;gap:6px;">
-              <select id="pe_phone_code" style="width:88px;flex-shrink:0;"></select>
-              <input id="pe_phone_number" placeholder="7145551234" style="flex:1;">
+        <div class="kform" data-kp-fields="pe_country_id,pe_city,pe_address,pe_contact_name,pe_email,pe_phone_number,pe_email_cc,pe_whatsapp_number,pe_website,pe_payments_contact_name,pe_payments_email,pe_payments_whatsapp_number,pe_payment_terms_type,pe_required_documentation,pe_notes,pe_internal_notes">
+          <aside class="kpass">
+            <div class="kring"><div class="kmark"><svg viewBox="0 0 24 24" style="width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M3 21V9l6 3V9l6 3V5h6v16z"/></svg></div><span class="kpct">0%</span></div>
+            <div style="text-align:center;font:700 16px 'Space Grotesk',sans-serif;margin-bottom:4px;">Edit profile</div>
+            <div class="kmoney">
+              <label>Payment Terms</label>
+              <select id="pe_payment_terms_type" onchange="togglePlantProfilePaymentDays()">
+                <option value="">—</option>
+                <option value="advance">Advance</option>
+                <option value="credit">Credit</option>
+              </select>
+              <div id="pePaymentDaysRow" style="display:none;margin-top:8px;">
+                <div class="field"><label>Credit days</label><input type="number" id="pe_payment_terms_days" min="1"></div>
+              </div>
+            </div>
+            <div class="kneed"></div>
+          </aside>
+          <div class="kcols">
+            <div class="kcol">
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>Contact</div>
+                <div class="kgrid">
+                  <div class="field"><label>Contact Name</label><input id="pe_contact_name"></div>
+                  <div class="field"><label>Email</label><input id="pe_email" type="email"></div>
+                  <div class="field"><label>Phone</label>
+                    <div style="display:flex;gap:6px;">
+                      <select id="pe_phone_code" style="width:88px;flex-shrink:0;"></select>
+                      <input id="pe_phone_number" placeholder="7145551234" style="flex:1;">
+                    </div>
+                  </div>
+                  <div class="field"><label>WhatsApp</label>
+                    <div style="display:flex;gap:6px;">
+                      <select id="pe_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
+                      <input id="pe_whatsapp_number" placeholder="7145551234" style="flex:1;">
+                    </div>
+                  </div>
+                  <div class="field"><label>Website</label><input id="pe_website"></div>
+                  <div class="field"><label>CC Emails (comma-separated)</label><input id="pe_email_cc" placeholder="ops@plant.com, billing@plant.com"></div>
+                </div>
+              </div>
+              <!-- Real correction 2026-09-06: "en todas las plantas es una persona distinta a la que
+                   vendio la carga la que recibe el recibo de pago" — a separate Accounts/Payments
+                   contact, never assumed to be the same as the sales contact above. -->
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></span>Payments contact</div>
+                <div class="kgrid">
+                  <div class="field"><label>Payments Contact Name</label><input id="pe_payments_contact_name"></div>
+                  <div class="field"><label>Payments Email</label><input id="pe_payments_email" type="email"></div>
+                  <div class="field kwide"><label>Payments WhatsApp</label>
+                    <div style="display:flex;gap:6px;">
+                      <select id="pe_payments_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
+                      <input id="pe_payments_whatsapp_number" placeholder="7145551234" style="flex:1;">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="kcol">
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
+                <div class="kgrid">
+                  <div class="field"><label>Country</label><select id="pe_country_id" onchange="onPlantCountryChange('pe')"><option value="">—</option></select></div>
+                  <div class="field" id="pe_stateSelectField" style="display:none;"><label>State</label><select id="pe_state_id"><option value="">—</option></select></div>
+                  <div class="field" id="pe_stateTextField"><label>State</label><input id="pe_state"></div>
+                  <div class="field"><label>City</label><input id="pe_city"></div>
+                  <div class="field kwide"><label>Address</label><input id="pe_address"></div>
+                </div>
+              </div>
+              <div class="profile-panel kcard">
+                <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 11h8M8 15h6"/></svg></span>Documents and notes</div>
+                <div class="field"><label>Required Documentation</label><input id="pe_required_documentation"></div>
+                <div class="field"><label>Notes</label><textarea id="pe_notes" rows="2"></textarea></div>
+                <div class="field"><label>Internal Notes</label><textarea id="pe_internal_notes" rows="2"></textarea></div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="grid3">
-          <div class="field"><label>CC Emails (comma-separated)</label><input id="pe_email_cc" placeholder="ops@plant.com, billing@plant.com"></div>
-          <div class="field"><label>WhatsApp</label>
-            <div style="display:flex;gap:6px;">
-              <select id="pe_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
-              <input id="pe_whatsapp_number" placeholder="7145551234" style="flex:1;">
-            </div>
-          </div>
-          <div class="field"><label>Website</label><input id="pe_website"></div>
-        </div>
-        <!-- Real correction 2026-09-06: "en todas las plantas es una persona distinta a la que
-             vendio la carga la que recibe el recibo de pago" — a separate Accounts/Payments
-             contact, never assumed to be the same as the sales contact above. -->
-        <div class="grid3">
-          <div class="field"><label>Payments Contact Name</label><input id="pe_payments_contact_name"></div>
-          <div class="field"><label>Payments Email</label><input id="pe_payments_email" type="email"></div>
-          <div class="field"><label>Payments WhatsApp</label>
-            <div style="display:flex;gap:6px;">
-              <select id="pe_payments_whatsapp_code" style="width:88px;flex-shrink:0;"></select>
-              <input id="pe_payments_whatsapp_number" placeholder="7145551234" style="flex:1;">
-            </div>
-          </div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Payment Terms</label>
-            <select id="pe_payment_terms_type" onchange="togglePlantProfilePaymentDays()">
-              <option value="">—</option>
-              <option value="advance">Advance</option>
-              <option value="credit">Credit</option>
-            </select>
-          </div>
-          <div class="field"><label>Required Documentation</label><input id="pe_required_documentation"></div>
-        </div>
-        <div id="pePaymentDaysRow" style="display:none;max-width:220px;">
-          <div class="field"><label>Credit days</label><input type="number" id="pe_payment_terms_days" min="1"></div>
-        </div>
-        <div class="field"><label>Notes</label><textarea id="pe_notes" rows="2"></textarea></div>
-        <div class="field"><label>Internal Notes</label><textarea id="pe_internal_notes" rows="2"></textarea></div>
         <div style="display:flex;gap:10px;">
           <button class="btn" onclick="saveProfile()">Save Profile</button>
           <button class="btn secondary" onclick="toggleProfile()">Cancel</button>
@@ -915,54 +938,68 @@ auth.onAuthStateChanged(user => {
     <!-- Same format as the product form: fill in the fields up top, and the read-only Plant
          Profile card below consolidates everything into one glanceable record as you go — nothing
          computed/derived here (unlike Full Name), it's a live mirror of what Save will record. -->
-    <div class="profile-panel" style="margin-top:12px;">
-      <div class="profile-heading">Classification</div>
-      <div class="grid5">
-        <div class="field"><label>Plant / Packer Name *</label><input id="newPlantName" oninput="updateNewPlantProfile()" placeholder="e.g. Tyson — Waterloo"></div>
-        <div class="field"><label>Species *</label><select id="newPlantCategory" onchange="updateNewPlantProfile()"><option value="">—</option></select></div>
-        <div class="field"><label>Country</label><select id="np_country_id" onchange="onPlantCountryChange('np');updateNewPlantProfile()"><option value="">—</option></select></div>
-        <div class="field" id="np_stateSelectField" style="display:none;"><label>State</label><select id="np_state_id" onchange="updateNewPlantProfile()"><option value="">—</option></select></div>
-        <div class="field" id="np_stateTextField"><label>State</label><input id="np_state" oninput="updateNewPlantProfile()"></div>
-        <div class="field"><label>City</label><input id="np_city" oninput="updateNewPlantProfile()"></div>
-      </div>
-      <div class="grid5">
-        <div class="field"><label>Contact Name</label><input id="np_contact_name" oninput="updateNewPlantProfile()"></div>
-        <div class="field"><label>Email</label><input id="np_email" type="email" oninput="updateNewPlantProfile()"></div>
-        <div class="field"><label>Phone</label>
-          <div style="display:flex;gap:6px;">
-            <select id="np_phone_code" style="width:88px;flex-shrink:0;" onchange="updateNewPlantProfile()"></select>
-            <input id="np_phone_number" placeholder="7145551234" style="flex:1;" oninput="updateNewPlantProfile()">
+    <div class="kform" data-kp-name="newPlantName" data-kp-need="newPlantName:Plant name,newPlantCategory:Species" data-kp-fields="newPlantName,newPlantCategory,np_country_id,np_city,np_address,np_contact_name,np_email,np_phone_number,np_email_cc,np_whatsapp_number,np_website,np_payment_terms_type,np_required_documentation,np_notes">
+      <aside class="kpass">
+        <div class="kring"><div class="kmark">+</div><span class="kpct">0%</span></div>
+        <div class="field kname"><label class="kvh">Plant / Packer Name *</label><input class="kbare" id="newPlantName" oninput="updateNewPlantProfile()" placeholder="Plant name"></div>
+        <div class="field ktype"><label>Species *</label><select id="newPlantCategory" onchange="updateNewPlantProfile()"><option value="">—</option></select></div>
+        <div class="kneed"></div>
+      </aside>
+      <div class="kcols">
+        <div class="kcol">
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>Contact</div>
+            <div class="kgrid">
+              <div class="field"><label>Contact Name</label><input id="np_contact_name" oninput="updateNewPlantProfile()"></div>
+              <div class="field"><label>Email</label><input id="np_email" type="email" oninput="updateNewPlantProfile()"></div>
+              <div class="field"><label>Phone</label>
+                <div style="display:flex;gap:6px;">
+                  <select id="np_phone_code" style="width:88px;flex-shrink:0;" onchange="updateNewPlantProfile()"></select>
+                  <input id="np_phone_number" placeholder="7145551234" style="flex:1;" oninput="updateNewPlantProfile()">
+                </div>
+              </div>
+              <div class="field"><label>WhatsApp</label>
+                <div style="display:flex;gap:6px;">
+                  <select id="np_whatsapp_code" style="width:88px;flex-shrink:0;" onchange="updateNewPlantProfile()"></select>
+                  <input id="np_whatsapp_number" placeholder="7145551234" style="flex:1;" oninput="updateNewPlantProfile()">
+                </div>
+              </div>
+              <div class="field"><label>Website</label><input id="np_website" oninput="updateNewPlantProfile()"></div>
+              <div class="field"><label>CC Emails (comma-separated)</label><input id="np_email_cc" placeholder="ops@plant.com, billing@plant.com" oninput="updateNewPlantProfile()"></div>
+            </div>
           </div>
         </div>
-        <div class="field"><label>CC Emails (comma-separated)</label><input id="np_email_cc" placeholder="ops@plant.com, billing@plant.com" oninput="updateNewPlantProfile()"></div>
-        <div class="field"><label>WhatsApp</label>
-          <div style="display:flex;gap:6px;">
-            <select id="np_whatsapp_code" style="width:88px;flex-shrink:0;" onchange="updateNewPlantProfile()"></select>
-            <input id="np_whatsapp_number" placeholder="7145551234" style="flex:1;" oninput="updateNewPlantProfile()">
+        <div class="kcol">
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Location</div>
+            <div class="kgrid">
+              <div class="field"><label>Country</label><select id="np_country_id" onchange="onPlantCountryChange('np');updateNewPlantProfile()"><option value="">—</option></select></div>
+              <div class="field" id="np_stateSelectField" style="display:none;"><label>State</label><select id="np_state_id" onchange="updateNewPlantProfile()"><option value="">—</option></select></div>
+              <div class="field" id="np_stateTextField"><label>State</label><input id="np_state" oninput="updateNewPlantProfile()"></div>
+              <div class="field"><label>City</label><input id="np_city" oninput="updateNewPlantProfile()"></div>
+              <div class="field kwide"><label>Address</label><input id="np_address" oninput="updateNewPlantProfile()"></div>
+            </div>
+          </div>
+          <div class="profile-panel kcard">
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></span>Terms and documents</div>
+            <div class="kgrid">
+              <div class="field"><label>Payment Terms</label>
+                <select id="np_payment_terms_type" onchange="toggleNewPlantPaymentDays();updateNewPlantProfile()">
+                  <option value="">—</option>
+                  <option value="advance">Advance</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </div>
+              <div class="field" id="npPaymentDaysRow" style="display:none;"><label>Credit days</label><input type="number" id="np_payment_terms_days" min="1" oninput="updateNewPlantProfile()"></div>
+              <div class="field kwide"><label>Required Documentation</label><input id="np_required_documentation" oninput="updateNewPlantProfile()"></div>
+              <div class="field kwide"><label>Notes</label><textarea id="np_notes" rows="2" oninput="updateNewPlantProfile()"></textarea></div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="grid5">
-        <div class="field"><label>Website</label><input id="np_website" oninput="updateNewPlantProfile()"></div>
-        <div class="field"><label>Payment Terms</label>
-          <select id="np_payment_terms_type" onchange="toggleNewPlantPaymentDays();updateNewPlantProfile()">
-            <option value="">—</option>
-            <option value="advance">Advance</option>
-            <option value="credit">Credit</option>
-          </select>
-        </div>
-        <div class="field"><label>Required Documentation</label><input id="np_required_documentation" oninput="updateNewPlantProfile()"></div>
-        <div class="field" id="npPaymentDaysRow" style="display:none;"><label>Credit days</label><input type="number" id="np_payment_terms_days" min="1" oninput="updateNewPlantProfile()"></div>
-      </div>
-
-      <!-- The two genuinely long free-text fields, grouped together at the end instead of
-           interrupting the compact rows above — keeps every short field's box the same width
-           throughout, no jarring narrow/wide/narrow rhythm. -->
-      <div class="field"><label>Address</label><input id="np_address" oninput="updateNewPlantProfile()"></div>
-      <div class="field"><label>Notes</label><textarea id="np_notes" rows="2" oninput="updateNewPlantProfile()"></textarea></div>
     </div>
 
-    <div class="profile-panel">
+    <div class="profile-panel" id="npvMirror" style="display:none;">
       <div class="profile-heading">Plant Profile</div>
       <div class="profile-grid">
         <div class="profile-row"><span class="view-label">Plant Name</span><span class="profile-row-value" id="npv_name">—</span></div>
@@ -2126,6 +2163,7 @@ function updateNewPlantProfile(){
   setV('npv_payment_terms', formatPaymentTerms(document.getElementById('np_payment_terms_type').value, document.getElementById('np_payment_terms_days').value));
   setV('npv_required_documentation', document.getElementById('np_required_documentation').value);
   setV('npv_notes', document.getElementById('np_notes').value);
+  if (window.btPassport) btPassport.refreshAll();
 }
 
 // Same field set as PROFILE_FIELDS/Edit Profile, filled upfront instead of in a later separate

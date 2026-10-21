@@ -127,7 +127,7 @@ html body .tab-btn.active, html body .seg-btn.active { background: rgba(232, 181
 
 /* ---- FIELDS: text boxes, dropdowns, date boxes, text areas, search boxes — one look: glass, a 1.5px blue border, white text ---------------
    (the Trading Tool keeps its own number boxes: body[data-bt-skip-fields])                                                                   */
-html body:not([data-bt-skip-fields]) #appContent :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=button]):not([type=submit]):not([class*="search-input"]), select, textarea):not(:is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box, .rq-search-trigger) *),
+html body:not([data-bt-skip-fields]) #appContent :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=button]):not([type=submit]):not([class*="search-input"]):not(.kbare), select, textarea):not(:is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box, .rq-search-trigger) *),
 html body .bt-select-trigger, html body .pl-cat-select, html body .pd-cat-select, html body .cp-search-input,
 html body:not([data-bt-skip-fields]) .rq-ddown-btn {
   font-family: var(--bt-font) !important; font-size: 13px !important; font-weight: 400 !important;
@@ -139,7 +139,7 @@ html body:not([data-bt-skip-fields]) .rq-ddown-btn {
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
 /* every single-line field, dropdown and search box is the same 38px high (a text area grows) */
-html body:not([data-bt-skip-fields]) #appContent :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=button]):not([type=submit]):not([class*="search-input"]), select):not(:is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box, .rq-search-trigger) *),
+html body:not([data-bt-skip-fields]) #appContent :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=button]):not([type=submit]):not([class*="search-input"]):not(.kbare), select):not(:is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box, .rq-search-trigger) *),
 html body .bt-select-trigger, html body .pl-cat-select, html body .pd-cat-select, html body .cp-search-input { height: 38px; box-sizing: border-box; }
 html body [class$="-search-wrap"], html body .rq-search-trigger { height: 38px !important; box-sizing: border-box; border: 1.5px solid rgba(90, 170, 255, .35) !important; border-radius: 8px !important; background: rgba(255, 255, 255, .06) !important; }
 html body [class$="-search-wrap"]:focus-within, html body .rq-search-trigger:focus-within { border-color: var(--bt-blue) !important; box-shadow: 0 0 0 3px rgba(90, 170, 255, .2) !important; }
@@ -160,7 +160,7 @@ html body .cp-product-card .cp-demand-empty .bt-select-trigger, html body .about
 html body .cp-product-card .cp-demand-empty .bt-select-trigger:hover, html body .cp-product-card .cp-demand-empty.open .bt-select-trigger, html body .about-insight-actions .cp-demand-empty .bt-select-trigger:hover, html body .about-insight-actions .cp-demand-empty.open .bt-select-trigger { color: var(--bt-blue) !important; border: 1px solid var(--bt-blue) !important; background: rgba(90, 170, 255, .12) !important; }
 html body .cp-product-card .bt-select-chevron, html body .about-insight-actions .bt-select-chevron { width: 12px; height: 12px; opacity: .7; }
 html body .cp-product-card .bt-select-label, html body .about-insight-actions .bt-select-label { flex: 0 1 auto; }
-html body:not([data-bt-skip-fields]) #appContent :is(input, select, textarea):not(:is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box, .rq-search-trigger) *):focus,
+html body:not([data-bt-skip-fields]) #appContent :is(input:not(.kbare), select, textarea):not(:is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box, .rq-search-trigger) *):focus,
 html body .bt-select-trigger:focus, html body .cp-search-input:focus { outline: none !important; border-color: var(--bt-blue) !important; box-shadow: 0 0 0 3px rgba(90, 170, 255, .2) !important; }
 html body .bt-select-trigger:hover, html body .pl-cat-select:hover, html body .pd-cat-select:hover { border-color: rgba(90, 170, 255, .7) !important; }
 html body #appContent ::placeholder { color: rgba(255, 255, 255, .4); }
@@ -318,3 +318,55 @@ html body .bt-toolbar .seg-btn { display: inline-flex; align-items: center; }
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px), linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%);}
 
+/* ---- FORMS (K passport layout) ---- */
+  /* THE form layout for every add/edit screen (owner approved option K, 2026-10-21): a "passport" on the left (name, key
+     facts, completeness ring) and section cards on the right. Design only — fields keep their ids and handlers. Colors/recipes
+     are the stat cards (blue hero glass, gold money card) and the section titles of the other modules. */
+  .kform{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start;margin-top:12px;}
+  .kpass{position:relative;border-radius:14px;padding:24px 20px 18px;background:linear-gradient(135deg,rgba(90,170,255,.30),rgba(90,170,255,.07));border:1px solid rgba(90,170,255,.55);box-shadow:0 3px 12px -3px rgba(90,170,255,.4),inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden;}
+  .kpass::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.85;}
+  .kring{position:relative;width:96px;height:96px;margin:0 auto 14px;border-radius:50%;background:conic-gradient(#5AAAFF calc(var(--p,0)*1%),rgba(255,255,255,.14) 0);display:flex;align-items:center;justify-content:center;transition:background .3s;}
+  .kmark{width:84px;height:84px;border-radius:50%;background:#0C2147;color:#5AAAFF;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;}
+  .kpct{position:absolute;right:-8px;bottom:0;background:#0C2147;border:1px solid rgba(90,170,255,.45);border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;padding:1px 8px;color:#fff;}
+  .kvh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+  html body #appContent .kpass .kname input{font-family:'Space Grotesk',sans-serif !important;font-size:23px !important;font-weight:700 !important;text-align:center;background:transparent !important;border:0 !important;border-bottom:1.5px solid transparent !important;border-radius:0 !important;padding:2px 0;height:auto !important;}
+  html body #appContent .kpass .kname input:hover{border-bottom-color:rgba(255,255,255,.25) !important;}
+  html body #appContent .kpass .kname input:focus{border-bottom-color:#5AAAFF !important;box-shadow:none !important;}
+  html body #appContent .kpass .kleg input{font-size:13px !important;text-align:center;background:transparent !important;border:0 !important;border-radius:0 !important;color:rgba(255,255,255,.7) !important;padding:2px 0;height:auto !important;}
+  html body #appContent .kpass .kleg input:focus{color:#fff !important;box-shadow:none !important;}
+  .kpass .field{margin-bottom:6px;}
+  .kpass .ktype{margin-top:12px;}
+  .kmoney{margin-top:16px;border-radius:12px;padding:12px 14px;background:linear-gradient(135deg,rgba(232,181,76,.28),rgba(232,181,76,.07));border:1px solid rgba(232,181,76,.55);box-shadow:0 3px 12px -3px rgba(232,181,76,.4),inset 0 1px 0 rgba(255,255,255,.1);}
+  .kmoney label{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.03em;}
+  .kmoney label::before{content:'';width:4px;height:4px;border-radius:50%;background:#E8B54C;box-shadow:0 0 7px 1.5px rgba(232,181,76,.8);}
+  .kmoney-row{margin-top:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;color:#fff;}
+  .kmoney .bt-money-wrap{gap:6px;}
+  .kmoney .bt-money-cur{font-family:'IBM Plex Mono',monospace;font-weight:700;color:#E8B54C !important;font-size:20px !important;}
+  .kmoney .bt-money-cur:last-child{font-size:12px !important;color:rgba(255,255,255,.55) !important;}
+  html body #appContent .kmoney-row input{background:transparent !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;padding:0;height:auto !important;font-family:'IBM Plex Mono',monospace !important;font-size:24px !important;font-weight:700 !important;text-align:left;font-variant-numeric:tabular-nums;}
+  .kneed{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15);display:grid;gap:6px;font-size:12px;color:rgba(255,255,255,.7);}
+  .kneed div{display:flex;align-items:center;gap:8px;}
+  .kneed i{width:14px;height:14px;border-radius:50%;border:1.5px solid #FF9C8A;flex:none;}
+  .kneed i.ok{border-color:#3FCB7E;background:#3FCB7E;box-shadow:inset 0 0 0 3px #0C2147;}
+  .kcols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+  .kcol{display:grid;gap:16px;min-width:0;}
+  .kcol .profile-panel + .profile-panel{margin-top:0;}
+  .kcard{padding:14px 16px 6px;}
+  .ksh{display:flex;align-items:center;gap:9px;margin:0 0 12px !important;}
+  .kic{width:26px;height:26px;border-radius:8px;background:rgba(90,170,255,.14);border:1.5px solid rgba(90,170,255,.5);color:#5AAAFF;display:flex;align-items:center;justify-content:center;flex:none;}
+  .kic svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+  .kgrid .kwide{grid-column:span 2;}
+  .kform .field{margin-bottom:10px;min-width:0;}
+  .kform .field label{text-align:left;font-size:11.5px;margin-bottom:3px;}
+  .kcard .field input,.kcard .field textarea{text-align:left;padding:7px 10px;font-size:13px;}
+  .kcheck{margin:2px 0 8px;}
+  .kcheck label{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:#fff;text-align:left;cursor:pointer;}
+  @media (max-width:980px){.kform{grid-template-columns:minmax(0,1fr);}.kcols{grid-template-columns:minmax(0,1fr);}}
+  @media (max-width:760px){.kgrid{grid-template-columns:minmax(0,1fr);}.kgrid .kwide{grid-column:auto;}}
+
+  .kpname{margin-top:4px;text-align:center;display:grid;gap:12px;}
+  .kpname .profile-row{display:block;padding:0;border:0;text-align:center;}
+  .kpname .view-label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:2px;}
+  .kpname .profile-row-value{display:block;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;line-height:1.3;word-break:break-word;}
+  .profile-panel.kcard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:14px 16px 6px;}
