@@ -541,6 +541,7 @@
 <script src="js/pdf-base.js"></script>
 <script src="js/invoice-pdf.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/customer-contact.js"></script>
 <script src="js/price-lock.js"></script>
 <script src="js/money-field.js"></script>
 <script src="js/email-modal.js"></script>
@@ -2287,7 +2288,9 @@ window.addEventListener('message', (e) => {
 
 // ===== Negotiation panel — additive only, never touches calc() or products[]. Opened from
 // Offers' "TT" button with offerId/plantId in the URL; reads/writes sent_offers directly. =====
-let negoOffer = null, negoPlant = null, negoCustomer = null;
+let negoOffer = null, negoPlant = null, negoCustomer = null, negoProductCategory = null;
+// the customer as THIS offer's product sees him: the buyer of its protein, else his main contact (js/customer-contact.js)
+function negoCustomerContact(){ return btCustomerFor(negoCustomer, negoProductCategory); }
 
 function negoEscapeHtml(str){
   return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -2484,6 +2487,10 @@ async function negoInit(){
   }
   if (offer.customer_id){
     try { negoCustomer = ((await callApi('customers-search', { ids: [offer.customer_id] })).results || [])[0] || null; } catch (e) { negoCustomer = null; }
+  }
+  negoProductCategory = null;
+  if (offer.product_id){
+    try { negoProductCategory = (((await callApi('products-search', { ids: [offer.product_id] })).results || [])[0] || {}).category_id || null; } catch (e) { negoProductCategory = null; }
   }
   negoRenderSignal();
   negoRenderLog();
@@ -3031,7 +3038,7 @@ async function negoRenderSignal(){
 async function negoSendToCustomer(channel){
   if (!negoCustomer){ document.getElementById('negoMsg').textContent = 'No customer on file for this offer.'; return; }
   const price = negoCurrentSale();
-  const contact = negoFirstName(negoCustomer.contact_name || negoCustomer.trade_name);
+  const contact = negoFirstName(negoCustomerContact().contact_name || negoCustomer.trade_name); // the buyer of this product's protein
   // Real ask 2026-09-16: same credit-hold line quotes.html appends to every customer-facing offer
   // — negoOffer.over_credit_limit already comes straight from sent-offers-search (loaded when this
   // negotiation opened), the same computeCustomerExposure check, never recomputed differently here.
@@ -3070,19 +3077,21 @@ async function negoSendToCustomer(channel){
     body = `Hola ${contact},\n\nLe confirmamos ${price.toFixed(4)} USD/lb frontera.${signalBlock}${creditHoldLine}`;
   }
   if (channel === 'email'){
-    if (!negoCustomer.email){ document.getElementById('negoMsg').textContent = 'This customer has no email on file.'; return; }
+    const buyer = negoCustomerContact(); // the buyer of this product's protein
+    if (!buyer.email){ document.getElementById('negoMsg').textContent = 'This customer has no email on file.'; return; }
     // Same follow-up gap as negoSendToPlant above — waInfo was never passed here either.
-    const customerPhone = (negoCustomer.whatsapp || negoCustomer.phone || '').replace(/\D/g, '');
+    const customerPhone = (buyer.whatsapp || buyer.phone || '').replace(/\D/g, '');
     try {
-      await sendEmailApi('offers', negoCustomer.email, 'Cotización', body, [], customerPhone ? { phone: customerPhone, message: body } : null, undefined, lockPrices);
+      await sendEmailApi('offers', buyer.email, 'Cotización', body, [], customerPhone ? { phone: customerPhone, message: body } : null, undefined, lockPrices);
       // sent from the review modal = confirmed by the trader → these Market Flash bullets now count as delivered
       if (negoLastSignal) await mfLogSends(callApi, negoLastSignal.marketNote, negoOffer.customer_id, 'email', currentActor());
     } catch(e){
       if (e.cancelled) return;
-      window.open(`mailto:${negoCustomer.email}?subject=${encodeURIComponent('Cotización')}&body=${encodeURIComponent(body)}`, '_blank');
+      window.open(`mailto:${buyer.email}?subject=${encodeURIComponent('Cotización')}&body=${encodeURIComponent(body)}`, '_blank');
     }
   } else {
-    const phone = (negoCustomer.whatsapp || negoCustomer.phone || '').replace(/\D/g, '');
+    const buyer = negoCustomerContact(); // the buyer of this product's protein
+    const phone = (buyer.whatsapp || buyer.phone || '').replace(/\D/g, '');
     if (!phone){ document.getElementById('negoMsg').textContent = 'This customer has no phone/WhatsApp on file.'; return; }
     // Reviewed and confirmed by the trader in the app before WhatsApp opens (same shared confirm window as the other modules)
     const waResult = await bcOpenWaOnlyModal({ title: `WhatsApp — ${negoCustomer.trade_name || negoCustomer.name || ''}`, phone, message: body, lockPrices });

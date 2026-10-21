@@ -119,12 +119,15 @@ async function qmcRun(opts){
   if (!candidates.length){ notify('Quote more clients', 'No other customer is linked to this product.', false); return; }
   if (opts.ask && !(await qmcAsk(candidates.length))) return;
 
+  let offerCategory = null; // the protein of the product: each candidate customer is reached through his buyer for it (js/customer-contact.js)
+  try { offerCategory = (((await callApi('products-search', { ids: [offer.product_id] })).results || [])[0] || {}).category_id || null; } catch (e) {}
   let buyerCity = '';
   try { buyerCity = (((await callApi('customers-search', { ids: [offer.customer_id] })).results || [])[0] || {}).city || ''; } catch (e) {}
 
   const productLabel = offer.product_spec_es || offer.product_name_es || offer.product_name || '';
   let created = 0;
-  for (const c of candidates){
+  for (const cust of candidates){
+    const c = typeof btCustomerFor === 'function' ? btCustomerFor(cust, offerCategory) : cust; // his buyer for this protein, else his main contact
     const message = qmcMessage(offer, c, buyerCity);
     const phone = (c.whatsapp || c.phone || '').replace(/\D/g, '');
     let outcome = null, channel = null;

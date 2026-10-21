@@ -174,6 +174,11 @@
   .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:0 14px;}
   .profile-panel{background:var(--card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:18px 22px;}
   .profile-panel + .profile-panel{margin-top:16px;}
+  .pc-row{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:rgba(255,255,255,.03);}
+  .pc-cats{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:6px;}
+  .pc-cat{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer;}
+  .pc-cat input{width:auto;}
+  .pc-remove{margin-left:auto;}
   /* the card whose dropdown (Customs agency, Country…) is open sits above the cards below it: each card blurs its own layer, so the next card was painting over the open list */
   .profile-panel:has(.bt-select-wrap.open){position:relative;z-index:60;}
   .profile-heading{font-size:11.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
@@ -538,6 +543,8 @@ auth.onAuthStateChanged(user => {
         <div><label class="view-label">Payments Email</label><span id="v_payments_contact_email">—</span></div>
         <div><label class="view-label">Payments WhatsApp</label><span id="v_payments_contact_phone">—</span></div>
       </div>
+      <div class="section-title">Buyers by protein</div>
+      <div id="v_protein_contacts" style="font-size:13.5px;line-height:1.7;">—</div>
       <div class="section-title">Commercial profile</div>
       <div class="grid3" style="row-gap:10px;">
         <div><label class="view-label">Business Type</label><span id="v_business_type">—</span></div>
@@ -658,6 +665,19 @@ auth.onAuthStateChanged(user => {
           <div class="field"><label>Payments contact email</label><input type="email" id="payments_contact_email" oninput="updateCustomerProfile()"></div>
           <div class="field"><label>Payments contact WhatsApp</label><input id="payments_contact_whatsapp" oninput="updateCustomerProfile()"></div>
         </div>
+      </div>
+
+      <div class="field" style="text-align:left;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;">
+          <input type="checkbox" id="proteinContactsOn" onchange="toggleProteinContacts()" style="width:auto;">
+          This company has other buyers by protein (one for chicken, another for beef and pork…)
+        </label>
+        <div id="proteinContactsHint" style="display:none;font-size:12px;color:var(--ink-soft);margin-top:4px;">Save the customer first, then add its buyers by protein.</div>
+      </div>
+      <div id="proteinContactsBlock" style="display:none;">
+        <div class="view-label" style="margin:2px 0 8px;">A protein with a buyer goes to that buyer only. The rest go to the buyer above.</div>
+        <div id="proteinContactRows"></div>
+        <button type="button" class="btn secondary small" onclick="addProteinContactRow()">+ Add buyer</button>
       </div>
 
     </div>
@@ -804,6 +824,7 @@ function openForm(customer){
   document.querySelectorAll('#formCard select[data-bt-enhanced]').forEach(s => { if (s.btSync) s.btSync(); });
   togglePaymentDaysInput();
   togglePaymentsContact();
+  loadProteinContactsForm(customer);
   updateCustomerProfile();
   document.getElementById('formMsg').textContent = '';
   document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
@@ -885,6 +906,64 @@ function togglePaymentsContact(){
   }
 }
 
+// ---- Buyers by protein (owner 2026-10-21: one company, one buyer for chicken and another for beef and pork; one invoice, one credit line) ----------------------------------------
+// customer.contacts = [{ contact_name, contact_role, whatsapp, email, category_ids }]; a protein with a buyer goes to that buyer only (js/customer-contact.js decides, in one place).
+let proteinCategories = [];
+let proteinRowN = 0;
+function proteinName(id){ const c = proteinCategories.find(x => x.id === id); return c ? (c.name_en || c.name) : ''; }
+function loadProteinContactsForm(customer){
+  const editing = !!(customer && customer.id), list = editing ? (customer.contacts || []) : [];
+  const toggle = document.getElementById('proteinContactsOn');
+  toggle.disabled = !editing;
+  document.getElementById('proteinContactsHint').style.display = editing ? 'none' : 'block';
+  toggle.checked = list.length > 0;
+  document.getElementById('proteinContactRows').innerHTML = '';
+  list.forEach(c => addProteinContactRow(c));
+  document.getElementById('proteinContactsBlock').style.display = toggle.checked ? 'block' : 'none';
+}
+function toggleProteinContacts(){
+  const on = document.getElementById('proteinContactsOn').checked;
+  document.getElementById('proteinContactsBlock').style.display = on ? 'block' : 'none';
+  if (on && !document.querySelector('#proteinContactRows .pc-row')) addProteinContactRow();
+}
+function addProteinContactRow(c){
+  c = c || {};
+  const n = ++proteinRowN, row = document.createElement('div');
+  row.className = 'pc-row';
+  row.innerHTML = `
+    <div class="grid3">
+      <div class="field"><label>Buyer name</label><input class="pc-name" value="${escapeHtml(c.contact_name || '')}"></div>
+      <div class="field"><label>WhatsApp</label><input class="pc-wa" id="pcwa_${n}" placeholder="+52 6621234567" value="${escapeHtml(c.whatsapp || '')}"></div>
+      <div class="field"><label>Email</label><input class="pc-email" type="email" value="${escapeHtml(c.email || '')}"></div>
+    </div>
+    <div class="pc-cats">${proteinCategories.map(k => `<label class="pc-cat"><input type="checkbox" value="${k.id}" ${(c.category_ids || []).includes(k.id) ? 'checked' : ''}> ${escapeHtml(k.name_en || k.name)}</label>`).join('')}
+      <button type="button" class="btn secondary small pc-remove" onclick="this.closest('.pc-row').remove()">Remove</button></div>`;
+  document.getElementById('proteinContactRows').appendChild(row);
+}
+function readProteinContacts(){
+  if (!document.getElementById('proteinContactsOn').checked) return [];
+  return [...document.querySelectorAll('#proteinContactRows .pc-row')].map(r => ({
+    contact_name: r.querySelector('.pc-name').value.trim(), whatsapp: r.querySelector('.pc-wa').value.trim() || null, email: r.querySelector('.pc-email').value.trim() || null,
+    category_ids: [...r.querySelectorAll('.pc-cats input[type=checkbox]:checked')].map(x => x.value),
+  })).filter(c => c.contact_name || c.whatsapp || c.email || c.category_ids.length);
+}
+// one problem, said plainly, or '' when the buyers are fine
+function proteinContactsProblem(list){
+  const seen = new Set();
+  for (const c of list){
+    if (!c.contact_name) return 'Each buyer by protein needs a name.';
+    if (!c.category_ids.length) return c.contact_name + ': choose at least one protein.';
+    for (const id of c.category_ids){ if (seen.has(id)) return proteinName(id) + ' is on two buyers: a protein can have only one.'; seen.add(id); }
+    if (c.email && !bcIsValidEmail(c.email)) return c.contact_name + ': the email doesn\'t look valid.';
+    if (c.whatsapp && !bcIsValidFullPhone(c.whatsapp)) return c.contact_name + ': WhatsApp must include the country code, e.g. +52 6621234567.';
+  }
+  return '';
+}
+function proteinContactsHtml(list){
+  if (!list || !list.length) return '<span style="color:var(--ink-soft);">None — everything goes to the buyer above.</span>';
+  return list.map(c => `<div><b>${escapeHtml(c.contact_name)}</b> — ${(c.category_ids || []).map(proteinName).filter(Boolean).map(escapeHtml).join(', ') || '—'}<span style="color:var(--ink-soft);"> · ${escapeHtml(c.whatsapp || c.phone || '')}${c.email ? ' · ' + escapeHtml(c.email) : ''}</span></div>`).join('');
+}
+
 // Border = USD, Delivered Mexico = MXN (BUENTRADE Trading OS rule).
 // Suggestion only — the trader can always override it.
 function suggestCurrency(){
@@ -924,6 +1003,7 @@ async function loadIncoterms(){
   const res = await loadLookupsOnce();
   incoterms = res.incoterms || [];
   businessTypes = res.business_types || [];
+  proteinCategories = res.categories || [];
   const biz = document.getElementById('business_type_id');
   biz.innerHTML = '<option value="">—</option>' + businessTypes.map(b => `<option value="${b.id}" data-sub="${escapeHtml(b.name_es || '')}">${escapeHtml(b.name_en)}</option>`).join('');
   const sel = document.getElementById('usual_incoterm_id');
@@ -1557,6 +1637,7 @@ function viewCustomer(id){
   document.getElementById('v_payments_contact_name').textContent = c.payments_contact_name || '—';
   document.getElementById('v_payments_contact_email').textContent = c.payments_contact_email || '—';
   document.getElementById('v_payments_contact_phone').textContent = c.payments_contact_whatsapp || c.payments_contact_phone || '—';
+  document.getElementById('v_protein_contacts').innerHTML = proteinContactsHtml(c.contacts);
   const biz = businessTypes.find(x => x.id === c.business_type_id);
   document.getElementById('v_business_type').innerHTML = biz ? `${escapeHtml(biz.name_en)}${biz.name_es ? `<span style="display:block;font-size:11.5px;color:var(--ink-soft);">${escapeHtml(biz.name_es)}</span>` : ''}` : '—';
   const curr = currencies.find(x => x.id === c.preferred_currency_id);
@@ -1736,6 +1817,12 @@ async function saveCustomer(forceOverride){
     const prevCust = id ? customers.find(c => c.id === id) : null;
     const prevLimit = prevCust && prevCust.credit_limit != null ? Number(prevCust.credit_limit) : null;
     if (prevLimit !== payload.credit_limit && !(await btMoney.confirmChange([{ label: (payload.trade_name || 'Customer') + ' — credit limit', before: prevLimit, after: payload.credit_limit }]))) return;
+  }
+  if (id){
+    // the buyers by protein go with the save (a customer being created gets them after its first save)
+    const proteinContacts = readProteinContacts(), pcProblem = proteinContactsProblem(proteinContacts);
+    if (pcProblem){ document.getElementById('formMsg').textContent = pcProblem; return; }
+    payload.contacts = proteinContacts;
   }
   let createdCustomer = null;
   try {
