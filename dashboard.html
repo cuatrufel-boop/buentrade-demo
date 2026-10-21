@@ -603,7 +603,7 @@ async function loadFunnel(){
     g.rows.push(b);
   });
   // The line's own numbers (open bids only): how many bids, how many loads still wanted, and the lowest bid (the buyer's safe floor). Each row shows what the plant's answer gave it, and why, in words.
-  const result = b => b.status === 'allocated' ? `<span style="color:var(--green,#3fcb7e);font-weight:700;">Got ${b.loads_granted} load${b.loads_granted === 1 ? '' : 's'}</span>${b.last_reason ? `<div style="color:var(--ink-soft);font-size:12px;">${escapeHtml(b.last_reason)}</div>` : ''}`
+  const result = b => b.status === 'allocated' ? `<span style="color:var(--green,#3fcb7e);font-weight:700;">Got ${b.loads_granted} load${b.loads_granted === 1 ? '' : 's'}</span> <a class="name-link" href="trading-tool.html?offerId=${encodeURIComponent(b.sent_offer_id)}" title="Open this offer to create the order">Create order →</a>${b.last_reason ? `<div style="color:var(--ink-soft);font-size:12px;">${escapeHtml(b.last_reason)}</div>` : ''}`
     : b.last_reason ? `${b.loads_granted ? `<b>Got ${b.loads_granted} of ${b.loads}</b>` : '<b>Not yet</b>'}<div style="color:var(--ink-soft);font-size:12px;">${escapeHtml(b.last_reason)}</div>` : '<span style="color:var(--ink-soft);">In line</span>';
   let lastPlant = null;
   wrap.innerHTML = groups.map(g => {
