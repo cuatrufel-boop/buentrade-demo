@@ -580,15 +580,16 @@ let dashCeo = null, dashToday = null, dashTab = 'today'; const todayHeldOpen = n
 function toggleHeld(k){ if (todayHeldOpen.has(k)) todayHeldOpen.delete(k); else todayHeldOpen.add(k); renderToday(); }
 const DASH_TABS = [['today', 'Today'], ['goals', 'Goals & Money'], ['mix', 'Sales Mix']];
 // Bid funnel (2026-10-21): the tab exists only where the funnel is switched on (sent-offers-search funnel/status); a system without it never shows it.
-let dashFunnelOn = false, funnelSends = [], funnelBids = [], funnelPrices = {};
+let dashFunnelOn = false, funnelSends = [], funnelRounds = [], funnelDemo = false, funnelBids = [], funnelPrices = {};
 async function loadFunnel(){
   let st;
   try { st = await callApi('sent-offers-search', { funnel: { action: 'status' } }); } catch (e) { return; }
   if (!st || st.enabled !== true) return;
+  funnelDemo = st.demo_plant === true;
   if (!dashFunnelOn){ dashFunnelOn = true; DASH_TABS.splice(1, 0, ['funnel', 'Bid funnel']); setDashTab(dashTab); }
   const wrap = document.getElementById('funnelWrap');
   let bids = [];
-  try { const l = await callApi('sent-offers-search', { funnel: { action: 'list' } }); bids = l.bids || []; funnelSends = l.sends || []; }
+  try { const l = await callApi('sent-offers-search', { funnel: { action: 'list' } }); bids = l.bids || []; funnelSends = l.sends || []; funnelRounds = l.rounds || []; }
   catch (e) { wrap.innerHTML = `<div class="empty">Could not load the funnel: ${escapeHtml(e.message)}</div>`; return; }
   if (!bids.length){ wrap.innerHTML = '<div class="empty">No bids posted yet.</div>'; return; }
   const fmt = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: 'America/New_York' });
@@ -612,6 +613,7 @@ async function loadFunnel(){
     const plantId = g.rows[0].plant_id, productId = g.rows[0].product_id;
     const sent = funnelSends.find(x => x.plant_id === plantId && x.product_id === productId);
     const k = plantId + '|' + productId;
+    const round = funnelRounds.find(x => x.plant_id === plantId && x.product_id === productId);
     const priceVal = funnelPrices[k] != null ? funnelPrices[k] : (floor != null ? floor.toFixed(4) : '');
     const plantBar = plantId !== lastPlant && g.rows.some(b => b.status === 'open')
       ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12);"><b>${escapeHtml(g.plant)}</b><button class="btn small" onclick="funnelEmailPlant('${plantId}')" title="One email to this plant with every line that has bids in line">Email plant</button></div>` : '';
@@ -619,7 +621,9 @@ async function loadFunnel(){
     return plantBar + `<div style="margin:6px 0 18px;"><div style="font-weight:700;margin-bottom:6px;">${escapeHtml(g.plant)} <span style="color:var(--ink-soft);font-weight:400;">→ ${escapeHtml(g.product)}</span>
     <span style="color:var(--ink-soft);font-weight:400;font-size:12.5px;"> · ${open.length} bid${open.length === 1 ? '' : 's'} in line · ${wanted} load${wanted === 1 ? '' : 's'} wanted${floor != null ? ` · lowest $${floor.toFixed(4)}` : ''}</span>
     ${open.length ? `<span style="float:right;font-weight:400;font-size:12.5px;">Price to send $ <input data-money="4" value="${priceVal}" onchange="funnelPrices['${k}'] = btMoney.canonical(btMoney.raw(this), 4)" style="width:90px;"></span>` : ''}
-    ${sent ? `<div style="color:var(--ink-soft);font-weight:400;font-size:12.5px;">Sent to the plant ${escapeHtml(fmt(sent.sent_at))} at $${Number(sent.price).toFixed(4)} · ${sent.loads_asked} load${sent.loads_asked === 1 ? '' : 's'} · by ${escapeHtml(sent.sent_by)}</div>` : ''}</div>
+    ${sent ? `<div style="color:var(--ink-soft);font-weight:400;font-size:12.5px;">Sent to the plant ${escapeHtml(fmt(sent.sent_at))} at $${Number(sent.price).toFixed(4)} · ${sent.loads_asked} load${sent.loads_asked === 1 ? '' : 's'} · by ${escapeHtml(sent.sent_by)}</div>` : ''}
+    ${round ? `<div style="color:var(--ink-soft);font-weight:400;font-size:12.5px;">The plant answered ${escapeHtml(fmt(round.created_at))}: “${escapeHtml(round.reply_text || '')}” → ${round.granted_loads} load${round.granted_loads === 1 ? '' : 's'} at $${Number(round.granted_price).toFixed(4)}${round.via === 'demo' ? ' (demo plant)' : ''}</div>` : ''}
+    ${funnelDemo && sent && open.length ? `<div style="margin-top:6px;font-weight:400;font-size:12.5px;border:1px dashed rgba(255,255,255,.3);border-radius:8px;padding:6px 8px;">DEMO — play the plant: loads <input id="dpLoads_${k}" inputmode="numeric" value="${wanted}" style="width:44px;"> price $ <input id="dpPrice_${k}" data-money="4" value="${sent.price}" style="width:80px;"> says <input id="dpText_${k}" value="Yes, we can do it." style="width:200px;"> <button class="btn small" onclick="funnelDemoPlant('${plantId}','${productId}')">Plant answers</button></div>` : ''}</div>
     <table><thead><tr><th>#</th><th>Trader</th><th>Customer</th><th>Price</th><th>Loads</th><th>Posted</th><th>Result</th></tr></thead><tbody>${g.rows.map(b =>
       `<tr><td>${b.place}</td><td style="text-align:left;">${escapeHtml(b.posted_by)}</td><td style="text-align:left;">${escapeHtml(b.customer_name || '—')}</td><td class="num">$${Number(b.price).toFixed(4)}</td><td class="num">${b.loads}</td><td>${escapeHtml(fmt(b.placed_at))}</td><td style="text-align:left;">${result(b)}</td></tr>`).join('')}</tbody></table></div>`;
   }).join('');
@@ -635,6 +639,16 @@ function funnelMessage(contact, plantName, lines){
     return { subject: `${l.product} — Bid`, text: hi + `Can you confirm ${l.price.toFixed(4)} USD/lb for ${l.loads === 1 ? 'this load' : 'these ' + l.loads + ' loads'}?` };
   }
   return { subject: `Bids — ${plantName}`, text: hi + 'Can you confirm these?\n\n' + lines.map(l => `- ${l.product}: ${l.loads} load${l.loads === 1 ? '' : 's'} at ${l.price.toFixed(4)} USD/lb`).join('\n') };
+}
+// DEMO only: there is no real mail in the demo, so this panel plays the plant. In REAL the plant's answer enters only as its OS email through the system channel (the server refuses it from any screen).
+async function funnelDemoPlant(plantId, productId){
+  const k = plantId + '|' + productId, g = id => document.getElementById(id + '_' + k);
+  const loads = parseInt(g('dpLoads').value, 10), price = Number(btMoney.canonical(btMoney.raw(g('dpPrice')), 4)), text = g('dpText').value.trim();
+  if (!(loads >= 1) || !(price > 0) || !text){ await btAlert('Put the loads, the price and what the plant says.'); return; }
+  try {
+    await callApi('sent-offers-search', { funnel: { action: 'grant', actor: currentActor(), plant_id: plantId, product_id: productId, granted_loads: loads, granted_price: price, source: 'demo-' + Date.now(), reply_text: text } });
+    await loadFunnel();
+  } catch (e) { await btAlert('Could not record the answer: ' + e.message); }
 }
 let funnelSending = false;
 async function funnelEmailPlant(plantId){
