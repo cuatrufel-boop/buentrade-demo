@@ -1030,7 +1030,7 @@ function loadPricesForCarrierFromLocations(providerId){
 function renderNewLocationTableRow(colCount){
   return `<tr>
     <td colspan="${colCount}">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <div class="kact" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input id="newLocationCity" placeholder="City" style="flex:1;min-width:140px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
         <input id="newLocationState" placeholder="State (2 letters)" maxlength="2" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;text-transform:uppercase;">
         <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="saveNewLocationMaster()">Add to Catalog</button>
@@ -2119,7 +2119,7 @@ function startAddLocation(){
 }
 
 function renderNewLocationFicha(saveFn = 'saveNewLocation', cancelFn = 'cancelRateEdit'){
-  return `<div class="pkg-row" style="flex-wrap:wrap;">
+  return `<div class="pkg-row kact" style="flex-wrap:wrap;">
     <input id="newLocationCity" placeholder="City" style="flex:1;min-width:140px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;">
     <input id="newLocationState" placeholder="State (2 letters)" maxlength="2" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;text-transform:uppercase;">
     <button class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="${saveFn}()">Add to Catalog</button>
