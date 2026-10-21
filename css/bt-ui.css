@@ -323,8 +323,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
      facts, completeness ring) and section cards on the right. Design only — fields keep their ids and handlers. Colors/recipes
      are the stat cards (blue hero glass, gold money card) and the section titles of the other modules. */
   .kform{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start;margin-top:12px;}
-  .kpass{position:relative;border-radius:14px;padding:24px 20px 18px;background:linear-gradient(135deg,rgba(90,170,255,.30),rgba(90,170,255,.07));border:1px solid rgba(90,170,255,.55);box-shadow:0 3px 12px -3px rgba(90,170,255,.4),inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden;}
-  .kpass::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.85;}
+  .kpass{position:relative;border-radius:14px;padding:24px 20px 18px;background:linear-gradient(135deg,rgba(90,170,255,.30),rgba(90,170,255,.07));border:1px solid rgba(90,170,255,.55);box-shadow:0 3px 12px -3px rgba(90,170,255,.4),inset 0 1px 0 rgba(255,255,255,.1);}
+  .kpass::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;border-radius:14px 14px 0 0;background:linear-gradient(90deg,transparent,#E8B54C 25%,#E8B54C 75%,transparent);opacity:.85;}
   .kring{position:relative;width:96px;height:96px;margin:0 auto 14px;border-radius:50%;background:conic-gradient(#5AAAFF calc(var(--p,0)*1%),rgba(255,255,255,.14) 0);display:flex;align-items:center;justify-content:center;transition:background .3s;}
   .kmark{width:84px;height:84px;border-radius:50%;background:#0C2147;color:#5AAAFF;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;}
   .kpct{position:absolute;right:-8px;bottom:0;background:#0C2147;border:1px solid rgba(90,170,255,.45);border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;padding:1px 8px;color:#fff;}
@@ -370,3 +370,20 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   .kpname .view-label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:2px;}
   .kpname .profile-row-value{display:block;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;line-height:1.3;word-break:break-word;}
   .profile-panel.kcard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:14px 16px 6px;}
+  .kpass:has(.bt-select-wrap.open){z-index:60;}
+  .kact,.kdanger{align-items:center !important;}
+  .kact .btn,.kdanger .btn{height:34px;padding:0 18px !important;font-size:13px !important;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;box-sizing:border-box;}
+  .kform input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:none;width:36px !important;height:20px !important;min-width:36px;border-radius:99px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);position:relative;cursor:pointer;padding:0;margin:0;transition:background .18s,border-color .18s;}
+  .kform input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .18s;}
+  .kform input[type=checkbox]:checked{background:#1E6ADB;border-color:#5AAAFF;}
+  .kform input[type=checkbox]:checked::after{left:18px;}
+  .kform input[type=checkbox]:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(90,170,255,.3);}
+  .kform .role-check{display:flex;align-items:center;gap:10px;font-size:12.5px;cursor:pointer;}
+  .kform ~ .kact{margin-top:16px !important;}
+  .kform .role-check{border:0 !important;background:none !important;padding:6px 0 !important;}
+  .kform .pc-cats{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px;}
+  .kform .pc-cat{position:relative;display:inline-flex;align-items:center;border:1.5px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:12px;font-weight:600;color:rgba(255,255,255,.7);user-select:none;transition:background .15s,border-color .15s,color .15s;}
+  .kform .pc-cat:hover{border-color:rgba(90,170,255,.6);}
+  .kform .pc-cat:has(input:checked){background:rgba(90,170,255,.18);border-color:#5AAAFF;color:#5AAAFF;}
+  .kform .pc-cat input[type=checkbox]{position:absolute;opacity:0;width:0 !important;height:0 !important;min-width:0;border:0;margin:0;}
+  .kform .pc-cat input[type=checkbox]::after{display:none;}

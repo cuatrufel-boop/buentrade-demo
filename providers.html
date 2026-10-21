@@ -527,7 +527,7 @@ auth.onAuthStateChanged(user => {
         </div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:14px;">
+    <div class="kact" style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn" onclick="saveNewProvider()">Create</button>
       <button class="btn secondary" onclick="closeNewProviderForm()">Cancel</button>
     </div>
@@ -653,11 +653,11 @@ auth.onAuthStateChanged(user => {
             </div>
           </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:8px;">
+        <div class="kact" style="display:flex;gap:10px;margin-top:8px;">
           <button class="btn" onclick="saveProviderProfile()">Save</button>
           <button class="btn secondary" onclick="cancelProviderEdit()">Cancel</button>
         </div>
-    <div id="provDangerZone" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div id="provDangerZone" class="kdanger" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <button class="btn danger" onclick="deleteProvider(currentProviderId)">Delete provider</button>
       <span class="muted" style="font-size:12px;">Only a provider with no loads, offers or payments can be deleted. You'll type its name to confirm.</span>
     </div>

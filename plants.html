@@ -874,14 +874,14 @@ auth.onAuthStateChanged(user => {
             </div>
           </div>
         </div>
-        <div style="display:flex;gap:10px;">
+        <div class="kact" style="display:flex;gap:10px;">
           <button class="btn" onclick="saveProfile()">Save Profile</button>
           <button class="btn secondary" onclick="toggleProfile()">Cancel</button>
-    <div id="plantDangerZone" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        </div>
+    <div id="plantDangerZone" class="kdanger" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <button class="btn danger" onclick="deletePlant(currentPlantId)">Delete plant</button>
       <span class="muted" style="font-size:12px;">Only a plant with no loads, offers or payments can be deleted. You'll type its name to confirm.</span>
     </div>
-        </div>
         <div id="profileMsg" style="font-size:12.5px;margin-top:10px;"></div>
       </div>
     </div>
@@ -1020,7 +1020,7 @@ auth.onAuthStateChanged(user => {
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:8px;"><button class="btn" onclick="saveNewPlant()">Create Plant</button><button class="btn secondary" onclick="closeNewPlant()">Cancel</button></div>
+    <div class="kact" style="display:flex;gap:10px;margin-top:8px;"><button class="btn" onclick="saveNewPlant()">Create Plant</button><button class="btn secondary" onclick="closeNewPlant()">Cancel</button></div>
     <div id="newPlantMsg" style="font-size:12.5px;margin-top:10px;"></div>
   </div>
 

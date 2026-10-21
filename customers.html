@@ -729,12 +729,12 @@ auth.onAuthStateChanged(user => {
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:14px;">
+    <div class="kact" style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn" onclick="saveCustomer()">Save</button>
       <button class="btn secondary" onclick="closeForm()">Cancel</button>
     </div>
     <div id="formMsg" style="font-size:12.5px;margin-top:10px;"></div>
-    <div id="dangerZone" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div id="dangerZone" class="kdanger" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,156,138,.3);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <button class="btn danger" onclick="deleteCustomer(document.getElementById('custId').value)">Delete customer</button>
       <span class="muted" style="font-size:12px;">Only a customer with no loads, offers or payments can be deleted. You'll type its name to confirm.</span>
     </div>
