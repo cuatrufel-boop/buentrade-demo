@@ -990,7 +990,11 @@ function suggestCurrency(){
   const code = delivery === 'Border' ? 'USD' : delivery === 'Delivered Mexico' ? 'MXN' : null;
   if (!code) return;
   const match = currencies.find(c => c.code === code);
-  if (match) document.getElementById('preferred_currency').value = match.id;
+  if (match){
+    const sel = document.getElementById('preferred_currency');
+    sel.value = match.id;
+    if (sel.btSync) sel.btSync(); // the visible dropdown must say what was set (it kept showing MXN after "Picked up (FOB)" set USD underneath: IDE Foods, 2026-10-22)
+  }
 }
 
 let customsAgencies = []; // providers with role = customs_broker — each customer clears through their own, not necessarily ours

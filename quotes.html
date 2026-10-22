@@ -3359,7 +3359,7 @@ function rqBrandListHtml(x){
     }
     pesT.forEach(c => {
       const conf = ready ? rqPesosConfirmation(r.plant.id, pid, c.id) : null;
-      const open = `rqPesosOpenQt('${pid}','${r.plant.id}','${c.id}')`;
+      const open = `rqBrandOpenPesos('${pid}','${r.plant.id}','${c.id}')`;
       lines.push(`<td>${escapeHtml(String(c.trade_name).trim())}${sub(escapeHtml(c.usual_destination || 'pesos'))}</td><td class="num">${planTag(open)}</td>
         <td>${conf ? `<span class="num" style="cursor:pointer;" title="Open his QT again" onclick="${open}">MX$ ${Number(conf.calc.pesosQt.perKg).toFixed(2)}/kg</span>` : '<span class="muted">—</span>'}</td>
         <td>${sendBtns(!!conf, !!conf && rqCanEmail(c, [pid]), !!conf && rqCanWhatsApp(c, [pid]), ch => `rqBrandSend('${ch}','${r.key}','${c.id}')`, 'his offer')}</td>`);
@@ -3838,6 +3838,14 @@ async function rqBrandSend(channel, key, customerId){
   await rqSendReadyRows(channel, rows, customers, rqSheetState.linksByCustomer, pids);
 }
 
+// A pesos line touched before its USD price is confirmed (owner 2026-10-22: "no deja abrir pesos"): his pesos QT is built from the confirmed USD one, so the DOLLAR QT opens first and his pesos QT follows by itself
+// once it is confirmed (rqConfirmPriceFromTool). Already confirmed: his pesos QT opens at once. The follow-up is forgotten after 20 minutes or when used.
+let rqBrandPesosNext = null;
+async function rqBrandOpenPesos(productId, plantId, customerId){
+  if (rqUsdConfirmedJson(plantId, productId)){ rqBrandPesosNext = null; await rqPesosOpenQt(productId, plantId, customerId); return; }
+  rqBrandPesosNext = { productId, plantId, customerId, at: Date.now() };
+  await rqConfirmPriceClick(null, productId, plantId);
+}
 // An old (expired) price used on purpose (owner 2026-10-22: "debe dejar confirmar el precio viejo para mandar nuevos con viejos"): it joins this send (the same rqReqOld set as before) and its QT opens at once,
 // where the trader confirms the sale price; once confirmed it is a normal line and goes with the new prices.
 async function rqBrandUseOld(key, productId, plantId){
@@ -5763,6 +5771,8 @@ async function rqConfirmPriceFromTool(){
     const pesosFor = p.rqPesosFor, pid = p.rqProductId;
     await rqCloseCalculator(p.id, { confirm: true }); // confirmed pricing, kept until the numbers or the plant's price change
     if (pesosFor && !p.rqCalculatorOpen) await rqPesosAfterConfirm(pesosFor, pid, p.id); // his next plant opens by itself until all of his are green
+    const nx = rqBrandPesosNext; rqBrandPesosNext = null;
+    if (!pesosFor && nx && nx.plantId === p.id && nx.productId === pid && Date.now() - nx.at < 20 * 60 * 1000 && !p.rqCalculatorOpen) await rqPesosOpenQt(nx.productId, nx.plantId, nx.customerId); // a pesos line was touched first: now that the USD price is confirmed, his pesos QT opens
   }
 }
 
