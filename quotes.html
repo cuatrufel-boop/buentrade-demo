@@ -3360,12 +3360,12 @@ function rqBrandListHtml(x){
     body.push(`<tr class="rq-sheet-dim">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
   });
   const lineCount = sorted.filter(r => r.calc && r.confirmed && !r.proposed).length;
-  const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>')
+  const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace(/<th>/g, '<th style="font-size:12.5px;color:rgba(255,255,255,.88);letter-spacing:.07em;padding:12px 10px 10px;">').replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>')
     : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>';
   return `<div class="rq-req rq-glass">
     <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div></div></div>
     <div class="card qbucket">
-    <div class="rq-req2-listhead" style="flex-wrap:wrap;gap:10px;">
+    <div class="rq-req2-listhead" style="flex-wrap:wrap;gap:10px;border-bottom:none;">
       <input id="rq_brand_q" type="text" placeholder="Search" value="${escapeHtml(rqBrandQ)}" oninput="rqBrandSearch(this.value)" onblur="rqBrandQFocus = false" style="max-width:240px;padding:8px 14px;border-radius:12px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:#fff;font-size:13px;">
       <div style="display:flex;gap:6px;">${[['all', 'All'], ['usd', 'USD'], ['pesos', 'Pesos']].map(([k, l]) => `<button type="button" class="chip${rqBrandCur === k ? ' on' : ''}" onclick="rqBrandSetCur('${k}')">${l}</button>`).join('')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-left:auto;">
