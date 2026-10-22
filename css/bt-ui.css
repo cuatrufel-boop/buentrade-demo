@@ -264,13 +264,13 @@ html body .bt-toolbar .seg-btn { display: inline-flex; align-items: center; }
   .rq-msg-done{font:700 10.5px 'IBM Plex Mono',monospace;color:#3FCB7E;border:1px solid rgba(63,203,126,.5);border-radius:20px;padding:3px 9px;background:rgba(63,203,126,.1);}
   .rq-msg-phone{margin-left:auto;font:600 11px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.5);letter-spacing:.02em;}
   .rq-wa-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end;}
-  .rq-wa-chat{background-color:#0b141a;background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);background-size:14px 14px;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px 14px 14px 36px;}
+  .rq-wa-chat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px 14px 14px 36px;}
   .rq-wa-bubble{position:relative;}
-  .rq-wa-bubble::after{content:'';position:absolute;right:-7px;bottom:0;width:10px;height:14px;background:#005c4b;clip-path:polygon(0 0,100% 100%,0 100%);}
-  .rq-wa-bubble textarea{display:block;background:#005c4b;color:#e9edef;border:none;border-radius:12px 12px 0 12px;padding:11px 14px 12px;font-size:13.5px;line-height:1.5;font-family:inherit;width:100%;min-height:64px;max-height:46vh;resize:none;overflow-y:auto;box-shadow:0 1px 2px rgba(0,0,0,.35);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.3) transparent;}
+  .rq-wa-bubble::after{content:none;}
+  .rq-wa-bubble textarea{display:block;background:rgba(63,203,126,.14);color:#fff;border:1px solid rgba(63,203,126,.5);border-radius:12px;padding:11px 14px 12px;font-size:13.5px;line-height:1.5;font-family:inherit;width:100%;min-height:64px;max-height:46vh;resize:none;overflow-y:auto;box-shadow:0 1px 2px rgba(0,0,0,.35);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.3) transparent;}
   .rq-wa-bubble textarea:focus{outline:2px solid rgba(63,203,126,.7);outline-offset:2px;}
-  html body :is(.rq-modal-box, .email-modal-box) .rq-wa-send{width:52px;height:52px;min-height:0;padding:0 !important;border-radius:50% !important;flex-shrink:0;color:#fff !important;background:linear-gradient(135deg,#3FCB7E,#1DA851) !important;border:none !important;box-shadow:0 4px 14px -2px rgba(37,211,102,.55);transition:transform .15s,box-shadow .15s !important;}
-  html body :is(.rq-modal-box, .email-modal-box) .rq-wa-send:hover:not(:disabled){transform:scale(1.07);box-shadow:0 6px 18px -2px rgba(37,211,102,.75);background:linear-gradient(135deg,#3FCB7E,#1DA851) !important;color:#fff !important;}
+  html body :is(.rq-modal-box, .email-modal-box) .rq-wa-send{width:52px;height:52px;min-height:0;padding:0 !important;border-radius:14px !important;flex-shrink:0;color:#3FCB7E !important;background:rgba(255,255,255,.05) !important;border:1.5px solid rgba(63,203,126,.4) !important;box-shadow:none;transition:background .12s !important;}
+  html body :is(.rq-modal-box, .email-modal-box) .rq-wa-send:hover:not(:disabled){background:#1DA851 !important;color:#fff !important;border-color:#1DA851 !important;}
   html body :is(.rq-modal-box, .email-modal-box) .rq-wa-send svg{width:26px;height:26px;fill:currentColor;}
   /* the review modal is dark glass, so its WhatsApp button keeps the dark green glass (bt-ui paints .rq-modal-box buttons as the white light-surface ones) */
   .rq-em-logo{color:#5AAAFF;background:rgba(90,170,255,.14);border-color:rgba(90,170,255,.5);}
