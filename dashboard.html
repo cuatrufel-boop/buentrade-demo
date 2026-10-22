@@ -366,6 +366,13 @@ auth.onAuthStateChanged(user => {
     </div>
   </div>
 
+  <!-- Profile views (2026-10-22): one tab per profile, shown only to that profile (an admin sees all). They exist only where the Bid funnel is switched on. -->
+  <div id="dashPanel_mybids" style="display:none;"><div class="tbl-wrap" style="padding:12px 14px;"><div id="myBidsWrap"><div class="empty">Loading your bids…</div></div></div></div>
+  <div id="dashPanel_buyer" style="display:none;"><div class="tbl-wrap" style="padding:12px 14px;"><div id="buyerWrap"><div class="empty">Loading…</div></div></div></div>
+  <div id="dashPanel_logistics" style="display:none;"><div class="tbl-wrap" style="padding:12px 14px;"><div id="logisticsWrap"><div class="empty">Loading the loads…</div></div></div></div>
+  <div id="dashPanel_payments" style="display:none;"><div class="tbl-wrap" style="padding:12px 14px;"><div id="paymentsWrap"><div class="empty">Loading payments…</div></div></div></div>
+  <div id="dashPanel_team" style="display:none;"><div class="tbl-wrap" style="padding:12px 14px;"><div id="teamWrap"><div class="empty">Loading the team…</div></div></div></div>
+
   <div id="dashPanel_goals" style="display:none;">
     <div class="kpis" id="ceoGoals" style="grid-template-columns:repeat(3,minmax(0,1fr));"><div class="empty">Loading…</div></div>
     <h1>Loads per Month <span style="color:var(--ink-soft);font-weight:400;font-size:15px;">— last 12 months, against the goal</span></h1>
@@ -583,17 +590,140 @@ function toggleHeld(k){ if (todayHeldOpen.has(k)) todayHeldOpen.delete(k); else 
 const DASH_TABS = [['today', 'Today'], ['goals', 'Goals & Money'], ['mix', 'Sales Mix']];
 // Bid funnel (2026-10-21): the tab exists only where the funnel is switched on (sent-offers-search funnel/status); a system without it never shows it.
 let dashFunnelOn = false, funnelSends = [], funnelRounds = [], funnelPlantMsgs = [], funnelDemo = false, funnelRoles = ['admin'], funnelBids = [], funnelPrices = {};
+
+// ---- Profile views (owner 2026-10-22: dashboards of buyers, traders, logistics, payments; "funciona con uno o con 100"). Each is a tab shown only to that profile (an admin sees all, and when profiles
+// are off everyone is an admin). They only READ what already exists; nothing here changes how a bid, an order or a payment works.
+const funnelFmt = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+const pvTable = (heads, rows) => `<table><thead><tr>${heads.map((h, i) => `<th${i ? '' : ' style="text-align:left;"'}>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('') || `<tr><td colspan="${heads.length}" class="empty">Nothing here.</td></tr>`}</tbody></table>`;
+const pvTitle = (t, sub) => `<div style="font-weight:700;margin:14px 0 6px;">${t}${sub ? ` <span style="color:var(--ink-soft);font-weight:400;font-size:12.5px;">${sub}</span>` : ''}</div>`;
+function addProfileTabs(){
+  const extra = [];
+  if (funnelCan('trader')) extra.push(['mybids', 'My bids']);
+  if (funnelCan('buyer')) extra.push(['buyer', 'Buyer']);
+  if (funnelCan('logistics')) extra.push(['logistics', 'Logistics']);
+  if (funnelCan('payments')) extra.push(['payments', 'Payments']);
+  if (funnelCan('admin')) extra.push(['team', 'Team']);
+  DASH_TABS.splice(2, 0, ...extra);
+  if (!funnelCan('admin')) ['goals', 'mix'].forEach(k => { const i = DASH_TABS.findIndex(x => x[0] === k); if (i >= 0) DASH_TABS.splice(i, 1); }); // Goals & Money and Sales Mix are the owner's view
+  // someone who is not an admin lands on his own tab
+  const mine = !funnelCan('admin') && extra.length ? extra[0][0] : dashTab;
+  setDashTab(mine);
+}
+let myOffers = null, myOffersAt = 0;
+async function renderMyBids(){
+  const wrap = document.getElementById('myBidsWrap');
+  if (!wrap || !funnelCan('trader')) return;
+  const me = String(currentActor()).toLowerCase();
+  const mine = funnelBids.filter(b => String(b.posted_by).toLowerCase() === me);
+  if (!myOffers || Date.now() - myOffersAt > 60000){
+    try { myOffers = (await callApi('sent-offers-search', { status: 'sent', limit: 300 })).results || []; myOffersAt = Date.now(); } catch (e) { myOffers = myOffers || []; }
+  }
+  const posted = new Set(funnelBids.map(b => b.sent_offer_id));
+  const toPost = myOffers.filter(o => o.plant_id && o.product_id && !posted.has(o.id));
+  const sentOf = b => funnelSends.find(x => x.plant_id === b.plant_id && x.product_id === b.product_id);
+  const state = b => { const s = sentOf(b); return !s ? 'Waiting for the buyer to email the plant' : new Date(b.placed_at) > new Date(s.sent_at) ? 'Next round — posted after the last email' : 'Waiting for the plant'; };
+  const rowOf = (b, last) => `<tr><td style="text-align:left;">${escapeHtml(b.plant_name)} → ${escapeHtml(b.product_name)}</td><td style="text-align:left;">${escapeHtml(b.customer_name || '—')}</td><td class="num">$${Number(b.price).toFixed(4)}</td><td class="num">${b.loads}</td><td>${escapeHtml(funnelFmt(b.placed_at))}</td><td style="text-align:left;">${last}</td></tr>`;
+  const counter = mine.filter(b => b.status === 'open' && b.last_outcome === 'out_of_price');
+  const inLine = mine.filter(b => b.status === 'open' && b.last_outcome !== 'out_of_price');
+  const granted = mine.filter(b => b.status === 'allocated');
+  const total = mine.length + toPost.length, pct = total ? Math.round(mine.length / total * 100) : 0;
+  const H = ['Plant → product', 'Customer', 'Price', 'Loads', 'Posted', ''];
+  wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;"><b>${mine.length} of ${total} bids posted</b><span style="color:var(--ink-soft);font-size:12.5px;">${toPost.length} offer${toPost.length === 1 ? '' : 's'} still to post</span></div>${bar(pct, 'var(--gold, #E8B54C)')}`
+    + pvTitle('To post', 'open offers with a plant and a product that are not in the funnel yet')
+    + pvTable(['Plant → product', 'Customer', 'Cost', ''], toPost.map(o => `<tr><td style="text-align:left;">${escapeHtml(o.plant_name || '')} → ${escapeHtml(o.product_spec || o.product_name || '')}</td><td style="text-align:left;">${escapeHtml(o.customer_name || '—')}</td><td class="num">${o.purchase_price != null ? '$' + Number(o.purchase_price).toFixed(4) : '—'}</td><td style="text-align:left;"><a class="name-link" href="trading-tool.html?offerId=${encodeURIComponent(o.id)}">Open to post →</a></td></tr>`))
+    + pvTitle('Plant asked for more', 'come back at the new price (you go first) or pass')
+    + pvTable(H, counter.map(b => rowOf(b, `${escapeHtml(b.last_reason || '')}<div style="margin-top:4px;"><button class="btn small" onclick="funnelReenter(${b.id}, ${Number(b.last_granted_price)})">Come back at $${Number(b.last_granted_price).toFixed(4)}</button> <button class="btn small secondary" onclick="funnelPass(${b.id})">Pass</button></div>`)))
+    + pvTitle('In line')
+    + pvTable(H, inLine.map(b => rowOf(b, escapeHtml(state(b)))))
+    + pvTitle('Granted', 'you got the loads: create the order')
+    + pvTable(H, granted.map(b => rowOf(b, `<span style="color:var(--green,#3fcb7e);font-weight:700;">Got ${b.loads_granted} load${b.loads_granted === 1 ? '' : 's'}</span> <a class="name-link" href="trading-tool.html?offerId=${encodeURIComponent(b.sent_offer_id)}">Create order →</a>`)));
+}
+function renderBuyer(){
+  const wrap = document.getElementById('buyerWrap');
+  if (!wrap || !funnelCan('buyer')) return;
+  const open = funnelBids.filter(b => b.status === 'open');
+  const plants = [...new Set(open.map(b => b.plant_id))];
+  if (!plants.length){ wrap.innerHTML = '<div class="empty">No bids waiting for a plant.</div>'; return; }
+  wrap.innerHTML = plants.map(pid => {
+    const mine = open.filter(b => b.plant_id === pid), name = mine[0].plant_name;
+    const unread = funnelPlantMsgs.some(m => m.plant_id === pid);
+    const rows = [...new Set(mine.map(b => b.product_id))].map(prod => {
+      const bs = mine.filter(b => b.product_id === prod);
+      const sent = funnelSends.find(x => x.plant_id === pid && x.product_id === prod), round = funnelRounds.find(x => x.plant_id === pid && x.product_id === prod);
+      const fresh = bs.filter(b => !sent || new Date(b.placed_at) > new Date(sent.sent_at)).length;
+      const st = unread ? 'Write back: the plant\'s reply could not be read'
+        : !sent ? 'Ready to send'
+        : fresh ? `${fresh} new bid${fresh === 1 ? '' : 's'} since the email — send again`
+        : round && new Date(round.created_at) > new Date(sent.sent_at) ? `Plant answered: ${round.granted_loads} load${round.granted_loads === 1 ? '' : 's'} at $${Number(round.granted_price).toFixed(4)}`
+        : 'Waiting for the plant';
+      return `<tr><td style="text-align:left;">${escapeHtml(bs[0].product_name)}</td><td class="num">${bs.length}</td><td class="num">${bs.reduce((n, b) => n + (b.loads - b.loads_granted), 0)}</td><td class="num">$${Math.min(...bs.map(b => Number(b.price))).toFixed(4)}</td><td style="text-align:left;">${escapeHtml(st)}</td></tr>`;
+    });
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12);"><b>${escapeHtml(name)}</b><button class="btn small" onclick="funnelEmailPlant('${pid}')" title="One email to this plant with every line that has bids in line">Email plant</button></div>` + pvTable(['Product', 'Bids', 'Loads wanted', 'Lowest bid', 'State'], rows);
+  }).join('');
+}
+async function loadLogistics(){
+  const wrap = document.getElementById('logisticsWrap');
+  if (!wrap) return;
+  let rows = [];
+  try { rows = (await callApi('shipments-search', { limit: 500 })).results || []; } catch (e) { wrap.innerHTML = `<div class="empty">Could not load: ${escapeHtml(e.message)}</div>`; return; }
+  const open = rows.filter(r => r.status !== 'delivered').sort((a, b) => (a.pickup_date || '9999') < (b.pickup_date || '9999') ? -1 : 1);
+  const light = (done, label) => `<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:11px;margin:1px;border:1px solid ${done ? 'rgba(63,203,126,.6)' : 'rgba(255,255,255,.2)'};color:${done ? '#3fcb7e' : 'var(--ink-soft)'};">${done ? '✓ ' : ''}${label}</span>`;
+  const picked = r => ['picked_up', 'unloading', 'delivered'].includes(r.status) || !!r.picked_up_at;
+  wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;"><b>${open.length} load${open.length === 1 ? '' : 's'} on the way</b><a class="name-link" href="orders.html">Open Orders →</a></div>`
+    + pvTable(['Order', 'Plant → product', 'Customer', 'Carrier', 'Pickup', 'Steps'], open.map(r => `<tr><td style="text-align:left;">${escapeHtml(r.order_number || '')}</td><td style="text-align:left;">${escapeHtml(r.plant_name || '')} → ${escapeHtml(r.product_spec || r.product_name || '')}</td><td style="text-align:left;">${escapeHtml(r.customer_name || '—')}</td><td>${escapeHtml(r.carrier_name || '—')}</td><td>${r.pickup_date ? escapeHtml(String(r.pickup_date).slice(0, 10)) : '—'}</td><td style="text-align:left;">${light(!!r.fo_sent_at, 'Freight order')}${light(!!r.plant_paid_at, 'Plant paid')}${light(!!r.release_number, 'Release #')}${light(picked(r), 'Picked up')}${light(!!r.customs_sent_at, 'Customs docs')}${light(r.status === 'delivered', 'Delivered')}</td></tr>`));
+}
+async function loadPayments(){
+  const wrap = document.getElementById('paymentsWrap');
+  if (!wrap) return;
+  let d;
+  try { d = await callApi('collections-search', {}); } catch (e) { wrap.innerHTML = `<div class="empty">Could not load: ${escapeHtml(e.message)}</div>`; return; }
+  const open = (d.shipments || []).filter(r => Number(r.balance) > 0).sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0));
+  wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;"><b>To collect ${money(d.total_outstanding)} · overdue ${money(d.total_overdue)}</b><a class="name-link" href="collections.html">Open Pay &amp; Receive →</a></div>`
+    + pvTable(['Order', 'Customer', 'Invoice', 'Due', 'Balance', 'Overdue', 'Aging'], open.map(r => `<tr><td style="text-align:left;">${escapeHtml(r.order_number || '')}</td><td style="text-align:left;">${escapeHtml(r.customer_trade_name || r.customer_name || '—')}</td><td>${r.invoice_sent_at ? escapeHtml(String(r.invoice_sent_at).slice(0, 10)) : '—'}</td><td>${r.payment_due_date ? escapeHtml(String(r.payment_due_date).slice(0, 10)) : '—'}</td><td class="num">${money(r.balance)}</td><td class="num">${r.days_overdue ? r.days_overdue + ' d' : '—'}</td><td>${escapeHtml(r.aging_bucket || '')}</td></tr>`));
+}
+const TEAM_ROLES = ['admin', 'trader', 'buyer', 'logistics', 'payments'];
+async function loadTeam(){
+  const wrap = document.getElementById('teamWrap');
+  if (!wrap || !funnelCan('admin')) return;
+  let d;
+  try { d = await callApi('sent-offers-search', { funnel: { action: 'list_roles', actor: currentActor() } }); } catch (e) { wrap.innerHTML = `<div class="empty">Could not load: ${escapeHtml(e.message)}</div>`; return; }
+  const row = r => `<tr data-email="${escapeHtml(r.email)}"><td style="text-align:left;">${escapeHtml(r.email)}</td>${TEAM_ROLES.map(k => `<td><input type="checkbox" data-role="${k}" ${r.roles.includes(k) ? 'checked' : ''} onchange="teamSave('${escapeHtml(r.email)}')"></td>`).join('')}</tr>`;
+  wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><div><b>Profiles are ${d.enforced ? 'ON' : 'OFF'}</b><div style="color:var(--ink-soft);font-size:12.5px;">${d.enforced ? 'Each person can do only what their profile allows.' : 'Everyone can do everything, as today. Set the profiles below, then turn them on.'}</div></div><button class="btn small" onclick="teamSwitch(${!d.enforced})">${d.enforced ? 'Turn profiles off' : 'Turn profiles on'}</button></div>`
+    + pvTable(['Person', ...TEAM_ROLES.map(k => k[0].toUpperCase() + k.slice(1))], d.roles.map(row))
+    + `<div style="margin-top:12px;display:flex;gap:8px;align-items:center;"><input id="teamNewEmail" placeholder="email of a new person" style="width:260px;"><button class="btn small" onclick="teamAdd()">Add person</button></div>`;
+}
+async function teamSave(email){
+  const tr = [...document.querySelectorAll('#teamWrap tr[data-email]')].find(x => x.dataset.email === email);
+  const roles = [...tr.querySelectorAll('input[data-role]')].filter(x => x.checked).map(x => x.dataset.role);
+  try { await callApi('sent-offers-search', { funnel: { action: 'set_roles', actor: currentActor(), email, roles } }); }
+  catch (e) { await btAlert('Could not save: ' + e.message); }
+  loadTeam();
+}
+async function teamAdd(){
+  const email = document.getElementById('teamNewEmail').value.trim().toLowerCase();
+  if (!email) return;
+  try { await callApi('sent-offers-search', { funnel: { action: 'set_roles', actor: currentActor(), email, roles: [] } }); }
+  catch (e) { await btAlert('Could not add: ' + e.message); }
+  loadTeam();
+}
+async function teamSwitch(on){
+  if (!(await btConfirm(on ? 'Turn profiles on? From now on each person can do only what their profile allows. You must be an admin in the list.' : 'Turn profiles off? Everyone can do everything again.', on ? 'Turn on' : 'Turn off', 'Cancel'))) return;
+  try { await callApi('sent-offers-search', { funnel: { action: 'set_profiles', actor: currentActor(), on } }); }
+  catch (e) { await btAlert('Could not change it: ' + e.message); }
+  loadTeam();
+}
 async function loadFunnel(){
   let st;
   try { st = await callApi('sent-offers-search', { funnel: { action: 'status', actor: currentActor() } }); } catch (e) { return; }
   if (!st || st.enabled !== true) return;
   funnelDemo = st.demo_plant === true;
   funnelRoles = Array.isArray(st.roles) ? st.roles : ['admin'];
-  if (!dashFunnelOn){ dashFunnelOn = true; DASH_TABS.splice(1, 0, ['funnel', 'Bid funnel']); setDashTab(dashTab); }
+  if (!dashFunnelOn){ dashFunnelOn = true; DASH_TABS.splice(1, 0, ['funnel', 'Bid funnel']); addProfileTabs(); }
   const wrap = document.getElementById('funnelWrap');
   let bids = [];
   try { const l = await callApi('sent-offers-search', { funnel: { action: 'list' } }); bids = l.bids || []; funnelSends = l.sends || []; funnelRounds = l.rounds || []; funnelPlantMsgs = l.plant_messages || []; }
   catch (e) { wrap.innerHTML = `<div class="empty">Could not load the funnel: ${escapeHtml(e.message)}</div>`; return; }
+  funnelBids = bids; renderMyBids(); renderBuyer();
   if (!bids.length){ wrap.innerHTML = '<div class="empty">No bids posted yet.</div>'; return; }
   const fmt = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: 'America/New_York' });
   if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#funnelWrap')) return; // the buyer is typing a price: do not redraw under his hands
@@ -712,6 +842,7 @@ async function funnelEmailPlant(plantId){
 function setDashTab(t){
   dashTab = t;
   DASH_TABS.forEach(([k]) => { document.getElementById('dashPanel_' + k).style.display = k === t ? '' : 'none'; });
+  if (t === 'logistics') loadLogistics(); else if (t === 'payments') loadPayments(); else if (t === 'team') loadTeam();
   document.getElementById('dashTabs').innerHTML = DASH_TABS.map(([k, l]) => `<div class="phase-tab${k === t ? ' active' : ''}" onclick="setDashTab('${k}')">${l}${k === 'today' && dashToday ? ` <span style="opacity:.7;">(${dashToday.filter(i => i.prio !== 4).length})</span>` : ''}</div>`).join('');
 }
 // the four cards on top — the day, the month's goal, the month's profit, the money in the street
