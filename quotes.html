@@ -3856,6 +3856,7 @@ async function rqBrandUseOld(key, productId, plantId){
 // Sends the brands confirmed in their QT (a package's Send): the regular customer send, one message per customer × product with its
 // brands highest → lowest, each reviewed by the trader before it goes. rows: ready package rows (r.confirmed + r.calc).
 // opts.openPackage (default true): a package's send records its customers on the package; Ready's share sends without opening one.
+let rqBothBusy = false;
 async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids = [...new Set(rows.map(r => r.pid))], opts = {}){
   if (opts.openPackage !== false){
     try {
@@ -3872,12 +3873,14 @@ async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids =
   const afterSend = () => { rqSheetState.key = ''; rqUrlPreselect = null; rqResetRequestSelection(); setTimeout(() => rqRenderSweepTables(), 1500); };
   try {
     if (channel === 'both'){ // one window: WhatsApp and/or email (rqOfferWindowBegin..Show) — each review window is built and sent exactly as when opened alone
+      if (rqBothBusy) return; // a second press while the window is still being built would reset it under the first one
+      rqBothBusy = true;
       rqOfferWindowBegin();
       try {
         const both = { skipChase: true, resend: opts.resend }; both.onSent = afterSend; // the same after-send refresh as each channel alone
         await sendOfferEmailToAll(pids, null, both);
         await sendOfferWhatsAppToAll(pids, null, both);
-      } finally { rqOfferWindowShow(); }
+      } finally { rqOfferWindowShow(); rqBothBusy = false; }
     }
     else if (channel === 'email') await sendOfferEmailToAll(pids, null, { skipChase: true, onSent: afterSend, resend: opts.resend });
     else await sendOfferWhatsAppToAll(pids, null, { skipChase: true, onSent: afterSend, resend: opts.resend });
@@ -7567,6 +7570,7 @@ function rqOfferToggle(k){
 function rqOfferWindowShow(){
   const any = rqEmailModalItems.length || rqWaModalItems.length;
   if (!any){ rqOfferWindowEnd(); return false; }
+  for (const id of ['rq_email_modal_overlay', 'rq_wa_modal_overlay']){ const o = document.getElementById(id); o.style.display = 'none'; o.classList.add('rq-merged'); } // the two review windows never show beside the one offer window, whatever ran before (owner 2026-10-22 screenshot: the WhatsApp window sat behind an empty offer window)
   rqOfferWindowSync();
   document.getElementById('rq_offer_modal_overlay').style.display = 'flex';
   return true;
