@@ -7447,7 +7447,7 @@ function rqRenderWaModal(){
     const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
     return `
     <div class="rq-msg-card${it.opened ? ' opened' : ''}">
-      <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.opened ? '<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span>' : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
+      <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.opened ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">I sent it</button>` : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
       <div class="rq-wa-row">
         <div class="rq-wa-chat"><div class="rq-wa-bubble"><textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
         <button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
@@ -7456,6 +7456,14 @@ function rqRenderWaModal(){
     </div>`; }).join('');
   list.querySelectorAll('textarea').forEach(rqWaFit);
   rqOfferWindowSync(); // the one offer window (when open) shows these cards
+}
+// A WhatsApp that was opened but never confirmed stays on the list; this lets the trader say "I sent it" by hand (owner 2026-10-22: the line stayed after sending) — the same record as "Yes, sent".
+async function rqWaMarkSent(i){
+  const it = rqWaModalItems[i];
+  if (!it || it.recorded) return;
+  rqWaWatching.delete(it); it.recorded = true;
+  try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
+  rqRenderWaModal();
 }
 function rqWaModalOpenOne(i){
   const it = rqWaModalItems[i];
@@ -7543,6 +7551,9 @@ function rqOfferWindowRender(){
   document.getElementById('rq_offer_ch_wa').classList.toggle('on', rqOfferCh.wa); document.getElementById('rq_offer_ch_em').classList.toggle('on', rqOfferCh.em);
   document.getElementById('rq_offer_ch_wa').style.display = rqWaModalItems.length ? '' : 'none'; document.getElementById('rq_offer_ch_em').style.display = rqEmailModalItems.length ? '' : 'none';
   const notes = ['rq_email_modal_list_note', 'rq_wa_modal_list_note'].map(id => document.getElementById(id)).filter(e => e && e.style.display !== 'none' && e.innerHTML).map(e => e.innerHTML);
+  // WhatsApp has no "send all": each card needs its own press, so the window says how many are still waiting (owner 2026-10-22: one stayed on the list).
+  const waLeft = rqWaModalItems.filter(it => !it.recorded);
+  if (rqWaModalItems.length > 1 || waLeft.length) notes.unshift(waLeft.length ? `WhatsApp: ${rqWaModalItems.length - waLeft.length} of ${rqWaModalItems.length} sent — press each green button; still waiting: ${waLeft.map(it => escapeHtml(String(it.label).split(' — ')[0])).join(', ')}` : `WhatsApp: all ${rqWaModalItems.length} sent ✓`);
   const nb = document.getElementById('rq_offer_modal_notes'); nb.innerHTML = notes.join('<br>'); nb.style.display = notes.length ? '' : 'none';
   const orig = document.getElementById('rq_email_modal_sendall'), all = document.getElementById('rq_offer_sendall');
   all.innerHTML = orig.innerHTML; all.style.display = rqOfferCh.em && rqEmailModalItems.length && orig.style.display !== 'none' ? 'inline-flex' : 'none';
