@@ -395,6 +395,9 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 
   .kform .kcard .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;}
   @media (max-width:760px){.kform .kcard .profile-grid{grid-template-columns:minmax(0,1fr);}}
+  /* the read-only profile card (Product profile, 2 columns): the label took a fixed 240px of a 350px row and left the value 76px, so words broke letter by letter ("Chick/en") — owner 2026-10-22 */
+  .kform .kcard .profile-row .view-label{flex:0 0 42%;max-width:190px;min-width:0;}
+  .kform .kcard .profile-row-value{min-width:0;word-break:normal;overflow-wrap:break-word;}
   .kform .kgrid{gap:0 12px;}
   .kform .field{margin-bottom:8px;}
   html body #appContent .kform .kgrid :is(input:not([type=checkbox]):not([type=hidden]):not([type=file]):not([type=range]), select){height:34px !important;}
