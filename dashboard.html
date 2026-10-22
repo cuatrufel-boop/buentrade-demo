@@ -150,6 +150,12 @@
   @media (prefers-reduced-motion:reduce){.tag.td-newtag{animation:none;}}
   .td-table tr.td-newrow td:first-child{box-shadow:inset 3px 0 0 #3FCB7E;}
   /* Today board (redesign 2026-10-14): one block per product — what arrived, when, the plants' prices once — and one row per customer: who + why, where each brand stands for him, one labelled button */
+  .tdr{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start;} @media (max-width:900px){ .tdr{grid-template-columns:minmax(0,1fr);} }
+  .tdr-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:18px 22px 10px;} .tdr-urgent{border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.05);}
+  .tdr-h{margin:0 0 2px;font:700 12.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);} .tdr-h.u{color:#FFC876;} .tdr-hint{font-size:12.5px;color:var(--ink-soft);margin:0 0 6px;}
+  .tdr-t{width:100%;border-collapse:collapse;} .tdr-t td{padding:13px 4px;border-top:1px solid rgba(255,255,255,.1);vertical-align:middle;text-align:left;} .tdr-t tr:first-child td{border-top:none;} .tdr-t td:last-child{text-align:right;width:1%;white-space:nowrap;}
+  .tdr-name .name-link{font-size:15px;font-weight:700;display:block;} .tdr-sub{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;} .tdr-new{color:#3FCB7E;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;} .tdr-up{color:#8EC5FF;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
+  .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
   .tdg{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035);overflow:hidden;}
   .tdg.tdg-new{border-color:rgba(63,203,126,.5);box-shadow:inset 3px 0 0 #3FCB7E;}
@@ -462,6 +468,27 @@ function reloadTodayIfStale(){ if (btAuthLoaded && Date.now() - todayLoadedAt > 
 setInterval(() => { if (!document.hidden && btAuthLoaded) loadToday(); }, 60000);
 setInterval(() => { if (!document.hidden && btAuthLoaded) loadFunnel(); }, 60000); // the Bid funnel board re-reads every minute too // a task done elsewhere leaves the list on its own
 const todayKey = i => i.group + '|' + i.title;
+// TODAY AS A GUIDE (owner 2026-10-22: "today solo que nos diga qué llegó o qué podemos mandar y el botón nos lleva a Quotes"): two cards, no prices — URGENT on the right (a plant answered a live quote and that price has gone to
+// no customer yet), OPTIONAL on the left (new prices and prices up to date that have not been sent). The rest of Today (collect, pay, credit, bid, needs a price…) stays, folded under "Other reminders".
+// TODAY_LIST = false brings the old board back as it was.
+const TODAY_LIST = true;
+let dashLive = [], todayOtherOpen = false;
+async function loadTodayLive(){ try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ } }
+function todayListHtml(all){
+  const urgent = (dashLive || []).filter(s => s.product_id && s.product_name && (s.arrivals || []).some(a => !(a.sent_customer_ids || []).length));
+  const urgentNames = new Set(urgent.map(s => s.product_name));
+  const by = new Map();
+  (all || []).filter(i => i.group === 'sell' && i.product && !urgentNames.has(i.product)).forEach(i => {
+    const g = by.get(i.product) || { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set() };
+    g.isNew = g.isNew || !!i.new; (i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : []).forEach(n => g.who.add(n)); by.set(i.product, g);
+  });
+  const list = [...by.values()].sort((a, b) => Number(b.isNew) - Number(a.isNew));
+  const go = (href, urg) => `<a class="btn small tdr-go${urg ? ' tdr-urg' : ''}" href="${escapeHtml(href)}">Go to Quotes →</a>`;
+  const rows = list.map(g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span></td><td>${go(g.href)}</td></tr>`).join('');
+  const urows = urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">A plant answered your live quote</span></td><td>${go(href, true)}</td></tr>`; }).join('');
+  return `<div class="tdr"><div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
+    + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A plant answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div></div>`;
+}
 document.addEventListener('visibilitychange', () => { if (!document.hidden) reloadTodayIfStale(); });
 window.addEventListener('pageshow', (e) => { if (e.persisted) reloadTodayIfStale(); });
 window.addEventListener('focus', reloadTodayIfStale);
@@ -472,7 +499,7 @@ async function loadToday(){
   if (!dashToday) wrap.innerHTML = '<div class="empty">Loading today…</div>'; // a refresh keeps the list on screen
   const prev = dashToday ? dashToday.slice() : null;
   let items = [];
-  try { items = (await callApi('dashboard-summary', { view: 'today' })).today || []; }
+  try { items = (await Promise.all([callApi('dashboard-summary', { view: 'today' }), loadTodayLive()]))[0].today || []; }
   catch (e) { wrap.innerHTML = `<div class="empty">Could not load today: ${escapeHtml(e.message)}</div>`; return; }
   dashToday = items;
   const gone = prev ? prev.filter(p => !items.some(n => todayKey(n) === todayKey(p))) : [];
@@ -482,8 +509,8 @@ async function loadToday(){
 function renderToday(gone = []){
   const wrap = document.getElementById('todayWrap'), all = dashToday || [];
   // ONE list, closest to a bid first (the server orders it) — no area tabs (user 2026-10-12: "todo enfocado en bids")
-  const items = all, leaving = gone;
-  if (!items.length && !leaving.length){ wrap.innerHTML = '<div class="empty">Nothing urgent today — all caught up.</div>'; return; }
+  const items = TODAY_LIST ? all.filter(i => i.group !== 'sell') : all, leaving = TODAY_LIST ? [] : gone; // (the guide shows the price lines itself)
+  if (!TODAY_LIST && !items.length && !leaving.length){ wrap.innerHTML = '<div class="empty">Nothing urgent today — all caught up.</div>'; return; }
   // REDESIGN 2026-10-14 (owner: "se repite data, botones se salen de márgenes… que sea claro qué llegó, cuándo, por qué es relevante y a quién; un botón más claro y limpio"): a price that arrives is ONE block per
   // product — what arrived and when (written once, NEW blinks once), the plants' prices (once) — and under it one row per customer: who, why he makes sense, where each brand stands for HIM, and one
   // labelled button. Nothing is repeated per customer and nothing overlaps: every row is a grid that wraps. Every other kind of line (collect, pay, needs a price…) is one tidy line with its button.
@@ -569,10 +596,11 @@ function renderToday(gone = []){
     return out.map(x => x.g ? groupHtml(x.g, cls) : lineHtml(x.line, cls)).join('');
   };
   const leavingHtml = leaving.length ? `<div class="td-leaving">${leaving.map(i => isPrice(i) ? groupHtml([i], ' leaving') : lineHtml(i, ' leaving')).join('')}</div>` : '';
-  wrap.innerHTML = `<div class="tdboard">${leavingHtml}${SEC.map(([pr, label, lvl]) => {
+  const boardHtml = `<div class="tdboard">${leavingHtml}${SEC.map(([pr, label, lvl]) => {
     // the products customers buy that no plant has priced are their own block inside "Do today" (they are asks to the plants, not offers to send)
     const blocks = pr === 2 ? [[label, items.filter(i => i.prio === pr && i.group !== 'gap')], ['Needs a price', items.filter(i => i.prio === pr && i.group === 'gap')]] : [[label, items.filter(i => i.prio === pr)]];
     return blocks.map(([lb, part]) => part.length ? secRow(lb, lvl, part.length, part) + sectionBody(part) : '').join(''); }).join('')}</div>`;
+  wrap.innerHTML = TODAY_LIST ? todayListHtml(all) + (items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Other reminders · ${items.length}</summary>${boardHtml}</details>` : '') : boardHtml;
 }
 
 
