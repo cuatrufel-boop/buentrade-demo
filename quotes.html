@@ -3353,7 +3353,7 @@ function rqBrandListHtml(x){
     const lines = [];
     if (usdT.length || !pesT.length){
       const open = `rqConfirmPriceClick(null,'${pid}','${r.plant.id}')`;
-      lines.push(`<td title="${escapeHtml(usdT.map(c => String(c.trade_name).trim()).join(', '))}">Any customer${sub('USD · ' + usdT.map(c => escapeHtml(String(c.trade_name).trim())).join(' · '))}</td><td class="num">${planTag(open)}</td>
+      lines.push(`<td title="${escapeHtml(usdT.map(c => String(c.trade_name).trim()).join(', '))}">Border Clients${sub('USD · ' + usdT.map(c => escapeHtml(String(c.trade_name).trim())).join(' · '))}</td><td class="num">${planTag(open)}</td>
         <td>${ready ? `<span class="num" style="cursor:pointer;" title="Open its QT again" onclick="${open}">${money(r.calc.salePerLb)}</span>` : '<span class="muted">—</span>'}</td>
         <td>${sendBtns(ready, ready && usdT.some(c => rqCanEmail(c, [pid])), ready && usdT.some(c => rqCanWhatsApp(c, [pid])), ch => `rqBrandSend('${ch}','${r.key}')`, 'this offer')}</td>`);
     }
@@ -3364,7 +3364,7 @@ function rqBrandListHtml(x){
         <td>${conf ? `<span class="num" style="cursor:pointer;" title="Open his QT again" onclick="${open}">MX$ ${Number(conf.calc.pesosQt.perKg).toFixed(2)}/kg</span>` : '<span class="muted">—</span>'}</td>
         <td>${sendBtns(!!conf, !!conf && rqCanEmail(c, [pid]), !!conf && rqCanWhatsApp(c, [pid]), ch => `rqBrandSend('${ch}','${r.key}','${c.id}')`, 'his offer')}</td>`);
     });
-    const shownLines = lines.filter(l => (rqBrandCur === 'all' || (rqBrandCur === 'usd') === /Any customer/.test(l)) && (!qq || (r.plant.name + ' ' + l.replace(/<[^>]*>/g, ' ')).toLowerCase().includes(qq)));
+    const shownLines = lines.filter(l => (rqBrandCur === 'all' || (rqBrandCur === 'usd') === /Border Clients/.test(l)) && (!qq || (r.plant.name + ' ' + l.replace(/<[^>]*>/g, ' ')).toLowerCase().includes(qq)));
     shownLines.forEach((l, i) => body.push(`<tr class="${fresh && !ready ? 'rq-sheet-new' : ''}">${i ? '<td></td>' : brand}${l}</tr>`));
     readyLines += shownLines.filter(l => !/disabled/.test(l)).length;
   });
