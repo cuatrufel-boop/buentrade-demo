@@ -3351,31 +3351,33 @@ function rqBrandListHtml(x){
   const offSpec = r => `<button type="button" class="qbucket-waiting-row-decline" title="Doesn't produce it — never asked again" onclick="rqSheetDecline('${r.plant.id}','${r.pid}')">✕ Off-Spec</button>`;
   // an old (expired) price is listed with its two ways out: ask the plant for an update, or send the old price anyway (then it is a normal line: its QT, its sale)
   stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => body.push(`<tr class="rq-sheet-dim"><td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}</td><td></td><td class="num"><span class="pkg-tag price exp">${money(r.price)}</span></td><td class="muted">—</td>
-    <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'])">Ask update →</button><button type="button" class="pkg-trigger-btn" title="Send this expired price anyway — you confirm your price in the QT first" onclick="rqToggleReqOld('${r.key}')">Send old price</button></div></td></tr>`));
+    <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask update →</button><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Send this expired price anyway — you confirm your price in the QT first" onclick="rqToggleReqOld('${r.key}')">Send old price</button></div></td></tr>`));
   pending.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => {
     const name = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}</td>`;
-    const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'])">Ask for price →</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
+    const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask for price →</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
       : r.kind === 'waiting' ? `<span class="rq-sheet-pill wait">Waiting for price</span>${offSpec(r)}`
-      : `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
+      : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
     body.push(`<tr class="rq-sheet-dim">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
   });
   const lineCount = sorted.filter(r => r.calc && r.confirmed && !r.proposed).length;
-  const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send'])
+  const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>')
     : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>';
   return `<div class="rq-req rq-glass">
     <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div></div></div>
+    <div class="card qbucket">
     <div class="rq-req2-listhead" style="flex-wrap:wrap;gap:10px;">
       <input id="rq_brand_q" type="text" placeholder="Search" value="${escapeHtml(rqBrandQ)}" oninput="rqBrandSearch(this.value)" onblur="rqBrandQFocus = false" style="max-width:240px;padding:8px 14px;border-radius:12px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:#fff;font-size:13px;">
       <div style="display:flex;gap:6px;">${[['all', 'All'], ['usd', 'USD'], ['pesos', 'Pesos']].map(([k, l]) => `<button type="button" class="chip${rqBrandCur === k ? ' on' : ''}" onclick="rqBrandSetCur('${k}')">${l}</button>`).join('')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-left:auto;">
-      ${remindN > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindN} plants →</button>` : ''}
-      ${askN ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}
+      ${remindN > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindN} plants →</button>` : ''}
+      ${askN ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}
       <span class="muted" style="font-size:12.5px;">${readyLines} ready</span>
       <div class="rq-req2-btns" style="margin:0;"><button type="button" class="rq-customer-bulk-btn email" ${canSend && emailOk ? '' : 'disabled'} title="${emailOk ? 'Email all the ready customers — you see the preview first' : 'No email on file: ' + noEmail.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('email')">${mailIco} Email all</button>
       <button type="button" class="rq-customer-bulk-btn whatsapp" ${canSend && waOk ? '' : 'disabled'} title="${waOk ? 'WhatsApp all the ready customers — you see the preview first' : 'No WhatsApp on file: ' + noWa.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('whatsapp')">${waIco} WhatsApp all</button></div>
     </div></div>
     ${table}
     ${hints}${addHtml}
+    </div>
   </div>`;
 }
 function rqRenderRequestView(rows){
