@@ -3824,7 +3824,7 @@ async function rqSheetSend(channel, onlyKey){
 // with HIS pesos price (rqWithPesos inside the send). Same rule as rqSheetSend: other confirmed brands of the SAME product may go together in one list, the trader chooses. Nothing else changes.
 async function rqBrandSend(channel, key, customerId){
   const pids = rqActiveProductFilterIds.slice();
-  let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed);
+  let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
   const one = rows.find(r => r.key === key);
   if (!one) return;
   const owners = rqSheetCustomersOwning(one.pid);
