@@ -718,7 +718,7 @@ async function loadFunnel(){
   if (!st || st.enabled !== true) return;
   funnelDemo = st.demo_plant === true;
   funnelRoles = Array.isArray(st.roles) ? st.roles : ['admin'];
-  if (!dashFunnelOn){ dashFunnelOn = true; renderDashCards(); DASH_TABS.splice(1, 0, ['funnel', 'Bid funnel']); addProfileTabs(); }
+  if (!dashFunnelOn){ dashFunnelOn = true; DASH_TABS.splice(1, 0, ['funnel', 'Bid funnel']); addProfileTabs(); }
   const wrap = document.getElementById('funnelWrap');
   let bids = [];
   try { const l = await callApi('sent-offers-search', { funnel: { action: 'list' } }); bids = l.bids || []; funnelSends = l.sends || []; funnelRounds = l.rounds || []; funnelPlantMsgs = l.plant_messages || []; }
@@ -851,15 +851,11 @@ function renderDashCards(){
   const c = dashCeo, m = c.month, now = dashToday.filter(i => i.prio === 1).length, todo = dashToday.filter(i => i.prio !== 4).length, mon = MONTHS[Number(c.ym.slice(5)) - 1];
   const card = (cls, value, label, sub, icon, tab) => `<div class="stat-card ${cls}" style="cursor:pointer;" onclick="setDashTab('${tab}')"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></div><div style="min-width:0;"><div class="stat-value">${value}</div><div class="stat-label">${label}</div><div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:3px;">${sub}</div></div></div>`;
   const left = Math.max(0, c.goal - m.loads);
-  // Profiles (owner 2026-10-22, "sí"): where the funnel is on, the money cards (Profit, To collect) are only for admin and payments; the Loads card leads a non-admin to Today (Goals & Money is the admin's).
-  const profiled = dashFunnelOn && !funnelCan('admin'), seeMoney = !profiled || funnelCan('payments');
-  const goalsTab = profiled ? 'today' : 'goals';
-  document.getElementById('dashCards').style.gridTemplateColumns = `repeat(${seeMoney ? 4 : 2},minmax(0,1fr))`;
   document.getElementById('dashCards').innerHTML =
     card(now ? 'danger' : 'hero', now ? `${now} now` : String(todo), 'Today', now ? `${todo} thing${todo === 1 ? '' : 's'} to do` : `thing${todo === 1 ? '' : 's'} to do`, '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', 'today') +
-    card(m.loads >= c.goal ? 'ok' : 'warn', `${m.loads} of ${c.goal}`, `Loads · ${mon}`, m.loads >= c.goal ? 'Goal met' : `${left} to go`, '<rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3.5L22 14v3h-6z"/><circle cx="6" cy="19" r="2"/><circle cx="17.5" cy="19" r="2"/>', goalsTab) +
-    (seeMoney ? card(m.margin >= 0 ? 'hero' : 'danger', money(m.margin), `Profit · ${mon}`, `${m.sales ? (m.margin / m.sales * 100).toFixed(1) : '0.0'}% on ${money(m.sales)}`, '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>', profiled ? 'payments' : 'goals') +
-    card('warn', money(c.to_collect), 'To collect', `To pay ${money(c.to_pay)}`, '<path d="M12 5v14M19 12l-7 7-7-7"/>', profiled ? 'payments' : 'goals') : '');
+    card(m.loads >= c.goal ? 'ok' : 'warn', `${m.loads} of ${c.goal}`, `Loads · ${mon}`, m.loads >= c.goal ? 'Goal met' : `${left} to go`, '<rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3.5L22 14v3h-6z"/><circle cx="6" cy="19" r="2"/><circle cx="17.5" cy="19" r="2"/>', 'goals') +
+    card(m.margin >= 0 ? 'hero' : 'danger', money(m.margin), `Profit · ${mon}`, `${m.sales ? (m.margin / m.sales * 100).toFixed(1) : '0.0'}% on ${money(m.sales)}`, '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>', 'goals') +
+    card('warn', money(c.to_collect), 'To collect', `To pay ${money(c.to_pay)}`, '<path d="M12 5v14M19 12l-7 7-7-7"/>', 'goals');
 }
 function renderCeo(c){
   dashCeo = c; renderDashCards();

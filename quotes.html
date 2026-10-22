@@ -700,6 +700,13 @@
   body.rq-focus .rq-req2-row.ready,body.rq-focus .rq-req2-row.confirm{padding:10px 14px;margin:5px 0;}
   body.rq-focus .rq-req2-grp{margin:12px 0 3px;}
   body.rq-focus .rq-req2-send{padding:14px;}
+  /* less text, everything centered (owner 2026-10-22: "mucho texto, innecesario… centrar todo"): who the offer is for and the "confirm below" line, the list titles and the "confirm a price to send" hint are hidden (never removed) */
+  body.rq-focus .rq-req-sub.rq-sub-who,body.rq-focus .rq-req2-send > .rq-req2-lbl:first-child,body.rq-focus .rq-req2-listhead .rq-req2-lbl,body.rq-focus .rq-hint-guide{display:none !important;}
+  body.rq-focus .rq-req2-head{flex-direction:column;align-items:center;gap:10px;text-align:center;margin-bottom:14px;} body.rq-focus .rq-req2-head > div{text-align:center;}
+  body.rq-focus .rq-req2-steps{justify-content:center;}
+  body.rq-focus #rq_request_asked > div > div{justify-content:center;}
+  body.rq-focus .rq-req2-listhead{justify-content:center;gap:10px;}
+  body.rq-focus .rq-req2-grp{text-align:left;}
   /* who asked: only the customers marked, with "change" to open the rest */
   body.rq-focus #rq_request_asked > div{padding:6px 2px !important;border-top:0 !important;}
   body.rq-focus #rq_request_asked:not(.open) .chip:not(.on):not(.rq-asked-change){display:none;}
@@ -3433,7 +3440,7 @@ function rqRenderRequestView(rows){
   const grpOf = o => GRP[o] || 'Plants'; let lastGrp = '';
   const html = `<div class="rq-req rq-glass">
     <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div>
-      <div class="rq-req-sub">${fromToday ? `Offer for <b class="rq-req-asker">${nm(fromToday)}</b> ${pill('ok', 'From Today')} <span>— confirm your price below and send</span>` : primary ? `Asked by <b class="rq-req-asker">${nm(primary)}</b> ${pill('ok', 'Asked')}${askedAt ? ` <span>${rqFmtArrival(askedAt)}</span>` : ''}${askers.length > 1 ? ` <span>+${askers.length - 1} more</span>` : ''}` : 'Nobody marked as having asked — pick who asked in “Who asked for it?” just above'}</div></div>
+      <div class="rq-req-sub${fromToday || primary ? ' rq-sub-who' : ''}">${fromToday ? `Offer for <b class="rq-req-asker">${nm(fromToday)}</b> ${pill('ok', 'From Today')} <span>— confirm your price below and send</span>` : primary ? `Asked by <b class="rq-req-asker">${nm(primary)}</b> ${pill('ok', 'Asked')}${askedAt ? ` <span>${rqFmtArrival(askedAt)}</span>` : ''}${askers.length > 1 ? ` <span>+${askers.length - 1} more</span>` : ''}` : 'Nobody marked as having asked — pick who asked in “Who asked for it?” just above'}</div></div>
       ${steps}</div>
     <div class="rq-req2-body">
       <div class="rq-req2-plants">
@@ -3449,7 +3456,7 @@ function rqRenderRequestView(rows){
           <button type="button" class="rq-customer-bulk-btn whatsapp" style="flex:1;justify-content:center;" ${canSend && waOk ? '' : 'disabled'} title="${waOk ? 'WhatsApp — you see the preview first' : 'No WhatsApp on file: ' + noWa.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('whatsapp')">${waIco} WhatsApp</button>
         </div>
         ${canSend && (noEmail.length || noWa.length) ? `<div class="rq-req2-hint">${noEmail.length ? `No email on file: ${noEmail.map(nm).join(', ')} — they get it by WhatsApp.` : ''}${noEmail.length && noWa.length ? ' ' : ''}${noWa.length ? `No WhatsApp on file: ${noWa.map(nm).join(', ')} — they get it by email.` : ''}</div>` : ''}
-        ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT (his row, above).' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
+        ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT (his row, above).' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
       </aside>
     </div></div>`;
   rqSetMsgOriginHtml(el, html);
