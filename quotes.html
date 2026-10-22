@@ -689,6 +689,27 @@
   .rq-req2-chips{gap:6px;} .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"]{flex:1 0 100%;display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 12px;font-size:12.5px;white-space:normal;text-align:left;overflow-wrap:anywhere;}
   .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"] small{margin-left:auto;white-space:nowrap;opacity:.85 !important;font-size:11px;}
   .rq-req2-chips > .chip:not([onclick^="rqToggleReqCustomer"]){background:transparent;border-style:dashed;color:rgba(255,255,255,.7);}
+  /* THE FOCUS SCREEN (owner 2026-10-22: "no quiero tanto scroll… llévame a una pantalla clara en el centro"): while ONE product is worked (body.rq-focus, set in rqRenderSweepTables) the stat cards, the tab bar, the
+     search banner and the Clear chip sit out of the way (hidden, never removed) and the product is centered on the screen; "← Back to Quotes" brings everything back. Nothing here applies without the class. */
+  .rq-focus-back{display:none;}
+  body.rq-focus .rq-focus-back{display:block;padding:0 0 4px;} .rq-back{font:600 12px 'IBM Plex Mono',monospace;color:var(--blue-bright);background:none;border:0;cursor:pointer;padding:4px 0;letter-spacing:.02em;} .rq-back:hover{text-decoration:underline;}
+  body.rq-focus #rq_page_title,body.rq-focus #qCardsSlot,body.rq-focus .tab-row,body.rq-focus .rq-hero-banner,body.rq-focus #rq_filter_chip_wrap{display:none !important;}
+  body.rq-focus .wrap{margin-top:6px !important;} body.rq-focus .rq-board{padding-top:4px;}
+  body.rq-focus #rq_sheet_section{max-width:1200px;margin:0 auto;padding:6px 22px 6px;}
+  body.rq-focus .rq-req2-head{margin-bottom:12px;} @media (min-width:1001px){ body.rq-focus .rq-req2-body{grid-template-columns:minmax(0,1fr) 400px;gap:20px;} } /* on a phone / narrow window the two columns stack, as before */
+  body.rq-focus .rq-req2-row.ready,body.rq-focus .rq-req2-row.confirm{padding:10px 14px;margin:5px 0;}
+  body.rq-focus .rq-req2-grp{margin:12px 0 3px;}
+  body.rq-focus .rq-req2-send{padding:14px;}
+  /* who asked: only the customers marked, with "change" to open the rest */
+  body.rq-focus #rq_request_asked > div{padding:6px 2px !important;border-top:0 !important;}
+  body.rq-focus #rq_request_asked:not(.open) .chip:not(.on):not(.rq-asked-change){display:none;}
+  #rq_request_asked .rq-asked-change,#rq_request_asked .rq-asked-none{display:none;} body.rq-focus #rq_request_asked .rq-asked-change,body.rq-focus #rq_request_asked:not(.open) .rq-asked-none{display:inline-flex;}
+  /* the customers as compact chips, two per row; the Email / WhatsApp buttons stay in view while the list scrolls inside its own box */
+  body.rq-focus .rq-req2-chips{gap:6px;max-height:calc(100vh - 500px);min-height:150px;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.3) transparent;}
+  body.rq-focus .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"]{flex:1 0 calc(50% - 6px);padding:7px 10px;font-size:11.5px;}
+  body.rq-focus .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"]{flex-direction:column;align-items:flex-start;gap:1px;overflow-wrap:break-word;word-break:normal;}
+  body.rq-focus .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"] small{margin-left:0;}
+  body.rq-focus .rq-req2-prow > .chip{padding:8px 10px;}
   /* the send list in two groups (owner 2026-10-22): USD customers (one price for all) and pesos customers (each in his own QT); green = ready to send */
   .rq-req2-seg{flex:1 0 100%;display:flex;align-items:center;gap:8px;font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:10px 0 0;} .rq-req2-seg:first-child{margin-top:0;}
   .rq-req2-prow{flex:1 0 100%;display:flex;flex-direction:column;gap:6px;align-items:stretch;} .rq-req2-prow > .pkg-trigger-btn{align-self:flex-end;white-space:nowrap;}
@@ -1419,6 +1440,7 @@ auth.onAuthStateChanged(user => {
     <!-- Offer Sheet (approved 2026-09-26): shown instead of the four sections below while products are picked in Find
          Product — see rqRenderSheet. Same stat-card / table / button components as the rest of this page. -->
     <div id="rq_sheet_section" class="rq-glass" style="display:none;padding-top:12px;">
+      <div class="rq-focus-back"><button type="button" class="rq-back" onclick="rqClearProductFilter()" title="Back to the Quotes screen">← Back to Quotes</button></div>
       <!-- Messaging (2026-09-27): "did this search come from a message?" — asked right here, no extra step. -->
       <div id="rq_msg_origin"></div>
       <!-- The request, in three steps (user 2026-10-10): what to send now, what already went out, what is still coming. -->
@@ -1868,6 +1890,7 @@ function qPlaceTabCards(){
 document.addEventListener('DOMContentLoaded', qPlaceTabCards);
 if (document.readyState !== 'loading') qPlaceTabCards();
 function setQuoteTab(tab){
+  if (tab !== 'request') document.body.classList.remove('rq-focus'); // the focus screen belongs to the Quotes tab: any other tab shows its own cards and tabs
   document.getElementById('qTabBtn_request').classList.toggle('active', tab === 'request');
   document.getElementById('qTabBtn_messaging').classList.toggle('active', tab === 'messaging');
   document.getElementById('qTabBtn_coverage').classList.toggle('active', tab === 'coverage');
@@ -2804,6 +2827,8 @@ function rqRenderSweepTables(){
   const sheetMode = filterId && rqActiveSweepTab === 'quote';
   const sheetSection = document.getElementById('rq_sheet_section');
   if (sheetSection) sheetSection.style.display = sheetMode ? '' : 'none';
+  // ONE product worked on its own screen (owner 2026-10-22, "focus screen"): the cards, the tabs and the search sit out of the way while it is on screen — only hidden with this class, never removed.
+  document.body.classList.toggle('rq-focus', !!(sheetMode && filterIds.length === 1));
   if (sheetMode){
     ['rq_ready_section', 'rq_expired_section', 'rq_updating_section', 'rq_possible_section'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     const cw = document.getElementById('rq_filter_chip_wrap'); if (cw) cw.style.display = 'flex';
@@ -3119,6 +3144,8 @@ async function rqDismissMsgOrigin(){
 // tiene más chance de que me dé bid porque tiene una necesidad"). The customers who asked for the picked product(s) lead the package and the
 // Outbox; the other buyers follow. Marking one is the only write — searching stays read-only. The server opens the package if there is none,
 // so the pair client × product is kept with or without a price on file (sent-offers-search offer_sheet.request).
+let rqAskedChangeOpen = false; // the focus screen shows only who asked; "change" opens the whole list (always open while nobody is marked or the trader still has to pick)
+function rqToggleAskedChange(){ rqAskedChangeOpen = !rqAskedChangeOpen; const el = document.getElementById('rq_request_asked'); if (el) el.classList.toggle('open', rqAskedChangeOpen); }
 let rqAskedBusy = false, rqAskedOtherOpen = false, rqAskedOtherQ = '', rqAllCustomersCache = null;
 function rqSheetAskedIds(pid, ctx = rqSheetState){ return new Set((((rqSheetFor(pid, ctx) || {}).requested) || []).map(r => r.customer_id)); }
 function rqSheetIsAsked(customerId, pids = rqActiveProductFilterIds, ctx = rqSheetState){
@@ -3187,8 +3214,10 @@ function rqRenderSheetAsked(keepFocus){
   const html = pids.length ? `<div style="padding:12px 18px;border-top:1px solid var(--line);">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <b style="font-size:13px;margin-right:4px;">Who asked for it?</b>
+      ${list.some(c => rqSheetIsAsked(c.id)) ? '' : '<span class="muted rq-asked-none" style="font-size:12px;">nobody has asked yet</span>'}
       ${list.map(chip).join('')}
       <button type="button" class="chip" onclick="rqSheetAskedOther()">+ Other customer</button>
+      <button type="button" class="chip rq-asked-change" onclick="rqToggleAskedChange()" title="Show everyone who buys it">change</button>
       ${other}
       ${needed ? '<div class="pkg-tag-blink" style="flex-basis:100%;font-size:13px;font-weight:600;">Pick the customer who asked for it to continue.</div>' : ''}
     </div></div>`
@@ -3198,6 +3227,7 @@ function rqRenderSheetAsked(keepFocus){
     el.dataset.html = html; el.innerHTML = html;
     if (focused){ const i = document.getElementById('rq_asked_other_q'); if (i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   }
+  if (el === reqEl) el.classList.toggle('open', rqAskedChangeOpen || needed || rqAskedOtherOpen); // still to pick / searching another customer: the whole list shows
   rqSyncPaletteGate();
 }
 
