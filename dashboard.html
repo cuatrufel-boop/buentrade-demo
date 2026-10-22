@@ -394,6 +394,8 @@ const API_REGION = '?forceFunctionRegion=us-east-1';
 const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
 
 async function callApi(fn, body){
+  // Bid funnel calls carry the sign-in proof (the Firebase ID token) so the server can check WHO is acting when it is switched to require it; harmless when it is not.
+  if (body && body.funnel && typeof auth !== 'undefined' && auth && auth.currentUser && auth.currentUser.getIdToken) { try { body.funnel.id_token = await auth.currentUser.getIdToken(); } catch (e) {} }
   const res = await fetch(API_ROOT + fn + API_REGION, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
@@ -580,12 +582,13 @@ let dashCeo = null, dashToday = null, dashTab = 'today'; const todayHeldOpen = n
 function toggleHeld(k){ if (todayHeldOpen.has(k)) todayHeldOpen.delete(k); else todayHeldOpen.add(k); renderToday(); }
 const DASH_TABS = [['today', 'Today'], ['goals', 'Goals & Money'], ['mix', 'Sales Mix']];
 // Bid funnel (2026-10-21): the tab exists only where the funnel is switched on (sent-offers-search funnel/status); a system without it never shows it.
-let dashFunnelOn = false, funnelSends = [], funnelRounds = [], funnelPlantMsgs = [], funnelDemo = false, funnelBids = [], funnelPrices = {};
+let dashFunnelOn = false, funnelSends = [], funnelRounds = [], funnelPlantMsgs = [], funnelDemo = false, funnelRoles = ['admin'], funnelBids = [], funnelPrices = {};
 async function loadFunnel(){
   let st;
-  try { st = await callApi('sent-offers-search', { funnel: { action: 'status' } }); } catch (e) { return; }
+  try { st = await callApi('sent-offers-search', { funnel: { action: 'status', actor: currentActor() } }); } catch (e) { return; }
   if (!st || st.enabled !== true) return;
   funnelDemo = st.demo_plant === true;
+  funnelRoles = Array.isArray(st.roles) ? st.roles : ['admin'];
   if (!dashFunnelOn){ dashFunnelOn = true; DASH_TABS.splice(1, 0, ['funnel', 'Bid funnel']); setDashTab(dashTab); }
   const wrap = document.getElementById('funnelWrap');
   let bids = [];
@@ -609,7 +612,7 @@ async function loadFunnel(){
     const why = b.last_reason ? `<div style="color:var(--ink-soft);font-size:12px;">${escapeHtml(b.last_reason)}</div>` : '';
     if (b.status === 'allocated') return `<span style="color:var(--green,#3fcb7e);font-weight:700;">Got ${b.loads_granted} load${b.loads_granted === 1 ? '' : 's'}</span> <a class="name-link" href="trading-tool.html?offerId=${encodeURIComponent(b.sent_offer_id)}" title="Open this offer to create the order">Create order →</a>${why}`;
     if (b.last_outcome === 'out_of_price') {
-      const mine = b.posted_by === currentActor();
+      const mine = b.posted_by === currentActor() && funnelCan('trader');
       return `<b>Not yet</b>${why}${mine ? `<div style="margin-top:4px;"><button class="btn small" onclick="funnelReenter(${b.id}, ${Number(b.last_granted_price)})">Come back at $${Number(b.last_granted_price).toFixed(4)}</button> <button class="btn small secondary" onclick="funnelPass(${b.id})">Pass</button></div>` : ''}`;
     }
     if (b.last_reason) return `${b.loads_granted ? `<b>Got ${b.loads_granted} of ${b.loads}</b>` : '<b>Not yet</b>'}${why}`;
@@ -628,7 +631,7 @@ async function loadFunnel(){
     const priceVal = funnelPrices[k] != null ? funnelPrices[k] : (floor != null ? floor.toFixed(4) : '');
     const barNow = plantId !== lastPlant && g.rows.some(b => b.status === 'open');
     const plantBar = barNow
-      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12);"><b>${escapeHtml(g.plant)}</b><button class="btn small" onclick="funnelEmailPlant('${plantId}')" title="One email to this plant with every line that has bids in line">Email plant</button></div>` : '';
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12);"><b>${escapeHtml(g.plant)}</b>${funnelCan('buyer') ? `<button class="btn small" onclick="funnelEmailPlant('${plantId}')" title="One email to this plant with every line that has bids in line">Email plant</button>` : ''}</div>` : '';
     // The plant wrote back and the system could not read it with certainty: its own words, for everyone. Nothing is given; the buyer writes back to the plant.
     const unread = barNow ? funnelPlantMsgs.filter(x => x.plant_id === plantId).map(x => `<div style="margin:6px 0;padding:8px 10px;border:1px solid rgba(232,181,76,.5);border-radius:8px;font-size:12.5px;"><b>The plant answered ${escapeHtml(fmt(x.received_at))}</b> — the system could not read ${x.outcome === 'partly' ? 'all of it' : 'it'} with certainty, so ${x.outcome === 'partly' ? 'only what it was sure of was used' : 'no loads were given'}. The buyer writes back to the plant.<div style="color:var(--ink-soft);margin-top:4px;white-space:pre-line;">“${escapeHtml(x.body)}”</div></div>`).join('') : '';
     if (barNow) lastPlant = plantId;
@@ -646,6 +649,8 @@ async function loadFunnel(){
 // Bid funnel, piece C: ONE OS email per plant with every line of that plant that has bids in line. The buyer chooses only the price of each line; the loads come from the funnel.
 // Goes out through the OS email window (preview, To / Subject / text editable, the same window every screen uses); the send is recorded in the funnel only after it went out. Wording PROPOSED, awaiting the owner's approval:
 // one line → the approved bid text (subject "<product> — Bid"); several lines → a list.
+// What this profile can do (the server enforces it too): admin everything; a trader posts and brings bids back; a buyer emails the plants.
+const funnelCan = role => funnelRoles.includes('admin') || funnelRoles.includes(role);
 function funnelMessage(contact, plantName, lines){
   const hi = `Hi ${contact || 'there'},\n\n`;
   if (lines.length === 1){

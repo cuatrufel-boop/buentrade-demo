@@ -1,10 +1,12 @@
 // Demo login: replaces Firebase. Nothing here reaches the real BUENTRADE system.
 (function(){
   var KEY = 'bt_demo_session';
-  // email -> SHA-256 of its password. "invitado" is the friend's login and never changes; "felipe" is the owner's.
+  // email -> SHA-256 of its password. "invitado" is the friend's login and never changes; "felipe" is the owner's; "trader" and "buyer" show the two profiles of the Bid funnel.
   var ACCOUNTS = {
     "invitado@buentrade.demo": "912b1ae1e94aa5ce8ef040ff85b3417a9a19d3638dcfba189d81457e197eac41",
-    "felipe@buentrade.demo": "140719f7228f5f898e8059194584b6b2bdf2f3db6d984b86700637df54eaa3d0"
+    "felipe@buentrade.demo": "140719f7228f5f898e8059194584b6b2bdf2f3db6d984b86700637df54eaa3d0",
+    "trader@buentrade.demo": "03afee30a1d1d6f714ecba34bc7949168acd46250fde8b5749fd378282a58d64",
+    "buyer@buentrade.demo": "d173bf5367dbed9644a3e8355427619b72b99b4c2b3d3500e51b3388b07845b2"
   };
   var listeners = [];
   function mk(email){ return { email: email, emailVerified: true, uid: 'demo-user', displayName: 'Demo', getIdToken: function(){ return Promise.resolve('demo'); } }; }

@@ -567,6 +567,8 @@ const API_ROOT = 'https://oqotaxmacwueiutdxgkk.supabase.co/functions/v1/';
 const API_REGION = '?forceFunctionRegion=us-east-1';
 const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
 async function callApi(fn, body){
+  // Bid funnel calls carry the sign-in proof (the Firebase ID token) so the server can check WHO is acting when it is switched to require it; harmless when it is not.
+  if (body && body.funnel && typeof auth !== 'undefined' && auth && auth.currentUser && auth.currentUser.getIdToken) { try { body.funnel.id_token = await auth.currentUser.getIdToken(); } catch (e) {} }
   const res = await fetch(API_ROOT + fn + API_REGION, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
@@ -2933,8 +2935,9 @@ async function negoSendToPlant(channel){
 // order it is posted (the server stamps the time). Shown only when the funnel is switched on; a system without it answers without `enabled` and the button stays hidden.
 async function negoFunnelInit(){
   try {
-    const st = await callApi('sent-offers-search', { funnel: { action: 'status' } });
-    if (st && st.enabled === true && negoOffer && negoOffer.status === 'sent' && negoPlant) document.getElementById('negoPostBidBtn').style.display = 'inline-flex';
+    const st = await callApi('sent-offers-search', { funnel: { action: 'status', actor: currentActor() } });
+    const canPost = !Array.isArray(st.roles) || st.roles.includes('admin') || st.roles.includes('trader'); // the profile decides (the server enforces it too)
+    if (st && st.enabled === true && canPost && negoOffer && negoOffer.status === 'sent' && negoPlant) document.getElementById('negoPostBidBtn').style.display = 'inline-flex';
   } catch (e) { /* no funnel: the button stays hidden */ }
 }
 let negoPostingBid = false;
