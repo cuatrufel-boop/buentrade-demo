@@ -7082,7 +7082,8 @@ async function rqLogSentOffers(customers, channel){
 }
 // dryRun (2026-09-26, Offer Sheets): only asks sent-offers-create for the customer's credit warning — nothing is logged.
 // The real log happens once the trader confirms the send (see sendOfferEmailToAll's onSent).
-async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
+// draft (owner 2026-10-22): a WhatsApp offer is minted for its product link when the review window opens, but it is NOT an Offer until the trader says "Yes, sent" (rqConfirmOffers) — until then it is hidden everywhere.
+async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft){
   const rows = [];
   withCalc.forEach(({ plant, calc }) => {
     // Prefer the catalog's own clean name over anything typed in a search box — matches what's
@@ -7166,7 +7167,7 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
   const offers = [];
   for (const row of rows) {
     try {
-      const result = await callApi('sent-offers-create', dryRun ? { ...row, dry_run: true } : row);
+      const result = await callApi('sent-offers-create', dryRun ? { ...row, dry_run: true } : draft ? { ...row, draft: true } : row);
       if (result.offer) offers.push(result.offer);
       if (result.credit_warning && !warnings.some(w => w.message === result.credit_warning.message)) {
         warnings.push(result.credit_warning);
@@ -7175,6 +7176,13 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun){
     catch (e) { console.error('Failed to log sent offer:', e.message, row); }
   }
   return { warnings, offers };
+}
+
+// "Yes, sent": the drafts of this WhatsApp become real offers (Offers, Today, Quotes' "has it") — and only now. Nothing else records a WhatsApp offer.
+async function rqConfirmOffers(offers){
+  const ids = (offers || []).map(o => o && o.id).filter(Boolean);
+  if (!ids.length) return;
+  await callApi('sent-offers-create', { action: 'confirm', actor: currentActor(), ids, idempotency_key: 'confirm|' + ids.join(',') }); // confirming twice is a no-op on the server (only a draft changes)
 }
 
 // Sends through the Netlify function (Resend) so the correct BuenTrade alias goes out as the
@@ -7659,7 +7667,7 @@ async function sendOfferWhatsAppTo(customerId){
     // the row — so this now logs BEFORE opening the modal, same order sendOfferEmailTo already uses
     // (see that function's own comment on why logging first is the reliable order), confirmed with
     // the user as an acceptable change from the old "only log once WhatsApp is actually opened."
-    const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp');
+    const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp', false, true); // drafts: they become offers at "Yes, sent"
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
@@ -7667,7 +7675,7 @@ async function sendOfferWhatsAppTo(customerId){
       id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, phone,
       body: buildCustomerOfferTextWithLinks(rqFirstName(cc.contact_name || c.trade_name), full, offersByPlantId, warnings.length ? warnings : false, signalLine),
       sentOffers: full.map(({ plant }) => ({ offer: offersByPlantId.get(plant.id), plantName: plant.name })).filter(x => x.offer),
-      onOpened: () => rqConfirmBullets(c.id, 'whatsapp'),
+      onOpened: async () => { await rqConfirmOffers(offers); rqConfirmBullets(c.id, 'whatsapp'); },
     });
   }
   if (!items.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
@@ -7785,7 +7793,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     }
     const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
     if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
-    const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp');
+    const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp', false, true); // drafts: they become offers at "Yes, sent"
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
@@ -7797,7 +7805,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
         ? buildCustomerUpdateText(rqFirstName(cc.contact_name || c.trade_name), full, newKeys, offersByPlantId, true)
         : buildCustomerOfferTextWithLinks(rqFirstName(cc.contact_name || c.trade_name), full, offersByPlantId, warnings.length ? warnings : false, signalLine),
       sentOffers: full.map(({ plant }) => ({ offer: offersByPlantId.get(plant.id), plantName: plant.name })).filter(x => x.offer),
-      onOpened: () => { rqConfirmBullets(c.id, 'whatsapp'); if (opts.onSent) opts.onSent(c); },
+      onOpened: async () => { await rqConfirmOffers(offers); rqConfirmBullets(c.id, 'whatsapp'); if (opts.onSent) opts.onSent(c); },
     });
   }
   if (!items.length){
