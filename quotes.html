@@ -689,6 +689,12 @@
   .rq-req2-chips{gap:6px;} .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"]{flex:1 0 100%;display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 12px;font-size:12.5px;white-space:normal;text-align:left;overflow-wrap:anywhere;}
   .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"] small{margin-left:auto;white-space:nowrap;opacity:.85 !important;font-size:11px;}
   .rq-req2-chips > .chip:not([onclick^="rqToggleReqCustomer"]){background:transparent;border-style:dashed;color:rgba(255,255,255,.7);}
+  /* the send list in two groups (owner 2026-10-22): USD customers (one price for all) and pesos customers (each in his own QT); green = ready to send */
+  .rq-req2-seg{flex:1 0 100%;display:flex;align-items:center;gap:8px;font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:10px 0 0;} .rq-req2-seg:first-child{margin-top:0;}
+  .rq-req2-prow{flex:1 0 100%;display:flex;flex-direction:column;gap:6px;align-items:stretch;} .rq-req2-prow > .pkg-trigger-btn{align-self:flex-end;white-space:nowrap;}
+  .rq-req2-prow > .chip,.rq-req2-chips > .chip.rq-ready{display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 12px;font-size:12.5px;white-space:normal;text-align:left;overflow-wrap:anywhere;} .rq-req2-prow > .chip{flex:1;}
+  .rq-req2-prow > .chip small{margin-left:auto;white-space:nowrap;opacity:.85;font-size:11px;}
+  .chip.rq-ready{background:rgba(63,203,126,.1);border-color:rgba(63,203,126,.55);color:#3FCB7E;}
   .rq-req2-send{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:16px;background:rgba(255,255,255,.04);position:sticky;top:12px;}
   .rq-req2-send.can{border-color:rgba(63,203,126,.45);background:linear-gradient(180deg,rgba(63,203,126,.1),rgba(255,255,255,.03));}
   .rq-req2-sum{display:flex;align-items:baseline;gap:8px;margin:2px 0 12px;font-size:12px;color:rgba(255,255,255,.6);}
@@ -2653,7 +2659,7 @@ function rqSavedConfirmation(link, plant, productId){
   const c = st && st.confirmed;
   if (!c || !c.calc || !(Number(c.calc.salePerLb) > 0) || link.current_price == null) return null;
   if (Number(c.price) !== Number(link.current_price) || String(c.price_date || '').slice(0, 10) !== String(link.price_date || '').slice(0, 10)) return null;
-  const { confirmed, saved_at, saved_by, plant_price, ...version } = st;
+  const { confirmed, saved_at, saved_by, plant_price, pesos, ...version } = st; // the pesos versions of the pesos customers are theirs, never part of the USD one
   return { calc: c.calc, snapshot: { ...rqPlantOfferObj(plant, link, productId), rqPrice: c.cost != null ? Number(c.cost) : Number(link.current_price),
     rqLastCalc: c.calc, rqLastState: version, rqUsFreightRateId: c.us_freight_rate_id || null, rqCalculatorOpen: false, rqPreparedFor: rqPrepKey(link) } };
 }
@@ -3200,6 +3206,7 @@ function rqRenderSheetAsked(keepFocus){
 // pick who gets it, send), ALREADY SENT (what that customer has, and when) and STILL COMING (plants asked and waiting, the ones to ask).
 // It only READS the package's rows (rqSheetRows) and calls the same actions as the table below: QT, rqSendReadyRows, rqSheetAsk.
 let rqReqSel = { key: '', ids: null };
+let rqReqReadyIds = []; // the marked customers who can be sent NOW (a USD price confirmed / his own pesos QT confirmed) — the Send panel computes them, the send uses them
 let rqUrlPreselect = null; // { pid, cid } from Today's Go → : only that customer starts marked for that product
 let rqPreselectScrolled = false;
 const rqReqOld = new Set(); // plant|product keys of EXPIRED prices the trader chose to send anyway (the date stays on the row)
@@ -3240,12 +3247,13 @@ function rqToggleReqCustomer(id){
 async function rqRequestSend(channel){
   const pids = rqActiveProductFilterIds.slice();
   const rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key)));
-  const customers = rqSheetState.customers.filter(c => rqReqSel.ids && rqReqSel.ids.has(c.id));
+  // only the customers who are ready go (green): a pesos customer without his own pesos price waits, and nothing is sent to him in dollars
+  const customers = rqSheetState.customers.filter(c => rqReqSel.ids && rqReqSel.ids.has(c.id) && rqReqReadyIds.includes(c.id));
   if (!rows.length || !customers.length) return;
   // The updated list goes out only when EVERY new price of a plant the customer already has an offer from is confirmed (user 2026-10-12: "tengo que confirmar los dos
   // precios nuevos antes de mandar"): otherwise he would receive a list that silently leaves that plant out.
-  const waiting = rqSheetRows().filter(r => r.kind === 'priced' && !r.na && !r.stale && !(r.calc && r.confirmed && !r.proposed)
-    && customers.some(c => (rqSheetState.sentByCustomer[c.id] || {})[r.key]));
+  const waiting = rqSheetRows().filter(r => r.kind === 'priced' && !r.na && !r.stale
+    && customers.some(c => (rqSheetState.sentByCustomer[c.id] || {})[r.key] && !((r.calc && r.confirmed && !r.proposed) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id)))));
   if (waiting.length){
     const names = [...new Set(waiting.map(r => r.plant.name.trim()))].join(', ');
     await btAlert(`Not sent yet. Confirm the new price of ${names} first (Confirm price). The updated list goes out only when every new price is confirmed.`);
@@ -3312,7 +3320,7 @@ function rqRenderRequestView(rows){
     const ready = r.calc && !r.proposed;
     const sale = r.calc ? `$${r.calc.salePerLb.toFixed(2)}/lb` : r.sentSale != null ? `$${Number(r.sentSale).toFixed(2)}/lb` : null;
     items.push({ o: ready ? 1 : 0, html: row(ready ? 'ready' : 'confirm', r, meta(r.stale ? `<span class="rq-req2-old">expired price from ${rqFmtDate(r.priceDate)} · <b>$${r.price.toFixed(2)}</b>/lb</span>` : `new price from the plant <b>$${r.price.toFixed(2)}</b>/lb`, r.freight ? `freight ${r.freight.label}` : '', sale ? `<span class="sale">your price <b>${sale}</b></span>` : ''),
-      `<div style="display:flex;gap:8px;align-items:center;">${ready ? pill('ok', 'Ready') : `<button type="button" class="pkg-trigger-btn hot" onclick="rqConfirmPriceClick(this,'${r.pid}','${r.plant.id}')">Confirm price →</button>`}${r.stale ? `<button type="button" class="pkg-trigger-btn" title="Don't send this expired price" onclick="rqToggleReqOld('${r.key}')">✕</button>` : ''}</div>`) });
+      `<div style="display:flex;gap:8px;align-items:center;">${ready ? `${pill('ok', 'Ready')}<button type="button" class="pkg-trigger-btn" title="Open this QT again" onclick="rqConfirmPriceClick(this,'${r.pid}','${r.plant.id}')">Open QT</button>` : `<button type="button" class="pkg-trigger-btn hot" onclick="rqConfirmPriceClick(this,'${r.pid}','${r.plant.id}')">Confirm price →</button>`}${r.stale ? `<button type="button" class="pkg-trigger-btn" title="Don't send this expired price" onclick="rqToggleReqOld('${r.key}')">✕</button>` : ''}</div>`) });
   });
   pending.filter(r => r.kind !== 'na').forEach(r => {
     if (r.kind === 'waiting') items.push({ o: 2, html: row('waiting', r, meta(`asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}, no answer yet`), pill('wait', 'Waiting')) });
@@ -3343,12 +3351,36 @@ function rqRenderRequestView(rows){
   const everyoneHasIt = !readyNew && rowsOk > 0 && order.length > 0 && order.every(hasAll); // the price is ready and every buyer has it: tap a name to send it again
   const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '';
   const waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
-  const canSend = readyN > 0 && selN > 0;
+  // WHO CAN BE SENT NOW (owner 2026-10-22): a USD customer when a USD price is confirmed; a pesos customer when HIS pesos price is confirmed in his own QT (js/quote-pesos.js). Green = ready.
+  const isPes = c => rqIsPesosCustomer(c);
+  const liveRows = priced.filter(r => !r.na && (!r.stale || inc(r)));
+  const usdOk = r => !!(r.calc && r.confirmed && !r.proposed);
+  const hisRows = c => liveRows.filter(r => usdOk(r) && (!isPes(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id)));
+  const canSendHim = c => { const mine = hisRows(c); return mine.length > 0 && (mine.some(r => !r.sentTo.some(x => x.id === c.id)) || hasAll(c)); };
+  const markedCs = order.filter(c => rqReqSel.ids.has(c.id));
+  const sendable = markedCs.filter(canSendHim);
+  rqReqReadyIds = sendable.map(c => c.id);
+  const canSend = sendable.length > 0;
   // each channel says up front whether the marked customers can receive it (no more pressing Email to be told he has none)
-  const selCs = order.filter(c => rqReqSel.ids.has(c.id));
+  const selCs = canSend ? sendable : markedCs;
   const noEmail = selCs.filter(c => !rqCanEmail(c, rqActiveProductFilterIds)), noWa = selCs.filter(c => !rqCanWhatsApp(c, rqActiveProductFilterIds));
   const emailOk = !selCs.length || noEmail.length < selCs.length, waOk = !selCs.length || noWa.length < selCs.length;
-  let chips = order.map(c => `<button type="button" class="chip${rqReqSel.ids.has(c.id) ? ' on' : ''}" onclick="rqToggleReqCustomer('${c.id}')" title="${hasAll(c) ? 'Already has every price on file' : askedIds.has(c.id) ? 'Asked for it' : 'Buys this product'}">${rqReqSel.ids.has(c.id) ? '✓ ' : ''}${askedIds.has(c.id) ? '★ ' : ''}${nm(c)}${hasAll(c) ? ' <small style="opacity:.6;">· has it</small>' : livePriced.length ? ' <small style="opacity:.85;">· not sent yet</small>' : ''}</button>`).join('');
+  // the customers in two groups: USD (one price for all, confirmed in the plants' QTs) and pesos (each one in HIS own QT); green = ready to send
+  const chipOf = c => {
+    const marked = rqReqSel.ids.has(c.id), ready = marked && canSendHim(c);
+    const states = isPes(c) ? rqPesosPlantStates(priced.filter(r => !r.na && (!r.stale || inc(r))), c.id) : [];
+    // every buyer still says "has it" or "not sent yet"; a pesos customer adds where HIS QT stands
+    const sent = hasAll(c) ? ' <small style="opacity:.6;">· has it</small>' : !livePriced.length ? '' : ' <small style="opacity:.85;">· not sent yet</small>';
+    const stat = sent + (isPes(c) ? ` <small>· ${states.length && states.every(x => x.state === 'ready') ? 'his QT confirmed' : `${states.filter(x => x.state === 'ready').length} of ${states.length} in his QT`}</small>` : '');
+    return `<button type="button" class="chip${marked ? ' on' : ''}${ready ? ' rq-ready' : ''}" onclick="rqToggleReqCustomer('${c.id}')" title="${hasAll(c) ? 'Already has every price on file' : askedIds.has(c.id) ? 'Asked for it' : 'Buys this product'}">${marked ? '✓ ' : ''}${askedIds.has(c.id) ? '★ ' : ''}${nm(c)}${stat}</button>`;
+  };
+  const pesosRow = c => {
+    const states = rqPesosPlantStates(priced.filter(r => !r.na && (!r.stale || inc(r))), c.id), allReady = states.length > 0 && states.every(x => x.state === 'ready');
+    return `<div class="rq-req2-prow">${chipOf(c)}<button type="button" class="pkg-trigger-btn${allReady ? '' : ' hot'}" title="${allReady ? 'Open his pesos QT' : 'Open his QT — his own price, to his destination'}" onclick="rqPesosOpenFirst('${c.id}')">${allReady ? 'Open QT' : 'Confirm in QT →'}</button></div>`;
+  };
+  const usdCs = order.filter(c => !isPes(c)), pesCs = order.filter(isPes);
+  let chips = (pesCs.length ? `<div class="rq-req2-seg">USD customers ${pill('off', 'USD')} · border · one price</div>` : '') + usdCs.map(chipOf).join('')
+    + (pesCs.length ? `<div class="rq-req2-seg">Pesos customers ${pill('wait', 'MXN')} · each in his own QT</div>` + pesCs.map(pesosRow).join('') : '');
   // The system knows who has NOT been sent the price and offers it in one tap (user 2026-10-14: "el sistema debe saber a quién no se le ha mandado quote y dar opción de mandar")
   const notSent = order.filter(c => !hasAll(c));
   if (livePriced.length && notSent.length && !(notSent.length === rqReqSel.ids.size && notSent.every(c => rqReqSel.ids.has(c.id)))) chips += `<button type="button" class="chip" onclick="rqReqSelectOnly([${notSent.map(c => `'${c.id}'`).join(',')}])" title="Mark exactly the customers who have not received this price yet">Only who has not received it · ${notSent.length}</button>`;
@@ -3381,13 +3413,13 @@ function rqRenderRequestView(rows){
       <aside class="rq-req2-send${canSend ? ' can' : ''}${fromToday ? ' focus' : ''}">
         <div class="rq-req2-lbl">Send to — the customer who asked goes first</div>
         <div class="rq-req2-chips">${chips || '<span class="muted" style="font-size:12px;">No customer buys this yet.</span>'}</div>
-        <div class="rq-req2-sum"><b>${readyN || (everyoneHasIt ? rowsOk : 0)}</b> price${(readyN || (everyoneHasIt ? rowsOk : 0)) === 1 ? '' : 's'} ready · <b>${selN}</b> customer${selN === 1 ? '' : 's'}</div>
+        <div class="rq-req2-sum"><b>${readyN || (everyoneHasIt ? rowsOk : 0)}</b> price${(readyN || (everyoneHasIt ? rowsOk : 0)) === 1 ? '' : 's'} ready · <b>${sendable.length}</b> of <b>${selN}</b> customer${selN === 1 ? '' : 's'} ready</div>
         <div class="rq-req2-btns">
           <button type="button" class="rq-customer-bulk-btn email" style="flex:1;justify-content:center;" ${canSend && emailOk ? '' : 'disabled'} title="${emailOk ? 'Email — you see the preview first' : 'No email on file: ' + noEmail.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('email')">${mailIco} Email</button>
           <button type="button" class="rq-customer-bulk-btn whatsapp" style="flex:1;justify-content:center;" ${canSend && waOk ? '' : 'disabled'} title="${waOk ? 'WhatsApp — you see the preview first' : 'No WhatsApp on file: ' + noWa.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('whatsapp')">${waIco} WhatsApp</button>
         </div>
         ${canSend && (noEmail.length || noWa.length) ? `<div class="rq-req2-hint">${noEmail.length ? `No email on file: ${noEmail.map(nm).join(', ')} — they get it by WhatsApp.` : ''}${noEmail.length && noWa.length ? ' ' : ''}${noWa.length ? `No WhatsApp on file: ${noWa.map(nm).join(', ')} — they get it by email.` : ''}</div>` : ''}
-        ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
+        ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT (his row, above).' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
       </aside>
     </div></div>`;
   rqSetMsgOriginHtml(el, html);
@@ -4315,7 +4347,7 @@ async function rqConfirmPriceClick(btn, productId, plantId){
   catch (e){ rqShowNotice(`Could not open the QT: ${e && e.message ? e.message : e}`); }
   finally { if (btn && btn.isConnected){ btn.disabled = false; btn.textContent = label; } }
 }
-async function qOpenPendingPlantInline(productId, plantId){
+async function qOpenPendingPlantInline(productId, plantId, pesosCustomerId){ // pesosCustomerId: the QT opens as HIS pesos QT (js/quote-pesos.js); without it it is the dollar QT
   const slotId = `q_pending_inline_${plantId}_${productId}`;
   const slot = document.getElementById(slotId); // the row's own host, when the table has one: the QT opens either way (user 2026-10-12: "esta bloqueado, no me deja confirmar precio")
 
@@ -4367,6 +4399,7 @@ async function qOpenPendingPlantInline(productId, plantId){
   let link = null;
   try { link = ((await callApi('plant-products-search', { plant_id: plantId, product_id: productId })).results || [])[0] || null; } catch (e) {}
   const plantObj = rqPlantOfferObj(plant, link, productId);
+  plantObj.rqPesosFor = pesosCustomerId || null;
   if (!plantObj.rqUsFreightRateId){
     plantObj.rqUsFreightRateId = rqDefaultUsFreightRateId(plantId, plantObj.rqProductLocationId, plantObj.rqFreightIncluded);
   }
@@ -5538,7 +5571,11 @@ async function rqConfirmPriceFromTool(){
     const fr = iframe && iframe.contentWindow && iframe.contentWindow.document.getElementById('freight');
     if (fr && !(parseFloat(fr.value) > 0)){ await btAlert('This price is FOB — pick the US freight in Direct Costs before confirming.'); return; }
   }
-  if (p) await rqCloseCalculator(p.id, { confirm: true }); // confirmed pricing, kept until the numbers or the plant's price change
+  if (p){
+    const pesosFor = p.rqPesosFor, pid = p.rqProductId;
+    await rqCloseCalculator(p.id, { confirm: true }); // confirmed pricing, kept until the numbers or the plant's price change
+    if (pesosFor && !p.rqCalculatorOpen) await rqPesosAfterConfirm(pesosFor, pid, p.id); // his next plant opens by itself until all of his are green
+  }
 }
 
 // Manual double-click detection (two clicks within 500ms) instead of relying on the browser's
@@ -5595,7 +5632,7 @@ async function rqToggleCalculator(id){
     // in the OS uses, not the one made for sitting directly on a dark bar.
     const ttSpec = rqSpecEnForPlant(p);
     document.getElementById('rq_tt_overlay_title').innerHTML =
-      `${(p.logo_url || p.logo_url_dark) ? `<img class="tt-logo-inline" src="${escapeHtml(p.logo_url || p.logo_url_dark)}" alt="">` : ''}<span>${ttSpec ? escapeHtml(ttSpec) + ' — ' : ''}${escapeHtml(p.name)}</span>`; // same look/order as Offers' QT header (2026-09-26)
+      `${(p.logo_url || p.logo_url_dark) ? `<img class="tt-logo-inline" src="${escapeHtml(p.logo_url || p.logo_url_dark)}" alt="">` : ''}<span>${ttSpec ? escapeHtml(ttSpec) + ' — ' : ''}${escapeHtml(p.name)}${p.rqPesosFor ? ` — ${escapeHtml(String((rqAnyCustomer(p.rqPesosFor) || {}).trade_name || '').trim())} · pesos` : ''}</span>`; // same look/order as Offers' QT header (2026-09-26); a pesos QT says whose it is
     document.getElementById('rq_tt_overlay_fields').innerHTML = rqPlantFieldsHtml(p);
     document.getElementById('rq_tt_overlay_body').innerHTML = `
       <iframe id="rq_iframe_${id}" src="${rqBuildToolUrl(p)}" onload="rqOnIframeLoaded('${id}')"></iframe>
@@ -5663,16 +5700,22 @@ async function rqCloseCalculator(id, opts = {}){
   // runs right before any send) already goes through — so Pending Quotes' own list can show the
   // exact same Selling price Quotes does, the moment it's known, from wherever it became known.
   let closedSnapshot = null;
+  // A pesos QT (p.rqPesosFor) belongs to ONE customer: it never touches this plant × product's USD pricing (rqPendingCalcCache / rqSheetConfirmed), which every USD customer shares.
+  const pesosClose = !!p.rqPesosFor;
+  let pesosConfirmed = null;
   if (p.rqLastCalc && p.rqProductId){
     const link = rqAllPlantProductRows.find(r => r.plant_id === p.id && r.product_id === p.rqProductId);
-    rqPendingCalcCache[p.id + '|' + p.rqProductId] = p.rqLastCalc;
-    closedSnapshot = rqSheetConfirmed[p.id + '|' + p.rqProductId] = { ...p, rqCalculatorOpen: false, rqPreparedFor: link && link.current_price != null ? rqPrepKey(link) : null };
+    if (!pesosClose){
+      rqPendingCalcCache[p.id + '|' + p.rqProductId] = p.rqLastCalc;
+      closedSnapshot = rqSheetConfirmed[p.id + '|' + p.rqProductId] = { ...p, rqCalculatorOpen: false, rqPreparedFor: link && link.current_price != null ? rqPrepKey(link) : null };
+    }
     if (opts.confirm){
       const qtw = document.getElementById('rq_iframe_' + p.id) && document.getElementById('rq_iframe_' + p.id).contentWindow;
-      if (qtw && qtw.ttMarkConfirmed) qtw.ttMarkConfirmed({
+      const summary = {
         price: link && link.current_price != null ? Number(link.current_price) : Number(p.rqPrice), price_date: link ? String(link.price_date || '').slice(0, 10) : null,
         at: new Date().toISOString(), by: currentActor(), cost: Number(p.rqPrice), calc: p.rqLastCalc, us_freight_rate_id: p.rqUsFreightRateId || null,
-      });
+      };
+      if (qtw && qtw.ttMarkConfirmed && qtw.ttMarkConfirmed(summary) && pesosClose) pesosConfirmed = { ...summary, state_json: qtw.ttConfirmedStateJson(), built_from: qtw.ttPesosBuiltFromJson() };
     }
   }
   // Real ask 2026-09-04 ("lee esto despacio... la pregunta deberia salir en el momento de
@@ -5687,9 +5730,14 @@ async function rqCloseCalculator(id, opts = {}){
     const qtWin = document.getElementById('rq_iframe_' + p.id) && document.getElementById('rq_iframe_' + p.id).contentWindow;
     if (qtWin && qtWin.ttFlushStateSave) await qtWin.ttFlushStateSave();
     // confirmed or a proposal, as the QT's own version now says (a ✕ after changing numbers drops a confirmation)
-    if (closedSnapshot) closedSnapshot.rqFromSavedVersion = !(qtWin && qtWin.ttIsConfirmed && qtWin.ttIsConfirmed());
+    if (closedSnapshot){
+      closedSnapshot.rqFromSavedVersion = !(qtWin && qtWin.ttIsConfirmed && qtWin.ttIsConfirmed());
+      closedSnapshot.rqConfirmedStateJson = closedSnapshot.rqFromSavedVersion || !(qtWin && qtWin.ttConfirmedStateJson) ? null : qtWin.ttConfirmedStateJson(); // a pesos QT is valid only for this exact USD version
+    }
+    if (pesosConfirmed && qtWin && qtWin.ttIsConfirmed && qtWin.ttIsConfirmed()) rqPesosSession[p.id + '|' + p.rqProductId + '|' + p.rqPesosFor] = pesosConfirmed;
   } catch (e) { if (closedSnapshot) closedSnapshot.rqFromSavedVersion = !opts.confirm; }
   p.rqCalculatorOpen = false;
+  if (pesosClose) rqSelectedPlants = rqSelectedPlants.filter(x => x !== p); // his pesos QT leaves no trace in the plant's own (USD) row
   document.getElementById('rq_tt_overlay').style.display = 'none';
   document.getElementById('rq_tt_overlay_body').innerHTML = '';
   document.getElementById('rq_tt_overlay_fields').innerHTML = '';
@@ -5744,6 +5792,14 @@ function rqOnIframeLoaded(id){
   setTimeout(() => {
     rqPrefillSellingPrice(id);
   }, 300);
+  // The QT applies its saved version a moment AFTER it loads: a version with no selling price yet (a plant × product that was never priced, or one reset) would overwrite that first
+  // suggestion with $0. Once the QT has read its version the suggestion is made again — it only ever fills an EMPTY box or one still holding the last suggestion.
+  let tries = 0;
+  const again = setInterval(() => {
+    const fr = document.getElementById('rq_iframe_' + id); let win = null; try { win = fr && fr.contentWindow; } catch (e) {}
+    if (!fr || ++tries > 25){ clearInterval(again); return; }
+    if (win && win.ttIsSettled && win.ttIsSettled()){ clearInterval(again); rqPrefillSellingPrice(id); }
+  }, 400);
 }
 
 // Starting point for the Selling Price so the trader doesn't open a fresh Trading Tool to a flat
@@ -6131,7 +6187,7 @@ function buildCustomerOfferText(customerFirstName, plantsOverride, overCreditLim
 function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPlantId, overCreditLimit, signalLine){
   const greeting = customerFirstName ? `Hola ${customerFirstName},\n\n` : '';
   const signalBlock = signalLine ? `${signalLine}\n\n` : '';
-  const cheapest = rqCheapestSet(withCalc.map(({ calc }) => calc.salePerLb));
+  const cheapest = rqCheapestSet(withCalc.map(({ calc }) => rqLinePrice(calc)));
   const lines = withCalc.map(({ plant, calc }, i) => {
     const delivery = rqDeliveryDatesText();
     const offer = offersByPlantId.get(plant.id);
@@ -6153,7 +6209,7 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
   withCalc.forEach(it => { const k = it.plant.rqProductId; if (!byProduct.has(k)) byProduct.set(k, []); byProduct.get(k).push(it); });
   const blocks = [...byProduct.values()].map(items => {
     const title = `Lista actualizada — ${rqSpecEsForPlant(items[0].plant) || ''}:`;
-    const cheapest = bold ? rqCheapestSet(items.map(({ calc }) => calc.salePerLb)) : new Set(); // bold is WhatsApp's: the email text stays plain
+    const cheapest = bold ? rqCheapestSet(items.map(({ calc }) => rqLinePrice(calc))) : new Set(); // bold is WhatsApp's: the email text stays plain
     const lines = items.map(({ plant, calc }, i) => {
       const isNew = newKeys.has(plant.id + '|' + plant.rqProductId) ? ' (nuevo)' : '';
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
@@ -6185,7 +6241,7 @@ function buildCustomerOfferHtml(customerFirstName, plantsOverride, overCreditLim
   const withCalc = plantsOverride || rqPricedPlantsSorted();
   const greeting = customerFirstName ? `Hola ${escapeHtml(customerFirstName)},<br><br>` : '';
   const delivery = rqDeliveryDatesText();
-  const cheapest = rqCheapestSet(withCalc.map(({ calc }) => calc.salePerLb));
+  const cheapest = rqCheapestSet(withCalc.map(({ calc }) => rqLinePrice(calc)));
   const blocks = withCalc.map(({ plant, calc }, i) => {
     const price = rqOfferPriceText(calc);
     return `<div>${escapeHtml(plant.name)} — ${escapeHtml(rqSpecEsForPlant(plant) || '')} — ${cheapest.has(i) ? '<b>' + price + '</b>' : price}${delivery ? ' — Entrega ' + escapeHtml(delivery) : ''}</div>`;
@@ -6348,8 +6404,9 @@ function rqUnsentPlantsFor(customerId, sentByCustomer, filterProductIds, filterP
 // earlier ever needs to be dug up to compare and bid.
 function rqCustomerOfferPlantsFor(customerId, filterProductIds, filterPlantIds){
   const ownedProductIds = rqCustomerProductIds[customerId];
+  // a pesos customer's lines are only the plants confirmed in HIS own QT, in his currency; brands go highest → lowest in that currency
   return rqPricedPlantsSorted(filterProductIds, filterPlantIds).filter(({ plant }) =>
-    !ownedProductIds || ownedProductIds.has(plant.rqProductId)).map(it => rqWithPesos(customerId, it));
+    !ownedProductIds || ownedProductIds.has(plant.rqProductId)).map(it => rqWithPesos(customerId, it)).filter(Boolean).sort((a, b) => rqLinePrice(b.calc) - rqLinePrice(a.calc));
 }
 
 // Same download-then-drag-in pattern as offers.html's WhatsApp cards — a wa.me link can only
@@ -7394,8 +7451,8 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
         if (rqCustomerBuys(c, pid) && rqCustomerOfferPlantsFor(c.id, [pid], filterPlantIds).length) skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'email') });
         continue;
       }
-      const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos needs his pesos price confirmed first
-      if (!full) return;
+      const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
+      if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
       const firstName = rqFirstName(cc.contact_name || c.trade_name);
       const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
       const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
@@ -7459,8 +7516,8 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       if (rqCustomerBuys(c, pid) && rqCustomerOfferPlantsFor(c.id, [pid], filterPlantIds).length) skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'whatsapp') });
       continue;
     }
-    const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos needs his pesos price confirmed first
-    if (!full) return;
+    const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
+    if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
     const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp');
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));

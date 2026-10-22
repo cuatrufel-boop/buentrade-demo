@@ -8,13 +8,16 @@
 const RQ_PESOS_IMPORT_COST_USD = 625; // Import Cost of a load that goes into Mexico — set by the owner (2026-10-18)
 let rqMxnCurrencyId = null;
 try { rqMxnCurrencyId = localStorage.getItem('bt_mxn_currency_id') || null; } catch (e) {} // last known, so a slow lookup never holds a send
-const rqPesosConfirmed = {}; // `plantId|productId|customerId` → what was confirmed in pesos
+// Each customer who buys in pesos has HIS OWN pesos QT per plant × product (owner 2026-10-22): his destination's Mexican freight makes his price different from every other pesos customer's.
+// It is saved in the plant × product's qt_state under pesos[customer id] (trading-tool ttLoadPesosVersion) and NEVER in the USD version, which every USD customer shares. A pesos
+// confirmation is valid only while the plant's price is the same AND the USD version it was built from is still the confirmed one; the USD QT is confirmed first.
+const rqPesosSession = {}; // `plantId|productId|customerId` → the confirmed block of a pesos QT confirmed in this session (before the rows are read again)
 
 async function rqLoadMxnCurrency(){
   try {
     const res = await callApi('lookups-search', {});
     const mxn = (res.currencies || []).find(x => x.code === 'MXN');
-    if (mxn){ rqMxnCurrencyId = mxn.id; try { localStorage.setItem('bt_mxn_currency_id', mxn.id); } catch (e) {} }
+    if (mxn){ const changed = rqMxnCurrencyId !== mxn.id; rqMxnCurrencyId = mxn.id; try { localStorage.setItem('bt_mxn_currency_id', mxn.id); } catch (e) {} if (changed && typeof rqRenderSheet === 'function'){ try { rqRenderSheet(); } catch (e) { /* the page is still loading */ } } } // the Send panel groups by currency: draw it again once it is known
   } catch (e) { /* keeps the last known one, if any */ }
   return rqMxnCurrencyId;
 }
@@ -35,18 +38,8 @@ function rqPesosDestRate(c){
   return found.filter(r => score(r) === best).sort((a, b) => Number(a.rate) - Number(b.rate))[0];
 }
 
-// An offer entry ({plant, calc}) for this customer: a pesos customer's carries the confirmed pesos price while it is still valid for the same border
-// price and plant price; anyone else's is returned untouched (same object).
-function rqWithPesos(customerId, it){
-  const c = rqMatchedCustomers.find(x => x.id === customerId);
-  if (!rqIsPesosCustomer(c)) return it;
-  // the pesos price the trader saw and confirmed inside the plant's own QT (calc.pesosQt), when it is for this customer's city
-  const q = it.calc.pesosQt, rate = q ? rqPesosDestRate(c) : null;
-  if (q && rate && q.rateId === rate.id) return { ...it, calc: { ...it.calc, mxn: { perKg: q.perKg, total: q.total, dest: q.dest, fx: q.fx } } };
-  const m = rqPesosConfirmed[it.plant.id + '|' + it.plant.rqProductId + '|' + customerId];
-  if (!m || m.borderSale !== it.calc.salePerLb || m.cost !== it.calc.costPerLb) return it;
-  return { ...it, calc: { ...it.calc, mxn: { perKg: m.perKg, total: m.total, dest: m.dest, fx: m.fx } } };
-}
+// The line price a customer sees, in HIS currency: MX$/kg for a pesos customer, $/lb at the border for anyone else. Order and "cheapest in bold" follow it.
+const rqLinePrice = (calc) => calc.mxn ? calc.mxn.perKg : calc.salePerLb;
 const rqOfferPriceText = (calc) => calc.mxn
   ? `$${calc.mxn.perKg.toFixed(2)} MXN/kg — entregado en ${calc.mxn.dest}`
   : `$${calc.salePerLb.toFixed(4)} USD/lb frontera`;
@@ -54,18 +47,53 @@ const rqOfferTotalText = (calc) => calc.mxn
   ? `MX$${calc.mxn.total.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
   : `$${calc.totalSale.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
-// The send is refused until every plant of a pesos customer's message has its pesos price confirmed (the pesos QT opens right there for each one).
-// Returns the customer's fresh offer entries, or null when the trader did not confirm (nothing is sent).
+const rqAnyCustomer = (id) => (typeof rqMatchedCustomers !== 'undefined' && rqMatchedCustomers.find(x => x.id === id))
+  || (typeof rqSheetState !== 'undefined' && (rqSheetState.customers || []).find(x => x.id === id))
+  || (typeof rqLiveCtx !== 'undefined' && (rqLiveCtx.customers || []).find(x => x.id === id)) || null;
+const rqPesosLink = (plantId, productId) => rqAllPlantProductRows.find(r => r.plant_id === plantId && r.product_id === productId) || null;
+// The USD version a pesos version must have been built from: the USD price that is confirmed now (this session's QT, else the saved one) — as the exact text the QT stored when it was confirmed.
+function rqUsdConfirmedJson(plantId, productId){
+  const link = rqPesosLink(plantId, productId), plant = rqAllPlants.find(p => p.id === plantId);
+  if (!link || !plant || link.current_price == null) return null;
+  const pricing = rqBrandPricing(link, plant, productId);
+  if (!pricing || pricing.proposed) return null; // not confirmed: nothing to build a pesos price on
+  const saved = link.qt_state && link.qt_state.confirmed;
+  return pricing.snapshot.rqConfirmedStateJson || (saved && saved.state_json) || null;
+}
+// The pesos confirmation of ONE customer for one plant × product, or null: confirmed in his own QT, for this plant price, built from the USD version that is confirmed now, with
+// the tariff of HIS city. Anything else is not his price.
+function rqPesosConfirmation(plantId, productId, customerId){
+  const c = rqAnyCustomer(customerId), link = rqPesosLink(plantId, productId);
+  if (!rqIsPesosCustomer(c) || !link || link.current_price == null) return null;
+  const rate = rqPesosDestRate(c), usdJson = rqUsdConfirmedJson(plantId, productId);
+  if (!rate || !usdJson) return null;
+  const saved = link.qt_state && link.qt_state.pesos && link.qt_state.pesos[customerId];
+  const cands = [rqPesosSession[plantId + '|' + productId + '|' + customerId], saved && saved.confirmed].filter(Boolean).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const conf = cands[0];
+  if (!conf || !conf.calc || !conf.calc.pesosQt || conf.built_from !== usdJson) return null;
+  if (Number(conf.price) !== Number(link.current_price) || String(conf.price_date || '').slice(0, 10) !== String(link.price_date || '').slice(0, 10)) return null;
+  if (conf.calc.pesosQt.rateId !== rate.id) return null;
+  return conf;
+}
+// An offer entry ({plant, calc}) for this customer. A border customer's is returned untouched (same object). A pesos customer gets ONLY his own pesos confirmation — its numbers, its
+// version, its price in MX$/kg — and a plant he has not confirmed in his own QT gives null: a pesos customer is never sent a border price.
+function rqWithPesos(customerId, it){
+  const c = rqAnyCustomer(customerId);
+  if (!rqIsPesosCustomer(c)) return it;
+  const conf = rqPesosConfirmation(it.plant.id, it.plant.rqProductId, customerId);
+  if (!conf) return null;
+  const q = conf.calc.pesosQt;
+  let state = null; try { state = JSON.parse(conf.state_json); } catch (e) { /* the numbers stay; the offer just carries no version */ }
+  return { ...it, plant: { ...it.plant, rqLastState: state, rqUsFreightRateId: conf.us_freight_rate_id || null }, calc: { ...conf.calc, mxn: { perKg: q.perKg, total: q.total, dest: q.dest, fx: q.fx } } };
+}
+
+// The send never goes to a pesos customer without HIS pesos price: his lines are the plants he has confirmed in his own QT (rqWithPesos); none → nothing is sent to him and the trader is told.
+// Returns the customer's fresh offer entries, or null when there is nothing to send him.
 async function rqRequirePesos(c, productId, filterPlantIds){
   if (!rqMxnCurrencyId && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return null; }
-  let full = rqCustomerOfferPlantsFor(c.id, [productId], filterPlantIds);
-  if (!rqIsPesosCustomer(c)) return full;
-  for (const it of full){
-    if (it.calc.mxn) continue;
-    rqShowNotice(`${c.trade_name} buys in pesos — confirm ${it.plant.name} in pesos first.`);
-    if (!(await rqConfirmInPesos(it.plant, productId, c, it.calc))) return null;
-  }
-  return rqCustomerOfferPlantsFor(c.id, [productId], filterPlantIds);
+  const full = rqCustomerOfferPlantsFor(c.id, [productId], filterPlantIds);
+  if (rqIsPesosCustomer(c) && !full.length){ rqShowNotice(`${c.trade_name} buys in pesos — confirm his price in his own QT first (Confirm in QT).`); return null; }
+  return full;
 }
 
 // The offer PDF of a pesos customer carries his pesos price (the shared one is the border's).
@@ -83,76 +111,53 @@ async function rqPesosFiles(full){
   return { attachments, downloadFiles };
 }
 
-function rqConfirmInPesos(plant, productId, c, borderCalc){
-  return new Promise((resolve) => {
-    const rate = rqPesosDestRate(c);
-    if (!rate){ btAlert(`There is no Mexican freight tariff for ${c.usual_destination || 'this customer\'s city'} — add it in the carrier's profile (Rates → Mexican Freight) before quoting ${c.trade_name} in pesos.`); resolve(false); return; }
-    const link = rqAllPlantProductRows.find(r => r.plant_id === plant.id && r.product_id === productId);
-    const pricing = rqBrandPricing(link, plant, productId);
-    const state = pricing && pricing.snapshot && pricing.snapshot.rqLastState;
-    if (!state){ btAlert(`Open ${plant.name}'s QT and confirm the border price first — the pesos price starts from it.`); resolve(false); return; }
-    const usd = Number(rate.rate), cur = rqPesosRateCur(rate), destName = (c.usual_destination || rate.destination || '').trim();
-    let ov = document.getElementById('rq_pesos_overlay');
-    if (ov) ov.remove();
-    ov = document.createElement('div');
-    ov.id = 'rq_pesos_overlay'; ov.className = 'tt-overlay'; ov.style.display = 'flex';
-    ov.innerHTML = `<div class="tt-overlay-head"><div></div><div class="tt-overlay-title" style="justify-content:center;min-width:0;"><span>${escapeHtml(c.trade_name)} — ${escapeHtml(plant.name)} — pesos · ${escapeHtml(destName)}</span></div>
-      <div style="justify-self:end;display:flex;gap:8px;align-items:center;"><button class="btn" id="rq_pesos_confirm" type="button">✓ Confirm in pesos</button><button class="tt-overlay-close" id="rq_pesos_close" title="Close" aria-label="Close" type="button">✕</button></div></div>
-      <div class="tt-overlay-body"><iframe id="rq_pesos_iframe" src="trading-tool.html?embed=1&v=${Date.now()}"></iframe></div>`;
-    document.body.appendChild(ov);
-    const frame = ov.querySelector('#rq_pesos_iframe');
-    let timer = null, done = false, applied = false;
-    const finish = (ok) => { if (done) return; done = true; clearInterval(timer); ov.remove(); resolve(ok); };
-    ov.querySelector('#rq_pesos_close').onclick = () => finish(false);
-    // one tick: the version is applied once the QT is up; then Import Cost is set and Mexican freight follows the QT's own rate (USD × that rate, so it comes back exact)
-    timer = setInterval(() => {
-      let win; try { win = frame.contentWindow; } catch (e) { return; }
-      if (!win || !win.__calc || !win.ttApplyState) return;
-      const doc = win.document, el = (id) => doc.getElementById(id);
-      if (!applied){
-        applied = true;
-        // the dollar QT turns into a pesos QT: same layout, pesos data (see rqPesosApplyView)
-        win.ttApplyState(JSON.parse(JSON.stringify(state)));
-        el('importCost').value = RQ_PESOS_IMPORT_COST_USD;
-        win.buildProductRows(); win.calc();
-      }
-      rqPesosApplyView(win, usd, cur);
-      const fx = parseFloat(el('fxRate').value) || 0;
-      const want = rqPesosFreightMx(usd, cur, fx) > 0 ? rqPesosFreightMx(usd, cur, fx).toFixed(2) : '';
-      if (want && parseFloat(el('freightMx').value) !== parseFloat(want)){ el('freightMx').value = want; win.buildProductRows(); win.calc(); }
-    }, 600);
-    ov.querySelector('#rq_pesos_confirm').onclick = () => {
-      let win; try { win = frame.contentWindow; } catch (e) { return; }
-      const k = win && win.__calc;
-      const fx = k && k.inp ? k.inp.fxRate : 0;
-      if (!k || !(k.totalSaleMx > 0) || !(fx > 0) || !(k.totalWeightKg > 0)){ rqShowNotice("The pesos price is not ready yet — wait for today's exchange rate and the Mexico costs to fill in."); return; }
-      rqPesosConfirmed[plant.id + '|' + productId + '|' + c.id] = {
-        perKg: k.totalSaleMx / k.totalWeightKg, total: k.totalSaleMx, fx, dest: destName, freightAmount: usd, freightCurrency: cur, importCost: RQ_PESOS_IMPORT_COST_USD,
-        borderSale: borderCalc.salePerLb, cost: borderCalc.costPerLb, at: new Date().toISOString(),
-      };
-      finish(true);
-    };
-  });
+// ---- The send panel's pesos side: which plants a pesos customer still has to confirm in his own QT, and opening it plant by plant.
+// The plants of the product that can be sent (a live price, its USD price confirmed): where HE stands for each one.
+function rqPesosPlantStates(rows, customerId){
+  return rows.filter(r => r.kind === 'priced' && !r.stale && !r.na).map(r => ({
+    row: r, state: !(r.calc && r.confirmed && !r.proposed) ? 'needs_usd' : (rqPesosConfirmation(r.plant.id, r.pid, customerId) ? 'ready' : 'needs_qt'),
+  }));
+}
+async function rqPesosOpenQt(productId, plantId, customerId){
+  const c = rqAnyCustomer(customerId), plant = rqAllPlants.find(p => p.id === plantId);
+  if (!c || !plant) return;
+  if (!rqPesosDestRate(c)){ btAlert(`There is no Mexican freight tariff for ${c.usual_destination || "this customer's city"} — add it in the carrier's profile (Rates → Mexican Freight) before quoting ${c.trade_name} in pesos.`); return; }
+  if (!rqUsdConfirmedJson(plantId, productId)){ rqShowNotice(`Confirm ${String(plant.name).trim()}'s USD price first — ${c.trade_name}'s QT starts from it.`); return; }
+  await qOpenPendingPlantInline(productId, plantId, customerId);
+}
+// The customer's row in the send panel: opens the first plant he has not confirmed in his own QT (else the first one, to look at it again).
+async function rqPesosOpenFirst(customerId){
+  const pid = rqActiveProductFilterIds[0], c = rqAnyCustomer(customerId);
+  if (!pid || !c) return;
+  if (!rqMxnCurrencyId && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return; }
+  const states = rqPesosPlantStates(rqSheetRows(), customerId).filter(x => x.row.pid === pid);
+  const target = states.find(x => x.state === 'needs_qt') || states.find(x => x.state === 'ready');
+  if (!target){ rqShowNotice(`Confirm the USD price of the plants first — ${c.trade_name}'s QT starts from it.`); return; }
+  await rqPesosOpenQt(pid, target.row.plant.id, customerId);
+}
+// After a pesos QT is confirmed: the next plant of the same customer, until all of his are green. A QT that closed without a valid pesos price stops the chain and says why.
+async function rqPesosAfterConfirm(customerId, productId, plantId){
+  if (!rqPesosConfirmation(plantId, productId, customerId)){ rqShowNotice("The pesos price was not saved — wait for today's exchange rate and the Mexico costs to fill in, then confirm again."); return; }
+  const next = rqPesosPlantStates(rqSheetRows(), customerId).find(x => x.state === 'needs_qt' && x.row.pid === productId);
+  if (next) await rqPesosOpenQt(productId, next.row.plant.id, customerId);
 }
 
 // ---- The pesos numbers INSIDE the plant's own QT (owner 2026-10-18: "poder ver números en el QT y confirmar como siempre").
 // When a customer who buys in pesos buys this product (the one marked in the send panel first), the QT opens with his city's Mexican freight (the carrier tariff in USD,
 // shown in the QT's own MX$ field at the QT's own rate) and Import Cost 625 filled in, so the QT's Mexico panel shows the pesos numbers next to the border ones. The trader
 // confirms as always; the pesos price he saw is saved with that confirmation (calc.pesosQt) and the send uses it. A product no pesos customer buys is opened exactly as before.
+// The pesos QT is opened ON PURPOSE for one customer (p.rqPesosFor, from his row in the send panel); every other QT is the dollar QT, whoever is marked (owner 2026-10-22).
 function rqPesosCustomerFor(p){
-  if (!p || !p.rqProductId || !rqMxnCurrencyId) return null;
-  const marked = rqReqSel && rqReqSel.ids && rqReqSel.key === rqSheetKey() ? rqMatchedCustomers.filter(c => rqReqSel.ids.has(c.id) && rqCustomerBuys(c, p.rqProductId)) : [];
-  if (!marked.length) return null;
-  const asked = rqSheetAskedIds(p.rqProductId);
-  const ctxCustomer = marked.find(c => asked.has(c.id)) || marked[0]; // the customer who asked (marked), else the first marked: HE decides which QT this is
-  return rqIsPesosCustomer(ctxCustomer) && rqPesosDestRate(ctxCustomer) ? ctxCustomer : null;
+  const c = p && p.rqPesosFor ? rqAnyCustomer(p.rqPesosFor) : null;
+  return c && rqIsPesosCustomer(c) && rqPesosDestRate(c) ? c : null;
 }
-// the QT's address: Import Cost shown and filled, Mexican freight filled (USD tariff × the rate Quotes already has)
+// the QT's address: his id, Import Cost shown and filled, Mexican freight filled (USD tariff × the rate Quotes already has)
 function rqPesosToolParams(p, params){
   const c = rqPesosCustomerFor(p);
   if (!c) { p.rqPesosCtx = null; return; }
   const rate = rqPesosDestRate(c);
   p.rqPesosCtx = { customerId: c.id, rateId: rate.id, usd: Number(rate.rate), cur: rqPesosRateCur(rate), dest: (c.usual_destination || rate.destination || '').trim() };
+  params.set('pesosCustomerId', c.id); params.set('pesosRateId', String(rate.id));
   params.set('hideImportCost', '0'); params.set('importCost', String(RQ_PESOS_IMPORT_COST_USD)); params.set('hideMexicanFreight', '0');
   const f0 = rqPesosFreightMx(p.rqPesosCtx.usd, p.rqPesosCtx.cur, typeof rqCachedFxRate === 'number' ? rqCachedFxRate : 0);
   if (f0 > 0) params.set('freightMx', String(f0));
@@ -255,7 +260,7 @@ function rqPesosFillQt(id){
     if (!el || !(fx > 0)) return;
     const want = rqPesosFreightMx(p.rqPesosCtx.usd, p.rqPesosCtx.cur, fx).toFixed(2), cur = parseFloat(el.value) || 0;
     // only touch the field while it still holds nothing, or what we put there (the trader's own number stays)
-    if (Math.abs(cur - parseFloat(want)) > 0.005 && (cur === 0 || (lastSet !== null && Math.abs(cur - lastSet) < 0.005) || p.rqPesosParamValue === cur)){
+    if (Math.abs(cur - parseFloat(want)) > 0.005 && (cur === 0 || (lastSet !== null && Math.abs(cur - lastSet) < 0.005))){
       el.value = want; lastSet = parseFloat(want); win.buildProductRows(); win.calc(); rqPrefillSellingPrice(id);
     }
   }, 700);

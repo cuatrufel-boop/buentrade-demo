@@ -1335,6 +1335,10 @@ let ttPlantPriceBase = null; // Quotes: the plant's price on file when this vers
 // it was confirmed with (ttMarkConfirmed). It stays confirmed while nothing in the QT changes and the plant's price is the same; any change
 // to the numbers, or a new plant price, and the version saves without it — Quotes then shows "Confirm in QT" again.
 let ttConfirmed = null;
+// A pesos QT (Quotes, one per customer × plant × product — owner 2026-10-22: "los clientes pesos tienen una confirmación diferente porque están en destinos diferentes"): it has its OWN version, saved under
+// qt_state.pesos[customer id] and never in the plant's USD version, which every USD customer shares. It starts from the USD version that was confirmed (ttPesosBuiltFrom) and is valid only while that is the one on file.
+const ttPesosCid = __qp.get('pesosCustomerId') || null;
+let ttPesosBuiltFrom = null;
 let products = [
   {
     name: __qp.get('label') || 'Product 1',
@@ -2396,7 +2400,15 @@ function ttStateOwner(){
   if (__qp.get('prepare') === '1') return null; // Quotes reading this version's numbers in the background (rqPrepareFromVersions) — read only
   try { if (negoOffer) return negoOffer.status === 'sent' ? { kind: 'offer', id: negoOffer.id } : null; } catch (e) {}
   const pp = __qp.get('ppId');
-  return pp ? { kind: 'pp', id: pp } : null;
+  return pp ? { kind: 'pp', id: pp, ...(ttPesosCid ? { pesosCid: ttPesosCid } : {}) } : null;
+}
+// The plant × product's qt_state as it is on the server RIGHT NOW: a save never writes from what this window read when it opened — the USD QT keeps every customer's pesos version
+// and a pesos QT keeps the USD version exactly as it is. A save that cannot read it writes nothing.
+async function ttFetchPpState(ppId){
+  const plantId = __qp.get('plantId'), productId = __qp.get('productId');
+  const row = ((await callApi('plant-products-search', { plant_id: plantId, product_id: productId })).results || []).find(r => r.id === ppId);
+  if (!row) throw new Error('this plant × product was not found');
+  return row.qt_state && typeof row.qt_state === 'object' ? row.qt_state : {};
 }
 function ttScheduleStateSave(){
   if (!ttStateReady || ttStateRestoring || !ttStateOwner()) return;
@@ -2424,7 +2436,13 @@ async function ttFlushStateSave(){
   ttStateSaving = (async () => {
     try {
       if (owner.kind === 'offer') await callApi('sent-offers-log-event', { actor: currentActor(), sent_offer_id: owner.id, qt_state: payload });
-      else await callApi('plant-products-update', { actor: currentActor(), id: owner.id, qt_state: payload });
+      else {
+        const onFile = await ttFetchPpState(owner.id);
+        let toSave;
+        if (owner.pesosCid) toSave = { ...onFile, pesos: { ...(onFile.pesos || {}), [owner.pesosCid]: { ...payload, built_from: ttPesosBuiltFrom, rate_id: __qp.get('pesosRateId') || null } } }; // only HIS entry changes; the USD version is untouched
+        else toSave = onFile.pesos ? { ...payload, pesos: onFile.pesos } : payload; // the USD version keeps every customer's pesos version
+        await callApi('plant-products-update', { actor: currentActor(), id: owner.id, qt_state: toSave });
+      }
       ttStateSavedJson = json;
       if (owner.kind === 'offer' && typeof negoSetSaveStatus === 'function') negoSetSaveStatus('saved');
     } catch (e) {
@@ -2439,11 +2457,13 @@ window.ttFlushStateSave = ttFlushStateSave;
 // it, plus the plant price it was confirmed at). Forces the next save, which carries it.
 window.ttMarkConfirmed = (summary) => {
   if (__qp.get('prepare') === '1' || !__qp.get('ppId')) return false;
-  ttConfirmed = { ...summary, state_json: JSON.stringify(ttGetState()) };
+  ttConfirmed = { ...summary, state_json: JSON.stringify(ttGetState()), ...(ttPesosCid ? { built_from: ttPesosBuiltFrom } : {}) };
   ttStateSavedJson = null;
   return true;
 };
 window.ttIsConfirmed = () => !!ttConfirmed;
+window.ttConfirmedStateJson = () => ttConfirmed ? ttConfirmed.state_json : null;
+window.ttPesosBuiltFromJson = () => ttPesosBuiltFrom; // the USD version this pesos QT started from // Quotes keeps it: a pesos version is valid only for the USD version it started from
 window.addEventListener('pagehide', () => { ttFlushStateSave(); });
 
 // Quotes: this plant × product's own version. The plant sent a new price since it was saved → that price is the one to offer (user
@@ -2456,6 +2476,7 @@ async function ttLoadPlantProductVersion(){
   catch (e) { ttReportSaveProblem(`Could not load this QT's saved version (${e.message}) — your changes here are not being saved. Close it and open it again.`); return; }
   if (!row){ ttReportSaveProblem("This plant × product was not found — your changes here are not being saved."); return; }
   ttPlantPriceBase = { price: row.current_price, date: row.price_date };
+  if (ttPesosCid){ ttLoadPesosVersion(row); return; }
   const st = row.qt_state ? JSON.parse(JSON.stringify(row.qt_state)) : null;
   if (st){
     const base = st.plant_price;
@@ -2468,6 +2489,32 @@ async function ttLoadPlantProductVersion(){
     // still confirmed only for the plant price it was confirmed at (the numbers are checked again at the next save)
     ttConfirmed = (!newPlantPrice && st.confirmed && Number(st.confirmed.price) === Number(row.current_price)) ? st.confirmed : null;
   }
+  ttStateReady = true;
+}
+// The pesos QT of ONE customer: his own saved version when it is still built from the USD version on file and the plant's price is the same; otherwise it starts again from the
+// confirmed USD version (its border numbers — US freight, docs, payment days) with the selling price and the Mexico costs empty, for Quotes to fill with his destination.
+// Without a confirmed USD version it opens nothing and saves nothing.
+function ttLoadPesosVersion(row){
+  const usd = row.qt_state && row.qt_state.confirmed;
+  const samePrice = (p, d) => p != null && Number(p) === Number(row.current_price) && (d == null || String(d).slice(0, 10) === String(row.price_date || '').slice(0, 10));
+  if (!usd || !usd.state_json || !samePrice(usd.price, usd.price_date)){
+    ttReportSaveProblem("Confirm this plant's USD price first — the pesos QT starts from it. Nothing here is being saved.");
+    return;
+  }
+  ttPesosBuiltFrom = usd.state_json;
+  const entry = row.qt_state.pesos && row.qt_state.pesos[ttPesosCid];
+  const reuse = !!(entry && entry.built_from === usd.state_json && entry.plant_price && samePrice(entry.plant_price.price, entry.plant_price.date));
+  let st;
+  if (reuse){
+    st = JSON.parse(JSON.stringify(entry));
+    if ((entry.rate_id || null) !== (__qp.get('pesosRateId') || null) && st.inputs) st.inputs.freightMx = ''; // his destination's tariff changed: the freight is filled again
+  } else {
+    st = JSON.parse(usd.state_json);
+    if (Array.isArray(st.products) && st.products[0]) Object.assign(st.products[0], { sellBorder: 0, sellManual: false, sellMx: 0, sellMxManual: false });
+    if (st.inputs){ st.inputs.importCost = ''; st.inputs.freightMx = ''; }
+  }
+  ttApplyState(st);
+  ttConfirmed = (reuse && entry.confirmed && entry.confirmed.built_from === usd.state_json && samePrice(entry.confirmed.price, entry.confirmed.price_date)) ? entry.confirmed : null;
   ttStateReady = true;
 }
 if (__qp.get('ppId') && !__qp.get('offerId')) ttLoadPlantProductVersion();
