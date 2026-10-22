@@ -3808,7 +3808,7 @@ async function rqSheetDecline(plantId, productId){
 // Opens (or continues) the server-side sheet first so a plant's later answer can be matched back to it.
 async function rqSheetSend(channel, onlyKey){
   const pids = rqActiveProductFilterIds.slice();
-  let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed);
+  let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price goes only when the trader chose it (same rule as the brand list and Ready's share)
   if (onlyKey){
     // "Together in one list" only ever means other brands of the SAME product — a customer message never carries two products.
     const one = rows.find(r => r.key === onlyKey);
