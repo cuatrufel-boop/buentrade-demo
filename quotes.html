@@ -1737,12 +1737,12 @@ const RQ_WHATSAPP_TEMPLATES = [
 // and words the reply reader knows (_shared/requestReply.ts isPriceRequestReply / newReplyLines): that is how the plant's reply is
 // tied to the product asked.
 const RQ_PRICE_REQUEST_BODIES = [
-  (n, l) => `Hi ${n},\n\nCould you send your current price and pickup location for:\n${l}\n\nThanks!`,
+  (n, l, many, mx) => `Hi ${n},\n\nCould you send your current price and pickup location for:\n${l}\n\n${mx ? 'This is for Mexico. ' : ''}Thanks!`,
   // one product: "this … it" instead of "these … they" (user 2026-10-05, approved)
-  (n, l, many) => `Hey ${n}, hope your week's going well.\n\nWhat are you getting for ${many ? 'these' : 'this'} right now, and where would ${many ? 'they' : 'it'} ship from?\n${l}\n\nAppreciate it.`,
-  (n, l) => `${n}, quick one — do you have a current price and pickup location on:\n${l}\n\nThanks`,
-  (n, l) => `Hi ${n} — can you update me on price and pickup location for:\n${l}\n\nThanks a lot`,
-  (n, l) => `Hello ${n},\n\nWhen you get a chance, could you let me know price and where it picks up for:\n${l}\n\nThanks!`,
+  (n, l, many, mx) => `Hey ${n}, hope your week's going well.\n\nWhat are you getting for ${many ? 'these' : 'this'} right now, and where would ${many ? 'they' : 'it'} ship from?\n${l}\n\n${mx ? "It's for Mexico. " : ''}Appreciate it.`,
+  (n, l, many, mx) => `${n}, quick one — do you have a current price and pickup location on:\n${l}\n\n${mx ? 'For Mexico. ' : ''}Thanks`,
+  (n, l, many, mx) => `Hi ${n} — can you update me on price and pickup location for:\n${l}\n\n${mx ? 'For Mexico. ' : ''}Thanks a lot`,
+  (n, l, many, mx) => `Hello ${n},\n\nWhen you get a chance, could you let me know price and where it picks up for:\n${l}\n\n${mx ? "It's for Mexico. " : ''}Thanks!`,
 ];
 const RQ_PRICE_REQUEST_SUBJECTS = [
   (s) => `${s} — price request`,
@@ -1751,9 +1751,9 @@ const RQ_PRICE_REQUEST_SUBJECTS = [
 ];
 // "Ask for a load" (a product the plant listed as not available), same rule: 3 approved texts, at random (user 2026-10-05).
 const RQ_ASK_LOAD_BODIES = [
-  (n, s) => `Hi ${n},\n\nI know your last list showed ${s} as not available — could you make a load for us?\n\nThanks!`,
-  (n, s) => `Hey ${n}, I saw ${s} came up as not available on your last list. Any chance you could put a load together for us?\n\nThanks`,
-  (n, s) => `${n}, quick question — ${s} showed N/A on your last list. Could you make one load for us?\n\nAppreciate it.`,
+  (n, s, mx) => `Hi ${n},\n\nI know your last list showed ${s} as not available — could you make a load for us?${mx ? " It's for Mexico." : ''}\n\nThanks!`,
+  (n, s, mx) => `Hey ${n}, I saw ${s} came up as not available on your last list. Any chance you could put a load together for us?${mx ? " It's for Mexico." : ''}\n\nThanks`,
+  (n, s, mx) => `${n}, quick question — ${s} showed N/A on your last list. Could you make one load for us?${mx ? " It's for Mexico." : ''}\n\nAppreciate it.`,
 ];
 let rqLastAskLoadBody = -1;
 let rqLastPriceRequestBody = -1;
@@ -1765,8 +1765,10 @@ function rqPriceRequestSubject(specText){
 function rqPriceRequestLine(spec, priceDate){
   return priceDate ? `• ${spec} (last one I have is from ${rqFmtDate(priceDate)})` : `• ${spec}`;
 }
-function rqPriceRequestText(contactName, lines){
-  return rqPickTemplate(RQ_PRICE_REQUEST_BODIES, (i) => { rqLastPriceRequestBody = i; }, rqLastPriceRequestBody)(rqFirstName(contactName), lines.join('\n'), lines.length > 1);
+// Every message that asks a plant for CHICKEN says it is for Mexico (owner 2026-10-23, approved wording: "es ir variando distintos pero que incluyan que son para México"): each variant carries its own phrase. Other products read exactly as before.
+function rqIsChickenProduct(pid){ const pr = (typeof products !== 'undefined' ? products : []).find(x => x.id === pid); return !!pr && /^chicken\b/i.test(pr.full_name_en || pr.name_en || ''); }
+function rqPriceRequestText(contactName, lines, mx){
+  return rqPickTemplate(RQ_PRICE_REQUEST_BODIES, (i) => { rqLastPriceRequestBody = i; }, rqLastPriceRequestBody)(rqFirstName(contactName), lines.join('\n'), lines.length > 1, !!mx);
 }
 
 function rqFirstName(fullName){
@@ -3727,7 +3729,7 @@ async function rqSheetAskLoad(plantId, pid){
   if (!r) return;
   const plant = r.plant;
   const spec = rqSpecEnForPlant({ ...plant, rqProductId: pid }) || rqProductName(pid);
-  const body = rqPickTemplate(RQ_ASK_LOAD_BODIES, (i) => { rqLastAskLoadBody = i; }, rqLastAskLoadBody)(rqFirstName(plant.contact_name || plant.name), spec);
+  const body = rqPickTemplate(RQ_ASK_LOAD_BODIES, (i) => { rqLastAskLoadBody = i; }, rqLastAskLoadBody)(rqFirstName(plant.contact_name || plant.name), spec, rqIsChickenProduct(pid));
   const subject = rqPriceRequestSubject(spec);
   const onDone = async () => {
     try { await callApi('plant-products-request-price', { actor: currentActor(), plant_id: plant.id, product_id: pid }); }
@@ -3779,7 +3781,7 @@ async function rqSheetAsk(plantIds, remind){
   byPlant.forEach(({ plant, rows: prodRows }) => {
     const specs = prodRows.map(r => rqSpecEnForPlant({ ...plant, rqProductId: r.pid }) || rqProductName(r.pid));
     const lines = prodRows.map((r, i) => rqPriceRequestLine(specs[i], r.kind === 'priced' ? r.priceDate : null));
-    const body = rqPriceRequestText(plant.contact_name || plant.name, lines);
+    const body = rqPriceRequestText(plant.contact_name || plant.name, lines, prodRows.some(r => rqIsChickenProduct(r.pid)));
     const subject = rqPriceRequestSubject(specs.join(' / '));
     const phone = (plant.whatsapp || plant.phone || '').replace(/\D/g, '');
     const doneOnce = rqOnce(onDone(plant, prodRows));
@@ -6970,7 +6972,7 @@ async function rqAskPossiblePlant(plantId, productId){
 
 function rqPriceRequestBody(p){
   const spec = rqSpecEnForPlant(p) || 'this product';
-  const body = rqPriceRequestText(p.contact_name || p.name, [rqPriceRequestLine(spec, p.rqPrice == null ? null : p.rqPriceDate)]);
+  const body = rqPriceRequestText(p.contact_name || p.name, [rqPriceRequestLine(spec, p.rqPrice == null ? null : p.rqPriceDate)], rqIsChickenProduct(p.rqProductId));
   // Real bug found 2026-09-04, confirmed live: every caller of this that sends as an EMAIL
   // (rqAutoAskCategoryPlants, the "Ask/Update Price" modal) goes straight through sendEmailApiRaw
   // → Resend, and send-email.js always appends its own signature server-side — so a signature
