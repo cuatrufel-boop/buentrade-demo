@@ -6,7 +6,9 @@
     "invitado@buentrade.demo": "912b1ae1e94aa5ce8ef040ff85b3417a9a19d3638dcfba189d81457e197eac41",
     "felipe@buentrade.demo": "140719f7228f5f898e8059194584b6b2bdf2f3db6d984b86700637df54eaa3d0",
     "trader@buentrade.demo": "03afee30a1d1d6f714ecba34bc7949168acd46250fde8b5749fd378282a58d64",
-    "buyer@buentrade.demo": "d173bf5367dbed9644a3e8355427619b72b99b4c2b3d3500e51b3388b07845b2"
+    "buyer@buentrade.demo": "d173bf5367dbed9644a3e8355427619b72b99b4c2b3d3500e51b3388b07845b2",
+    "logistics@buentrade.demo": "ae27ef0425ab1cf90a5579faca1f67e024f5f7781e7e9794bc0f24d11960fd98",
+    "payments@buentrade.demo": "ea0063e306d3822990fb237b274ffa910aea77d912abcd717a56dd44ce70d27b"
   };
   var listeners = [];
   function mk(email){ return { email: email, emailVerified: true, uid: 'demo-user', displayName: 'Demo', getIdToken: function(){ return Promise.resolve('demo'); } }; }
@@ -68,5 +70,17 @@
     b.textContent = 'DEMO — datos de ejemplo. No se envía ningún correo ni mensaje real.';
     b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#0f766e;color:#fff;font:600 12px/1.2 Inter,system-ui,sans-serif;text-align:center;padding:6px 10px;letter-spacing:.2px;pointer-events:none';
     document.body.appendChild(b);
+    // "Viewing as": switch between the demo's profiles on any screen without logging in again (the demo has only sample data; this exists nowhere in the real system).
+    var PROFILES = [['felipe@buentrade.demo', 'Admin (felipe)'], ['trader@buentrade.demo', 'Trader'], ['buyer@buentrade.demo', 'Buyer'], ['logistics@buentrade.demo', 'Logistics'], ['payments@buentrade.demo', 'Payments']];
+    if (!current) return;
+    var w = document.createElement('div');
+    w.style.cssText = 'position:fixed;right:12px;bottom:36px;z-index:2147483001;background:#0f766e;color:#fff;font:600 12px/1.2 Inter,system-ui,sans-serif;padding:5px 8px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);display:flex;align-items:center;gap:6px';
+    var sel = document.createElement('select');
+    sel.style.cssText = 'font:600 12px Inter,system-ui,sans-serif;border-radius:6px;border:0;padding:3px 4px;background:#fff;color:#0f172a';
+    var list = PROFILES.slice(); if (!list.some(function(p){ return p[0] === current.email; })) list.unshift([current.email, current.email.split('@')[0]]);
+    sel.innerHTML = list.map(function(p){ return '<option value="' + p[0] + '"' + (p[0] === current.email ? ' selected' : '') + '>' + p[1] + '</option>'; }).join('');
+    sel.onchange = function(){ try { localStorage.setItem(KEY, sel.value); } catch(e){} location.reload(); };
+    w.appendChild(document.createTextNode('Viewing as')); w.appendChild(sel);
+    document.body.appendChild(w);
   });
 })();
