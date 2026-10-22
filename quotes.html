@@ -3300,6 +3300,72 @@ async function rqRequestSend(channel){
   // the panel says so before, and the review window shows the message before anything goes out
   await rqSendReadyRows(channel, rows, customers, rqSheetState.linksByCustomer, pids, { resend: new Set(rqReqResendIds) }); // one message per customer, every brand highest → lowest, preview first
 }
+// THE BRAND LIST (owner 2026-10-22: "una tabla como la de Brands… USD para cualquier cliente, pesos un precio por cliente… todo dentro del QT… lo que mando pasa a Offers"). One clean table for ONE product:
+// per brand a USD line (one price for any customer) and one line per marked pesos customer (his own price, his own QT). The plant price IS the button of the QT (it opens it, also after confirming);
+// the sale price appears outside only once confirmed in that QT; Email / WhatsApp turn on with it. Only what still needs something is listed: new prices, plants waiting for a price, N/A.
+// What was already sent to the marked customers is not listed (it is in Offers); replies to our asks come back through Live quotes. Every action is an existing function — nothing is sent or written by this view itself.
+const RQ_BRAND_LIST = true; // false = the old plants list + Send panel (kept in rqRenderRequestView)
+let rqBrandCustsOpen = false; // the collapsed "Customers" strip (who is marked, add a customer, only who has not received it) keeps its open state across re-renders
+function rqBrandListHtml(x){
+  const { pid, sheet, sendRows, pending, order, marked, isPes, mailIco, waIco, askN, remindN, chips, hints, selN, canSend, emailOk, waOk, noEmail, noWa } = x;
+  const money = n => '$' + Number(n).toFixed(4) + '/lb';
+  const sub = t => `<span class="muted" style="display:block;font-size:11px;">${t}</span>`;
+  const mark = (ch, on, call, title) => `<button type="button" class="rq-customer-bulk-btn ${ch === 'email' ? 'email' : 'whatsapp'}" style="padding:7px 10px;${on ? '' : 'opacity:.35;cursor:default;'}" title="${title}" ${on ? `onclick="${call}"` : 'disabled'}>${ch === 'email' ? mailIco : waIco}</button>`;
+  const sendBtns = (ready, emailOn, waOn, callFor, who) => `<div class="rq-sheet-actions" style="justify-content:center;">${ready
+    ? `${mark('email', emailOn, callFor('email'), emailOn ? 'Email ' + who : 'No email on file')}${mark('whatsapp', waOn, callFor('whatsapp'), waOn ? 'WhatsApp ' + who : 'No WhatsApp on file')}`
+    : `${mark('email', false, '', 'Confirm the price in its QT first')}${mark('whatsapp', false, '', 'Confirm the price in its QT first')}`}</div>`;
+  const body = [];
+  const sorted = sendRows.slice().sort((a, b) => (!!(a.calc && !a.proposed) - !!(b.calc && !b.proposed)));
+  sorted.forEach(r => {
+    const lacks = c => !r.sentTo.some(y => y.id === c.id);
+    const usdT = order.filter(c => marked.has(c.id) && !isPes(c) && lacks(c));
+    const pesT = order.filter(c => marked.has(c.id) && isPes(c) && lacks(c));
+    const ready = !!(r.calc && r.confirmed && !r.proposed);
+    const fresh = r.status === 'new' || r.status === 'proposed';
+    const arr = rqSheetArrival(sheet, r.plant.id);
+    const when = r.stale ? `old price from ${rqFmtDate(r.priceDate)}` : arr && arr.arrived_at ? rqFmtArrival(arr.arrived_at) : `price from ${rqFmtDate(r.priceDate)}`;
+    const brand = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${fresh ? ' <span class="rq-sheet-pill new">NEW</span>' : ''}${sub(when)}</td>`;
+    const planTag = open => `<span class="pkg-tag price${r.stale ? ' exp' : ''}${fresh && !ready ? ' pkg-tag-blink' : ''}" style="cursor:pointer;" title="Open its QT" onclick="${open}">${money(r.price)}</span>`;
+    const lines = [];
+    if (usdT.length || !pesT.length){
+      const open = `rqConfirmPriceClick(null,'${pid}','${r.plant.id}')`;
+      lines.push(`<td>Any customer${sub('USD')}</td><td class="num">${planTag(open)}</td>
+        <td>${ready ? `<span class="num" style="cursor:pointer;" title="Open its QT again" onclick="${open}">${money(r.calc.salePerLb)}</span>` : '<span class="muted">—</span>'}</td>
+        <td>${sendBtns(ready, ready && usdT.some(c => rqCanEmail(c, [pid])), ready && usdT.some(c => rqCanWhatsApp(c, [pid])), ch => `rqBrandSend('${ch}','${r.key}')`, 'this offer')}</td>`);
+    }
+    pesT.forEach(c => {
+      const conf = ready ? rqPesosConfirmation(r.plant.id, pid, c.id) : null;
+      const open = `rqPesosOpenQt('${pid}','${r.plant.id}','${c.id}')`;
+      lines.push(`<td>${escapeHtml(String(c.trade_name).trim())}${sub(escapeHtml(c.usual_destination || 'pesos'))}</td><td class="num">${planTag(open)}</td>
+        <td>${conf ? `<span class="num" style="cursor:pointer;" title="Open his QT again" onclick="${open}">MX$ ${Number(conf.calc.pesosQt.perKg).toFixed(2)}/kg</span>` : '<span class="muted">—</span>'}</td>
+        <td>${sendBtns(!!conf, !!conf && rqCanEmail(c, [pid]), !!conf && rqCanWhatsApp(c, [pid]), ch => `rqBrandSend('${ch}','${r.key}','${c.id}')`, 'his offer')}</td>`);
+    });
+    lines.forEach((l, i) => body.push(`<tr class="${fresh && !ready ? 'rq-sheet-new' : ''}">${i ? '<td></td>' : brand}${l}</tr>`));
+  });
+  const offSpec = r => `<button type="button" class="qbucket-waiting-row-decline" title="Doesn't produce it — never asked again" onclick="rqSheetDecline('${r.plant.id}','${r.pid}')">✕ Off-Spec</button>`;
+  pending.filter(r => r.kind !== 'possible').forEach(r => {
+    const name = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}</td>`;
+    const act = r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
+      : r.kind === 'waiting' ? `<span class="rq-sheet-pill wait">Waiting for price</span>${offSpec(r)}`
+      : `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
+    body.push(`<tr class="rq-sheet-dim">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
+  });
+  const lineCount = sorted.filter(r => r.calc && r.confirmed && !r.proposed).length;
+  const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send'])
+    : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>';
+  return `<div class="rq-req rq-glass">
+    <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div></div></div>
+    <div class="rq-req2-listhead"><span class="rq-req2-lbl">Brands · ${sorted.length + pending.filter(r => r.kind !== 'possible').length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;">
+      ${remindN > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindN} plants →</button>` : ''}
+      ${askN ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}
+      <div class="rq-req2-btns" style="margin:0;"><button type="button" class="rq-customer-bulk-btn email" ${canSend && emailOk ? '' : 'disabled'} title="${emailOk ? 'Email all the ready customers — you see the preview first' : 'No email on file: ' + noEmail.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('email')">${mailIco} Email all</button>
+      <button type="button" class="rq-customer-bulk-btn whatsapp" ${canSend && waOk ? '' : 'disabled'} title="${waOk ? 'WhatsApp all the ready customers — you see the preview first' : 'No WhatsApp on file: ' + noWa.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('whatsapp')">${waIco} WhatsApp all</button></div>
+    </div></div>
+    ${table}
+    <details class="rq-req2-custs"${rqBrandCustsOpen ? ' open' : ''} ontoggle="rqBrandCustsOpen = this.open"><summary class="muted" style="cursor:pointer;font-size:12.5px;padding:10px 2px;">Customers · ${selN} marked</summary>
+      <div class="rq-req2-chips">${chips || '<span class="muted" style="font-size:12px;">No customer buys this yet.</span>'}</div>${hints}</details>
+  </div>`;
+}
 function rqRenderRequestView(rows){
   const el = document.getElementById('rq_request_view');
   const det = document.getElementById('rq_sheet_details');
@@ -3377,7 +3443,10 @@ function rqRenderRequestView(rows){
   });
   pending.filter(r => r.kind === 'na').forEach(r => items.push({ o: 7, html: row('na', r, meta(`N/A since ${rqFmtDate(r.naSince)}`), pill('off', 'N/A')) }));
   items.sort((a, b) => (a.o - b.o) || ((b.t || 0) - (a.t || 0))); // within a group, the most recent send first
-  const askN = [...new Set(rqSheetAskTargets(rows).map(r => r.plant.id))].length;
+  const askTargetRows = rqSheetAskTargets(rows);
+  const askN = [...new Set(askTargetRows.map(r => r.plant.id))].length;
+  // the bulk "Ask N plants" only when it saves something (owner 2026-10-22): ONE plant to ask already has its own "Ask price →" / "Ask update →" on its row — unless it was chosen to be sent as an old price, which leaves its row with no ask button
+  const askNeedsTop = askN > 1 || askTargetRows.some(r => inc(r));
   const remindIds = [...new Set(pending.filter(r => r.kind === 'noreply').map(r => r.plant.id))]; // the same plants each row's Remind → asks, all in one preview
   const readyNew = sendRows.filter(r => r.calc && !r.proposed).length, confirmN = sendRows.length - readyNew;
   const selN = order.filter(c => rqReqSel.ids.has(c.id)).length;
@@ -3444,7 +3513,7 @@ function rqRenderRequestView(rows){
       ${steps}</div>
     <div class="rq-req2-body">
       <div class="rq-req2-plants">
-        <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindIds.length} plants →</button>` : ''}${askN ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
+        <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindIds.length} plants →</button>` : ''}${askNeedsTop ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
         ${items.length ? items.map(i => { const g = grpOf(i.o), h = g !== lastGrp ? `<div class="rq-req2-grp ${g.toLowerCase().replace(/[^a-z]+/g, '-')}">${g}</div>` : ''; lastGrp = g; return h + i.html; }).join('') : '<div class="rq-req-empty">No plant carries this product yet.</div>'}
       </div>
       <aside class="rq-req2-send${canSend ? ' can' : ''}${fromToday ? ' focus' : ''}">
@@ -3459,7 +3528,12 @@ function rqRenderRequestView(rows){
         ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT (his row, above).' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
       </aside>
     </div></div>`;
-  rqSetMsgOriginHtml(el, html);
+  // The brand list is the working view of ONE product (owner 2026-10-22). The plants + Send panel view built above stays in the code: RQ_BRAND_LIST = false brings it back as it was.
+  const hintsHtml = (canSend && (noEmail.length || noWa.length) ? `<div class="rq-req2-hint">${noEmail.length ? `No email on file: ${noEmail.map(nm).join(', ')} — they get it by WhatsApp.` : ''}${noEmail.length && noWa.length ? ' ' : ''}${noWa.length ? `No WhatsApp on file: ${noWa.map(nm).join(', ')} — they get it by email.` : ''}</div>` : '')
+    + (resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : '')
+    + (canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : '')
+    + (canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT.' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`);
+  rqSetMsgOriginHtml(el, RQ_BRAND_LIST ? rqBrandListHtml({ pid, sheet, sendRows, pending, order, marked: rqReqSel.ids, isPes, mailIco, waIco, askN: askTargetRows.length ? askN : 0, remindN: remindIds.length, remindIds, chips, hints: hintsHtml, selN, canSend, emailOk, waOk, noEmail, noWa }) : html);
   if (rqReqAddOpen){ const i = document.getElementById('rq_req_add_q'); if (i && document.activeElement !== i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   // arriving from Today: land ON this quote (the product, the customer marked, the Send panel glowing) instead of at the top of a generic screen
   if (fromToday && !rqPreselectScrolled){ rqPreselectScrolled = true; setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); }
@@ -3700,6 +3774,24 @@ async function rqSheetSend(channel, onlyKey){
   }
   if (!rows.length) return;
   await rqSendReadyRows(channel, rows, rqSheetState.customers, rqSheetState.linksByCustomer, pids);
+}
+
+// One line of the brand list (owner 2026-10-22): the USD line (customerId empty) goes to the marked USD customers who do not have this brand yet; a pesos line goes to HIS customer only,
+// with HIS pesos price (rqWithPesos inside the send). Same rule as rqSheetSend: other confirmed brands of the SAME product may go together in one list, the trader chooses. Nothing else changes.
+async function rqBrandSend(channel, key, customerId){
+  const pids = rqActiveProductFilterIds.slice();
+  let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed);
+  const one = rows.find(r => r.key === key);
+  if (!one) return;
+  const marked = rqReqSel.ids || new Set();
+  const customers = customerId
+    ? rqSheetState.customers.filter(c => c.id === customerId)
+    : rqSheetState.customers.filter(c => marked.has(c.id) && !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
+  if (!customers.length) return;
+  const others = rows.filter(r => r.key !== key && r.pid === one.pid && customers.some(c => !r.sentTo.some(x => x.id === c.id) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))));
+  const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
+  rows = wantsAll ? [one, ...others] : [one];
+  await rqSendReadyRows(channel, rows, customers, rqSheetState.linksByCustomer, pids);
 }
 
 // Sends the brands confirmed in their QT (a package's Send): the regular customer send, one message per customer × product with its
