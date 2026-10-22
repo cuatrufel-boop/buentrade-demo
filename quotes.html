@@ -3377,10 +3377,7 @@ function rqRenderRequestView(rows){
   });
   pending.filter(r => r.kind === 'na').forEach(r => items.push({ o: 7, html: row('na', r, meta(`N/A since ${rqFmtDate(r.naSince)}`), pill('off', 'N/A')) }));
   items.sort((a, b) => (a.o - b.o) || ((b.t || 0) - (a.t || 0))); // within a group, the most recent send first
-  const askTargetRows = rqSheetAskTargets(rows);
-  const askN = [...new Set(askTargetRows.map(r => r.plant.id))].length;
-  // the bulk "Ask N plants" only when it saves something (owner 2026-10-22): ONE plant to ask already has its own "Ask price →" / "Ask update →" on its row — unless it was chosen to be sent as an old price, which leaves its row with no ask button
-  const askNeedsTop = askN > 1 || askTargetRows.some(r => inc(r));
+  const askN = [...new Set(rqSheetAskTargets(rows).map(r => r.plant.id))].length;
   const remindIds = [...new Set(pending.filter(r => r.kind === 'noreply').map(r => r.plant.id))]; // the same plants each row's Remind → asks, all in one preview
   const readyNew = sendRows.filter(r => r.calc && !r.proposed).length, confirmN = sendRows.length - readyNew;
   const selN = order.filter(c => rqReqSel.ids.has(c.id)).length;
@@ -3447,7 +3444,7 @@ function rqRenderRequestView(rows){
       ${steps}</div>
     <div class="rq-req2-body">
       <div class="rq-req2-plants">
-        <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindIds.length} plants →</button>` : ''}${askNeedsTop ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
+        <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindIds.length} plants →</button>` : ''}${askN ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
         ${items.length ? items.map(i => { const g = grpOf(i.o), h = g !== lastGrp ? `<div class="rq-req2-grp ${g.toLowerCase().replace(/[^a-z]+/g, '-')}">${g}</div>` : ''; lastGrp = g; return h + i.html; }).join('') : '<div class="rq-req-empty">No plant carries this product yet.</div>'}
       </div>
       <aside class="rq-req2-send${canSend ? ' can' : ''}${fromToday ? ' focus' : ''}">
