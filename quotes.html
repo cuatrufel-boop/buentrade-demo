@@ -6389,7 +6389,7 @@ function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPl
   const lines = withCalc.map(({ plant, calc }, i) => {
     const delivery = rqDeliveryDatesText();
     const offer = offersByPlantId.get(plant.id);
-    const link = !calc.mxn && offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
+    const link = offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
     const price = rqOfferPriceText(calc);
     return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${link}`;
   }).join('\n\n');
@@ -6411,7 +6411,7 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
     const lines = items.map(({ plant, calc }, i) => {
       const isNew = newKeys.has(plant.id + '|' + plant.rqProductId) ? ' (nuevo)' : '';
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
-      const link = !calc.mxn && offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
+      const link = offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
       const price = rqOfferPriceText(calc);
       return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${isNew}${link}`;
     }).join('\n\n');
