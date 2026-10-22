@@ -3385,9 +3385,11 @@ function rqRenderRequestView(rows){
   const pids = rqActiveProductFilterIds;
   if (pids.length !== 1){ // several products picked: the full table is the working view
     if (det && det.dataset.multi !== '1'){ det.dataset.multi = '1'; det.open = true; }
+    if (det) det.style.display = ''; // several products: the full table is the working view
     rqSetMsgOriginHtml(el, ''); return;
   }
   if (det && det.dataset.multi === '1'){ det.dataset.multi = '0'; det.open = false; }
+  if (det) det.style.display = RQ_BRAND_LIST ? 'none' : ''; // ONE product: the brand list is the table (owner 2026-10-22: "quita la tabla vieja"); the old full table + Outbox stays in the page, only hidden
   const pid = pids[0];
   const sheet = rqSheetFor(pid);
   const owners = rqSheetCustomersOwning(pid);
