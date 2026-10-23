@@ -1059,12 +1059,12 @@ auth.onAuthStateChanged(user => {
           <div id="photoMsg" style="font-size:12px;color:var(--ink-soft);margin-top:4px;"></div>
         </div>
         <div class="kwide">
-          <span class="view-label">Spec Sheet (PDF)</span>
+          <span class="view-label">Spec Sheet (PDF or Word)</span>
           <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
             <button type="button" class="btn secondary" onclick="document.getElementById('specFile').click()">Choose File</button>
             <div id="specPreview" style="display:none;font-size:13px;color:var(--ink-soft);"></div>
           </div>
-          <input type="file" id="specFile" accept="application/pdf" style="display:none;">
+          <input type="file" id="specFile" accept="application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none;">
           <div id="specMsg" style="font-size:12px;color:var(--ink-soft);margin-top:4px;"></div>
         </div>
       </div>
@@ -4401,7 +4401,7 @@ function renderPlantProducts(){
     // from Plants, without first building a quote around this product.
     const fileName = (p.full_name_en || p.name_en || p.name || 'product').replace(/[^a-z0-9]+/gi, '-');
     const photoBtn = p.photo_url ? `<button type="button" class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="downloadPlantProductFile('${p.photo_url}','Foto-${fileName}', this)">📋 Foto</button>` : '';
-    const specBtn = p.spec_url ? `<button type="button" class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="downloadPlantProductFile('${p.spec_url}','Ficha-tecnica-${fileName}.pdf', this)">📋 Spec</button>` : '';
+    const specBtn = p.spec_url ? `<button type="button" class="btn secondary" style="padding:5px 10px;font-size:12px;" onclick="downloadPlantProductFile('${p.spec_url}','Ficha-tecnica-${fileName}.${(String(p.spec_url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i) || [, 'pdf'])[1].toLowerCase()}', this)">📋 Spec</button>` : '';
     const saved = justSavedProducts.get(p.id);
     return `<tr${saved ? ' class="just-saved" style="background:rgba(63,203,126,.10);"' : p.declined_at ? ' style="opacity:.5;"' : ''}>
       <td>

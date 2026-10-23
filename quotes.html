@@ -5298,7 +5298,7 @@ function rqPlantRowHtml(p, hasDeliveryDate, specText){
   const fileButtonsHtml = (files.photo_url || files.spec_url) ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${files.photo_url ? `<button type="button" class="btn secondary" style="padding:5px 10px;font-size:11px;" onclick="rqCopyPhotoToClipboard('${files.photo_url}','Foto-${p.name.replace(/[^a-z0-9]+/gi,'-')}', this)">📋 Foto</button>` : ''}
-          ${files.spec_url ? `<button type="button" class="btn secondary" style="padding:5px 10px;font-size:11px;" onclick="rqCopyPhotoToClipboard('${files.spec_url}','Ficha-tecnica-${p.name.replace(/[^a-z0-9]+/gi,'-')}.pdf', this)">📋 Ficha</button>` : ''}
+          ${files.spec_url ? `<button type="button" class="btn secondary" style="padding:5px 10px;font-size:11px;" onclick="rqCopyPhotoToClipboard('${files.spec_url}','Ficha-tecnica-${p.name.replace(/[^a-z0-9]+/gi,'-')}.${(String(files.spec_url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i) || [, 'pdf'])[1].toLowerCase()}', this)">📋 Ficha</button>` : ''}
         </div>` : '';
   const saleHtml = calc
     ? `<span class="num">$${calc.salePerLb.toFixed(4)}/lb</span><span class="muted" style="display:block;font-size:10.5px;">Total $${calc.totalSale.toLocaleString('en-US',{maximumFractionDigits:0})}</span>`
