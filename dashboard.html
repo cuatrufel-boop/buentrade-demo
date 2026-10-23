@@ -155,6 +155,10 @@
   .tdr-h{margin:0 0 2px;font:700 12.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);} .tdr-h.u{color:#FFC876;} .tdr-hint{font-size:12.5px;color:var(--ink-soft);margin:0 0 6px;}
   .tdr-t{width:100%;border-collapse:collapse;} .tdr-t td{padding:13px 4px;border-top:1px solid rgba(255,255,255,.1);vertical-align:middle;text-align:left;} .tdr-t tr:first-child td{border-top:none;} .tdr-t td:last-child{text-align:right;width:1%;white-space:nowrap;}
   .tdr-name .name-link{font-size:15px;font-weight:700;display:block;} .tdr-sub{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;} .tdr-new{color:#3FCB7E;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;} .tdr-up{color:#8EC5FF;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
+  .tdr-why{display:block;font-size:12.5px;color:#fff;margin-top:3px;opacity:.88;}
+  .tdr-who{margin-top:6px;} .tdr-who>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--blue-bright);user-select:none;} .tdr-who>summary::-webkit-details-marker{display:none;} .tdr-who>summary::before{content:'▸ ';} .tdr-who[open]>summary::before{content:'▾ ';}
+  .tdr-ul{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:5px;} .tdr-ul li{font-size:12.5px;line-height:1.35;} .tdr-ul li b{font-weight:600;} .tdr-ul li span{color:var(--ink-soft);margin-left:6px;} .tdr-ask-tag{font-style:normal;font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#FFC876;border:1px solid rgba(255,200,118,.5);border-radius:999px;padding:1px 7px;margin-left:6px;}
+  .tdr-askcard{grid-column:1/-1;} .tdr-scroll{max-height:360px;overflow:auto;}
   .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
   .tdg{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035);overflow:hidden;}
@@ -486,17 +490,45 @@ async function loadTodayLive(){ try { dashLive = ((await callApi('sent-offers-se
 function todayListHtml(all){
   const urgent = (dashLive || []).filter(s => s.product_id && s.product_name && (s.arrivals || []).some(a => !(a.sent_customer_ids || []).length));
   const urgentNames = new Set(urgent.map(s => s.product_name));
+  // One line per product; behind it EVERY customer (no limit) with the reason he makes sense: asked, buys it, never offered, a note, a similar product he buys (owner 2026-10-24: "debe ser mas inteligente… para ofrecer producto con proposito").
   const by = new Map();
-  (all || []).filter(i => i.group === 'sell' && i.product && !urgentNames.has(i.product)).forEach(i => {
-    const g = by.get(i.product) || { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set() };
-    g.isNew = g.isNew || !!i.new; (i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : []).forEach(n => g.who.add(n)); by.set(i.product, g);
+  const grp = i => { let g = by.get(i.product); if (!g) { g = { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set(), cust: new Map(), asked: new Set(), hasSell: false }; by.set(i.product, g); } return g; };
+  (all || []).filter(i => (i.group === 'sell' || i.group === 'ask') && i.product && !urgentNames.has(i.product)).forEach(i => {
+    const g = grp(i);
+    if (i.group === 'sell') g.hasSell = true;
+    g.isNew = g.isNew || !!i.new;
+    const names = i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : [];
+    names.forEach(n => g.who.add(n));
+    if (i.lead && i.lead.name) {
+      const c = g.cust.get(i.lead.name) || { reasons: new Set(), asked: false };
+      if (i.group === 'ask') { c.asked = true; g.asked.add(i.lead.name); }
+      if (i.lead.reason) c.reasons.add(i.lead.reason);
+      (i.reasons || []).forEach(r => { if (r && r.label) c.reasons.add(r.label); });
+      g.cust.set(i.lead.name, c);
+    }
   });
-  const list = [...by.values()].sort((a, b) => Number(b.isNew) - Number(a.isNew));
-  const go = (href, urg) => `<a class="btn small tdr-go${urg ? ' tdr-urg' : ''}" href="${escapeHtml(href)}">Go to Quotes →</a>`;
-  const rows = list.map(g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span></td><td>${go(g.href)}</td></tr>`).join('');
+  const list = [...by.values()].filter(g => g.hasSell || g.asked.size).sort((a, b) => Number(b.asked.size > 0) - Number(a.asked.size > 0) || Number(b.isNew) - Number(a.isNew));
+  const go = (href, urg, label) => `<a class="btn small tdr-go${urg ? ' tdr-urg' : ''}" href="${escapeHtml(href)}">${label || 'Go to Quotes →'}</a>`;
+  const purposeOf = g => {
+    if (g.asked.size) return `Asked by ${[...g.asked].join(', ')}`;
+    const tally = new Map(); g.cust.forEach(c => c.reasons.forEach(r => tally.set(r, (tally.get(r) || 0) + 1)));
+    const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    return top ? (top[1] === g.cust.size ? top[0] : `${top[0]} · ${top[1]} of ${g.cust.size}`) : '';
+  };
+  const whoHtml = g => !g.cust.size ? '' : `<details class="tdr-who"><summary>Who and why</summary><ul class="tdr-ul">${[...g.cust.entries()].sort((a, b) => Number(b[1].asked) - Number(a[1].asked) || a[0].localeCompare(b[0])).map(([n, c]) => `<li><b>${escapeHtml(n)}</b>${c.asked ? '<i class="tdr-ask-tag">Asked</i>' : ''}<span>${escapeHtml([...c.reasons].filter(r => !(c.asked && /^asked/i.test(r))).join(' · '))}</span></li>`).join('')}</ul></details>`;
+  const rows = list.map(g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`).join('');
   const urows = urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">A plant answered your live quote</span></td><td>${go(href, true)}</td></tr>`; }).join('');
+  // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
+  const needs = new Map();
+  (all || []).filter(i => i.group === 'gap').forEach(i => {
+    if (i.product && i.who && i.who.length) needs.set(i.product, { name: i.product, href: i.href, who: i.who.slice(), why: String(i.why || '').replace(/^\d+ customers? buy it · ?/, '') });
+    (i.held || []).forEach(h => { if (h.product && !needs.has(h.product)) needs.set(h.product, { name: h.product, href: h.href, who: (h.reasons || []).slice(), why: String(h.price || '') }); });
+  });
+  const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => b.who.length - a.who.length || a.name.localeCompare(b.name));
+  const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.who.length} customer${x.who.length === 1 ? '' : 's'} buy it${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td><td>${go(x.href, false, 'Ask in Quotes →')}</td></tr>`).join('');
   return `<div class="tdr"><div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
-    + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A plant answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div></div>`;
+    + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A plant answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div>`
+    + (arows ? `<div class="tdr-card tdr-askcard"><h3 class="tdr-h">Ask the plants — customers are waiting</h3><div class="tdr-hint">No plant has a fresh price · the most customers first</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${arows}</tbody></table></div></div>` : '') + `</div>`;
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) reloadTodayIfStale(); });
 window.addEventListener('pageshow', (e) => { if (e.persisted) reloadTodayIfStale(); });
