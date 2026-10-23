@@ -8,6 +8,14 @@
   css.textContent =
     '.hdr-logout{width:19px;height:19px;border-radius:50%;background:rgba(255,255,255,.1);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background .18s;}' +
     '.hdr-logout:hover{background:rgba(255,255,255,.22);}' +
+    // One small round icon button for the whole OS (owner 2026-10-23: the Dashboard refresh and the Quotes back arrow are the same logo): BuenTrade blue, fills on hover, spins while busy.
+    '.bt-icon-btn{flex:0 0 30px;width:30px;height:30px;padding:0;margin:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(90,170,255,.14);color:#5AAAFF;border:1.5px solid #1E6ADB;cursor:pointer;transition:background .15s,color .15s,transform .15s;}' +
+    '.bt-icon-btn:hover{background:#1E6ADB;color:#fff;}' +
+    '.bt-icon-btn:active{transform:scale(.92);}' +
+    '.bt-icon-btn:disabled{cursor:default;opacity:.8;}' +
+    '.bt-icon-btn svg{width:15px;height:15px;}' +
+    '.bt-icon-btn.spin svg{animation:btIconSpin .8s linear infinite;}' +
+    '@keyframes btIconSpin{to{transform:rotate(360deg);}}' +
     '.nav-row{padding-left:76px;padding-right:76px;box-sizing:border-box;}' +
     // Phones (user 2026-10-05: "no están responsive en el celular"): the nav stacked one link per line and filled half
     // the screen, and iPhone zoomed the whole page in (and stayed zoomed) every time a box under 16px got focus.

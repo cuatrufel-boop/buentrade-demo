@@ -692,7 +692,7 @@
   /* THE FOCUS SCREEN (owner 2026-10-22: "no quiero tanto scroll… llévame a una pantalla clara en el centro"): while ONE product is worked (body.rq-focus, set in rqRenderSweepTables) the stat cards, the tab bar, the
      search banner and the Clear chip sit out of the way (hidden, never removed) and the product is centered on the screen; "← Back to Quotes" brings everything back. Nothing here applies without the class. */
   .rq-focus-back{display:none;}
-  body.rq-focus .rq-focus-back{display:block;padding:0 0 4px;} .rq-back{font:600 12px 'IBM Plex Mono',monospace;color:var(--blue-bright);background:none;border:0;cursor:pointer;padding:4px 0;letter-spacing:.02em;} .rq-back:hover{text-decoration:underline;}
+  body.rq-focus .rq-focus-back{display:block;padding:0 0 4px;}
   body.rq-focus #rq_page_title,body.rq-focus #qCardsSlot,body.rq-focus .tab-row,body.rq-focus .rq-hero-banner,body.rq-focus #rq_filter_chip_wrap{display:none !important;}
   body.rq-focus .wrap{margin-top:6px !important;} body.rq-focus .rq-board{padding-top:4px;}
   body.rq-focus #rq_sheet_section{max-width:1200px;margin:0 auto;padding:6px 22px 6px;}
@@ -1450,7 +1450,7 @@ auth.onAuthStateChanged(user => {
     <!-- Offer Sheet (approved 2026-09-26): shown instead of the four sections below while products are picked in Find
          Product — see rqRenderSheet. Same stat-card / table / button components as the rest of this page. -->
     <div id="rq_sheet_section" class="rq-glass" style="display:none;padding-top:12px;">
-      <div class="rq-focus-back"><button type="button" class="rq-back" onclick="rqClearProductFilter()" title="Back to the Quotes screen">← Back to Quotes</button></div>
+      <div class="rq-focus-back"><button type="button" class="bt-icon-btn rq-back" onclick="rqClearProductFilter()" title="Back to Quotes" aria-label="Back to Quotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></button></div>
       <!-- Messaging (2026-09-27): "did this search come from a message?" — asked right here, no extra step. -->
       <div id="rq_msg_origin"></div>
       <!-- The request, in three steps (user 2026-10-10): what to send now, what already went out, what is still coming. -->
