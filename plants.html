@@ -4142,7 +4142,7 @@ async function applyPriceList(){
     actor: currentActor(), plant_id: applyPlantId, product_id: row.matchedProductId,
     raw_text: normalizeForMatch(row.rawText), price: row.price,
     price_currency_id: usdCurrencyId, price_date: today,
-    location_name: row.locationName || null,
+    location_name: row.locationName || null, ship_region: row.locationName ? null : (row.region || null),
     freight_included: row.freightIncluded === true,
   })));
   const applied = [];
@@ -4159,6 +4159,8 @@ async function applyPriceList(){
     actor: currentActor(), plant_id: applyPlantId, raw_text: row.rawText,
     detected_price: row.price != null ? row.price : null,
     idempotency_key: `manual|${applyPlantId}|${normalizeForMatch(row.rawText)}`,
+    // the pickup city / zone / delivered flag the pasted line carried travel with the waiting price (2026-10-23, same rule as every other way a price reaches Pending)
+    pickup_location: row.locationName || null, ship_region: row.locationName ? null : (row.region || null), freight_included: row.freightIncluded === true,
   })));
   const sentToPending = [];
   let pendingErrors = 0;
