@@ -2774,6 +2774,8 @@ async function resolvePlantPendingMatch(id){
         // the date of the plant's email this line came in (Miami day), never the day it is matched (user 2026-10-09: "no se debe
         // equivocar con fechas"); a newer price already on file stays (applyPlantProductMatch) and this one goes to the history
         price_currency_id: usdCurrencyId, price_date: match.price_date ? String(match.price_date).slice(0, 10) : new Date(match.created_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }),
+        // where the plant said it ships from (and delivered or not), kept on the row when the price arrived: it goes with the price (2026-10-23, "fob Gainesville, GA" never reached the QT)
+        location_name: match.pickup_location || null, ship_region: match.pickup_location ? null : (match.ship_region || null), freight_included: match.freight_included === true,
       });
       keptNewer = !!(applied && applied.kept_newer);
     }
