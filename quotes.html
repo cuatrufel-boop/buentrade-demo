@@ -3974,17 +3974,12 @@ function rqRenderLiveQuotes(){
   // What went out is an Offer now and leaves Quotes (user 2026-10-11: "cuando se vuelve offer desaparece, pero se vuelve a llenar si llega un precio nuevo"): a package
   // whose prices all went out is not listed; a new price for it makes it 'send' again, so it comes back by itself.
   const pkgs = rqLivePackages(entries).filter(p => p.stage === 'send' || p.stage === 'wait');
-  const nSend = pkgs.filter(p => p.stage === 'send').length, nWait = pkgs.filter(p => p.stage === 'wait').length;
-  const counter = (cls, n, label) => `<span class="rq-lq2-count ${cls}${n ? '' : ' zero'}"><b>${n}</b>${label}</span>`;
-  const idle = pkgs.filter(p => p.stage !== 'send' && p.stage !== 'wait');
-  const sec = (cls, label, n) => `<tr class="rq-lq-secrow"><td colspan="4"><div class="rq-lq-sec ${cls}">${label} <b>${n}</b></div></td></tr>`;
+  // The same table language as the brand list (owner 2026-10-23: "este está mejor… ahí donde entro a mandar a clientes"): Product · Asked by · Status · Send. Only what waits for a price: a new price (NEW PRICE, green, the send button
+  // opens the product where he sends to customers) or "Waiting for price" (no button — the product name opens it). Nothing from Quotes' brand list or Today is used here: Live quotes has its own purpose.
   el.innerHTML = `<div class="card qbucket rq-glass rq-lq2">
     <h2 style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">Live quotes<span class="rq-lq2-live"><i></i>live</span></h2>
-    <div class="rq-lq2-counts">${counter('send', nSend, nSend === 1 ? 'new price to send' : 'new prices to send')}${counter('wait', nWait, 'waiting for prices')}</div>
-    <div class="table-scroll"><table class="rq-lq-table"><thead><tr><th style="width:30%;">Product</th><th>Customer</th><th style="width:270px;">Prices</th><th style="width:90px;">Next</th></tr></thead><tbody>${
-      (nSend ? sec('send', '<i class="rq-lq-newdot"></i>New prices to send', nSend) + pkgs.filter(p => p.stage === 'send').map(rqLiveRowHtml).join('') : '')
-      + (nWait ? sec('wait', 'Waiting for prices', nWait) + pkgs.filter(p => p.stage === 'wait').map(rqLiveRowHtml).join('') : '')
-      + (idle.length ? idle.map(rqLiveRowHtml).join('') : '')
+    <div class="table-scroll"><table class="rq-lq-table"><colgroup><col style="width:34%"><col style="width:26%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>Product</th><th>Asked by</th><th>Status</th><th>Send</th></tr></thead><tbody>${
+      pkgs.map(rqLiveRowHtml).join('')
       || '<tr><td colspan="4" class="empty">Nothing new to send right now.</td></tr>'}</tbody></table></div></div>`;
 }
 // A brand's price that is still sendable: not Off-Spec, not N/A, not stale (the same checks as rqIsNewArrival, without the "sent to anyone" part).
@@ -4087,15 +4082,17 @@ function rqLiveRowHtml(p){
   const lead = group.filter(e => e.asked)[0] || group[0] || p.asked[0] || null;
   const others = group.filter(e => e !== lead);
   const custCell = lead
-    ? `<span title="${escapeHtml(lead.asked && lead.askedAt ? 'asked ' + rqAgo(lead.askedAt) : '')}"><b style="font-weight:600;font-size:14px;">${nm(lead)}</b>${others.length ? `<span class="muted" title="${escapeHtml(others.map(e => rqLiveCustomerName(e.cid) || '').join(', '))}"> + ${others.length} more</span>` : ''}</span>${lead.asked ? '<div class="rq-lq-pills"><span class="rq-sheet-pill ok">Asked</span></div>' : ''}`
+    ? `<span title="${escapeHtml(lead.asked && lead.askedAt ? 'asked ' + rqAgo(lead.askedAt) : '')}"><b style="font-weight:600;font-size:14px;">${nm(lead)}</b>${others.length ? `<span class="muted" title="${escapeHtml(others.map(e => rqLiveCustomerName(e.cid) || '').join(', '))}"> + ${others.length} more</span>` : ''}</span>`
     : '<span class="muted">Nobody buys it yet</span>';
-  const prices = sending
-    ? (() => { const m = new Map(); p.toSend.forEach(e => e.fresh.forEach(f => { if (!m.has(f.a.plant_id)) m.set(f.a.plant_id, { plant: rqLqPlantName(f.a.plant_id), price: Number(f.a.price), at: String(f.a.arrived_at) }); }));
-        return [...m.values()].sort((x, y) => y.price - x.price).map(x => `<div style="white-space:normal;overflow-wrap:anywhere;"><span class="muted" style="font-size:11.5px;">${escapeHtml(x.plant)}</span> <span style="white-space:nowrap;"><b class="mono">$${x.price.toFixed(2)}</b> <span class="muted" style="font-size:11px;">${escapeHtml(rqAgo(x.at))}</span></span></div>`).join(''); })()
-    : (p.plants.filter(x => x.state === 'waiting').map(x => escapeHtml(rqLqPlantName(x.plant_id))).join(', ') ? `<span class="muted" style="font-size:12px;white-space:normal;display:block;">waiting: ${p.plants.filter(x => x.state === 'waiting').map(x => escapeHtml(rqLqPlantName(x.plant_id))).join(', ')}${p.askedAt ? ' · asked ' + escapeHtml(rqAgo(p.askedAt)) : ''}</span>` : '<span class="muted">—</span>');
-  const n = sending ? p.toSend.length : 0;
-  const btn = `<button type="button" class="wa-btn" title="${sending ? 'Send' : 'Open'}" aria-label="${sending ? 'Send' : 'Open'}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')">${RQ_SEND_ICON}${n > 1 ? `<span>${n}</span>` : ''}</button>`;
-  return `<tr class="rq-lq-row ${p.stage}"><td><a class="name-link" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')">${escapeHtml(p.s.product_name)}</a>${sending ? `<div><span class="rq-sheet-pill ok pkg-tag-blink" title="A plant's price arrived and has not been sent">NEW PRICE${p.newest ? ' · ' + escapeHtml(rqAgo(p.newest)) : ''}</span></div>` : ''}</td><td>${custCell}</td><td class="num">${prices}</td><td>${btn}</td></tr>`;
+  const sub = sending ? (p.newest ? 'Price arrived ' + rqAgo(p.newest) : '') : (p.askedAt ? 'Asked ' + rqAgo(p.askedAt) : '');
+  const status = sending
+    ? `<span class="rq-sheet-pill new pkg-tag-blink" title="A plant's price arrived and has not been sent">NEW PRICE${p.newest ? ' · ' + escapeHtml(rqAgo(p.newest)) : ''}</span>`
+    : '<span class="rq-sheet-pill wait">Waiting for price</span>';
+  const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '', waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
+  const btn = sending
+    ? `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="${sending ? 'Send' : 'Open'}" aria-label="Send" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')">${waIco}${mailIco}</button></div>`
+    : '<span class="muted">—</span>';
+  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${sending ? 'Send' : 'Open'}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
 }
 function rqOpenSheetFromList(productIdsCsv){
   rqResetRequestSelection();
