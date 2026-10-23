@@ -482,7 +482,7 @@ setInterval(() => { if (!document.hidden && btAuthLoaded) loadToday(); }, 60000)
 setInterval(() => { if (!document.hidden && btAuthLoaded) loadFunnel(); }, 60000); // the Bid funnel board re-reads every minute too // a task done elsewhere leaves the list on its own
 const todayKey = i => i.group + '|' + i.title;
 // TODAY AS A GUIDE (owner 2026-10-22: "today solo que nos diga qué llegó o qué podemos mandar y el botón nos lleva a Quotes"): two cards, no prices — URGENT on the right (a plant answered a live quote and that price has gone to
-// no customer yet), OPTIONAL on the left (new prices and prices up to date that have not been sent). The rest of Today (collect, pay, credit, bid, needs a price…) stays, folded under "Other reminders".
+// no customer yet), OPTIONAL on the left (new prices and prices up to date that have not been sent). Under it only money and bids that need an action (collect, pay, credit, bid) stay, folded ("Money and bids").
 // TODAY_LIST = false brings the old board back as it was.
 const TODAY_LIST = true;
 let dashLive = [], todayOtherOpen = false;
@@ -493,7 +493,9 @@ function todayListHtml(all){
   // One line per product; behind it EVERY customer (no limit) with the reason he makes sense: asked, buys it, never offered, a note, a similar product he buys (owner 2026-10-24: "debe ser mas inteligente… para ofrecer producto con proposito").
   const by = new Map();
   const grp = i => { let g = by.get(i.product); if (!g) { g = { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set(), cust: new Map(), asked: new Set(), hasSell: false }; by.set(i.product, g); } return g; };
+  const askNoPrice = new Map(); // a customer asked and no plant has a price yet: it goes to "Ask the plants" (first), not to the send list
   (all || []).filter(i => (i.group === 'sell' || i.group === 'ask') && i.product && !urgentNames.has(i.product)).forEach(i => {
+    if (i.group === 'ask' && !(i.options || []).length) { const a = askNoPrice.get(i.product) || { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), who: [], why: '', asked: true }; if (i.lead && i.lead.name && !a.who.includes(i.lead.name)) a.who.push(i.lead.name); a.why = String((i.lead && i.lead.reason) || i.why || '').replace(/ · still waiting$/, ' · still waiting'); askNoPrice.set(i.product, a); return; }
     const g = grp(i);
     if (i.group === 'sell') g.hasSell = true;
     g.isNew = g.isNew || !!i.new;
@@ -525,13 +527,13 @@ function todayListHtml(all){
   const rows = list.map(g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`).join('');
   const urows = urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">A plant answered your live quote</span></td><td>${go(href, true)}</td></tr>`; }).join('');
   // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
-  const needs = new Map();
+  const needs = new Map(askNoPrice);
   (all || []).filter(i => i.group === 'gap').forEach(i => {
     if (i.product && i.who && i.who.length) needs.set(i.product, { name: i.product, href: i.href, who: i.who.slice(), why: String(i.why || '').replace(/^\d+ customers? buy it · ?/, '') });
     (i.held || []).forEach(h => { if (h.product && !needs.has(h.product)) needs.set(h.product, { name: h.product, href: h.href, who: (h.reasons || []).slice(), why: String(h.price || '') }); });
   });
-  const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => b.who.length - a.who.length || a.name.localeCompare(b.name));
-  const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.who.length} customer${x.who.length === 1 ? '' : 's'} buy it${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td><td>${go(x.href, false, 'Ask in Quotes →')}</td></tr>`).join('');
+  const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => Number(!!b.asked) - Number(!!a.asked) || b.who.length - a.who.length || a.name.localeCompare(b.name));
+  const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.asked ? '<b class="tdr-ask-now">Asked</b> · ' : ''}${x.who.length} customer${x.who.length === 1 ? '' : 's'} ${x.asked ? 'waiting' : 'buy it'}${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td><td>${go(x.href, false, 'Ask in Quotes →')}</td></tr>`).join('');
   return `<div class="tdr"><div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
     + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A plant answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div>`
     + (arows ? `<div class="tdr-card tdr-askcard"><h3 class="tdr-h">Ask the plants — customers are waiting</h3><div class="tdr-hint">No plant has a fresh price · the most customers first</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${arows}</tbody></table></div></div>` : '') + `</div>`;
@@ -556,7 +558,7 @@ async function loadToday(){
 function renderToday(gone = []){
   const wrap = document.getElementById('todayWrap'), all = dashToday || [];
   // ONE list, closest to a bid first (the server orders it) — no area tabs (user 2026-10-12: "todo enfocado en bids")
-  const items = TODAY_LIST ? all.filter(i => i.group !== 'sell') : all, leaving = TODAY_LIST ? [] : gone; // (the guide shows the price lines itself)
+  const items = TODAY_LIST ? all.filter(i => ['collect', 'pay', 'credit', 'bid'].includes(i.group)) : all, leaving = TODAY_LIST ? [] : gone; // the guide is Today (owner 2026-10-24: "puras tablas viejas abajo"): below it only money and bids that need an action — collect, pay, credit, bid — and only when there is one
   if (!TODAY_LIST && !items.length && !leaving.length){ wrap.innerHTML = '<div class="empty">Nothing urgent today — all caught up.</div>'; return; }
   // REDESIGN 2026-10-14 (owner: "se repite data, botones se salen de márgenes… que sea claro qué llegó, cuándo, por qué es relevante y a quién; un botón más claro y limpio"): a price that arrives is ONE block per
   // product — what arrived and when (written once, NEW blinks once), the plants' prices (once) — and under it one row per customer: who, why he makes sense, where each brand stands for HIM, and one
@@ -647,7 +649,7 @@ function renderToday(gone = []){
     // the products customers buy that no plant has priced are their own block inside "Do today" (they are asks to the plants, not offers to send)
     const blocks = pr === 2 ? [[label, items.filter(i => i.prio === pr && i.group !== 'gap')], ['Needs a price', items.filter(i => i.prio === pr && i.group === 'gap')]] : [[label, items.filter(i => i.prio === pr)]];
     return blocks.map(([lb, part]) => part.length ? secRow(lb, lvl, part.length, part) + sectionBody(part) : '').join(''); }).join('')}</div>`;
-  wrap.innerHTML = TODAY_LIST ? todayListHtml(all) + (items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Other reminders · ${items.length}</summary>${boardHtml}</details>` : '') : boardHtml;
+  wrap.innerHTML = TODAY_LIST ? todayListHtml(all) + (items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Money and bids · ${items.length}</summary>${boardHtml}</details>` : '') : boardHtml;
 }
 
 
