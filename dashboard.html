@@ -157,7 +157,7 @@
   .tdr-name .name-link{font-size:15px;font-weight:700;display:block;} .tdr-sub{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;} .tdr-new{color:#3FCB7E;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;} .tdr-up{color:#8EC5FF;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
   .tdr-why{display:block;font-size:12.5px;color:#fff;margin-top:3px;opacity:.88;}
   .tdr-who{margin-top:6px;} .tdr-who>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--blue-bright);user-select:none;} .tdr-who>summary::-webkit-details-marker{display:none;} .tdr-who>summary::before{content:'▸ ';} .tdr-who[open]>summary::before{content:'▾ ';}
-  .tdr-ul{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:5px;} .tdr-ul li{font-size:12.5px;line-height:1.35;} .tdr-ul li b{font-weight:600;} .tdr-ul li span{color:var(--ink-soft);margin-left:6px;} .tdr-ask-tag{font-style:normal;font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#FFC876;border:1px solid rgba(255,200,118,.5);border-radius:999px;padding:1px 7px;margin-left:6px;}
+  .tdr-ul{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:6px;} .tdr-ul li{font-size:12.5px;line-height:1.4;} .tdr-ul li b{font-weight:600;} .tdr-rs{color:#FFC876;font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;margin-right:4px;}
   .tdr-askcard{grid-column:1/-1;} .tdr-scroll{max-height:360px;overflow:auto;}
   .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
@@ -502,20 +502,26 @@ function todayListHtml(all){
     if (i.lead && i.lead.name) {
       const c = g.cust.get(i.lead.name) || { reasons: new Set(), asked: false };
       if (i.group === 'ask') { c.asked = true; g.asked.add(i.lead.name); }
-      if (i.lead.reason) c.reasons.add(i.lead.reason);
-      (i.reasons || []).forEach(r => { if (r && r.label) c.reasons.add(r.label); });
+      if (i.lead.reason && !/^Buys this product/i.test(i.lead.reason)) c.reasons.add(i.lead.reason); // the generic "buys this product" is the base of every line: never written
+      if (i.hook && i.hook.label) c.reasons.add(i.hook.label); // the ONE strongest reason of that customer (not the whole list: that was long and repeated)
       g.cust.set(i.lead.name, c);
     }
   });
   const list = [...by.values()].filter(g => g.hasSell || g.asked.size).sort((a, b) => Number(b.asked.size > 0) - Number(a.asked.size > 0) || Number(b.isNew) - Number(a.isNew));
   const go = (href, urg, label) => `<a class="btn small tdr-go${urg ? ' tdr-urg' : ''}" href="${escapeHtml(href)}">${label || 'Go to Quotes →'}</a>`;
-  const purposeOf = g => {
-    if (g.asked.size) return `Asked by ${[...g.asked].join(', ')}`;
-    const tally = new Map(); g.cust.forEach(c => c.reasons.forEach(r => tally.set(r, (tally.get(r) || 0) + 1)));
-    const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
-    return top ? (top[1] === g.cust.size ? top[0] : `${top[0]} · ${top[1]} of ${g.cust.size}`) : '';
+  // Customers grouped by the reason they share, so no reason is written twice: "Asked: IDE Foods" · "Buys this product · no offer open: Ana, Beto, Caro".
+  const groupsOf = g => {
+    const m = new Map();
+    g.cust.forEach((c, name) => { const reasons = [...c.reasons].filter(r => !(c.asked && /^asked/i.test(r))); const key = (c.asked ? 'Asked' : reasons.join(' · ')); const e = m.get(key) || { head: key || 'Buys it', asked: c.asked, names: [] }; e.names.push(name); m.set(key, e); });
+    return [...m.values()].sort((a, b) => Number(b.asked) - Number(a.asked) || b.names.length - a.names.length);
   };
-  const whoHtml = g => !g.cust.size ? '' : `<details class="tdr-who"><summary>Who and why</summary><ul class="tdr-ul">${[...g.cust.entries()].sort((a, b) => Number(b[1].asked) - Number(a[1].asked) || a[0].localeCompare(b[0])).map(([n, c]) => `<li><b>${escapeHtml(n)}</b>${c.asked ? '<i class="tdr-ask-tag">Asked</i>' : ''}<span>${escapeHtml([...c.reasons].filter(r => !(c.asked && /^asked/i.test(r))).join(' · '))}</span></li>`).join('')}</ul></details>`;
+  const purposeOf = g => {
+    const gs = groupsOf(g);
+    if (!gs.length) return '';
+    if (gs[0].asked) return gs[0].names.length === 1 ? 'Asked for it' : `${gs[0].names.length} asked for it`;
+    return gs.length === 1 ? gs[0].head : `${gs[0].head} · ${gs[0].names.length} of ${g.cust.size}`;
+  };
+  const whoHtml = g => { const gs = groupsOf(g); if (!gs.length) return ''; const only = gs.length === 1 && !gs[0].asked; return `<details class="tdr-who"><summary>Who and why</summary><ul class="tdr-ul">${gs.map(x => `<li>${only ? '' : `<span class="tdr-rs">${escapeHtml(x.head)}</span> `}${x.names.slice().sort((a, b) => a.localeCompare(b)).map(n => `<b>${escapeHtml(n)}</b>`).join(', ')}</li>`).join('')}</ul></details>`; };
   const rows = list.map(g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`).join('');
   const urows = urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">A plant answered your live quote</span></td><td>${go(href, true)}</td></tr>`; }).join('');
   // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
