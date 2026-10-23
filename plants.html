@@ -2490,18 +2490,18 @@ async function deletePlantDocument(id){
 }
 
 // ---- Mail needing attention (unrecognized senders + mail a reader could not finish) ----
-let mailAttention = { senders: [], issues: [] };
+let mailAttention = { senders: [], issues: [], waiting: [] };
 function updateMailAttentionButton(failed){
   const btn = document.getElementById('mailAttentionBtn');
   const n = mailAttention.senders.length + mailAttention.issues.length;
   document.getElementById('mailAttentionCount').textContent = failed ? '?' : n;
-  btn.style.display = (n || failed) ? '' : 'none';
+  btn.style.display = (n || failed || mailAttention.waiting.length) ? '' : 'none';
   btn.title = failed ? 'Could not load this list — click to retry' : '';
 }
 async function loadMailAttention(){
   try {
     const res = await callApi('mail-attention', { action: 'search' });
-    mailAttention = { senders: res.senders || [], issues: res.issues || [] };
+    mailAttention = { senders: res.senders || [], issues: res.issues || [], waiting: res.waiting_for_ai || [] };
     updateMailAttentionButton(false);
   } catch (e) {
     updateMailAttentionButton(true);
@@ -2509,8 +2509,8 @@ async function loadMailAttention(){
 }
 function renderMailAttention(){
   const body = document.getElementById('mailAttentionBody');
-  const { senders, issues } = mailAttention;
-  if (!senders.length && !issues.length){ body.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);padding:8px 0;">Nothing waiting.</div>'; return; }
+  const { senders, issues, waiting } = mailAttention;
+  if (!senders.length && !issues.length && !waiting.length){ body.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);padding:8px 0;">Nothing waiting.</div>'; return; }
   const when = t => new Date(t).toLocaleString();
   const plantOptions = plants.map(p => `<option value="${p.id}">${escapeHtml((p.name || '').trim())}</option>`).join('');
   const senderRows = senders.map((x, i) => {
@@ -2533,9 +2533,14 @@ function renderMailAttention(){
       <div style="font-size:12px;color:#FFC876;margin-top:3px;">${escapeHtml(x.reason_detail || x.reason_code)}</div>
       <div class="plr-teach-row" style="margin-top:6px;"><button type="button" class="plr-teach-toggle" onclick="resolveMailIssue(${i})">Dismiss</button></div>
     </div>`).join('');
+  const waitingRows = waiting.map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--line);">
+      <div style="font-size:13px;font-weight:600;">${escapeHtml(x.subject || '(no subject)')}</div>
+      <div class="hint" style="margin:3px 0 0;">${escapeHtml((x.plant || '').trim())} · ${escapeHtml(when(x.processed_at))} · ${x.lines_applied || 0} price(s) already loaded${x.will_retry ? '' : ' · older than 3 days: it will not be read again by itself'}</div>
+    </div>`).join('');
   body.innerHTML =
     (senders.length ? `<div class="profile-heading" style="margin-top:6px;">Unrecognized senders</div>${senderRows}` : '') +
-    (issues.length ? `<div class="profile-heading" style="margin-top:14px;">Could not finish</div>${issueRows}` : '');
+    (issues.length ? `<div class="profile-heading" style="margin-top:14px;">Could not finish</div>${issueRows}` : '') +
+    (waiting.length ? `<div class="profile-heading" style="margin-top:14px;">Waiting for the AI service (${waiting.length})</div><div class="hint" style="margin:3px 0 6px;">Not a decision for you: these emails are read again by themselves when the AI service answers. What a rule could read was already loaded.</div>${waitingRows}` : '');
   btEnhanceAllSelects(body);
 }
 async function openMailAttention(){
