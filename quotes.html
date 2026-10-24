@@ -6394,19 +6394,27 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = rqFirstName(cc.contact_name || c.trade_name);
   const sorted = full.slice().sort((a, b) => rqLinePrice(b.calc) - rqLinePrice(a.calc));
   const cheap = rqCheapestSet(sorted.map(({ calc }) => rqLinePrice(calc)));
+  const pairKey = `${c.trade_name} — ${rqProductName(pid)}`;
   let customerDone = false;
-  return sorted.map((one, i) => {
-    const part = { first: i === 0, last: i === sorted.length - 1, cheap: cheap.has(i) };
+  // The greeting and the note ("como me pediste…") are NOT part of an offer: they go OUT, as their own first message (owner 2026-10-24: "el saludo y la nota debe ir fuera"), so every brand message is only
+  // its line and its link. The pending / credit notes, when there are any, are their own last message. Nothing here is priced, so nothing is locked or confirmed for these two.
+  const plain = (label, text) => ({ id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${label}`, pairKey, phone, body: text, sentOffers: [], onOpened: async () => {} });
+  const greet = firstName ? `Hola ${firstName},` : '';
+  const intro = isUpdate ? [greet, `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:`].filter(Boolean).join('\n\n') : [greet, signalLine || ''].filter(Boolean).join('\n\n');
+  const outro = [rqPendingNote(), warnings.length ? rqCreditNote(warnings) : ''].filter(Boolean).join('\n\n');
+  const brands = sorted.map((one, i) => {
+    const part = { first: false, last: false, noTitle: true, cheap: cheap.has(i) };
     const offer = offersByPlantId.get(one.plant.id);
     const body = isUpdate
       ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part)
-      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, warnings.length ? warnings : false, signalLine, part);
+      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, false, '', part);
     return {
-      id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${one.plant.name}`, pairKey: `${c.trade_name} — ${rqProductName(pid)}`, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his brand messages
+      id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${one.plant.name}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
   });
+  return [...(intro ? [plain('Greeting', intro)] : []), ...brands, ...(outro ? [plain('Note', outro)] : [])];
 }
 function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
@@ -6450,7 +6458,7 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
       const price = rqOfferPriceText(calc);
       return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${isCheap(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${isNew}`, withCalc.length);
     }).join('\n\n');
-    return title + '\n\n' + lines;
+    return p.noTitle ? lines : title + '\n\n' + lines;
   });
   return greeting + blocks.join('\n\n');
 }
