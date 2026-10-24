@@ -6432,7 +6432,7 @@ function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
   const hasLink = !!(offer && offer.short_code);
   const cardCarriesBrand = hasLink && totalLines === 1;
-  return `${cardCarriesBrand ? '' : plant.name + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
+  return `${cardCarriesBrand ? '' : plant.name + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN.replace(/^https?:\/\//, '')}/p/${offer.short_code}` : ''}`; // no "https://": the short link takes one line on a phone (the address still opens, WhatsApp links it)
 }
 // `part` (one WhatsApp message per brand, owner 2026-10-24): which message of the customer's set this is — the greeting and the signal line belong to the FIRST, the pending note and the credit note to the
 // LAST, and `cheap` says whether this brand's price is the cheapest of the whole set (the bold). Without it the text is the whole offer, as before.
