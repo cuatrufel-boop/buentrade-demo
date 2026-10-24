@@ -6402,7 +6402,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
       ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part)
       : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, warnings.length ? warnings : false, signalLine, part);
     return {
-      id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${one.plant.name}`, phone, body,
+      id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${one.plant.name}`, pairKey: `${c.trade_name} — ${rqProductName(pid)}`, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his brand messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
@@ -7568,18 +7568,19 @@ function rqOfferWindowSync(){
 function rqOfferWindowRender(){
   const list = document.getElementById('rq_offer_modal_list'); if (!list) return;
   const rows = [], byLabel = new Map();
-  const add = (label, kind, node) => { if (!node) return; let r = byLabel.get(label); if (!r){ r = { label }; byLabel.set(label, r); rows.push(r); } r[kind] = node; };
+  // one row per customer × product: his email on the left, and on the right ALL his WhatsApp messages (one per brand, highest price first) stacked — the row is found by `pairKey` (the brand is not part of it)
+  const add = (label, kind, node) => { if (!node) return; let r = byLabel.get(label); if (!r){ r = { label, wa: [] }; byLabel.set(label, r); rows.push(r); } if (kind === 'wa') r.wa.push(node); else r[kind] = node; };
   rqEmailModalItems.forEach((it, i) => add(it.label, 'em', rqOfferEmNodes[i]));
-  rqWaModalItems.forEach((it, i) => add(it.label, 'wa', rqOfferWaNodes[i]));
+  rqWaModalItems.forEach((it, i) => add(it.pairKey || it.label, 'wa', rqOfferWaNodes[i]));
   list.textContent = '';
   const lbl = t => { const d = document.createElement('div'); d.className = 'rq-req2-lbl'; d.style.margin = '0 0 4px'; d.textContent = t; return d; };
   let shown = 0;
   for (const r of rows){
-    const wa = rqOfferCh.wa && r.wa, em = rqOfferCh.em && r.em;
+    const wa = rqOfferCh.wa && r.wa.length ? r.wa : null, em = rqOfferCh.em && r.em;
     if (!wa && !em) continue;
     shown++;
     const row = document.createElement('div'); row.className = 'rq-offer-row' + (wa && em ? '' : ' one');
-    for (const [kind, node, name] of [['wa', wa, 'WhatsApp'], ['em', em, 'Email']]){ if (!node) continue; const col = document.createElement('div'); col.appendChild(lbl(name)); col.appendChild(node); row.appendChild(col); }
+    for (const [kind, node, name] of [['wa', wa, 'WhatsApp'], ['em', em, 'Email']]){ if (!node) continue; const col = document.createElement('div'); col.appendChild(lbl(name)); (kind === 'wa' ? node : [node]).forEach((n, k) => { if (k) n.style.marginTop = '10px'; col.appendChild(n); }); row.appendChild(col); }
     list.appendChild(row);
   }
   document.getElementById('rq_offer_modal_title').textContent = `Offer — ${rows.length} message${rows.length === 1 ? '' : 's'} (one product each)`;
