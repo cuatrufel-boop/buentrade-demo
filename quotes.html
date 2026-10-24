@@ -6418,15 +6418,20 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   return [...(intro ? [plain('Greeting', intro)] : []), ...brands, ...(outro ? [plain('Note', outro)] : [])];
 }
 // The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
-// 1200×300, downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link. Never blocks a send: no picture = the message goes as it is.
-async function rqWaAttachThinImages(items){
-  await Promise.all(items.filter(it => it.thinImage).map(async it => {
-    try {
-      const r = await fetch(`${APP_ORIGIN}/.netlify/functions/product-card-image?b=${encodeURIComponent(it.thinImage.brand)}&d=${it.thinImage.docs ? 1 : 0}&s=thin`);
-      if (!r.ok) return;
-      it.downloadFiles = [{ bytes: await r.arrayBuffer(), filename: `${it.thinImage.brand.replace(/[^\w.-]+/g, '_')}.png`, type: 'image/png' }];
-    } catch (e) { /* offline or not published yet: the message goes without the picture */ }
-  }));
+// 1200×300, downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
+// NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
+const rqThinCache = new Map();
+function rqWaAttachThinImages(items){
+  items.filter(it => it.thinImage).forEach(it => {
+    const key = `${it.thinImage.brand}|${it.thinImage.docs ? 1 : 0}`;
+    if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(`${APP_ORIGIN}/.netlify/functions/product-card-image?b=${encodeURIComponent(it.thinImage.brand)}&d=${it.thinImage.docs ? 1 : 0}&s=thin`).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
+    rqThinCache.get(key).then(bytes => {
+      if (!bytes) return;
+      it.downloadFiles = [{ bytes, filename: `${it.thinImage.brand.replace(/[^\w.-]+/g, '_')}.png`, type: 'image/png' }];
+      const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+      if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
+    });
+  });
 }
 function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
@@ -7740,7 +7745,7 @@ async function sendOfferWhatsAppTo(customerId){
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
     const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate: false, newKeys: new Set() }); // one message per brand, highest price first
-    await rqWaAttachThinImages(brandItems); items.push(...brandItems);
+    rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
   }
   if (!items.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
   rqOpenWaModal(`WhatsApp offer — ${c.trade_name}`, items, true);
@@ -7864,7 +7869,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
     const signalLine = isUpdate ? '' : await rqFetchCustomerSignalLine(c.id, full);
     const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent: opts.onSent }); // one message per brand, highest price first
-    await rqWaAttachThinImages(brandItems); items.push(...brandItems);
+    rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
   }
   if (!items.length){
     rqShowNotice(skipped.length ? 'Nothing to send — ' + skipped.map(x => `${x.c.trade_name}: ${x.why}`).join(' · ') : withWa.length
