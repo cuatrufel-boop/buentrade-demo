@@ -6411,10 +6411,22 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     return {
       id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${one.plant.name}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
+      thinImage: offer && offer.short_code ? { brand: one.plant.name, docs: one.plant.rqDocsOn === true } : null, // a brand with a card gets its thin blue banner attached (rqWaAttachThinImages)
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
   });
   return [...(intro ? [plain('Greeting', intro)] : []), ...brands, ...(outro ? [plain('Note', outro)] : [])];
+}
+// The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
+// 1200×300, downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link. Never blocks a send: no picture = the message goes as it is.
+async function rqWaAttachThinImages(items){
+  await Promise.all(items.filter(it => it.thinImage).map(async it => {
+    try {
+      const r = await fetch(`${APP_ORIGIN}/.netlify/functions/product-card-image?b=${encodeURIComponent(it.thinImage.brand)}&d=${it.thinImage.docs ? 1 : 0}&s=thin`);
+      if (!r.ok) return;
+      it.downloadFiles = [{ bytes: await r.arrayBuffer(), filename: `${it.thinImage.brand.replace(/[^\w.-]+/g, '_')}.png`, type: 'image/png' }];
+    } catch (e) { /* offline or not published yet: the message goes without the picture */ }
+  }));
 }
 function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
@@ -7727,7 +7739,8 @@ async function sendOfferWhatsAppTo(customerId){
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
-    items.push(...rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate: false, newKeys: new Set() })); // one message per brand, highest price first
+    const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate: false, newKeys: new Set() }); // one message per brand, highest price first
+    await rqWaAttachThinImages(brandItems); items.push(...brandItems);
   }
   if (!items.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
   rqOpenWaModal(`WhatsApp offer — ${c.trade_name}`, items, true);
@@ -7850,7 +7863,8 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
     const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
     const signalLine = isUpdate ? '' : await rqFetchCustomerSignalLine(c.id, full);
-    items.push(...rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent: opts.onSent })); // one message per brand, highest price first
+    const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent: opts.onSent }); // one message per brand, highest price first
+    await rqWaAttachThinImages(brandItems); items.push(...brandItems);
   }
   if (!items.length){
     rqShowNotice(skipped.length ? 'Nothing to send — ' + skipped.map(x => `${x.c.trade_name}: ${x.why}`).join(' · ') : withWa.length
