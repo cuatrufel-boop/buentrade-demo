@@ -7511,8 +7511,9 @@ function rqRenderWaModal(){
       <div class="rq-wa-row">
         <div class="rq-wa-chat"><div class="rq-wa-bubble"><textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
         <button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
+        ${rqWaCanShare(it) ? `<button type="button" class="btn rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}
       </div>
-      ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:6px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — drag ${it.downloadFiles.length > 1 ? 'them' : 'it'} into the chat that opens</div>` : ''}
+      ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:6px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — drag ${it.downloadFiles.length > 1 ? 'them' : 'it'} into the chat that opens${rqWaCanShare(it) ? ' — or tap Share to send the picture and the text together' : ''}</div>` : ''}
     </div>`; }).join('');
   list.querySelectorAll('textarea').forEach(rqWaFit);
   rqOfferWindowSync(); // the one offer window (when open) shows these cards
@@ -7523,6 +7524,25 @@ async function rqWaMarkSent(i){
   if (!it || it.recorded) return;
   rqWaWatching.delete(it); it.recorded = true;
   try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
+  rqRenderWaModal();
+}
+// SHARE (owner 2026-10-24, his own example: the thin banner and the text in ONE bubble): a wa.me link can only carry text, so where the browser can share a file (the phone) the picture and the text go out together
+// through the system share sheet — he picks the chat, WhatsApp receives the banner with the text (and its link) as the caption. Same bookkeeping as opening WhatsApp: the offer is confirmed at "Yes, sent".
+function rqWaShareFile(it){
+  const f = it.downloadFiles && it.downloadFiles[0];
+  return f ? new File([f.bytes], f.filename, { type: f.type || 'image/png' }) : null;
+}
+function rqWaCanShare(it){
+  try { const file = rqWaShareFile(it); return !!(file && typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+}
+async function rqWaModalShareOne(i){
+  const it = rqWaModalItems[i];
+  if (!it) return;
+  if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
+  try { await navigator.share({ files: [rqWaShareFile(it)], text: it.body }); }
+  catch (e) { if (e && e.name === 'AbortError') return; rqShowNotice(`Couldn't open the share sheet: ${e.message || e}`); return; }
+  it.opened = true;
+  if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; }
   rqRenderWaModal();
 }
 function rqWaModalOpenOne(i){
