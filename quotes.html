@@ -6575,9 +6575,9 @@ function rqBytesToBase64(bytes){
 async function rqPrepareOfferFilesByPlant(filterProductIds, filterPlantIds){
   const withCalc = rqPricedPlantsSorted(filterProductIds, filterPlantIds);
   const byPlant = {};
-  for (const { plant, calc } of withCalc){
+  await Promise.all(withCalc.map(async ({ plant, calc }) => { // every plant's PDF at once (owner 2026-10-24: "hazlo más rápido"), not one after the other
     const files = rqFindProductFilesFor(plant);
-    if (!files.photo_url && !files.spec_url) continue;
+    if (!files.photo_url && !files.spec_url) return;
     try {
       const built = await rqBuildCombinedPdf(plant, calc);
       byPlant[plant.id] = {
@@ -6585,7 +6585,7 @@ async function rqPrepareOfferFilesByPlant(filterProductIds, filterPlantIds){
         downloadFile: built,
       };
     } catch(e){ /* one plant's PDF failing to build shouldn't block the rest of the offer */ }
-  }
+  }));
   return byPlant;
 }
 
@@ -7137,8 +7137,9 @@ async function rqLogSentOffers(customers, channel){
 // dryRun (2026-09-26, Offer Sheets): only asks sent-offers-create for the customer's credit warning — nothing is logged.
 // The real log happens once the trader confirms the send (see sendOfferEmailToAll's onSent).
 // draft (owner 2026-10-22): a WhatsApp offer is minted for its product link when the review window opens, but it is NOT an Offer until the trader says "Yes, sent" (rqConfirmOffers) — until then it is hidden everywhere.
-async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft){
-  const rows = [];
+async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, moreJobs){
+  const rows = [], spans = []; // moreJobs (owner 2026-10-24: "hazlo más rápido"): other customers' lines [{ withCalc, customers }] go in the SAME request; spans = where each job's rows start, to hand each customer his own answer back (perJob)
+  for (const job of [{ withCalc, customers }, ...(moreJobs || [])]) { const { withCalc, customers } = job; spans.push(rows.length);
   withCalc.forEach(({ plant, calc }) => {
     // Prefer the catalog's own clean name over anything typed in a search box — matches what's
     // actually stored on the product (name_en), so downstream screens (Offers Status) can show
@@ -7208,7 +7209,8 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft){
       });
     });
   });
-  if (!rows.length) return { warnings: [], offers: [] };
+  }
+  if (!rows.length) return { warnings: [], offers: [], perJob: spans.map(() => ({ warnings: [], offers: [] })) };
   // sent_offers.create is single-row — no batch variant exists, so a multi-plant × multi-customer
   // send logs one call per row. Kept sequential (not Promise.all) so one failure is attributable
   // to a specific plant/customer pair in the console instead of an unordered Promise.all rejection.
@@ -7219,9 +7221,14 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft){
   // short_code) to build the WhatsApp product-card link — see sendOfferWhatsAppTo.
   const warnings = [];
   const offers = [];
-  const take = (result) => {
-    if (result.offer) offers.push(result.offer);
-    if (result.credit_warning && !warnings.some(w => w.message === result.credit_warning.message)) warnings.push(result.credit_warning);
+  const perJob = spans.map(() => ({ warnings: [], offers: [] }));
+  const take = (result, i) => {
+    const mine = perJob[spans.filter(st => st <= i).length - 1];
+    if (result.offer) { offers.push(result.offer); mine.offers.push(result.offer); }
+    if (result.credit_warning) {
+      if (!warnings.some(w => w.message === result.credit_warning.message)) warnings.push(result.credit_warning);
+      if (!mine.warnings.some(w => w.message === result.credit_warning.message)) mine.warnings.push(result.credit_warning);
+    }
   };
   const bodyOf = (row) => dryRun ? { ...row, dry_run: true } : draft ? { ...row, draft: true } : row;
   // ONE round trip for all the brands (owner 2026-10-24: "se demora demasiado en abrir"): the server creates the rows one after the other (its audit log is a hash chain) inside the one request.
@@ -7229,14 +7236,14 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft){
   let batched = null;
   try { const r = await callApi('sent-offers-create', { rows: rows.map(bodyOf) }); if (r && r.batch && Array.isArray(r.results) && r.results.length === rows.length) batched = r.results; } catch (e) { console.error('Batch log failed, logging one by one:', e.message); }
   if (batched) {
-    batched.forEach((result, i) => { if (result.status < 400) take(result); else console.error('Failed to log sent offer:', result.error || result.message, rows[i]); });
-    return { warnings, offers };
+    batched.forEach((result, i) => { if (result.status < 400) take(result, i); else console.error('Failed to log sent offer:', result.error || result.message, rows[i]); });
+    return { warnings, offers, perJob };
   }
-  for (const row of rows) {
-    try { take(await callApi('sent-offers-create', bodyOf(row))); }
+  for (const [i, row] of rows.entries()) {
+    try { take(await callApi('sent-offers-create', bodyOf(row)), i); }
     catch (e) { console.error('Failed to log sent offer:', e.message, row); }
   }
-  return { warnings, offers };
+  return { warnings, offers, perJob };
 }
 
 // "Yes, sent": the drafts of this WhatsApp become real offers (Offers, Today, Quotes' "has it") — and only now. Nothing else records a WhatsApp offer.
@@ -7812,10 +7819,11 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
   // One message per customer × product (see rqOfferProductIds), each with its own brands' PDFs.
   for (const pid of rqOfferProductIds(filterProductIds)) {
     rqMatchedCustomers.filter(c => !rqCustFor(c, pid).email && rqCustomerBuys(c, pid)).forEach(c => skipped.push({ c, pid, why: 'no email on file — send it by WhatsApp' }));
-    const filesByPlant = await rqPrepareOfferFilesByPlant([pid], filterPlantIds);
+    const filesP = rqPrepareOfferFilesByPlant([pid], filterPlantIds); // started now: the PDFs build while the credit checks run
     // Real ask 2026-09-16: same "log first, know overCreditLimit before building body" order as
     // sendOfferEmailTo above — each customer here now logs inside this loop (was: only inside the
     // later send loop), so the second loop below just sends, never logs again.
+    const jobs = [];
     for (const c of withEmail) {
       const cc = rqCustFor(c, pid); // the buyer of this product's protein
       if (!cc.email) continue;
@@ -7826,13 +7834,21 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       }
       const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
       if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
-      const firstName = rqFirstName(cc.contact_name || c.trade_name);
+      jobs.push({ c, cc, unsent, full, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
+    }
+    // every customer's credit check (a dry run: reads only), signal line and pesos PDFs are asked AT ONCE (owner 2026-10-24: "hazlo más rápido"); the messages keep the customers' order
+    const prepared = await Promise.all(jobs.map(async ({ c, full, isUpdate }) => {
       const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
-      const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
       // 2026-09-26: credit check only (dry run) — the offer itself is logged when the trader confirms the send (onSent below).
-      const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
       const [{ warnings }, signalLine] = await Promise.all([rqLogSentOffersRows(full, [c], 'email', true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // the credit check and the signal line are both reads: asked together
+      return { pesosFiles, warnings, signalLine };
+    }));
+    const filesByPlant = await filesP;
+    jobs.forEach(({ c, cc, unsent, full, isUpdate }, k) => {
+      const { pesosFiles, warnings, signalLine } = prepared[k];
       warnings.forEach(w => rqShowNotice(w.message));
+      const firstName = rqFirstName(cc.contact_name || c.trade_name);
+      const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       toSend.push({
         id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
@@ -7840,7 +7856,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
         attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
         downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
       });
-    }
+    });
   }
   // Real bug caught live, explicit complaint ("no manda las pending offers"): this same message
   // fired whether zero customers were linked to any variant in this quote at all, or real
@@ -7880,6 +7896,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
   // Real ask 2026-09-15: same "log first, get short_code back" order as sendOfferWhatsAppTo —
   // sequential per customer (not Promise.all) so one customer's logging failure never blocks the
   // rest from getting their own real links.
+  const jobs = [];
   for (const pid of rqOfferProductIds(filterProductIds)) for (const c of withWa) { // one message per customer × product
     const cc = rqCustFor(c, pid); // the buyer of this product's protein
     if (!(cc.whatsapp || cc.phone)) continue;
@@ -7890,14 +7907,23 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     }
     const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
     if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
-    const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
-    // the log (the only write, one customer at a time) and the signal line (a read) go out together: one wait instead of two
-    const [{ warnings, offers }, signalLine] = await Promise.all([rqLogSentOffersRows(full, [c], 'whatsapp', false, true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // drafts: they become offers at "Yes, sent"
-    warnings.forEach(w => rqShowNotice(w.message));
-    const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
-    const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
-    const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent: opts.onSent }); // one message per brand, highest price first
-    rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+    jobs.push({ pid, c, cc, full, unsent, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
+  }
+  if (jobs.length) {
+    // ALL the customers' drafts go in ONE request (the server writes them one after the other — the audit log is a hash chain — but the browser waits for one answer, not one per customer), while every customer's
+    // signal line is read at the same time (owner 2026-10-24: "hazlo más rápido")
+    const [logged, signals] = await Promise.all([
+      rqLogSentOffersRows(jobs[0].full, [jobs[0].c], 'whatsapp', false, true, jobs.slice(1).map(j => ({ withCalc: j.full, customers: [j.c] }))), // drafts: they become offers at "Yes, sent"
+      Promise.all(jobs.map(j => j.isUpdate ? '' : rqFetchCustomerSignalLine(j.c.id, j.full))),
+    ]);
+    jobs.forEach(({ pid, c, cc, full, unsent, isUpdate }, k) => {
+      const { warnings, offers } = logged.perJob[k];
+      warnings.forEach(w => rqShowNotice(w.message));
+      const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
+      const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
+      const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine: signals[k], isUpdate, newKeys, onSent: opts.onSent }); // one message per customer × product, highest price first
+      rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+    });
   }
   if (!items.length){
     rqShowNotice(skipped.length ? 'Nothing to send — ' + skipped.map(x => `${x.c.trade_name}: ${x.why}`).join(' · ') : withWa.length
