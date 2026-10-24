@@ -7225,14 +7225,21 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft){
   // short_code) to build the WhatsApp product-card link — see sendOfferWhatsAppTo.
   const warnings = [];
   const offers = [];
+  const take = (result) => {
+    if (result.offer) offers.push(result.offer);
+    if (result.credit_warning && !warnings.some(w => w.message === result.credit_warning.message)) warnings.push(result.credit_warning);
+  };
+  const bodyOf = (row) => dryRun ? { ...row, dry_run: true } : draft ? { ...row, draft: true } : row;
+  // ONE round trip for all the brands (owner 2026-10-24: "se demora demasiado en abrir"): the server creates the rows one after the other (its audit log is a hash chain) inside the one request.
+  // If the server does not know `rows` yet (or the call fails) the old one-by-one path below still runs, so a send is never blocked.
+  let batched = null;
+  try { const r = await callApi('sent-offers-create', { rows: rows.map(bodyOf) }); if (r && r.batch && Array.isArray(r.results) && r.results.length === rows.length) batched = r.results; } catch (e) { console.error('Batch log failed, logging one by one:', e.message); }
+  if (batched) {
+    batched.forEach((result, i) => { if (result.status < 400) take(result); else console.error('Failed to log sent offer:', result.error || result.message, rows[i]); });
+    return { warnings, offers };
+  }
   for (const row of rows) {
-    try {
-      const result = await callApi('sent-offers-create', dryRun ? { ...row, dry_run: true } : draft ? { ...row, draft: true } : row);
-      if (result.offer) offers.push(result.offer);
-      if (result.credit_warning && !warnings.some(w => w.message === result.credit_warning.message)) {
-        warnings.push(result.credit_warning);
-      }
-    }
+    try { take(await callApi('sent-offers-create', bodyOf(row))); }
     catch (e) { console.error('Failed to log sent offer:', e.message, row); }
   }
   return { warnings, offers };
