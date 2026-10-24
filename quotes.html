@@ -6391,27 +6391,31 @@ function buildCustomerOfferText(customerFirstName, plantsOverride, overCreditLim
 // own card gets its own message; every message is the approved single-brand message. The greeting (and the signal line) go on the first message, the pending / credit notes on the last, the bold on the brand with the
 // cheapest price of the set. Each message confirms ONLY its own offer at "Yes, sent"; the customer's own bookkeeping (market bullets, after-send refresh) runs once, at the first confirmation.
 function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent }){
-  // ONE WhatsApp message per customer × product, however many brands it carries — one price or five (owner 2026-10-24, final: "si estoy mandando estas dos marcas debo mandar las dos en el mismo mensaje… el saludo
-  // arriba, editable, un solo mensaje"): the greeting on top, then every brand highest → lowest (the cheapest in bold), the pending / credit notes at the end. Its picture is the approved banners of the brands that have a
-  // photo and/or a spec, stacked in ONE image (a brand with neither is text only); "Yes, sent" confirms every offer of the message.
-  const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = ''; // no "Hola <name>," line (owner 2026-10-24: "te dije que hola Manuel no"): the message opens with the note / the list itself, editable in its box
-  const hasCard = (one) => { const o = offersByPlantId.get(one.plant.id); return !!(o && o.short_code); };
-  const sorted = full.slice().sort((a, b) => (hasCard(b) - hasCard(a)) || (rqLinePrice(b.calc) - rqLinePrice(a.calc))); // the brands with a banner first (their banners stack in this order), then the text-only ones; each group highest → lowest
+  // ONE WhatsApp message PER BRAND (owner 2026-10-24, option B: "dame la B"; "mas delgada" = the thin banner), highest price first: each brand is its own message — its line, its link and its thin banner — so WhatsApp draws every
+  // brand's card. No "Hola <name>," line (owner: "te dije que hola Manuel no"). The signal line (or the "Lista actualizada" title) sits on the FIRST message, the pending / credit notes on the LAST, the bold on the cheapest price of the set.
+  // Each message confirms ONLY its own offer at "Yes, sent"; the customer's own bookkeeping (market bullets, after-send refresh) runs once, at the first confirmation.
+  const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = '';
+  const sorted = full.slice().sort((a, b) => rqLinePrice(b.calc) - rqLinePrice(a.calc));
+  const cheap = rqCheapestSet(sorted.map(({ calc }) => rqLinePrice(calc)));
   const pairKey = `${c.trade_name} — ${rqProductName(pid)}`;
   const outro = [rqPendingNote(), warnings.length ? rqCreditNote(warnings) : ''].filter(Boolean).join('\n\n');
-  const body = isUpdate
-    ? buildCustomerUpdateText(firstName, sorted, newKeys, offersByPlantId, true) + (outro ? '\n\n' + outro : '')
-    : buildCustomerOfferTextWithLinks(firstName, sorted, offersByPlantId, warnings.length ? warnings : false, signalLine);
-  const sentOffers = sorted.map(one => ({ offer: offersByPlantId.get(one.plant.id), plantName: one.plant.name })).filter(x => x.offer);
-  return [{
-    id: c.id, label: pairKey, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside his message
-    sentOffers,
-    thinImages: sorted.filter(one => { const o = offersByPlantId.get(one.plant.id); return o && o.short_code; }).map(one => ({ brand: one.plant.name, docs: one.plant.rqDocsOn === true })), // the banners that go with the message (rqWaAttachThinImages)
-    onOpened: async () => { await rqConfirmOffers(sentOffers.map(x => x.offer)); rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); },
-  }];
+  let customerDone = false;
+  return sorted.map((one, i) => {
+    const part = { first: i === 0, last: i === sorted.length - 1, noTitle: i > 0, cheap: cheap.has(i) };
+    const offer = offersByPlantId.get(one.plant.id);
+    const body = isUpdate
+      ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part) + (part.last && outro ? '\n\n' + outro : '')
+      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, warnings.length ? warnings : false, signalLine, part);
+    return {
+      id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
+      sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
+      thinImages: offer && offer.short_code ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true }] : [], // a brand with a card gets its thin banner attached (rqWaAttachThinImages)
+      onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
+    };
+  });
 }
 // The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
-// 1200×300, downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
+// 1200×144 (thin), downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
 const rqThinCache = new Map();
 function rqWaAttachThinImages(items){
@@ -7921,7 +7925,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       warnings.forEach(w => rqShowNotice(w.message));
       const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
-      const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine: signals[k], isUpdate, newKeys, onSent: opts.onSent }); // one message per customer × product, highest price first
+      const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine: signals[k], isUpdate, newKeys, onSent: opts.onSent }); // one message per brand, highest price first
       rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
     });
   }
@@ -7931,7 +7935,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       : 'No customer with a WhatsApp number is linked to any variant in this quote yet — link one in Customers first.');
     return;
   }
-  rqOpenWaModal(`WhatsApp offer — ${items.length} message${items.length > 1 ? 's' : ''} (one per customer)`, items, true);
+  rqOpenWaModal(`WhatsApp offer — ${items.length} message${items.length > 1 ? 's' : ''} (one per brand)`, items, true);
   rqSetModalNote('rq_wa_modal_list', skipped);
 }
 
