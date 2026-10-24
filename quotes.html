@@ -3880,8 +3880,8 @@ async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids =
       rqOfferWindowBegin();
       try {
         const both = { skipChase: true, resend: opts.resend }; both.onSent = afterSend; // the same after-send refresh as each channel alone
-        await sendOfferEmailToAll(pids, null, both);
-        await sendOfferWhatsAppToAll(pids, null, both);
+        // BOTH PREPARED AT ONCE (owner 2026-10-24: "se demora mucho… no responde al abrir el WhatsApp"): the email side only READS (PDFs, dry-run credit check) and the WhatsApp side is the only writer, so they no longer wait on each other
+        await Promise.all([sendOfferEmailToAll(pids, null, both), sendOfferWhatsAppToAll(pids, null, both)]);
       } finally { rqOfferWindowShow(); rqBothBusy = false; }
     }
     else if (channel === 'email') await sendOfferEmailToAll(pids, null, { skipChase: true, onSent: afterSend, resend: opts.resend });
@@ -6391,43 +6391,37 @@ function buildCustomerOfferText(customerFirstName, plantsOverride, overCreditLim
 // own card gets its own message; every message is the approved single-brand message. The greeting (and the signal line) go on the first message, the pending / credit notes on the last, the bold on the brand with the
 // cheapest price of the set. Each message confirms ONLY its own offer at "Yes, sent"; the customer's own bookkeeping (market bullets, after-send refresh) runs once, at the first confirmation.
 function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent }){
-  const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = rqFirstName(cc.contact_name || c.trade_name);
-  const sorted = full.slice().sort((a, b) => rqLinePrice(b.calc) - rqLinePrice(a.calc));
-  const cheap = rqCheapestSet(sorted.map(({ calc }) => rqLinePrice(calc)));
+  // ONE WhatsApp message per customer × product, however many brands it carries — one price or five (owner 2026-10-24, final: "si estoy mandando estas dos marcas debo mandar las dos en el mismo mensaje… el saludo
+  // arriba, editable, un solo mensaje"): the greeting on top, then every brand highest → lowest (the cheapest in bold), the pending / credit notes at the end. Its picture is the approved banners of the brands that have a
+  // photo and/or a spec, stacked in ONE image (a brand with neither is text only); "Yes, sent" confirms every offer of the message.
+  const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = ''; // no "Hola <name>," line (owner 2026-10-24: "te dije que hola Manuel no"): the message opens with the note / the list itself, editable in its box
+  const hasCard = (one) => { const o = offersByPlantId.get(one.plant.id); return !!(o && o.short_code); };
+  const sorted = full.slice().sort((a, b) => (hasCard(b) - hasCard(a)) || (rqLinePrice(b.calc) - rqLinePrice(a.calc))); // the brands with a banner first (their banners stack in this order), then the text-only ones; each group highest → lowest
   const pairKey = `${c.trade_name} — ${rqProductName(pid)}`;
-  let customerDone = false;
-  // The greeting and the note ("como me pediste…") are NOT part of an offer: they go OUT, as their own first message (owner 2026-10-24: "el saludo y la nota debe ir fuera"), so every brand message is only
-  // its line and its link. The pending / credit notes, when there are any, are their own last message. Nothing here is priced, so nothing is locked or confirmed for these two.
-  const plain = (label, text) => ({ id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${label}`, pairKey, phone, body: text, sentOffers: [], onOpened: async () => {} });
-  const greet = firstName ? `Hola ${firstName},` : '';
-  const intro = isUpdate ? [greet, `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:`].filter(Boolean).join('\n\n') : [greet, signalLine || ''].filter(Boolean).join('\n\n');
   const outro = [rqPendingNote(), warnings.length ? rqCreditNote(warnings) : ''].filter(Boolean).join('\n\n');
-  const brands = sorted.map((one, i) => {
-    const part = { first: false, last: false, noTitle: true, cheap: cheap.has(i) };
-    const offer = offersByPlantId.get(one.plant.id);
-    const body = isUpdate
-      ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part)
-      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, false, '', part);
-    return {
-      id: c.id, label: `${c.trade_name} — ${rqProductName(pid)} — ${one.plant.name}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
-      sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
-      thinImage: offer && offer.short_code ? { brand: one.plant.name, docs: one.plant.rqDocsOn === true } : null, // a brand with a card gets its thin blue banner attached (rqWaAttachThinImages)
-      onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
-    };
-  });
-  return [...(intro ? [plain('Greeting', intro)] : []), ...brands, ...(outro ? [plain('Note', outro)] : [])];
+  const body = isUpdate
+    ? buildCustomerUpdateText(firstName, sorted, newKeys, offersByPlantId, true) + (outro ? '\n\n' + outro : '')
+    : buildCustomerOfferTextWithLinks(firstName, sorted, offersByPlantId, warnings.length ? warnings : false, signalLine);
+  const sentOffers = sorted.map(one => ({ offer: offersByPlantId.get(one.plant.id), plantName: one.plant.name })).filter(x => x.offer);
+  return [{
+    id: c.id, label: pairKey, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside his message
+    sentOffers,
+    thinImages: sorted.filter(one => { const o = offersByPlantId.get(one.plant.id); return o && o.short_code; }).map(one => ({ brand: one.plant.name, docs: one.plant.rqDocsOn === true })), // the banners that go with the message (rqWaAttachThinImages)
+    onOpened: async () => { await rqConfirmOffers(sentOffers.map(x => x.offer)); rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); },
+  }];
 }
 // The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
 // 1200×300, downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
 const rqThinCache = new Map();
 function rqWaAttachThinImages(items){
-  items.filter(it => it.thinImage).forEach(it => {
-    const key = `${it.thinImage.brand}|${it.thinImage.docs ? 1 : 0}`;
-    if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(`${APP_ORIGIN}/.netlify/functions/product-card-banner?b=${encodeURIComponent(it.thinImage.brand)}&d=${it.thinImage.docs ? 1 : 0}`).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
+  items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
+    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
+    const url = list.length === 1 ? `${APP_ORIGIN}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}` : `${APP_ORIGIN}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     rqThinCache.get(key).then(bytes => {
       if (!bytes) return;
-      it.downloadFiles = [{ bytes, filename: `${it.thinImage.brand.replace(/[^\w.-]+/g, '_')}.png`, type: 'image/png' }];
+      it.downloadFiles = [{ bytes, filename: `${list.map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
@@ -6436,8 +6430,8 @@ function rqWaAttachThinImages(items){
 function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
   const hasLink = !!(offer && offer.short_code);
-  const cardCarriesBrand = hasLink && totalLines === 1;
-  return `${cardCarriesBrand ? '' : plant.name + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
+  const cardCarriesBrand = hasLink; // a brand WITH a banner never repeats its brand or docs in the text (owner 2026-10-24: "no repetir Seaboard dos veces, en el banner y abajo"); a brand without one (text only) says both
+  return `${cardCarriesBrand ? '' : plant.name.trim() + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
 }
 // `part` (one WhatsApp message per brand, owner 2026-10-24): which message of the customer's set this is — the greeting and the signal line belong to the FIRST, the pending note and the credit note to the
 // LAST, and `cheap` says whether this brand's price is the cheapest of the whole set (the bold). Without it the text is the whole offer, as before.
@@ -7836,11 +7830,10 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
       const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
       // 2026-09-26: credit check only (dry run) — the offer itself is logged when the trader confirms the send (onSent below).
-      const { warnings } = await rqLogSentOffersRows(full, [c], 'email', true);
-      warnings.forEach(w => rqShowNotice(w.message));
       const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
+      const [{ warnings }, signalLine] = await Promise.all([rqLogSentOffersRows(full, [c], 'email', true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // the credit check and the signal line are both reads: asked together
+      warnings.forEach(w => rqShowNotice(w.message));
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
-      const signalLine = isUpdate ? '' : await rqFetchCustomerSignalLine(c.id, full);
       toSend.push({
         id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
         body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, c,
@@ -7897,12 +7890,12 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     }
     const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
     if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
-    const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp', false, true); // drafts: they become offers at "Yes, sent"
+    const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
+    // the log (the only write, one customer at a time) and the signal line (a read) go out together: one wait instead of two
+    const [{ warnings, offers }, signalLine] = await Promise.all([rqLogSentOffersRows(full, [c], 'whatsapp', false, true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // drafts: they become offers at "Yes, sent"
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
-    const isUpdate = rqCustomerHadProducts(sentByCustomer[c.id], [pid]);
     const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
-    const signalLine = isUpdate ? '' : await rqFetchCustomerSignalLine(c.id, full);
     const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent: opts.onSent }); // one message per brand, highest price first
     rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
   }
@@ -7912,7 +7905,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       : 'No customer with a WhatsApp number is linked to any variant in this quote yet — link one in Customers first.');
     return;
   }
-  rqOpenWaModal(`WhatsApp offer — ${items.length} message${items.length > 1 ? 's' : ''} (one brand each)`, items, true);
+  rqOpenWaModal(`WhatsApp offer — ${items.length} message${items.length > 1 ? 's' : ''} (one per customer)`, items, true);
   rqSetModalNote('rq_wa_modal_list', skipped);
 }
 
