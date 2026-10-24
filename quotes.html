@@ -6384,6 +6384,15 @@ function buildCustomerOfferText(customerFirstName, plantsOverride, overCreditLim
 // short_code; a plant with neither a real photo nor a real spec has no short_code at all (see
 // sent-offers-create's own "only mint one when there's something real to show" comment), so its
 // line stays plain text, same as before this feature existed.
+// WhatsApp line of ONE brand (owner 2026-10-24, chosen from the mock-ups): when the message is ONE brand and its link has a card (photo and/or spec), the card carries the brand and "Con docs" / "Sin docs",
+// so the text does not repeat the brand; with no link (no photo, no spec) the line is plain text with the brand and the docs at the end. With several brands every line keeps its brand
+// (WhatsApp unfurls only the first link) and says its docs, so no line is left without them.
+function rqWaLine(plant, offer, body, totalLines){
+  const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
+  const hasLink = !!(offer && offer.short_code);
+  const cardCarriesBrand = hasLink && totalLines === 1;
+  return `${cardCarriesBrand ? '' : plant.name + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
+}
 function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPlantId, overCreditLimit, signalLine){
   const greeting = customerFirstName ? `Hola ${customerFirstName},\n\n` : '';
   const signalBlock = signalLine ? `${signalLine}\n\n` : '';
@@ -6391,9 +6400,8 @@ function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPl
   const lines = withCalc.map(({ plant, calc }, i) => {
     const delivery = rqDeliveryDatesText();
     const offer = offersByPlantId.get(plant.id);
-    const link = offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
     const price = rqOfferPriceText(calc);
-    return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${link}`;
+    return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
   }).join('\n\n');
   const pending = rqPendingNote();
   return greeting + signalBlock + lines + (pending ? '\n\n' + pending : '') + (overCreditLimit ? '\n\n' + rqCreditNote(overCreditLimit) : '');
@@ -6413,9 +6421,8 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
     const lines = items.map(({ plant, calc }, i) => {
       const isNew = newKeys.has(plant.id + '|' + plant.rqProductId) ? ' (nuevo)' : '';
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
-      const link = offer && offer.short_code ? `\n${APP_ORIGIN}/p/${offer.short_code}` : '';
       const price = rqOfferPriceText(calc);
-      return `${plant.name} — ${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${isNew}${link}`;
+      return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${cheapest.has(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${isNew}`, withCalc.length);
     }).join('\n\n');
     return title + '\n\n' + lines;
   });
