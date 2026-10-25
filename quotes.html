@@ -6427,7 +6427,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     return { extras,
       id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
-      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
+      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: one.calc.mxn ? null : rqLinePrice(one.calc) }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
   });
@@ -6438,9 +6438,9 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 function rqWaAttachThinImages(items){
   items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
-    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
+    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname) ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
@@ -7601,7 +7601,7 @@ function rqWaModalOpenOne(i){
   // The banner is also COPIED, right here in the click (its bytes are already in memory, so the browser still counts this as the trader's own click — the old copy failed because it fetched first): in the chat, Cmd+V puts the
   // banner in the bubble and the text of the box becomes its caption — the approved design, one bubble. Never blocks: no clipboard support = the download above is still there.
   const copied = rqWaCopyBanner(it);
-  copied.then(ok => { it.bannerState = ok ? 'copied' : 'failed'; rqRenderWaModal(); if (ok && !/\/p\/[a-z0-9]+/.test(it.body || '')) rqWaAutoPaste(it); }); // the card says it: "copied — paste with Cmd+V" or "NOT copied — the file downloaded"; a message with a link needs no paste (WhatsApp draws the banner from the link)
+  copied.then(ok => { it.bannerState = ok ? 'copied' : 'failed'; rqRenderWaModal(); if (ok) rqWaAutoPaste(it); }); // the card says it: "copied — paste with Cmd+V" or "NOT copied — the file downloaded"; EVERY message gets its banner pasted, with or without a link (owner 2026-10-25: banner on top, then the text with its price and its link)
   window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body), '_blank');
   it.opened = true;
   if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; } // NOT recorded yet: WhatsApp never says whether the message went out, so the trader says so when he is back
@@ -7668,7 +7668,7 @@ function rqComposerWaHtml(it, i){
   const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
   const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
     : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button>` : '';
-  const hint = it.downloadFiles && it.downloadFiles.length && !/\/p\/[a-z0-9]+/.test(it.body || '') ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
+  const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
   const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button></div>`).join('');
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner" alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
