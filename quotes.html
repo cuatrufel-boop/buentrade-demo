@@ -6424,6 +6424,7 @@ function rqWaAttachThinImages(items){
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname) ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
     const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
+    it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
       if (!bytes) return;
       it.downloadFiles = [{ bytes, filename: `${list.map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
@@ -7560,8 +7561,10 @@ async function rqWaModalShareOne(i){
 }
 function rqWaCopyBanner(it){
   const f = it.downloadFiles && it.downloadFiles[0];
-  if (!f || typeof ClipboardItem === 'undefined' || !navigator.clipboard || !navigator.clipboard.write) return;
-  try { navigator.clipboard.write([new ClipboardItem({ [f.type || 'image/png']: new Blob([f.bytes], { type: f.type || 'image/png' }) })]).catch(() => {}); } catch (e) { /* the download is still there */ }
+  if ((!f && !it.thinBytesP) || typeof ClipboardItem === 'undefined' || !navigator.clipboard || !navigator.clipboard.write) return;
+  // Called inside the click. If the picture has not landed yet the clipboard is handed the PROMISE of it (Chrome waits for it, the click's permission stays valid) — before, a quick click copied nothing.
+  const blob = f ? Promise.resolve(new Blob([f.bytes], { type: f.type || 'image/png' })) : it.thinBytesP.then(b => { if (!b) throw new Error('no picture'); return new Blob([b], { type: 'image/png' }); });
+  try { navigator.clipboard.write([new ClipboardItem({ [f && f.type || 'image/png']: blob })]).catch(() => {}); } catch (e) { /* the download is still there */ }
 }
 function rqWaModalOpenOne(i){
   const it = rqWaModalItems[i];
