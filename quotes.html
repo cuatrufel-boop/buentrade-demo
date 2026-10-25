@@ -6414,12 +6414,17 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   const outro = [rqPendingNote(), warnings.length ? rqCreditNote(warnings) : ''].filter(Boolean).join('\n\n');
   let customerDone = false;
   return sorted.map((one, i) => {
-    const part = { first: i === 0, last: i === sorted.length - 1, noTitle: i > 0, cheap: cheap.has(i) };
+    // THE MESSAGE IS THE PRICE (owner 2026-10-25: "quita los mensajes fuera del precio, déjalo a un lado como sugerencia para poder hacer copy paste"): the product, the price and its link — nothing else goes in the bubble. The opening line / the "Lista actualizada" title
+    // (first message) and the pending / credit notes (last message) are SUGGESTIONS beside it (`extras`), one tap to copy and paste into the chat if the trader wants them.
+    const part = { first: false, last: false, noTitle: true, cheap: cheap.has(i) };
     const offer = offersByPlantId.get(one.plant.id);
     const body = isUpdate
-      ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part) + (part.last && outro ? '\n\n' + outro : '')
-      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, warnings.length ? warnings : false, signalLine, part);
-    return {
+      ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part)
+      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, false, '', part);
+    const extras = [];
+    if (i === 0) { if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(one.plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine }); }
+    if (i === sorted.length - 1 && outro) extras.push({ label: 'Note', text: outro });
+    return { extras,
       id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
       thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
@@ -7658,13 +7663,37 @@ function rqComposerWaHtml(it, i){
   const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
   const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
     : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button>` : '';
-  const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
-  return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}">
+  const hint = it.downloadFiles && it.downloadFiles.length && !/\/p\/[a-z0-9]+/.test(it.body || '') ? `<div class="rq-cmp-hint">📎 ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
+  const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button></div>`).join('');
+  return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner" alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
     <div class="rq-cmp-act">
       <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
       ${status ? `<div class="rq-cmp-status">${status}</div>` : ''}
-    </div>${hint}</div>`;
+    </div>${sugg ? `<div class="rq-cmp-suggs">${sugg}</div>` : ''}${hint}</div>`;
+}
+// What sits beside a WhatsApp message as suggestions (owner 2026-10-25: prices, banners and links go by themselves; everything relevant to the customer is a suggestion to copy): the opening line / title / notes of the offer (it.extras)
+// and what Messaging has ready for THIS customer (it.msgOptions: his cycle, his notes, a Market Flash line — the messages Messaging already wrote, each from a real fact).
+function rqCmpAllSuggs(it){ return (it.extras || []).concat(it.msgOptions || []); }
+const RQ_CMP_KIND = { cycle: 'His cycle', ask_volume: 'His volume', personal: 'He told us', market: 'Market' };
+let rqCmpMsgMap = null, rqCmpMsgLoading = false;
+function rqCmpMsgFor(customerId){ return rqCmpMsgMap && rqCmpMsgMap[customerId] || []; }
+async function rqCmpLoadMessaging(){ // read-only, once per page, never holds the window up
+  if (rqCmpMsgMap || rqCmpMsgLoading) return;
+  rqCmpMsgLoading = true;
+  try {
+    const d = await callApi('messaging', { action: 'list', actor: currentActor() });
+    rqCmpMsgMap = {};
+    (d.clients || []).forEach(c => { rqCmpMsgMap[c.id] = (c.options || []).filter(o => !o.sent_at && o.draft).slice(0, 3).map(o => ({ label: RQ_CMP_KIND[o.kind] || 'Messaging', text: o.draft })); });
+    if (rqOfferWinOpen) rqOfferWindowRender();
+  } catch (e) { /* no suggestions from Messaging: the offer window works exactly the same */ }
+  rqCmpMsgLoading = false;
+}
+// copies a suggestion (the opening line, the title, the notes) to paste into the chat if wanted
+function rqCmpCopy(i, k, btn){
+  const x = rqWaModalItems[i] ? rqCmpAllSuggs(rqWaModalItems[i])[k] : null; if (!x) return;
+  const done = () => { if (btn){ btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); } };
+  try { navigator.clipboard.writeText(x.text).then(done, () => rqShowNotice('Could not copy — select the text and copy it')); } catch (e) { rqShowNotice('Could not copy — select the text and copy it'); }
 }
 function rqComposerEmailHtml(it, i){
   const envIco = RQ_EMAIL_ICON.replace(/width:13px;height:13px;/, '');
@@ -7696,7 +7725,7 @@ function rqOfferWindowRender(){
     const wa = rqOfferCh.wa && r.wa.length ? r.wa : null, em = rqOfferCh.em && r.em;
     if (!wa && !em) continue;
     const row = document.createElement('div'); row.className = 'rq-offer-row' + (wa && em ? '' : ' one');
-    if (wa){ const col = document.createElement('div'); col.innerHTML = '<div class="rq-cmp-lab">WhatsApp · one message per brand, most expensive first</div>' + wa.map(({ it, i }) => rqComposerWaHtml(it, i)).join(''); row.appendChild(col); }
+    if (wa){ if (typeof rqCmpMsgFor === 'function') wa.forEach(({ it }, n) => { it.msgOptions = n === 0 ? rqCmpMsgFor(it.id) : []; }); const col = document.createElement('div'); col.innerHTML = '<div class="rq-cmp-lab">WhatsApp · one message per brand, most expensive first</div>' + wa.map(({ it, i }) => rqComposerWaHtml(it, i)).join(''); row.appendChild(col); }
     if (em){ const col = document.createElement('div'); col.innerHTML = '<div class="rq-cmp-lab">Email · one message, all brands</div>' + rqComposerEmailHtml(em.it, em.i); row.appendChild(col); }
     list.appendChild(row); rowEls.push(row); rowLabels.push(r.key);
   }
@@ -7736,6 +7765,7 @@ function rqOfferWindowShow(){
   const any = rqEmailModalItems.length || rqWaModalItems.length;
   if (!any){ rqOfferWindowEnd(); return false; }
   for (const id of ['rq_email_modal_overlay', 'rq_wa_modal_overlay']){ const o = document.getElementById(id); o.style.display = 'none'; o.classList.add('rq-merged'); } // the two review windows never show beside the one offer window, whatever ran before (owner 2026-10-22 screenshot: the WhatsApp window sat behind an empty offer window)
+  rqCmpLoadMessaging();
   rqOfferCh = rqWaModalItems.length ? { wa: true, em: false } : { wa: false, em: true }; // opens on WhatsApp alone (owner 2026-10-25: "pon solo whatsapp por default"); Email / Both are one tap away; a send with no WhatsApp opens on Email
   rqOfferWindowSync();
   document.getElementById('rq_offer_modal_overlay').style.display = 'flex';

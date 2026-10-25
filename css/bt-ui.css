@@ -435,3 +435,10 @@ html body .rq-cmp-msg .rq-wa-bubble textarea{background:transparent;color:#111;b
 html body .rq-cmp-msg .rq-wa-bubble textarea:focus{outline:2px solid rgba(63,203,126,.7);outline-offset:1px;}
 .rq-cmp-msg .rq-wa-banner{border-radius:9px;} .rq-cmp-msg .rq-wa-banner + textarea{border-radius:0 0 9px 9px !important;}
 .rq-cmp-wa-strip{background:#efeae2;border-radius:16px;padding:16px;} 
+
+/* the suggestions beside a WhatsApp message (opening line, title, notes): not in the bubble, one tap to copy (owner 2026-10-25) */
+.rq-cmp-msg.has-sugg{grid-template-columns:minmax(0,440px) auto minmax(220px,1fr);align-items:start;}
+.rq-cmp-suggs{display:flex;flex-direction:column;gap:10px;align-self:stretch;}
+.rq-cmp-sg{border:1px dashed rgba(255,255,255,.25);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.03);}
+.rq-cmp-sg-t{font-family:var(--bt-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:6px;} .rq-cmp-sg-x{font-size:13px;line-height:1.4;color:rgba(255,255,255,.82);white-space:pre-wrap;margin-bottom:8px;}
+@media (max-width:760px){ .rq-cmp-msg.has-sugg{grid-template-columns:minmax(0,470px) auto;} .rq-cmp-suggs{grid-column:1 / -1;} }
