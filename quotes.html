@@ -6455,7 +6455,7 @@ function rqWaAttachThinImages(items){
 }
 function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
-  const hasLink = !!(offer && offer.short_code);
+  const hasLink = !!(offer && offer.short_code && (offer.spec_url || offer.photo_url)); // the link is only for a product with a spec or a photo (owner 2026-10-25); without either: banner and text, no link
   const cardCarriesBrand = !!offer; // every brand of a WhatsApp offer has its banner (owner 2026-10-24, "la 2": the brands without photo/spec get the same thin banner, just without a link), so no line repeats its brand or docs; only a line with no offer at all (email's updated list, a failed log) still says both
   return `${cardCarriesBrand ? '' : plant.name.trim() + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
 }
