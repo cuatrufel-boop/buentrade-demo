@@ -410,3 +410,21 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   .kform .ksh{margin-bottom:10px !important;}
   @media (max-width:1080px){.kgrid,.kgrid.k3{grid-template-columns:repeat(2,minmax(0,1fr));}.kgrid .kwide{grid-column:span 2;}.kgrid .kfull{grid-column:1 / -1;}}
   @media (max-width:760px){.kgrid,.kgrid.k3{grid-template-columns:minmax(0,1fr);}.kgrid .kwide,.kgrid .kfull{grid-column:auto;}}
+
+/* ---- THE SEND WINDOW (owner 2026-10-25, option A "Composer", rebuilt from scratch): the WhatsApp / email window CSS lives HERE, once. ----
+   One customer at a time: name + product, WhatsApp / Email / Both, a stepper; his WhatsApp messages (the BuenTrade banner on top of each) and his email; a progress bar.
+   BuenTrade design: glass buttons, Space Grotesk titles, IBM Plex Mono labels, green = the send, blue = information. */
+#rq_offer_ch_wa, #rq_offer_ch_em{display:none !important;} /* replaced by the WhatsApp / Email / Both control (hidden, not removed) */
+.rq-cmp-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:4px 22px 14px;}
+.rq-cmp-who{font-family:var(--bt-title);font-size:22px;font-weight:700;letter-spacing:-.01em;} .rq-cmp-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:3px;}
+.rq-cmp-seg{display:flex;gap:6px;} .rq-cmp-step{display:flex;align-items:center;gap:8px;font-size:12.5px;color:rgba(255,255,255,.65);} .rq-cmp-step b{color:#fff;font-family:var(--bt-mono);font-weight:500;}
+.rq-cmp-foot{padding:6px 22px 16px;} .rq-cmp-prog{height:6px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;} .rq-cmp-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--bt-blue),var(--bt-green));transition:width .3s;} .rq-cmp-foot span{display:block;font-size:12px;color:rgba(255,255,255,.55);margin-top:8px;}
+.rq-cmp-lab{font-family:var(--bt-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin:6px 0 12px;}
+.rq-offer-row > div + div{margin-top:22px;}
+.rq-cmp-msg{display:grid;grid-template-columns:minmax(0,470px) auto;gap:16px;align-items:center;margin-bottom:16px;} .rq-cmp-msg.sent{opacity:.7;}
+.rq-cmp-act{display:flex;flex-direction:column;gap:8px;align-items:flex-start;} .rq-cmp-btns{display:flex;gap:10px;align-items:center;} .rq-cmp-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.rq-cmp-hint{grid-column:1 / -1;font-size:12px;color:rgba(255,255,255,.55);margin-top:-6px;}
+.rq-cmp-mail{max-width:760px;margin:0;}
+.rq-wa-bubble .rq-wa-banner{display:block;width:100%;height:auto;aspect-ratio:1200/72;border-radius:10px 10px 0 0;background:#10244A;} .rq-wa-banner + textarea{border-top-left-radius:0 !important;border-top-right-radius:0 !important;border-top:0 !important;} /* the BuenTrade banner as it reaches WhatsApp, on top of the message */
+html body .rq-cmp-msg .rq-wa-share{height:44px;padding:0 20px;font-size:14px;}
+@media (max-width:700px){ .rq-cmp-msg{grid-template-columns:minmax(0,1fr);} }

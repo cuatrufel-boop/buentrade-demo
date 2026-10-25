@@ -1075,7 +1075,7 @@
      both, instead of two identical full-screen overlays stacking (which just hid one behind the
      other and doubled the dim). Only applied while both are open at once; cleared on close. */
   .rq-modal-overlay.rq-merged{display:none !important;} /* the WhatsApp and email review windows live INSIDE the one offer window (rq_offer_modal_overlay) while it is open */
-  .rq-offer-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px;align-items:start;} .rq-offer-row.one{grid-template-columns:minmax(0,1fr);} .rq-offer-row .rq-msg-card{margin:0;}
+  .rq-offer-row{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:14px;align-items:start;} .rq-offer-row.one{grid-template-columns:minmax(0,1fr);} .rq-offer-row .rq-msg-card{margin:0;}
   @media (max-width:900px){ .rq-offer-row{grid-template-columns:minmax(0,1fr);} }
   .rq-modal-overlay.rq-split-left{justify-content:flex-end;padding-right:1.5vw;}
   .rq-modal-overlay.rq-split-right{justify-content:flex-start;padding-left:1.5vw;background:transparent;pointer-events:none;}
@@ -1576,7 +1576,9 @@ auth.onAuthStateChanged(user => {
       </div>
     </div>
     <div id="rq_offer_modal_notes" class="loc-hint" style="margin:0 0 12px;padding:0 22px;line-height:1.5;display:none;"></div>
+    <div id="rq_offer_cmp_head"></div>
     <div id="rq_offer_modal_list" class="rq-modal-list"></div>
+    <div id="rq_offer_cmp_foot"></div>
   </div>
 </div>
 
@@ -6428,7 +6430,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 // The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
 // 1200×72 (thin), downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
-const rqThinCache = new Map();
+const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 function rqWaAttachThinImages(items){
   items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
     const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
@@ -6438,6 +6440,8 @@ function rqWaAttachThinImages(items){
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
       if (!bytes) return;
+      if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
+      it.bannerUrl = rqThinUrls.get(key);
       it.downloadFiles = [{ bytes, filename: `${list.map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
@@ -7535,7 +7539,7 @@ function rqRenderWaModal(){
     <div class="rq-msg-card${it.opened ? ' opened' : ''}">
       <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.opened ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">I sent it</button>` : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
       <div class="rq-wa-row">
-        <div class="rq-wa-chat"><div class="rq-wa-bubble"><textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
+        <div class="rq-wa-chat"><div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner" alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
         <button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
         ${rqWaCanShare(it) ? `<button type="button" class="btn rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}
       </div>
@@ -7632,13 +7636,13 @@ async function rqWaModalClose(){
 // THE ONE OFFER WINDOW (owner 2026-10-22: "una sola ventana con los dos botones por cliente… WhatsApp o email, una de las dos o las dos"). It does not build or send anything itself: the email and the WhatsApp review
 // windows are built and sent EXACTLY as before (sendOfferEmailToAll / sendOfferWhatsAppToAll, same texts, same records, same "Did you send the WhatsApp?"); while this window is open their cards are shown here, side by side per
 // customer × product, each with its own send button, and the two chips choose which channel is shown. Every re-render of either review window hands its cards to rqOfferWindowSync.
-let rqOfferWinOpen = false, rqOfferCh = { wa: true, em: true }, rqOfferWaNodes = [], rqOfferEmNodes = [];
+let rqOfferWinOpen = false, rqOfferCh = { wa: true, em: true }, rqOfferWaNodes = [], rqOfferEmNodes = [], rqOfferCur = 0; // rqOfferCur: which customer × product the composer shows
 function rqOfferWindowBegin(){
   rqEmailModalOnClose = null; rqEmailModalItems = []; rqWaModalItems = []; rqOfferWaNodes = []; rqOfferEmNodes = [];
   for (const id of ['rq_email_modal_overlay', 'rq_wa_modal_overlay']){ const o = document.getElementById(id); o.style.display = 'none'; o.classList.remove('rq-split-left', 'rq-split-right'); o.classList.add('rq-merged'); }
   for (const id of ['rq_email_modal_list', 'rq_wa_modal_list', 'rq_offer_modal_list']) document.getElementById(id).textContent = '';
   rqSetModalNote('rq_email_modal_list', null); rqSetModalNote('rq_wa_modal_list', null);
-  rqOfferCh = { wa: true, em: true }; rqOfferWinOpen = true;
+  rqOfferCh = { wa: true, em: true }; rqOfferWinOpen = true; rqOfferCur = 0;
 }
 function rqOfferWindowSync(){
   if (!rqOfferWinOpen) return;
@@ -7647,36 +7651,82 @@ function rqOfferWindowSync(){
   if (emList.children.length) rqOfferEmNodes = [...emList.children];
   rqOfferWindowRender();
 }
+// THE COMPOSER, built from the messages themselves (owner 2026-10-25, option A: "hacerlo de nuevo bien hecho… manteniendo el flujo que tenemos"). One customer × product at a time: his WhatsApp messages (one per brand, the BuenTrade
+// banner on top of each) and his one email, drawn here from rqWaModalItems / rqEmailModalItems with the SAME handlers, records and states as the review windows (rqWaModalOpenOne, rqWaModalShareOne, rqWaMarkSent, rqEmailModalSendOne):
+// prices (USD and pesos), links, banners, drafts and "Yes, sent" are decided where they always were; this only shows them.
+function rqComposerWaHtml(it, i){
+  const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
+  const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
+    : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button>` : '';
+  const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}${rqWaCanShare(it) ? ' — or Share' : ''}</div>` : '';
+  return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}">
+    <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner" alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
+    <div class="rq-cmp-act">
+      <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>${rqWaCanShare(it) ? `<button type="button" class="chip rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}</div>
+      ${status ? `<div class="rq-cmp-status">${status}</div>` : ''}
+    </div>${hint}</div>`;
+}
+function rqComposerEmailHtml(it, i){
+  const envIco = RQ_EMAIL_ICON.replace(/width:13px;height:13px;/, '');
+  const action = it.sent ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
+    : it.gmailFallbackUrl ? `<a class="pkg-trigger-btn" style="display:inline-flex;align-items:center;gap:5px;" href="${escapeHtml(it.gmailFallbackUrl)}" target="bt_gmail" rel="noopener" onclick="rqEmailModalOpenFallback(${i})">⚠ Open in Gmail →</a>`
+    : `<button type="button" class="pkg-trigger-btn rq-em-send" title="Send the email" aria-label="Send the email" onclick="rqEmailModalSendOne(${i})">${envIco}</button>`;
+  const dis = it.sent ? 'disabled' : '';
+  const msg = it.html && (it.htmlText == null || it.htmlText === it.body)
+    ? `<div class="rq-email-field"><label>Message — the BuenTrade card${it.sent ? '' : ' <a href="#" style="text-transform:none;letter-spacing:0;margin-left:8px;" onclick="rqEmailModalEditText(' + i + ');return false;">Edit as text</a>'}</label><div style="background:#e9eef7;border-radius:10px;padding:14px;overflow:auto;">${it.html}</div></div>`
+    : `<div class="rq-email-field"><label>Message</label><textarea ${dis} oninput="rqEmailModalItems[${i}].body=this.value;rqWaFit(this)" autocomplete="off">${escapeHtml(it.body)}</textarea></div>`;
+  return `<div class="rq-msg-card rq-cmp-mail${it.sent ? ' sent' : ''}">
+    <div class="rq-em-fields"><div class="rq-email-field"><label>To</label><input type="text" ${dis} value="${escapeHtml(it.to)}" oninput="rqEmailModalItems[${i}].to=this.value" autocomplete="off" name="bt-to-${i}"></div>
+    <div class="rq-email-field"><label>CC (optional)</label><input type="text" ${dis} value="${escapeHtml(it.cc || '')}" placeholder="name@example.com" oninput="rqEmailModalItems[${i}].cc=this.value" autocomplete="off" name="bt-cc-${i}"></div></div>
+    <div class="rq-email-field"><label>Subject</label><input type="text" ${dis} value="${escapeHtml(it.subject)}" oninput="rqEmailModalItems[${i}].subject=this.value" autocomplete="off" name="bt-subj-${i}"></div>
+    ${msg}
+    ${it.attachments && it.attachments.length ? `<div class="rq-email-field"><label>Attachments</label><div style="display:flex;flex-wrap:wrap;gap:6px;">${it.attachments.map(a => `<span class="chip" style="cursor:default;">📎 ${escapeHtml(a.filename)}</span>`).join('')}</div></div>` : ''}
+    <div class="rq-msg-foot">${action}</div></div>`;
+}
 function rqOfferWindowRender(){
   const list = document.getElementById('rq_offer_modal_list'); if (!list) return;
-  const rows = [], byLabel = new Map();
-  // one row per customer × product: his email on the left, and on the right ALL his WhatsApp messages (one per brand, highest price first) stacked — the row is found by `pairKey` (the brand is not part of it)
-  const add = (label, kind, node) => { if (!node) return; let r = byLabel.get(label); if (!r){ r = { label, wa: [] }; byLabel.set(label, r); rows.push(r); } if (kind === 'wa') r.wa.push(node); else r[kind] = node; };
-  rqEmailModalItems.forEach((it, i) => add(it.label, 'em', rqOfferEmNodes[i]));
-  rqWaModalItems.forEach((it, i) => add(it.pairKey || it.label, 'wa', rqOfferWaNodes[i]));
+  const rows = [], byKey = new Map();
+  // one row per customer × product: his email and ALL his WhatsApp messages (one per brand, highest price first) — found by `pairKey` (the brand is not part of it)
+  const add = (key, kind, it, i) => { let r = byKey.get(key); if (!r){ r = { key, wa: [], em: null }; byKey.set(key, r); rows.push(r); } if (kind === 'wa') r.wa.push({ it, i }); else r.em = { it, i }; };
+  rqEmailModalItems.forEach((it, i) => add(it.label, 'em', it, i));
+  rqWaModalItems.forEach((it, i) => add(it.pairKey || it.label, 'wa', it, i));
   list.textContent = '';
-  const lbl = t => { const d = document.createElement('div'); d.className = 'rq-req2-lbl'; d.style.margin = '0 0 4px'; d.textContent = t; return d; };
-  let shown = 0;
+  const rowEls = [], rowLabels = []; // the composer shows ONE of these at a time
   for (const r of rows){
     const wa = rqOfferCh.wa && r.wa.length ? r.wa : null, em = rqOfferCh.em && r.em;
     if (!wa && !em) continue;
-    shown++;
     const row = document.createElement('div'); row.className = 'rq-offer-row' + (wa && em ? '' : ' one');
-    for (const [kind, node, name] of [['wa', wa, 'WhatsApp'], ['em', em, 'Email']]){ if (!node) continue; const col = document.createElement('div'); col.appendChild(lbl(name)); (kind === 'wa' ? node : [node]).forEach((n, k) => { if (k) n.style.marginTop = '10px'; col.appendChild(n); }); row.appendChild(col); }
-    list.appendChild(row);
+    if (wa){ const col = document.createElement('div'); col.innerHTML = '<div class="rq-cmp-lab">WhatsApp · one message per brand, most expensive first</div>' + wa.map(({ it, i }) => rqComposerWaHtml(it, i)).join(''); row.appendChild(col); }
+    if (em){ const col = document.createElement('div'); col.innerHTML = '<div class="rq-cmp-lab">Email · one message, all brands</div>' + rqComposerEmailHtml(em.it, em.i); row.appendChild(col); }
+    list.appendChild(row); rowEls.push(row); rowLabels.push(r.key);
   }
-  document.getElementById('rq_offer_modal_title').textContent = `Offer — ${rows.length} message${rows.length === 1 ? '' : 's'} (one product each)`;
+  if (rqOfferCur >= rowEls.length) rqOfferCur = Math.max(0, rowEls.length - 1);
+  rowEls.forEach((el, i) => { el.style.display = i === rqOfferCur ? '' : 'none'; });
+  const cmpHead = document.getElementById('rq_offer_cmp_head'), cmpFoot = document.getElementById('rq_offer_cmp_foot');
+  if (cmpHead){
+    const [who, ...prodParts] = String(rowLabels[rqOfferCur] || '').split(' — '), both = rqOfferCh.wa && rqOfferCh.em;
+    const on = { wa: rqOfferCh.wa && !rqOfferCh.em, em: rqOfferCh.em && !rqOfferCh.wa, both };
+    cmpHead.innerHTML = `<div class="rq-cmp-top"><div><div class="rq-cmp-who">${escapeHtml(who || '')}</div><div class="rq-cmp-sub">${escapeHtml(prodParts.join(' — '))} · most expensive first</div></div>`
+      + `<div class="rq-cmp-seg">${[['wa', 'WhatsApp'], ['em', 'Email'], ['both', 'Both']].map(([v, l]) => `<button type="button" class="chip${on[v] ? ' on' : ''}" onclick="rqOfferSetCh('${v}')">${l}</button>`).join('')}</div>`
+      + (rowEls.length > 1 ? `<div class="rq-cmp-step"><button type="button" class="chip" onclick="rqOfferStep(-1)" title="Previous customer">‹</button>Customer <b>${rqOfferCur + 1} / ${rowEls.length}</b><button type="button" class="chip" onclick="rqOfferStep(1)" title="Next customer">›</button></div>` : '') + `</div>`;
+  }
+  if (cmpFoot){
+    const total = rqWaModalItems.length + rqEmailModalItems.length, done = rqWaModalItems.filter(it => it.recorded).length + rqEmailModalItems.filter(it => it.sent).length;
+    cmpFoot.className = 'rq-cmp-foot'; cmpFoot.innerHTML = total ? `<div class="rq-cmp-prog"><i style="width:${Math.round(done / total * 100)}%"></i></div><span>${done} of ${total} sent</span>` : '';
+  }
+  document.getElementById('rq_offer_modal_title').textContent = 'Send offer';
   document.getElementById('rq_offer_ch_wa').classList.toggle('on', rqOfferCh.wa); document.getElementById('rq_offer_ch_em').classList.toggle('on', rqOfferCh.em);
   document.getElementById('rq_offer_ch_wa').style.display = rqWaModalItems.length ? '' : 'none'; document.getElementById('rq_offer_ch_em').style.display = rqEmailModalItems.length ? '' : 'none';
   const notes = ['rq_email_modal_list_note', 'rq_wa_modal_list_note'].map(id => document.getElementById(id)).filter(e => e && e.style.display !== 'none' && e.innerHTML).map(e => e.innerHTML);
-  // WhatsApp has no "send all": each card needs its own press, so the window says how many are still waiting (owner 2026-10-22: one stayed on the list).
   const waLeft = rqWaModalItems.filter(it => !it.recorded);
-  if (rqWaModalItems.length > 1 || waLeft.length) notes.unshift(waLeft.length ? `WhatsApp: ${rqWaModalItems.length - waLeft.length} of ${rqWaModalItems.length} sent — press each green button; still waiting: ${waLeft.map(it => escapeHtml(String(it.label).split(' — ')[0])).join(', ')}` : `WhatsApp: all ${rqWaModalItems.length} sent ✓`);
+  if (rqWaModalItems.length > 1 || waLeft.length) notes.unshift(waLeft.length ? `WhatsApp: ${rqWaModalItems.length - waLeft.length} of ${rqWaModalItems.length} sent — press each green button` : `WhatsApp: all ${rqWaModalItems.length} sent ✓`);
   const nb = document.getElementById('rq_offer_modal_notes'); nb.innerHTML = notes.join('<br>'); nb.style.display = notes.length ? '' : 'none';
   const orig = document.getElementById('rq_email_modal_sendall'), all = document.getElementById('rq_offer_sendall');
   all.innerHTML = orig.innerHTML; all.style.display = rqOfferCh.em && rqEmailModalItems.length && orig.style.display !== 'none' ? 'inline-flex' : 'none';
   const fit = () => list.querySelectorAll('textarea').forEach(rqWaFit); fit(); setTimeout(fit, 80);
 }
+function rqOfferSetCh(v){ rqOfferCh = v === 'wa' ? { wa: true, em: false } : v === 'em' ? { wa: false, em: true } : { wa: true, em: true }; rqOfferWindowRender(); } // WhatsApp / Email / Both: one channel is always shown
+function rqOfferStep(d){ const n = document.querySelectorAll('#rq_offer_modal_list .rq-offer-row').length; if (n < 2) return; rqOfferCur = (rqOfferCur + d + n) % n; rqOfferWindowRender(); }
 function rqOfferToggle(k){
   const other = k === 'wa' ? 'em' : 'wa';
   if (rqOfferCh[k] && !rqOfferCh[other]) return; // one channel is always shown
