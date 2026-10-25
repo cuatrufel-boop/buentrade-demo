@@ -6409,7 +6409,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     return {
       id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
-      thinImages: offer && offer.short_code ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true }] : [], // a brand with a card gets its thin banner attached (rqWaAttachThinImages)
+      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
   });
@@ -6435,7 +6435,7 @@ function rqWaAttachThinImages(items){
 function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
   const hasLink = !!(offer && offer.short_code);
-  const cardCarriesBrand = hasLink; // a brand WITH a banner never repeats its brand or docs in the text (owner 2026-10-24: "no repetir Seaboard dos veces, en el banner y abajo"); a brand without one (text only) says both
+  const cardCarriesBrand = !!offer; // every brand of a WhatsApp offer has its banner (owner 2026-10-24, "la 2": the brands without photo/spec get the same thin banner, just without a link), so no line repeats its brand or docs; only a line with no offer at all (email's updated list, a failed log) still says both
   return `${cardCarriesBrand ? '' : plant.name.trim() + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
 }
 // `part` (one WhatsApp message per brand, owner 2026-10-24): which message of the customer's set this is — the greeting and the signal line belong to the FIRST, the pending note and the credit note to the
