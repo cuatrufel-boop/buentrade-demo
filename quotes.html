@@ -1882,6 +1882,16 @@ async function loadQuotesPage(){
 // Email all/WhatsApp all, per-customer rows), not a separate smaller stand-in. It has to be moved
 // back to its home — Building's own tray card (rq_card) — before anything clears an inline slot's
 // innerHTML around it, or the node is destroyed outright instead of just hidden.
+// The page keeps its own reference to the shared node: whatever re-render clears an inline slot while the node lives there (owner 2026-10-25: "Could not open the QT: Cannot read properties of null (reading 'style')"),
+// the next QT opens with the node put back home, never with a null.
+let rqCustomersWrapNode = null;
+function rqEnsureCustomersWrap(){
+  const wrap = document.getElementById('rq_customers_wrap');
+  if (wrap) { rqCustomersWrapNode = wrap; return wrap; }
+  const home = document.getElementById('rq_card');
+  if (rqCustomersWrapNode && home) { home.appendChild(rqCustomersWrapNode); return rqCustomersWrapNode; }
+  return null;
+}
 function rqReturnCustomersWrapHome(){
   const home = document.getElementById('rq_card');
   const wrap = document.getElementById('rq_customers_wrap');
@@ -4638,7 +4648,8 @@ async function qOpenPendingPlantInline(productId, plantId, pesosCustomerId){ // 
   // instead (the tray's own set, which may not even include this product).
   if (slot){
     rqRenderCustomersList();
-    slot.appendChild(document.getElementById('rq_customers_wrap'));
+    const customersWrap = rqEnsureCustomersWrap();
+    if (customersWrap) slot.appendChild(customersWrap);
   }
   // Same spot the trader just clicked becomes the close action — no separate button floating
   // elsewhere on the card to hunt for. Kept in sync with the real overlay state by
@@ -6743,8 +6754,9 @@ let rqFindCustomersPromiseFor = null;
 // bug caught building the tab merge: calling the fetch-gated rqFindCustomers from there used to
 // hit its "rqQuoteProductIds is empty → hide the wrap" early return and silently show nothing.
 function rqRenderCustomersList(){
-  const wrap = document.getElementById('rq_customers_wrap');
+  const wrap = rqEnsureCustomersWrap();
   const container = document.getElementById('rq_customers_list');
+  if (!wrap || !container) return;
   if (!rqMatchedCustomers.length){
     wrap.style.display = 'block';
     container.innerHTML = '<div class="empty">No customers linked to this product yet.</div>';
