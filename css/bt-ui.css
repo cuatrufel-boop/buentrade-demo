@@ -442,3 +442,17 @@ html body .rq-cmp-msg .rq-wa-bubble textarea:focus{outline:2px solid rgba(63,203
 .rq-cmp-sg{border:1px dashed rgba(255,255,255,.25);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.03);}
 .rq-cmp-sg-t{font-family:var(--bt-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:6px;} .rq-cmp-sg-x{font-size:13px;line-height:1.4;color:rgba(255,255,255,.82);white-space:pre-wrap;margin-bottom:8px;}
 @media (max-width:760px){ .rq-cmp-msg.has-sugg{grid-template-columns:minmax(0,470px) auto;} .rq-cmp-suggs{grid-column:1 / -1;} }
+
+/* THE EMAIL in the send window, drawn like an email (owner 2026-10-25): compact, glass, one line each for To / Subject, the message in a short box, files and Send on the last line. */
+.rq-cmp-mail{max-width:640px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.04);padding:6px 16px 14px;}
+.rq-cmp-mail.sent{opacity:.7;}
+.rq-cmp-mail-row{display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08);padding:9px 0;}
+.rq-cmp-mail-k{flex:0 0 58px;font-family:var(--bt-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.5);}
+.rq-cmp-mail-row input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:400 14px var(--bt-font);padding:2px 0;} .rq-cmp-mail-row input::placeholder{color:rgba(255,255,255,.3);} .rq-cmp-mail-row input:disabled{color:rgba(255,255,255,.6);}
+.rq-cmp-mail-subj{font-weight:600 !important;font-size:15px !important;}
+.rq-cmp-mail:not(.cc-on) .rq-cmp-mail-cc{display:none;} .rq-cmp-mail-cc-btn{padding:3px 10px !important;font-size:12px !important;}
+html body .rq-cmp-mail textarea.rq-cmp-mail-body{display:block;width:100%;margin-top:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.92);font:400 13.5px/1.5 var(--bt-font);padding:10px 12px;min-height:90px;max-height:210px;resize:none;overflow-y:auto;}
+.rq-cmp-mail-card{margin-top:10px;max-height:240px;overflow:auto;background:#e9eef7;border-radius:12px;padding:12px;} .rq-cmp-mail-edit{display:inline-block;margin-top:8px;font-size:12px;}
+.rq-cmp-mail-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap;} .rq-cmp-mail-files{display:flex;gap:6px;flex-wrap:wrap;min-width:0;}
+html body .rq-cmp-mail .rq-em-send{width:auto !important;min-width:0 !important;flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 20px !important;border-radius:12px !important;font-weight:600;color:var(--bt-blue) !important;background:var(--bt-blue-bg) !important;border:1.5px solid var(--bt-blue-bd) !important;} html body .rq-cmp-mail .rq-em-send:hover{background:var(--bt-blue-hover) !important;}
+html body .rq-cmp-mail .rq-em-send svg{width:16px;height:16px;flex:none;} html body .rq-cmp-mail .rq-em-send span{white-space:nowrap;}
