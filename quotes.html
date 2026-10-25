@@ -7736,6 +7736,7 @@ function rqOfferWindowShow(){
   const any = rqEmailModalItems.length || rqWaModalItems.length;
   if (!any){ rqOfferWindowEnd(); return false; }
   for (const id of ['rq_email_modal_overlay', 'rq_wa_modal_overlay']){ const o = document.getElementById(id); o.style.display = 'none'; o.classList.add('rq-merged'); } // the two review windows never show beside the one offer window, whatever ran before (owner 2026-10-22 screenshot: the WhatsApp window sat behind an empty offer window)
+  rqOfferCh = rqWaModalItems.length ? { wa: true, em: false } : { wa: false, em: true }; // opens on WhatsApp alone (owner 2026-10-25: "pon solo whatsapp por default"); Email / Both are one tap away; a send with no WhatsApp opens on Email
   rqOfferWindowSync();
   document.getElementById('rq_offer_modal_overlay').style.display = 'flex';
   return true;

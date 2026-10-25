@@ -428,3 +428,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .rq-wa-bubble .rq-wa-banner{display:block;width:100%;height:auto;aspect-ratio:1200/72;border-radius:10px 10px 0 0;background:#10244A;} .rq-wa-banner + textarea{border-top-left-radius:0 !important;border-top-right-radius:0 !important;border-top:0 !important;} /* the BuenTrade banner as it reaches WhatsApp, on top of the message */
 html body .rq-cmp-msg .rq-wa-share{height:44px;padding:0 20px;font-size:14px;}
 @media (max-width:700px){ .rq-cmp-msg{grid-template-columns:minmax(0,1fr);} }
+
+/* the WhatsApp message looks like a WhatsApp message (owner 2026-10-25: "el mismo fondo color de WhatsApp… que parezca un mensaje de WhatsApp"): the sent-bubble green, dark text, the banner on top of it, on a chat-coloured strip */
+.rq-cmp-msg .rq-wa-bubble{background:#d9fdd3;border-radius:12px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,.35);}
+html body .rq-cmp-msg .rq-wa-bubble textarea{background:transparent;color:#111;border:0;border-radius:0 0 9px 9px;box-shadow:none;padding:8px 8px 6px;font-size:14.5px;line-height:1.4;min-height:48px;}
+html body .rq-cmp-msg .rq-wa-bubble textarea:focus{outline:2px solid rgba(63,203,126,.7);outline-offset:1px;}
+.rq-cmp-msg .rq-wa-banner{border-radius:9px;} .rq-cmp-msg .rq-wa-banner + textarea{border-radius:0 0 9px 9px !important;}
+.rq-cmp-wa-strip{background:#efeae2;border-radius:16px;padding:16px;} 
