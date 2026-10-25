@@ -7500,7 +7500,7 @@ const RQ_WA_ICON = `<svg viewBox="0 0 24 24" fill="#fff" style="width:12px;heigh
 let rqWaModalItems = [];
 let rqWaModalIsOffer = false;
 function rqOpenWaModal(title, items, isOffer){
-  rqWaModalItems = items.map(it => ({ ...it, opened: false }));
+  rqWaModalItems = items.map(it => Object.assign(it, { opened: false })); // the SAME objects, not copies: the banner is fetched in the background (rqWaAttachThinImages) and lands on these very items — with copies it never reached the window (owner 2026-10-25: no banner in WhatsApp)
   rqWaModalIsOffer = !!isOffer;
   rqSetModalNote('rq_wa_modal_list', null);
   document.getElementById('rq_wa_modal_title').textContent = title;
