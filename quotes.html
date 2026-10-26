@@ -2219,7 +2219,7 @@ function qmWeeklySendEmail(cid){
 async function qmWeeklySendWa(cid){
   const c = qmWeeklyFind(cid); if (!c || !c.phone) return;
   let card = null; try { card = await BTWeeklyCard.weeklyCardPng(c, qmWeeklyLabel(c)); } catch (e){ console.error('weekly card image failed', e); } // WhatsApp has no HTML: the card is an image that downloads to drag into the chat
-  const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: card ? c.message.split('\n').slice(0, 2).join('\n') : c.message, downloadFiles: card ? [{ bytes: card.bytes, filename: card.filename, type: 'image/png' }] : undefined };
+  const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: card ? c.message.split('\n').slice(0, 2).join('\n') : c.message, downloadFiles: card ? [{ bytes: card.bytes, filename: card.filename, type: 'image/png' }] : undefined, bannerUrl: card ? URL.createObjectURL(new Blob([card.bytes], { type: 'image/png' })) : undefined }; // the blue card is shown in the window, the same picture that downloads and is pasted
   const edited = () => ((rqWaModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
   item.onOpened = async () => { try { await qmWeeklyLogSend(c, edited(), 'whatsapp'); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
   rqOpenWaModal(`WhatsApp — ${c.trade_name.trim()}`, [item], false);
@@ -7602,11 +7602,9 @@ function rqWaModalOpenOne(i){
   if (firstTime) (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename, f.type));
   // The banner is also COPIED, right here in the click (its bytes are already in memory, so the browser still counts this as the trader's own click — the old copy failed because it fetched first): in the chat, Cmd+V puts the
   // banner in the bubble and the text of the box becomes its caption — the approved design, one bubble. Never blocks: no clipboard support = the download above is still there.
-  // ONLY for a customer offer: the Monday summary and Messaging's messages keep their approved flow (the card downloads, he drags it into the chat; no Share, no paste) — owner 2026-10-26: "dice share y no mandan las tarjetas que habíamos hecho"
-  if (rqWaModalIsOffer) {
+  // EVERY message gets its picture copied and pasted (owner 2026-10-25: "todos con banner"), the Monday summary's blue card too; only the Share button is for customer offers (owner 2026-10-26)
   const copied = rqWaCopyBanner(it);
   copied.then(ok => { it.bannerState = ok ? 'copied' : 'failed'; rqRenderWaModal(); if (ok) rqWaAutoPaste(it); }); // the card says it: "copied — paste with Cmd+V" or "NOT copied — the file downloaded"; EVERY message gets its banner pasted, with or without a link (owner 2026-10-25: banner on top, then the text with its price and its link)
-  }
   window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body), '_blank');
   it.opened = true;
   if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; } // NOT recorded yet: WhatsApp never says whether the message went out, so the trader says so when he is back
