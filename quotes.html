@@ -3036,6 +3036,9 @@ function rqIsNewArrival(arrival, link){
   return !(arrival.sent_customer_ids || []).length;
 }
 // ctx: the products and their customers / offers / packages — the package on screen (rqSheetState) or every live package (rqLiveContext).
+// AN N/A PLANT WE ASKED IS WAITING, NOT N/A (owner 2026-10-27: "envié los correos a Northwood y Tyson y quedaron igual, no quedaron en waiting for a price"): once a request went out AFTER the N/A date
+// ("Ask for a load"), the line says it is waiting for the plant's price, like any asked plant. Pure: dates in, true/false out.
+function rqNaIsWaiting(naSince, askedAt){ return !!(askedAt && (!naSince || new Date(askedAt) > new Date(naSince))); }
 function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
   const rows = [];
   pids.forEach(pid => {
@@ -3056,7 +3059,7 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
       const confirmed = pricing ? pricing.snapshot : null;
       const calc = pricing ? pricing.calc : null;
       const base = { key, pid, prod, plant: r.plant, link: r, askedAt, answeredAt: asked ? asked.answered_at : null, na: rqIsNa(r), naSince: r.unavailable_since || null };
-      if (r.current_price == null && base.na){ rows.push({ ...base, kind: 'na' }); return; }
+      if (r.current_price == null && base.na && !rqNaIsWaiting(base.naSince, askedAt)){ rows.push({ ...base, kind: 'na' }); return; }
       if (r.current_price != null){
         const stale = (rqPriceAgeDays(r.price_date) || 0) > RQ_PRICE_STALE_DAYS;
         let freight = null;
@@ -7439,7 +7442,7 @@ function rqRenderEmailModal(){
   // "Send/Open All" stays button+JS (there's no single link to click for a whole batch) — it just
   // drives rqEmailModalSendOne/rqEmailModalOpenFallback per item exactly as if the trader had
   // clicked each item's own real link or button in turn.
-  sendAllBtn.style.display = rqEmailModalItems.every(it => it.sent) ? 'none' : 'inline-flex';
+  sendAllBtn.style.display = (rqEmailModalItems.every(it => it.sent) || rqEmailModalItems.length <= 1) ? 'none' : 'inline-flex'; // ONE message has ONE send button (its own envelope); the header "All" button is only for several (owner 2026-10-27: "para qué dos botones de enviar correo")
   sendAllBtn.style.alignItems = 'center';
   sendAllBtn.style.gap = '5px';
   const remaining = rqEmailModalItems.filter(it => !it.sent).length;
