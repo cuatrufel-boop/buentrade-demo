@@ -6492,11 +6492,10 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
     const cheapest = bold ? rqCheapestSet(items.map(({ calc }) => rqLinePrice(calc))) : new Set(); // bold is WhatsApp's: the email text stays plain
     const isCheap = (i) => (p.cheap !== undefined && bold) ? p.cheap : cheapest.has(i);
     const lines = items.map(({ plant, calc }, i) => {
-      const isNew = newKeys.has(plant.id + '|' + plant.rqProductId) ? ' (nuevo)' : '';
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
       const price = rqOfferPriceText(calc);
-      if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${isNew}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length); // the price is on its picture
-      return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${isCheap(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}${isNew}`, withCalc.length);
+      if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length); // the price is on its picture
+      return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${isCheap(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
     }).join('\n\n');
     return p.noTitle ? lines : title + '\n\n' + lines;
   });
