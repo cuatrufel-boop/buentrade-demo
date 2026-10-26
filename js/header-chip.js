@@ -227,7 +227,7 @@
 })();
 
 // A READ NEVER HANGS THE SCREEN (owner 2026-10-26: "ni today ni monday ni nada carga"). The server sometimes lets ONE request hang (a database connection that died while the function was idle: about 1 in 8 calls of
-// `messaging`, measured 2026-10-26), and a screen that waits for it stays on "Loading…" for ever. A READ that has not answered in 8 s is cancelled and asked again (up to 3 times); the next call lands on a healthy connection.
+// `messaging`, measured 2026-10-26), and a screen that waits for it stays on "Loading…" for ever. A READ that is silent for 6 s is asked a second time (and a third at 14 s) without cancelling the first; the first answer wins.
 // ONLY reads are retried (the list below); a write is sent exactly once, exactly as before. callApi in every page calls this instead of fetch.
 var btMqHigh = [], btMqLow = [], btMqBusy = false;
 function btMqPump(){
@@ -239,15 +239,25 @@ function btMqPump(){
   job.run().then(function(v){ clearTimeout(wd); free(); job.res(v); }, function(e){ clearTimeout(wd); free(); job.rej(e); });
 }
 function btMqEnqueue(run, high){ return new Promise(function(res, rej){ (high ? btMqHigh : btMqLow).push({ run: run, res: res, rej: rej }); btMqPump(); }); }
-async function btFetchOnce(url, opts, read){
-  if (!read || typeof AbortController === 'undefined') return fetch(url, opts);
-  var last;
-  for (var attempt = 1; attempt <= 3; attempt++) {
-    var ctl = new AbortController(), timer = setTimeout(function(){ ctl.abort(); }, 8000);
-    try { var r = await fetch(url, Object.assign({}, opts, { signal: ctl.signal })); clearTimeout(timer); return r; }
-    catch (e) { clearTimeout(timer); last = e; if (!(e && e.name === 'AbortError')) throw e; }
-  }
-  throw last;
+function btFetchOnce(url, opts, read){
+  if (!read) return fetch(url, opts);
+  // A READ is asked again WITHOUT cancelling the first ask (a slow answer on a busy machine still counts, a hung one is covered): the second ask goes out after 6 s of silence, the third after 14 s, and the first answer
+  // that comes back is the one used. Cancelling at a fixed time (the first version, 8 s) broke the real screen on a busy machine: a slow but healthy read was cancelled and never loaded.
+  return new Promise(function(resolve, reject){
+    var launched = 0, pending = 0, done = false, timers = [];
+    function finish(){ done = true; timers.forEach(clearTimeout); }
+    function launch(){
+      if (done || launched >= 3) return;
+      launched++; pending++;
+      fetch(url, opts).then(function(r){ if (!done) { finish(); resolve(r); } }, function(e){
+        pending--;
+        if (done) return;
+        if (launched < 3) launch(); else if (pending === 0) { finish(); reject(e); }
+      });
+    }
+    launch();
+    timers.push(setTimeout(launch, 6000), setTimeout(launch, 14000));
+  });
 }
 // MESSAGING ONE AT A TIME (owner 2026-10-26, reproduced: three calls at once = two of them hang for ever). The function has ONE database connection and two requests at once on it hang in the pooler's transaction mode, so the
 // page sends its `messaging` calls one after the other, the reads (list, weekly_summary) before the drafts. Nothing else changes.
