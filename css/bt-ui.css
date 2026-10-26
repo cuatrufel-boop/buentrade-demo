@@ -425,7 +425,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .rq-cmp-act{display:flex;flex-direction:column;gap:8px;align-items:flex-start;} .rq-cmp-btns{display:flex;gap:10px;align-items:center;} .rq-cmp-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .rq-cmp-hint{grid-column:1 / -1;font-size:12px;color:rgba(255,255,255,.55);margin-top:-6px;}
 .rq-cmp-mail{max-width:760px;margin:0;}
-.rq-wa-bubble .rq-wa-banner{display:block;width:100%;height:auto;aspect-ratio:1200/72;border-radius:10px 10px 0 0;background:#10244A;} .rq-wa-banner + textarea{border-top-left-radius:0 !important;border-top-right-radius:0 !important;border-top:0 !important;} /* the BuenTrade banner as it reaches WhatsApp, on top of the message */
+.rq-wa-bubble .rq-wa-banner{display:block;width:100%;height:auto;aspect-ratio:1200/72;border-radius:10px 10px 0 0;background:#10244A;} .rq-wa-bubble .rq-wa-banner[data-full]{aspect-ratio:auto;} /* the Monday blue card is a whole table, shown whole (not the thin offer band) */ .rq-wa-banner + textarea{border-top-left-radius:0 !important;border-top-right-radius:0 !important;border-top:0 !important;} /* the BuenTrade banner as it reaches WhatsApp, on top of the message */
 html body .rq-cmp-msg .rq-wa-share{height:44px;padding:0 20px;font-size:14px;}
 @media (max-width:700px){ .rq-cmp-msg{grid-template-columns:minmax(0,1fr);} }
 
