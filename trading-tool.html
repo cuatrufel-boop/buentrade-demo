@@ -938,11 +938,11 @@ if (FIREBASE_READY) {
           <div id="freightMxUsdHint" style="font-size:10.5px;color:var(--ink-soft);text-align:right;margin:-4px 0 8px;"></div>
           <div class="field" id="inspectionCasesField">
             <label>Inspection — Cases (USD)</label>
-            <div class="inputwrap"><span class="pfx">$</span><input data-money id="inspectionCases" value="" placeholder="0" oninput="calc()"></div>
+            <div class="inputwrap"><span class="pfx">$</span><input data-money id="inspectionCases" value="" placeholder="0" oninput="calc()" onchange="ttEnforceInspectionRule();calc()"></div>
           </div>
           <div class="field" id="inspectionCombosField">
             <label>Inspection — Combos (USD)</label>
-            <div class="inputwrap"><span class="pfx">$</span><input data-money id="inspectionCombos" value="" placeholder="0" oninput="calc()"></div>
+            <div class="inputwrap"><span class="pfx">$</span><input data-money id="inspectionCombos" value="" placeholder="0" oninput="calc()" onchange="ttEnforceInspectionRule();calc()"></div>
           </div>
           <div class="field" id="importCostField">
             <label>Import Cost (USD)</label>
@@ -1915,6 +1915,23 @@ function rqShow(id, visible){ document.getElementById(id).style.display = visibl
 // only ever working once at initial load. Every visibility toggle is explicit both ways (show
 // AND hide) for the same reason — otherwise a field hidden once could never come back once the
 // trader picks a location/destination that should reveal it.
+// THE DOCS RULE (owner 2026-10-26: "la regla dice cajas 350 combos 200"): what we pay for the inspection is $350 for CASES and $200 for COMBOS (or 0 when the plant includes the docs). Nothing else is a valid number, so
+// a value that is not 0 or the rule is put back: a combo's 200 that arrived in the Cases box goes to Combos, anything else becomes the rule (550 and 650 → 350; a load with both types has 350 in Cases AND 200 in Combos, each in its own box). Pure: values in, values out.
+function ttInspectionByRule(casesVal, combosVal){
+  let c = Number(casesVal) || 0, m = Number(combosVal) || 0;
+  if (c === 200 && m === 0) return { cases: 0, combos: 200 };
+  if (c !== 0 && c !== 350) c = 350;
+  if (m !== 0 && m !== 200) m = 200;
+  return { cases: c, combos: m };
+}
+function ttEnforceInspectionRule(){
+  const ce = document.getElementById('inspectionCases'), me = document.getElementById('inspectionCombos');
+  if (!ce || !me) return;
+  const num = el => parseFloat(String(el.value).replace(/,/g, '')) || 0;
+  const r = ttInspectionByRule(num(ce), num(me));
+  if (r.cases !== num(ce)) ce.value = r.cases ? r.cases.toFixed(2) : '0.00';
+  if (r.combos !== num(me)) me.value = r.combos ? r.combos.toFixed(2) : '';
+}
 function applyEmbedParams(qp){
   // Once the real per-plant rate picker owns this field (ttFreightPlantId set — see
   // ttInitFreightPicker), Quotes' own freight/hideFreight params are stale by construction (Quotes
@@ -1929,7 +1946,7 @@ function applyEmbedParams(qp){
   // Re-opening an existing offer's negotiation only has one historical total on file
   // (inspection_amount predates the Cases/Combos split) — lands it in Cases rather than silently
   // dropping it; the trader can move it to Combos if that's what the load actually was.
-  if (qp.has('inspection')) document.getElementById('inspectionCases').value = Number(qp.get('inspection')) || 0;
+  if (qp.has('inspection')) { const r = ttInspectionByRule(Number(qp.get('inspection')) || 0, 0); document.getElementById('inspectionCases').value = r.cases; document.getElementById('inspectionCombos').value = r.combos || ''; }
   // Docs are always on screen, to put or take off in any QT (user 2026-10-06: "quitar y poner docs") — hideInspection no longer hides them.
   rqShow('inspectionCasesField', true);
   rqShow('inspectionCombosField', true);
@@ -2366,6 +2383,7 @@ function ttApplyState(st){
     const inp = st.inputs || {};
     TT_STATE_INPUT_IDS.forEach(id => { if (Object.prototype.hasOwnProperty.call(inp, id)){ const el = document.getElementById(id); if (el) el.value = inp[id]; } });
     if (st.fx_manual && st.fx_rate != null){ fxRateManuallySet = true; const fx = document.getElementById('fxRate'); if (fx) fx.value = st.fx_rate; }
+    ttEnforceInspectionRule(); // a version saved with another number (550, 650…) opens with the rule
     // every cost this version carries is on screen — nothing in it stays hidden
     EXTRA_COST_FIELD_IDS.forEach(id => { if ((parseFloat(inp[id]) || 0) !== 0){ const f = document.getElementById(id + 'Field'); if (f) f.style.display = ''; } });
     // a version that carries a Mexican freight shows it
