@@ -1915,6 +1915,7 @@ function rqShow(id, visible){ document.getElementById(id).style.display = visibl
 // only ever working once at initial load. Every visibility toggle is explicit both ways (show
 // AND hide) for the same reason — otherwise a field hidden once could never come back once the
 // trader picks a location/destination that should reveal it.
+let ttLastEmbedInspection = null;
 function applyEmbedParams(qp){
   // Once the real per-plant rate picker owns this field (ttFreightPlantId set — see
   // ttInitFreightPicker), Quotes' own freight/hideFreight params are stale by construction (Quotes
@@ -1929,7 +1930,9 @@ function applyEmbedParams(qp){
   // Re-opening an existing offer's negotiation only has one historical total on file
   // (inspection_amount predates the Cases/Combos split) — lands it in Cases rather than silently
   // dropping it; the trader can move it to Combos if that's what the load actually was.
-  if (qp.has('inspection')) document.getElementById('inspectionCases').value = Number(qp.get('inspection')) || 0;
+  // The inspection Quotes sends ($350 cases / $200 combos, 0 with docs) is the DEFAULT: it is put in the box when it CHANGES (opening, the Docs switch), never again on every sync (owner 2026-10-27: "pongo el campo y después cuando
+  // meto otros costos se cambia ese número"): a number the trader typed stays until Quotes' own value changes.
+  if (qp.has('inspection')) { const v = Number(qp.get('inspection')) || 0; if (ttLastEmbedInspection !== v) { document.getElementById('inspectionCases').value = v; ttLastEmbedInspection = v; } }
   // Docs are always on screen, to put or take off in any QT (user 2026-10-06: "quitar y poner docs") — hideInspection no longer hides them.
   rqShow('inspectionCasesField', true);
   rqShow('inspectionCombosField', true);
