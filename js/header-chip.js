@@ -229,14 +229,17 @@
 // A READ NEVER HANGS THE SCREEN (owner 2026-10-26: "ni today ni monday ni nada carga"). The server sometimes lets ONE request hang (a database connection that died while the function was idle: about 1 in 8 calls of
 // `messaging`, measured 2026-10-26), and a screen that waits for it stays on "Loading…" for ever. A READ that has not answered in 8 s is cancelled and asked again (up to 3 times); the next call lands on a healthy connection.
 // ONLY reads are retried (the list below); a write is sent exactly once, exactly as before. callApi in every page calls this instead of fetch.
-window.btFetch = async function(url, opts){
-  var fn = '', b = {};
-  try { fn = String(url).split('/functions/v1/')[1].split('?')[0]; } catch (e) {}
-  try { b = JSON.parse((opts && opts.body) || '{}') || {}; } catch (e) {}
-  var read = fn === 'dashboard-summary'
-    || /^(lookups|plants|providers|plant-locations|provider-rates|products)-search$/.test(fn)
-    || (fn === 'messaging' && (b.action === 'list' || b.action === 'weekly_summary'))
-    || (fn === 'sent-offers-search' && b.offer_sheet && (b.offer_sheet.action === 'list' || b.offer_sheet.action === 'get'));
+var btMqHigh = [], btMqLow = [], btMqBusy = false;
+function btMqPump(){
+  if (btMqBusy) return;
+  var job = btMqHigh.shift() || btMqLow.shift(); if (!job) return;
+  btMqBusy = true; var freed = false;
+  var free = function(){ if (freed) return; freed = true; btMqBusy = false; btMqPump(); };
+  var wd = setTimeout(free, 60000); // a call that never answers must not hold the line for ever
+  job.run().then(function(v){ clearTimeout(wd); free(); job.res(v); }, function(e){ clearTimeout(wd); free(); job.rej(e); });
+}
+function btMqEnqueue(run, high){ return new Promise(function(res, rej){ (high ? btMqHigh : btMqLow).push({ run: run, res: res, rej: rej }); btMqPump(); }); }
+async function btFetchOnce(url, opts, read){
   if (!read || typeof AbortController === 'undefined') return fetch(url, opts);
   var last;
   for (var attempt = 1; attempt <= 3; attempt++) {
@@ -245,4 +248,17 @@ window.btFetch = async function(url, opts){
     catch (e) { clearTimeout(timer); last = e; if (!(e && e.name === 'AbortError')) throw e; }
   }
   throw last;
+}
+// MESSAGING ONE AT A TIME (owner 2026-10-26, reproduced: three calls at once = two of them hang for ever). The function has ONE database connection and two requests at once on it hang in the pooler's transaction mode, so the
+// page sends its `messaging` calls one after the other, the reads (list, weekly_summary) before the drafts. Nothing else changes.
+window.btFetch = async function(url, opts){
+  var fn = '', b = {};
+  try { fn = String(url).split('/functions/v1/')[1].split('?')[0]; } catch (e) {}
+  try { b = JSON.parse((opts && opts.body) || '{}') || {}; } catch (e) {}
+  var read = fn === 'dashboard-summary'
+    || /^(lookups|plants|providers|plant-locations|provider-rates|products)-search$/.test(fn)
+    || (fn === 'messaging' && (b.action === 'list' || b.action === 'weekly_summary'))
+    || (fn === 'sent-offers-search' && b.offer_sheet && (b.offer_sheet.action === 'list' || b.offer_sheet.action === 'get'));
+  if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read); }, read);
+  return btFetchOnce(url, opts, read);
 };
