@@ -256,7 +256,8 @@ window.btFetch = async function(url, opts){
   try { fn = String(url).split('/functions/v1/')[1].split('?')[0]; } catch (e) {}
   try { b = JSON.parse((opts && opts.body) || '{}') || {}; } catch (e) {}
   var read = fn === 'dashboard-summary'
-    || /^(lookups|plants|providers|plant-locations|provider-rates|products)-search$/.test(fn)
+    || (/-search$/.test(fn) && fn !== 'sent-offers-search') // every other search only reads (checked 2026-10-26: none of them writes)
+    || (fn === 'customer-product-signal' && !b.log_notification)
     || (fn === 'messaging' && (b.action === 'list' || b.action === 'weekly_summary'))
     || (fn === 'sent-offers-search' && b.offer_sheet && (b.offer_sheet.action === 'list' || b.offer_sheet.action === 'get'));
   if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read); }, read);
