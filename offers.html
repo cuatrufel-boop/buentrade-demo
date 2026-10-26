@@ -316,9 +316,8 @@
   @media (max-width:760px){ tr.prod-cont .cont-name{display:inline;} }
   .btn.secondary.qt-hot{border-color:#3FCB7E;color:#3FCB7E;animation:hotPulse 1.4s ease-in-out infinite;}
   .btn.secondary.qt-hot:hover{background:rgba(63,203,126,.14);}
-  /* the Live bids button of the toolbar: same height as its neighbours (38 px, like the Pending/Lost/All control and the search), pulsing green like every live bid in this file */
-  html body #liveBidsBtn{height:38px !important;min-height:0 !important;line-height:1 !important;box-sizing:border-box;padding:0 18px;border-radius:999px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;border:1.5px solid #3FCB7E;color:#3FCB7E;background:rgba(63,203,126,.1);animation:hotPulse 1.4s ease-in-out infinite;cursor:pointer;}
-  html body #liveBidsBtn[style*="display:none"], html body #liveBidsBtn[style*="display: none"]{display:none;}
+  /* NEGOTIATING NOW with a live bid (owner 2026-10-26: "pon solo uno arriba"): the card itself pulses green and is the click that opens those customers */
+  .stat-card.live-bids{cursor:pointer;border-color:#3FCB7E;animation:hotPulse 1.4s ease-in-out infinite;}
   /* Real ask: customer-first drill-down (find Murgati, then her Sirloin, then the plants quoting
      it), not a flat list of every offer. A customer's card collapses to one line once you're not
      actively looking at it — opens on its own when it has a live bid, or when the search box
@@ -650,8 +649,6 @@ auth.onAuthStateChanged(user => {
         <svg class="of-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="f_search" type="text" placeholder="Search" oninput="renderOffers()" class="of-search-input">
       </div>
-      <!-- LIVE BIDS (owner 2026-10-26: "hay dos bids en vivo y no sé de qué cliente ni dónde… un botón arriba que blinke"): shown only while an offer is in a live negotiation; the click opens those customers -->
-      <button type="button" id="liveBidsBtn" class="btn secondary qt-hot" style="display:none;" onclick="openLiveBids()"></button>
     </div>
 
     <div class="card">
@@ -817,10 +814,9 @@ async function loadOffers(){
 // list — the point is a fixed read of the whole pipeline in range, so it doesn't jump around
 // as you type into the search box.
 function renderStats(){
-  renderLiveBids();
   const money = n => '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const pending = offers.filter(o => o.status === 'sent');
-  const hot = pending.filter(offerIsHot);
+  const hot = pending.filter(offerIsLive); // the live bids (either side of the negotiation), not only the customer's: the card is the one place they show
   const won = offers.filter(o => o.status === 'won');
   const lost = offers.filter(o => o.status === 'lost');
   const pipelineValue = pending.reduce((s, o) => s + (o.total_sale || 0), 0);
@@ -829,7 +825,8 @@ function renderStats(){
   const stats = [
     { accent: '#5AAAFF', accentSoft: 'rgba(90,170,255,.4)', value: money(pipelineValue), label: 'Pipeline value',
       hero: true, icon: '<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
-    { accent: '#FF9C8A', accentSoft: 'rgba(196,67,46,.4)', value: String(hot.length), label: 'Negotiating now',
+    { accent: '#FF9C8A', accentSoft: 'rgba(196,67,46,.4)', value: String(hot.length), label: 'Negotiating now', live: hot.length > 0,
+      title: hot.map(o => `${String(o.customer_name || '—').trim()} — ${o.product_spec || o.product_name || ''} (${String(o.plant_name || '').trim()})`).join('\n'),
       icon: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.4 0 2.5-1 2.5-2.3 0-1.4-1.5-2-1.2-3.7.3-1.6 2-2.7 2-2.7s.5 2 .3 3.3c1.5-.7 2.4-2.5 2.4-4.1 0-2.3-1.6-4-3.2-5C13 4.4 12 6.6 10 8c-2 1.4-3.5 3.5-3.5 6.5"/>' },
     { accent: '#5AAAFF', accentSoft: 'rgba(90,170,255,.4)', value: String(pending.length), label: 'Pending offers',
       icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>' },
@@ -837,7 +834,7 @@ function renderStats(){
       empty: winRate === null, icon: '<path d="M20 6 9 17l-5-5"/>' },
   ];
   document.getElementById('pipelineStats').innerHTML = stats.map(s => `
-    <div class="stat-card ${s.hero ? 'hero' : ({ '#5AAAFF': 'blue', '#FF9C8A': 'danger', '#3FCB7E': 'ok' })[s.accent] || ''}" style="--stat-accent:${s.accent};--stat-accent-soft:${s.accentSoft};">
+    <div class="stat-card ${s.hero ? 'hero' : ({ '#5AAAFF': 'blue', '#FF9C8A': 'danger', '#3FCB7E': 'ok' })[s.accent] || ''}${s.live ? ' live-bids' : ''}" style="--stat-accent:${s.accent};--stat-accent-soft:${s.accentSoft};"${s.live ? ` onclick="openLiveBids()" title="${escapeHtml(s.title)}"` : ''}>
       <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${s.icon}</svg></div>
       <div><div class="stat-value${s.empty ? ' empty' : ''}">${s.value}</div><div class="stat-label">${s.label}</div></div>
     </div>`).join('');
@@ -853,13 +850,6 @@ function offerAgeDays(dateStr){
 // A LIVE BID (owner 2026-10-26): an offer still pending whose negotiation has a bid in it on EITHER side — the customer's bid, our bid to the plant, the plant's answer. (Our new price to the customer is not a bid.)
 // "Bid" (offerIsHot) stays the customer answering; "Live bids" is the whole negotiation, so a bid to a plant is never invisible.
 function offerIsLive(o){ return o.status === 'sent' && (o.negotiation_log || []).some(e => e && (e.to === 'customer_bid' || e.to === 'plant' || e.to === 'plant_reply')); }
-function renderLiveBids(){
-  const btn = document.getElementById('liveBidsBtn'); if (!btn) return;
-  const live = offers.filter(offerIsLive);
-  btn.style.display = live.length ? '' : 'none';
-  btn.innerHTML = `Live bids · ${live.length}`;
-  btn.title = live.map(o => `${String(o.customer_name || '—').trim()} — ${o.product_spec || o.product_name || ''} (${String(o.plant_name || '').trim()})`).join('\n');
-}
 function openLiveBids(){
   const names = [...new Set(offers.filter(offerIsLive).map(o => o.customer_name || '—'))];
   names.forEach(n => custOpenOverride.set(n, true));
