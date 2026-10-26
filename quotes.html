@@ -3113,6 +3113,13 @@ function rqSheetAskTargets(rows){
   const recentlyAsked = r => r.askedAt && (Date.now() - new Date(r.askedAt).getTime()) < cooldownMs;
   return rows.filter(r => (r.kind === 'priced' && r.stale && !r.calc && !r.na && !recentlyAsked(r)) || r.kind === 'possible');
 }
+// The UPDATE button of ONE plant (owner 2026-10-26: "el botón de update no funciona"): a stale price that still has its sale calculated (the line shows "Update" and "Send old price" side by side, Seaboard on Pork Snout) is asked
+// when that plant's own button is pressed. The bulk list above leaves it out (it asks only prices with no sale yet), so the button found nothing and did nothing, silently. The two-day cooldown still holds.
+function rqSheetAskTargetsFor(rows, plantIds){
+  const cooldownMs = RQ_REQUEST_COOLDOWN_DAYS * 86400000;
+  const recentlyAsked = r => r.askedAt && (Date.now() - new Date(r.askedAt).getTime()) < cooldownMs;
+  return rows.filter(r => plantIds.includes(r.plant.id) && ((r.kind === 'priced' && r.stale && !r.na && !recentlyAsked(r)) || r.kind === 'possible'));
+}
 // A package's Outbox: one entry per customer × product they buy (a customer message is always ONE product, its brands highest → lowest — user
 // 2026-10-09), with the brands whose sale is set (r.calc) that this customer has not received at this price yet.
 function rqSheetOutbox(rows, ctx = rqSheetState){
@@ -3774,7 +3781,7 @@ async function rqSheetAsk(plantIds, remind){
   const rows = rqSheetRows();
   const targets = remind
     ? rows.filter(r => r.kind === 'noreply' && plantIds.includes(r.plant.id))
-    : rqSheetAskTargets(rows).filter(r => !plantIds || plantIds.includes(r.plant.id));
+    : (plantIds && plantIds.length ? rqSheetAskTargetsFor(rows, plantIds) : rqSheetAskTargets(rows));
   const byPlant = new Map();
   targets.forEach(r => { if (!byPlant.has(r.plant.id)) byPlant.set(r.plant.id, { plant: r.plant, rows: [] }); byPlant.get(r.plant.id).rows.push(r); });
   if (!byPlant.size) return;
