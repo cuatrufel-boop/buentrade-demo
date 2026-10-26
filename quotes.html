@@ -6440,7 +6440,7 @@ function rqWaAttachThinImages(items){
   items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
     const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname) ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
