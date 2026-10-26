@@ -377,7 +377,7 @@ const API_REGION = '?forceFunctionRegion=us-east-1';
 const API_KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
 
 async function callApi(fn, body){
-  const res = await fetch(API_ROOT + fn + API_REGION, {
+  const res = await btFetch(API_ROOT + fn + API_REGION, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY, 'apikey': API_KEY },
     body: JSON.stringify(body || {}),
