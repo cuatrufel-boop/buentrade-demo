@@ -2190,37 +2190,37 @@ function qmWeeklyRender(){
   document.getElementById('qm_count').textContent = `${list.length} client${list.length === 1 ? '' : 's'}${qmWeekly.week ? ` · ${qmWeekly.week.from} → ${qmWeekly.week.to}` : ''}`;
   if (!list.length){ document.getElementById('qm_rows').innerHTML = `<div class="empty">${qmWeekly.failed ? 'Couldn’t load the Monday summary.' : 'No offers were sent last week.'}</div>`; return; }
   const off = t => `style="padding:7px 10px;opacity:.35;cursor:default;" disabled title="${t}"`;
-  const rows = list.map(c => `<tr data-qmw-key="${escapeHtml(c.id)}">
-    <td style="min-width:170px;"><b style="color:var(--blue);font-weight:600;">${escapeHtml(c.trade_name.trim())}</b><span class="muted" style="display:block;font-size:11.5px;">${escapeHtml([c.first_name, c.city].filter(Boolean).join(' · '))}</span>${c.sent ? `<span class="rq-sheet-pill ok" style="margin-top:4px;">${c.sent.channel === 'email' ? 'Email' : 'WhatsApp'} · ${qmTime(c.sent.sent_at)}</span>` : ''}</td>
+  const rows = list.map(c => `<tr data-qmw-key="${escapeHtml(c.key || c.id)}">
+    <td style="min-width:170px;"><b style="color:var(--blue);font-weight:600;">${escapeHtml(c.trade_name.trim())}</b><span class="muted" style="display:block;font-size:11.5px;">${escapeHtml([c.contact_name || c.first_name, c.city].filter(Boolean).join(' · '))}</span>${c.sent ? `<span class="rq-sheet-pill ok" style="margin-top:4px;">${c.sent.channel === 'email' ? 'Email' : 'WhatsApp'} · ${qmTime(c.sent.sent_at)}</span>` : ''}</td>
     <td style="text-align:left;max-width:460px;"><span style="display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.45;white-space:pre-line;">${escapeHtml(c.message)}</span></td>
     <td><div class="rq-sheet-actions" style="justify-content:center;">
-      <button type="button" class="wa-btn outline" ${!c.email ? off('No email on file') : 'style="padding:7px 10px;" title="Review and send by email"'} onclick="qmWeeklySendEmail('${c.id}')"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></button>
-      <button type="button" class="wa-btn" ${!c.phone ? off('No WhatsApp on file') : 'style="padding:7px 10px;" title="Review and open WhatsApp"'} onclick="qmWeeklySendWa('${c.id}')">${RQ_WA_ICON.replace('fill="#fff"', 'fill="currentColor"').replace('width:12px;height:12px', 'width:13px;height:13px')}</button>
+      <button type="button" class="wa-btn outline" ${!c.email ? off('No email on file') : 'style="padding:7px 10px;" title="Review and send by email"'} onclick="qmWeeklySendEmail('${c.key || c.id}')"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></button>
+      <button type="button" class="wa-btn" ${!c.phone ? off('No WhatsApp on file') : 'style="padding:7px 10px;" title="Review and open WhatsApp"'} onclick="qmWeeklySendWa('${c.key || c.id}')">${RQ_WA_ICON.replace('fill="#fff"', 'fill="currentColor"').replace('width:12px;height:12px', 'width:13px;height:13px')}</button>
     </div></td></tr>`).join('');
   document.getElementById('qm_rows').innerHTML = rqTableSection(rows, ['Client', 'Message', 'Send']);
 }
 const qmWeeklyLabel = c => String(c.subject || '').replace('Resumen de la semana pasada · ', '');
-function qmWeeklyFind(cid){ return qmWeekly && qmWeekly.clients.find(x => x.id === cid); }
+function qmWeeklyFind(cid){ return qmWeekly && qmWeekly.clients.find(x => (x.key || x.id) === cid); } // by key: a customer with contacts by protein has one row per contact (owner 2026-10-26)
 async function qmWeeklyLogSend(c, message, channel){
   const r = await callApi('messaging', {
-    action: 'send', actor: currentActor(), customer_id: c.id, reason_key: qmWeekly.reason_key, message, draft: c.message, reason_why: 'Monday summary', channel,
-    idempotency_key: `messaging|${c.id}|${qmWeekly.reason_key}|${channel}`,
+    action: 'send', actor: currentActor(), customer_id: c.id, reason_key: c.reason_key || qmWeekly.reason_key, message, draft: c.message, reason_why: 'Monday summary', channel,
+    idempotency_key: `messaging|${c.id}|${c.reason_key || qmWeekly.reason_key}|${channel}`,
   });
   c.sent = { sent_at: r.message.sent_at, channel, message: r.message.message };
   qmRender();
 }
 function qmWeeklySendEmail(cid){
   const c = qmWeeklyFind(cid); if (!c || !c.email) return;
-  const item = { id: c.id, label: c.trade_name.trim(), to: c.email, subject: c.subject, body: c.message, fromAlias: 'offers', html: BTWeeklyCard.weeklyCardHtml(c, qmWeeklyLabel(c)), htmlText: c.message }; // the BuenTrade card; the text is what shows if the trader edits it
-  const edited = () => ((rqEmailModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
+  const item = { id: c.key || c.id, label: c.trade_name.trim() + (c.contact_name ? ' — ' + c.contact_name : ''), to: c.email, subject: c.subject, body: c.message, fromAlias: 'offers', html: BTWeeklyCard.weeklyCardHtml(c, qmWeeklyLabel(c)), htmlText: c.message }; // the BuenTrade card; the text is what shows if the trader edits it
+  const edited = () => ((rqEmailModalItems.find(x => x.id === (c.key || c.id)) || item).body || '').trim(); // the modal edits its own copy
   item.onSent = async () => { try { await qmWeeklyLogSend(c, edited(), 'email'); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
   rqOpenEmailModal(`Email — ${c.trade_name.trim()}`, [item], true, 'Send');
 }
 async function qmWeeklySendWa(cid){
   const c = qmWeeklyFind(cid); if (!c || !c.phone) return;
   let card = null; try { card = await BTWeeklyCard.weeklyCardPng(c, qmWeeklyLabel(c)); } catch (e){ console.error('weekly card image failed', e); } // WhatsApp has no HTML: the card is an image that downloads to drag into the chat
-  const item = { id: c.id, label: c.trade_name.trim(), phone: String(c.phone).replace(/\D/g, ''), body: card ? c.message.split('\n').slice(0, 2).join('\n') : c.message, downloadFiles: card ? [{ bytes: card.bytes, filename: card.filename, type: 'image/png' }] : undefined, cardFull: !!card, bannerUrl: card ? URL.createObjectURL(new Blob([card.bytes], { type: 'image/png' })) : undefined }; // the blue card is shown in the window, the same picture that downloads and is pasted
-  const edited = () => ((rqWaModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
+  const item = { id: c.key || c.id, label: c.trade_name.trim() + (c.contact_name ? ' — ' + c.contact_name : ''), phone: String(c.phone).replace(/\D/g, ''), body: card ? c.message.split('\n').slice(0, 2).join('\n') : c.message, downloadFiles: card ? [{ bytes: card.bytes, filename: card.filename, type: 'image/png' }] : undefined, cardFull: !!card, bannerUrl: card ? URL.createObjectURL(new Blob([card.bytes], { type: 'image/png' })) : undefined }; // the blue card is shown in the window, the same picture that downloads and is pasted
+  const edited = () => ((rqWaModalItems.find(x => x.id === (c.key || c.id)) || item).body || '').trim(); // the modal edits its own copy
   item.onOpened = async () => { try { await qmWeeklyLogSend(c, edited(), 'whatsapp'); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
   rqOpenWaModal(`WhatsApp — ${c.trade_name.trim()}`, [item], false);
 }
