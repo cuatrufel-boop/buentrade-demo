@@ -7591,7 +7591,7 @@ function rqWaCopyBanner(it){
 }
 // On the trader's own Mac (the local server) the banner is pasted into the WhatsApp chat for him — Cmd+V only, never Enter. Anywhere else (the published site) there is no such address: it answers "manual" and the card says to paste.
 async function rqWaAutoPaste(it){
-  try { const r = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j = await r.json(); it.pasteState = j && j.ok ? 'pasted' : 'manual'; } catch (e) { it.pasteState = 'manual'; }
+  try { const r = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j = await r.json(); it.pasteState = j && j.ok ? 'pasted' : 'manual'; it.pasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : ''; } catch (e) { it.pasteState = 'manual'; it.pasteError = String(e.message || e); } // the error is shown on the card, not hidden
   rqRenderWaModal();
 }
 function rqWaModalOpenOne(i){
@@ -7670,7 +7670,7 @@ function rqComposerWaHtml(it, i){
   const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
   const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
     : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button>` : '';
-  const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
+  const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.pasteError ? '<b>not pasted: ' + escapeHtml(it.pasteError) + '</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
   const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button></div>`).join('');
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner" alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
