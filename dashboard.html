@@ -158,7 +158,6 @@
   .tdr-why{display:block;font-size:12.5px;color:#fff;margin-top:3px;opacity:.88;}
   .tdr-who{margin-top:6px;} .tdr-who>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--blue-bright);user-select:none;} .tdr-who>summary::-webkit-details-marker{display:none;} .tdr-who>summary::before{content:'▸ ';} .tdr-who[open]>summary::before{content:'▾ ';}
   .tdr-ul{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:6px;} .tdr-ul li{font-size:12.5px;line-height:1.4;} .tdr-ul li b{font-weight:600;} .tdr-rs{color:#FFC876;font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;margin-right:4px;}
-  .tdr-weak{margin:4px 0 8px;} .tdr-weak>summary{cursor:pointer;list-style:none;font-size:12.5px;color:var(--blue-bright);padding:8px 0;user-select:none;} .tdr-weak>summary::-webkit-details-marker{display:none;} .tdr-weak>summary::before{content:'▸ ';} .tdr-weak[open]>summary::before{content:'▾ ';}
   .tdr-askcard{grid-column:1/-1;} .tdr-scroll{max-height:360px;overflow:auto;}
   .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
@@ -501,17 +500,14 @@ function todayListHtml(all){
   urgent.forEach(u => { if (u.askers && u.askers.length) u.why = 'Asked by ' + u.askers.join(', ') + (u.why ? ' · ' + u.why.toLowerCase() : ''); });
   const urgentNames = new Set(urgent.map(s => s.product_name));
   // One line per product; behind it EVERY customer (no limit) with the reason he makes sense: asked, buys it, never offered, a note, a similar product he buys (owner 2026-10-24: "debe ser mas inteligente… para ofrecer producto con proposito").
-  // STRONG match = the customer's own signal; WEAK = the system's guess (never offered, history, below average, cadence, similar, just buys it). Weak ones stay listed, folded (owner 2026-10-26: "fuertes arriba, débiles plegados").
-  const STRONG_HOOKS = new Set(['window', 'bid_meet', 'beats_last', 'plant_drop', 'bid']);
   const by = new Map();
-  const grp = i => { let g = by.get(i.product); if (!g) { g = { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set(), cust: new Map(), asked: new Set(), hasSell: false, strong: false }; by.set(i.product, g); } return g; };
+  const grp = i => { let g = by.get(i.product); if (!g) { g = { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set(), cust: new Map(), asked: new Set(), hasSell: false }; by.set(i.product, g); } return g; };
   const askNoPrice = new Map(); // a customer asked and no plant has a price yet: it goes to "Ask the plants" (first), not to the send list
   (all || []).filter(i => (i.group === 'sell' || i.group === 'ask') && i.product && !urgentNames.has(i.product)).forEach(i => {
     if (i.group === 'ask' && !(i.options || []).length) { const a = askNoPrice.get(i.product) || { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), who: [], why: '', asked: true }; if (i.lead && i.lead.name && !a.who.includes(i.lead.name)) a.who.push(i.lead.name); a.why = String((i.lead && i.lead.reason) || i.why || '').replace(/ · still waiting$/, ' · still waiting'); askNoPrice.set(i.product, a); return; }
     const g = grp(i);
     if (i.group === 'sell') g.hasSell = true;
     g.isNew = g.isNew || !!i.new;
-    if (i.hook && STRONG_HOOKS.has(i.hook.key)) g.strong = true; // a real signal of THAT customer (his note's window, his bid works, beats his last offer, a plant drop, his bid)
     const names = i.who && i.who.length ? i.who : i.lead ? [i.lead.name] : [];
     names.forEach(n => g.who.add(n));
     if (i.lead && i.lead.name) {
@@ -523,7 +519,6 @@ function todayListHtml(all){
     }
   });
   const list = [...by.values()].filter(g => g.hasSell || g.asked.size).sort((a, b) => Number(b.asked.size > 0) - Number(a.asked.size > 0) || Number(b.isNew) - Number(a.isNew));
-  const strongList = list.filter(g => g.strong || g.asked.size), weakList = list.filter(g => !(g.strong || g.asked.size));
   const go = (href, urg, label) => `<a class="btn small tdr-go${urg ? ' tdr-urg' : ''}" href="${escapeHtml(href)}">${label || 'Go to Quotes →'}</a>`;
   // Customers grouped by the reason they share, so no reason is written twice: "Asked: IDE Foods" · "Buys this product · no offer open: Ana, Beto, Caro".
   const groupsOf = g => {
@@ -539,7 +534,7 @@ function todayListHtml(all){
   };
   const whoHtml = g => { const gs = groupsOf(g); if (!gs.length) return ''; const only = gs.length === 1 && !gs[0].asked; return `<details class="tdr-who"><summary>Who and why</summary><ul class="tdr-ul">${gs.map(x => `<li>${only ? '' : `<span class="tdr-rs">${escapeHtml(x.head)}</span> `}${x.names.slice().sort((a, b) => a.localeCompare(b)).map(n => `<b>${escapeHtml(n)}</b>`).join(', ')}</li>`).join('')}</ul></details>`; };
   const rowOf = g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`;
-  const rows = strongList.map(rowOf).join(''), weakRows = weakList.map(rowOf).join('');
+  const rows = list.map(rowOf).join('');
   const urows = urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td><td>${go(href, true)}</td></tr>`; }).join('');
   // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
   const needs = new Map(askNoPrice);
@@ -549,7 +544,7 @@ function todayListHtml(all){
   });
   const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => Number(!!b.asked) - Number(!!a.asked) || b.who.length - a.who.length || a.name.localeCompare(b.name));
   const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.asked ? '<b class="tdr-ask-now">Asked</b> · ' : ''}${x.who.length} customer${x.who.length === 1 ? '' : 's'} ${x.asked ? 'waiting' : 'buy it'}${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td><td>${go(x.href, false, 'Ask in Quotes →')}</td></tr>`).join('');
-  return `<div class="tdr"><div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : weakRows ? '<div class="empty">No strong match right now.</div>' : '<div class="empty">Nothing to offer right now.</div>'}${weakRows ? `<details class="tdr-weak"><summary>Weaker matches · ${weakList.length} product${weakList.length === 1 ? '' : 's'}</summary><table class="tdr-t"><tbody>${weakRows}</tbody></table></details>` : ''}</div>`
+  return `<div class="tdr"><div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
     + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A customer asked, or a plant you asked answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div>`
     + (arows ? `<div class="tdr-card tdr-askcard"><h3 class="tdr-h">Ask the plants — customers are waiting</h3><div class="tdr-hint">No plant has a fresh price · the most customers first</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${arows}</tbody></table></div></div>` : '') + `</div>`;
 }

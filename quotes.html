@@ -7442,7 +7442,7 @@ function rqRenderEmailModal(){
   // "Send/Open All" stays button+JS (there's no single link to click for a whole batch) — it just
   // drives rqEmailModalSendOne/rqEmailModalOpenFallback per item exactly as if the trader had
   // clicked each item's own real link or button in turn.
-  sendAllBtn.style.display = (rqEmailModalItems.every(it => it.sent) || rqEmailModalItems.length <= 1) ? 'none' : 'inline-flex'; // ONE message has ONE send button (its own envelope); the header "All" button is only for several (owner 2026-10-27: "para qué dos botones de enviar correo")
+  sendAllBtn.style.display = rqEmailModalItems.every(it => it.sent) ? 'none' : 'inline-flex';
   sendAllBtn.style.alignItems = 'center';
   sendAllBtn.style.gap = '5px';
   const remaining = rqEmailModalItems.filter(it => !it.sent).length;

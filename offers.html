@@ -847,9 +847,9 @@ function offerAgeDays(dateStr){
 
 // A BID is the customer answering (a customer_bid round in the negotiation) — sending him a price, or the updated list, is not a bid (user 2026-10-12: the objective is bids, so the
 // Bid tag, "Negotiating now" and the green QT button mean exactly that and nothing else).
-// A LIVE BID (owner 2026-10-26): an offer still pending whose negotiation has a bid in it on EITHER side — the customer's bid, our bid to the plant, the plant's answer. (Our new price to the customer is not a bid.)
+// A LIVE BID (owner 2026-10-27: "bids solo debe mostrar los bids que yo mismo marco"): an offer still pending with a bid the trader himself recorded — the customer's bid or his own bid to the plant. Nothing else counts (not the plant's answer, not our price).
 // "Bid" (offerIsHot) stays the customer answering; "Live bids" is the whole negotiation, so a bid to a plant is never invisible.
-function offerIsLive(o){ return o.status === 'sent' && (o.negotiation_log || []).some(e => e && (e.to === 'customer_bid' || e.to === 'plant' || e.to === 'plant_reply')); }
+function offerIsLive(o){ return o.status === 'sent' && (o.negotiation_log || []).some(e => e && (e.to === 'customer_bid' || e.to === 'plant')); }
 function openLiveBids(){
   const names = [...new Set(offers.filter(offerIsLive).map(o => o.customer_name || '—'))];
   names.forEach(n => custOpenOverride.set(n, true));
