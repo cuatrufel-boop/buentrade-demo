@@ -4256,45 +4256,6 @@ function rqLiveAuctionRowHtml(a){
     <td style="text-align:center;"><span class="rq-sheet-pill new pkg-tag-blink" title="The plant asks for bids; there is no price">AUCTION${until}</span></td>
     <td style="text-align:center;"><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="Send" aria-label="Send" onclick="${open}">${waIco}${mailIco}</button></div></td></tr>`;
 }
-// The Spanish message to a customer about an open plant auction (owner 2026-10-27: "primero lea producto y clientes, después redacta el mensaje editable"). PURE: it only writes text; it sends
-// nothing, records nothing and calls nothing. WORDING IS A PROPOSAL, not approved copy — it lives in these few lines and nowhere else, so approving or changing it is a one-place edit.
-// The plant's own lines (its places and loads) are translated ONLY where the phrase is one we know for sure ("N loads per week", the weekdays, "also has loads available for 11/4, 11/25…");
-// any other line stays exactly as the plant wrote it (never a guess) and is returned in `untranslated` so the trader sees it is still English; the message is editable before it goes.
-const RQ_AUC_DAYS = { monday: 'lunes', tuesday: 'martes', wednesday: 'miércoles', thursday: 'jueves', friday: 'viernes', saturday: 'sábado', sunday: 'domingo' };
-const RQ_AUC_MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-function rqAuctionLineEs(line){
-  const t = String(line || '').trim();
-  const days = (s) => { const w = String(s || '').split(/\s*(?:,|\band\b|&)\s*/i).map(x => x.trim().toLowerCase().replace(/s$/, '')).filter(Boolean); return w.every(x => RQ_AUC_DAYS[x]) && w.length ? w.map(x => RQ_AUC_DAYS[x]).join(' y ') : null; };
-  let m = /^(.+?):\s*(\d+)\s+loads?\s+per\s+week(?::\s*(.+))?$/i.exec(t);
-  if (m){
-    const n = Number(m[2]), d = m[3] ? days(m[3]) : '';
-    if (d !== null) return `${m[1].trim()}: ${n} ${n === 1 ? 'carga' : 'cargas'} por semana${d ? ': ' + d : ''}`;
-  }
-  m = /^(.+?)\s+also\s+has\s+loads\s+available\s+for\s+(.+)$/i.exec(t);
-  if (m){
-    const ds = m[2].split(/\s*(?:,|\band\b|&)\s*/i).map(x => /^(\d{1,2})\/(\d{1,2})$/.exec(x.trim())).filter(Boolean);
-    const months = [...new Set(ds.map(x => Number(x[1])))];
-    if (ds.length && ds.length === m[2].split(/\s*(?:,|\band\b|&)\s*/i).filter(x => x.trim()).length && months.length === 1 && months[0] >= 1 && months[0] <= 12 && ds.every(x => Number(x[2]) >= 1 && Number(x[2]) <= 31)){
-      const list = ds.map(x => 'el ' + Number(x[2]));
-      return `${m[1].trim()} también tiene cargas disponibles para ${list.length > 1 ? list.slice(0, -1).join(', ') + ' y ' + list[list.length - 1] : list[0]} de ${RQ_AUC_MONTHS[months[0] - 1]}`;
-    }
-  }
-  return null;
-}
-function rqAuctionDeadlineEs(iso){
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
-  if (!m) return '';
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return `${Object.values(RQ_AUC_DAYS)[(d.getDay() + 6) % 7]} ${Number(m[3])} de ${RQ_AUC_MONTHS[Number(m[2]) - 1]}`;
-}
-function rqAuctionMessage(a, firstName){
-  const lines = (a.details || []).map(l => ({ en: String(l), es: rqAuctionLineEs(l) }));
-  const untranslated = lines.filter(l => l.es === null).map(l => l.en);
-  const deadline = rqAuctionDeadlineEs(a.deadline_date);
-  const who = String(firstName || '').trim();
-  const text = `${who ? who + ', buen día' : 'Buen día'}. La planta abrió esta oferta:\n\n${a.product_name_es || a.product_name}${lines.length ? '\n' + lines.map(l => l.es === null ? l.en : l.es).join('\n') : ''}\n\n${deadline ? `Las ofertas (bids) se reciben hasta el ${deadline}. ` : ''}¿Te interesa?`;
-  return { text, untranslated };
-}
 function rqOpenSheetFromList(productIdsCsv){
   rqResetRequestSelection();
   rqActiveProductFilterIds = String(productIdsCsv).split(',').filter(Boolean);
