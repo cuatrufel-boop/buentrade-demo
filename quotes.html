@@ -6751,7 +6751,8 @@ function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPl
     const offer = offersByPlantId.get(plant.id);
     const price = rqOfferPriceText(calc);
     // with its picture the price is on the picture (owner 2026-10-25): the text is the full name, the docs and the link
-    if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
+    // a pesos customer's picture carries no price (the banner draws USD/lb only): his text carries it, after the delivery (owner 2026-10-27: pesos offers went out without a price)
+    if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}${calc.mxn ? ' — ' + price : ''}`, withCalc.length);
     return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${(p.cheap !== undefined ? p.cheap : cheapest.has(i)) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
   }).join('\n\n');
   const pending = p.last ? rqPendingNote() : '';
@@ -6774,7 +6775,7 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
     const lines = items.map(({ plant, calc }, i) => {
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
       const price = rqOfferPriceText(calc);
-      if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length); // the price is on its picture
+      if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}${calc.mxn ? ' — ' + price : ''}`, withCalc.length); // the price is on its picture; a pesos customer's picture has none: his text carries it
       return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${isCheap(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
     }).join('\n\n');
     return p.noTitle ? lines : title + '\n\n' + lines;
