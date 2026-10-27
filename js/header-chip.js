@@ -177,6 +177,8 @@
   var badge = document.getElementById('userBadge');
   var avatar = document.getElementById('userAvatar');
   var chip = document.getElementById('userChip');
+  // the bell (js/os-bell.js): what arrived, in the header of every screen (owner 2026-10-27); not inside the embedded QT
+  if (chip && !/(?:^|[?&])embed=1/.test(location.search)) { var bellJs = document.createElement('script'); bellJs.src = 'js/os-bell.js'; document.head.appendChild(bellJs); }
 
   // "Enable notifications" (user 2026-10-05, OS added to the iPhone home screen): iPhone only lets a page ask for
   // notification permission after a tap, so the automatic ask on login (orders/offers) never reached the phone.
