@@ -3522,6 +3522,8 @@ function rqBrandListHtml(x){
       : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
     body.push(`<tr class="rq-sheet-dim">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
   });
+  const aucRows = typeof rqAuctionRowsHtml === 'function' ? rqAuctionRowsHtml(pid) : ''; // an open plant auction of this product, on top (owner 2026-10-27)
+  if (aucRows) body.unshift(aucRows);
   const lineCount = sorted.filter(r => r.calc && r.confirmed && !r.proposed).length;
   const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace(/<th>/g, '<th style="font-size:12.5px;color:rgba(255,255,255,.88);letter-spacing:.07em;padding:12px 10px 10px;">').replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>')
     : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>';
@@ -4255,6 +4257,45 @@ function rqLiveAuctionRowHtml(a){
     <td><span><b style="font-weight:600;font-size:14px;">${escapeHtml(String(lead.customer_name || '').trim())}</b>${others > 0 ? `<span class="muted"> + ${others} more</span>` : ''}</span></td>
     <td style="text-align:center;"><span class="rq-sheet-pill new pkg-tag-blink" title="The plant asks for bids; there is no price">AUCTION${until}</span></td>
     <td style="text-align:center;"><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="Send" aria-label="Send" onclick="${open}">${waIco}${mailIco}</button></div></td></tr>`;
+}
+// The open plant auctions of ONE product as lines of the brand list (the Send panel): Brand · For · Plant price · Sale · Send, with "AUCTION · until Wed 28" where a price would be and two buttons, WhatsApp and Email.
+// They open the EXISTING review windows, one row per customer who buys the product, each with the plant's email EXACTLY as it came (owner 2026-10-27: "el sistema no puede cambiar ni omitir nada, yo redacto").
+// Nothing is written, translated or recorded here: the windows' own Send / Open buttons are what the trader presses, and he edits the text first.
+function rqAuctionRowsHtml(pid){
+  const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '', waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
+  return rqLiveAuctions.filter(a => a.product_id === pid).map(a => {
+    const cs = a.customers || [];
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(a.deadline_date || ''));
+    const until = m ? ' · until ' + new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + Number(m[3]) : '';
+    const names = cs.map(c => escapeHtml(String(c.customer_name || '').trim())).join(' · ');
+    const btn = (ch, ico, tip) => `<button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="${tip}" aria-label="${tip}" onclick="rqAuctionSend('${escapeHtml(a.id)}','${ch}')">${ico}</button>`;
+    return `<tr class="rq-sheet-new"><td style="min-width:170px;"><b>${escapeHtml(String(a.plant_name || '').trim())}</b><span class="muted" style="display:block;font-size:11px;">Auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}</span></td>`
+      + `<td title="${names}">${cs.length} customer${cs.length === 1 ? '' : 's'}<span class="muted" style="display:block;font-size:11px;">${names}</span></td>`
+      + `<td class="num"><span class="rq-sheet-pill new pkg-tag-blink" title="The plant asks for bids; there is no price">AUCTION${until}</span></td><td><span class="muted">—</span></td>`
+      + `<td><div class="rq-sheet-actions" style="justify-content:center;">${btn('wa', waIco, "Open the plant's email in WhatsApp for each customer")}${btn('email', mailIco, "Open the plant's email as an email for each customer")}</div></td></tr>`;
+  }).join('');
+}
+async function rqAuctionSend(id, channel){
+  const a = rqLiveAuctions.find(x => x.id === id);
+  if (!a) return;
+  const text = String(a.email_text || '');
+  if (!text.trim()){ await btAlert("This auction has no email text saved, so there is nothing to open."); return; }
+  const match = await rqMatchCustomersForProductIds([a.product_id]);
+  if (match.failed){ await btAlert("Couldn't load the customers just now — try again."); return; }
+  const wa = [], mail = [], skipWa = [], skipMail = [];
+  (match.customers || []).forEach(c => {
+    const k = rqCustFor(c, a.product_id), name = String(c.trade_name || '').trim(), phone = String(k.whatsapp || k.phone || '').replace(/\D/g, '');
+    if (phone) wa.push({ id: `auc-${a.id}-${c.id}`, label: name, phone, body: text }); else skipWa.push({ c, pid: a.product_id, why: 'no WhatsApp number on file' });
+    if (k.email) mail.push({ id: `auc-${a.id}-${c.id}`, label: name, to: k.email, subject: a.email_subject || '', body: text, fromAlias: 'offers' }); else skipMail.push({ c, pid: a.product_id, why: 'no email on file' });
+  });
+  const title = `${channel === 'wa' ? 'WhatsApp' : 'Email'} — ${rqProductName(a.product_id)} auction`;
+  if (channel === 'wa'){
+    if (!wa.length){ rqShowNotice('Nothing to open — ' + (skipWa.map(x => `${x.c.trade_name}: ${x.why}`).join(' · ') || 'nobody buys this product')); return; }
+    rqOpenWaModal(title, wa, false); rqSetModalNote('rq_wa_modal_list', skipWa);
+  } else {
+    if (!mail.length){ rqShowNotice('Nothing to open — ' + (skipMail.map(x => `${x.c.trade_name}: ${x.why}`).join(' · ') || 'nobody buys this product')); return; }
+    rqOpenEmailModal(title, mail, false, 'Send'); rqSetModalNote('rq_email_modal_list', skipMail);
+  }
 }
 function rqOpenSheetFromList(productIdsCsv){
   rqResetRequestSelection();
