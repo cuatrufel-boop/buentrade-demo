@@ -21,7 +21,10 @@ async function rqLoadMxnCurrency(){
   } catch (e) { /* keeps the last known one, if any */ }
   return rqMxnCurrencyId;
 }
-function rqIsPesosCustomer(c){ return !!(rqMxnCurrencyId && c && c.preferred_currency_id === rqMxnCurrencyId); }
+// Who pays in pesos is read from the customer himself: the server sends his currency code with him (customers-search: preferred_currency_code). The currency lookup (rqMxnCurrencyId) is only a second way, for a customer
+// that arrived without the code — a lookup that is slow or fails must never turn a pesos customer into a dollar one and open the USD QT (owner 2026-10-27: "cualquier parte que yo escoja un cliente que paga en mxn debe abrir el mxn qt").
+function rqCurrencyKnown(){ return !!rqMxnCurrencyId || (typeof rqAllCustomersCache !== 'undefined' && Array.isArray(rqAllCustomersCache) && rqAllCustomersCache.some(c => c && c.preferred_currency_code)); }
+function rqIsPesosCustomer(c){ return !!(c && (String(c.preferred_currency_code || '').toUpperCase() === 'MXN' || (rqMxnCurrencyId && c.preferred_currency_id === rqMxnCurrencyId))); }
 
 // The customer's city → his Mexican freight tariff (USD). Exact name first, then "starts with", then "contains"; the cheapest of the carriers that quote it.
 // Mexican freight is in the currency of the carrier's own tariff (USD or MXN, as its profile says); the QT's field is MX$, so a USD tariff goes in at the QT's own rate
@@ -90,7 +93,7 @@ function rqWithPesos(customerId, it){
 // The send never goes to a pesos customer without HIS pesos price: his lines are the plants he has confirmed in his own QT (rqWithPesos); none → nothing is sent to him and the trader is told.
 // Returns the customer's fresh offer entries, or null when there is nothing to send him.
 async function rqRequirePesos(c, productId, filterPlantIds){
-  if (!rqMxnCurrencyId && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return null; }
+  if (!rqCurrencyKnown() && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return null; }
   const full = rqCustomerOfferPlantsFor(c.id, [productId], filterPlantIds);
   if (rqIsPesosCustomer(c) && !full.length){ rqShowNotice(`${c.trade_name} buys in pesos — confirm his price in his own QT first (Confirm in QT).`); return null; }
   return full;
@@ -129,7 +132,7 @@ async function rqPesosOpenQt(productId, plantId, customerId){
 async function rqPesosOpenFirst(customerId){
   const pid = rqActiveProductFilterIds[0], c = rqAnyCustomer(customerId);
   if (!pid || !c) return;
-  if (!rqMxnCurrencyId && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return; }
+  if (!rqCurrencyKnown() && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return; }
   const states = rqPesosPlantStates(rqSheetRows(), customerId).filter(x => x.row.pid === pid);
   const target = states.find(x => x.state === 'needs_qt') || states.find(x => x.state === 'ready');
   if (!target){ rqShowNotice(`Confirm the USD price of the plants first — ${c.trade_name}'s QT starts from it.`); return; }
