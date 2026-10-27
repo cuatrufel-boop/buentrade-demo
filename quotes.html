@@ -4050,9 +4050,12 @@ async function rqLoadLiveQuotes(){
 // Open plant AUCTIONS (owner 2026-10-27: "mismo diseño y flujo de hoy"): the plant offers a product and asks for bids, no price. They arrive matched to a product (an unmatched one waits in
 // Pending), and show here only when someone buys that product. A failed load keeps the last list and says nothing; the server expires them by their deadline.
 // Answers of a plant that name no product we can place (owner 2026-10-27: every answer is seen): one line at the top of Live quotes, by plant, with the plant's own words — never attached to a product by a guess.
+// OFF by the owner's word (2026-10-27: "por qué saca en live una marca sola y lo llenaste de notas"): the answers are STILL kept (plant_answers) but Live quotes shows none of this until he decides how he wants to see them.
+let RQ_LIVE_ANSWERS = false;
 let rqLiveUnplaced = [];
-function rqLiveUnplacedToRead(){ return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
+function rqLiveUnplacedToRead(){ if (!RQ_LIVE_ANSWERS) return []; return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
 async function rqLoadLiveUnplaced(){
+  if (!RQ_LIVE_ANSWERS) return;
   try { rqLiveUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { return; }
   try { rqRenderLiveQuotes(); renderRqStats(); } catch (e) {}
 }
@@ -4242,9 +4245,11 @@ function rqOpenLiveRow(pid, cid){
 // What needs reading (a counter-offer, a reply to our bid, an unread answer, within 2 days) turns the status into "Answers to read" and is Today's Urgent too.
 const RQ_ANSWER_READ_KINDS = ['counter', 'bid_reply', 'unread'], RQ_ANSWER_READ_DAYS = 2;
 function rqLiveAnswersToRead(s){
+  if (!RQ_LIVE_ANSWERS) return [];
   return (s.answers || []).filter(a => RQ_ANSWER_READ_KINDS.includes(a.kind) && Date.now() - new Date(a.at).getTime() < RQ_ANSWER_READ_DAYS * 86400000);
 }
 function rqLiveAnswersHtml(p){
+  if (!RQ_LIVE_ANSWERS) return '';
   const pill = (cls, text, title) => `<span class="rq-sheet-pill ${cls}" style="margin:0 4px 3px 0;white-space:normal;text-align:left;"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(text)}</span>`;
   const nm = id => { const pl = (typeof rqAllPlants !== 'undefined' ? rqAllPlants : []).find(x => x.id === id); return pl ? String(pl.name).trim() : ''; };
   const out = [], shown = new Set();

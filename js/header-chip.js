@@ -249,7 +249,12 @@ function btFetchOnce(url, opts, read){
     function launch(){
       if (done || launched >= 3) return;
       launched++; pending++;
-      fetch(url, opts).then(function(r){ if (!done) { finish(); resolve(r); } }, function(e){
+      // a 5xx answer (the platform's 504 in front of a function that was cold: owner 2026-10-27, Today "Error calling API: 504") is asked again too; if all three asks end in 5xx the last one is the answer
+      fetch(url, opts).then(function(r){
+        if (done) return;
+        if (r.status >= 500 && launched < 3) { pending--; launch(); return; }
+        finish(); resolve(r);
+      }, function(e){
         pending--;
         if (done) return;
         if (launched < 3) launch(); else if (pending === 0) { finish(); reject(e); }

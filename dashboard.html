@@ -485,15 +485,17 @@ const todayKey = i => i.group + '|' + i.title;
 // no customer yet), OPTIONAL on the left (new prices and prices up to date that have not been sent). Under it only money and bids that need an action (collect, pay, credit, bid) stay, folded ("Money and bids").
 // TODAY_LIST = false brings the old board back as it was.
 const TODAY_LIST = true;
+// OFF by the owner's word (2026-10-27): Urgent is exactly what he defined (a customer asked / a plant we asked answered with a price). The answers are kept; Today does not read them, and does not wait for them.
+const TODAY_ANSWERS = false;
 let dashLive = [], dashUnplaced = [], todayOtherOpen = false;
 async function loadTodayLive(){ try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ }
-  try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } }
+  if (TODAY_ANSWERS){ try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } } }
 function todayListHtml(all){
   // URGENT = real work only (owner 2026-10-26: "urgent solo cuando un cliente pidió o una planta que preguntamos respondió"): (1) a plant WE asked for that product answered after we asked and that price has gone to no customer; (2) a customer asked, the price is here and nothing went to him.
   // A routine price list of a product with an open live quote is NOT urgent: it is an ordinary match, listed in Optional.
   const urgent = (dashLive || []).filter(s => s.product_id && s.product_name && (s.arrivals || []).some(a => !(a.sent_customer_ids || []).length && (s.plants || []).some(p => p.plant_id === a.plant_id && p.asked_at && new Date(a.arrived_at) >= new Date(p.asked_at)))).map(s => ({ ...s, why: 'A plant you asked answered' }));
   // An answer that needs READING is urgent too (owner 2026-10-27: "no quiero estar arreglando todo muchas veces"): a counter-offer, a reply to our bid, an answer the system could not read — within 2 days, from the quote's own answers.
-  (dashLive || []).filter(s => s.product_id && s.product_name && !urgent.some(u => u.product_id === s.product_id)).forEach(s => {
+  if (typeof TODAY_ANSWERS !== 'undefined' && TODAY_ANSWERS) (dashLive || []).filter(s => s.product_id && s.product_name && !urgent.some(u => u.product_id === s.product_id)).forEach(s => {
     const toRead = (s.answers || []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000);
     if (toRead.length) urgent.push({ ...s, why: toRead.map(a => `${a.plant_name} ${a.kind === 'bid_reply' ? 'answered your bid' : a.kind === 'counter' ? 'offered something else' : 'answered (not read)'} — read it`).join(' · ') });
   });
@@ -506,7 +508,7 @@ function todayListHtml(all){
   urgent.forEach(u => { if (u.askers && u.askers.length) u.why = 'Asked by ' + u.askers.join(', ') + (u.why ? ' · ' + u.why.toLowerCase() : ''); });
   const urgentNames = new Set(urgent.map(s => s.product_name));
   // Answers that name no product we can place are urgent too, by plant (owner 2026-10-27: every answer is seen) — within 2 days, a counter-offer, a bid reply or an unread answer.
-  const unplacedRead = (typeof dashUnplaced !== 'undefined' ? dashUnplaced : []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000);
+  const unplacedRead = (typeof TODAY_ANSWERS !== 'undefined' && TODAY_ANSWERS && typeof dashUnplaced !== 'undefined' ? dashUnplaced : []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000);
   // One line per product; behind it EVERY customer (no limit) with the reason he makes sense: asked, buys it, never offered, a note, a similar product he buys (owner 2026-10-24: "debe ser mas inteligente… para ofrecer producto con proposito").
   const by = new Map();
   const grp = i => { let g = by.get(i.product); if (!g) { g = { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set(), cust: new Map(), asked: new Set(), hasSell: false }; by.set(i.product, g); } return g; };
