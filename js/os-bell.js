@@ -2,9 +2,9 @@
 // match, an open plant auction — with filters and one button per line that goes to where the work is done (Quotes, Plants). It only reads (dashboard-summary view "bell") and links: it never sends, saves or decides.
 // "Seen" is this browser's own memory (localStorage); the number on the bell counts what arrived since. A soft sound plays once when something new arrives while the OS is open (can be switched off in the panel).
 (function(){
-  var KINDS = { price: { label: 'Prices', color: '#2fbf71', ini: 'PR' }, pending: { label: 'Pending', color: '#f0b429', ini: 'PM' }, auction: { label: 'Auction', color: '#6fb1ff', ini: 'AU' } };
+  var KINDS = { price: { label: 'Prices', color: '#2fbf71', ini: 'PR' }, answer: { label: 'Answers', color: '#c792ea', ini: 'AN' }, pending: { label: 'Pending', color: '#f0b429', ini: 'PM' }, auction: { label: 'Auction', color: '#6fb1ff', ini: 'AU' } };
   function unseenCount(items, seenIso){ var t = seenIso ? new Date(seenIso).getTime() : 0; return (items || []).filter(function(i){ return new Date(i.at).getTime() > t; }).length; }
-  function kindCounts(items){ var c = { all: (items || []).length, price: 0, pending: 0, auction: 0 }; (items || []).forEach(function(i){ if (c[i.kind] != null) c[i.kind]++; }); return c; }
+  function kindCounts(items){ var c = { all: (items || []).length, price: 0, answer: 0, pending: 0, auction: 0 }; (items || []).forEach(function(i){ if (c[i.kind] != null) c[i.kind]++; }); return c; }
   function ago(iso, now){ var m = Math.max(0, Math.round(((now || Date.now()) - new Date(iso).getTime()) / 60000)); return m < 1 ? 'just now' : m < 60 ? m + ' min' : m < 1440 ? Math.round(m / 60) + ' h' : Math.round(m / 1440) + ' d'; }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   window.btBellLogic = { unseenCount: unseenCount, kindCounts: kindCounts, ago: ago, esc: esc, KINDS: KINDS };
