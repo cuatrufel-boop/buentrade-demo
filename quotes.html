@@ -4050,7 +4050,10 @@ async function rqLoadLiveQuotes(){
 // Pending), and show here only when someone buys that product. A failed load keeps the last list and says nothing; the server expires them by their deadline.
 let rqLiveAuctions = [];
 async function rqLoadLiveAuctions(){
-  try { rqLiveAuctions = ((await callApi('sent-offers-search', { offer_sheet: { action: 'auctions' } })).auctions || []).filter(a => a && a.product_id && (a.customers || []).length); } catch (e) { return; }
+  try {
+    // Who is left: the customers who buy the product and were not sent it yet (the Messaging log says who was). An auction leaves Live quotes when everybody has it, like what went out leaves for Offers.
+    rqLiveAuctions = ((await callApi('sent-offers-search', { offer_sheet: { action: 'auctions' } })).auctions || []).filter(a => a && a.product_id).map(a => { const got = new Set((a.sent || []).map(x => x.customer_id)); return { ...a, customers: (a.customers || []).filter(c => !got.has(c.customer_id)), alreadySent: (a.customers || []).filter(c => got.has(c.customer_id)) }; }).filter(a => a.customers.length);
+  } catch (e) { return; }
   try { rqRenderLiveQuotes(); renderRqStats(); } catch (e) {}
 }
 // Where one asked plant stands in its package, read from its own price record — the same reading for the Live quotes counts and for
@@ -4253,7 +4256,7 @@ function rqLiveAuctionRowHtml(a){
   const until = m ? ' · until ' + new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + Number(m[3]) : '';
   const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '', waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
   const open = `rqOpenLiveRow('${escapeHtml(pid)}','${escapeHtml(lead.customer_id)}')`;
-  return `<tr class="rq-lq-row send"><td><a class="name-link" title="Send" onclick="${open}"><b>${escapeHtml(a.product_name)}</b></a><span class="muted" style="display:block;font-size:11px;">${escapeHtml(String(a.plant_name || '').trim())} auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}</span></td>
+  return `<tr class="rq-lq-row send"><td><a class="name-link" title="Send" onclick="${open}"><b>${escapeHtml(a.product_name)}</b></a><span class="muted" style="display:block;font-size:11px;">${escapeHtml(String(a.plant_name || '').trim())} auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}${(a.alreadySent || []).length ? ' · sent to ' + a.alreadySent.length : ''}</span></td>
     <td><span><b style="font-weight:600;font-size:14px;">${escapeHtml(String(lead.customer_name || '').trim())}</b>${others > 0 ? `<span class="muted"> + ${others} more</span>` : ''}</span></td>
     <td style="text-align:center;"><span class="rq-sheet-pill new pkg-tag-blink" title="The plant asks for bids; there is no price">AUCTION${until}</span></td>
     <td style="text-align:center;"><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="Send" aria-label="Send" onclick="${open}">${waIco}${mailIco}</button></div></td></tr>`;
@@ -4269,7 +4272,7 @@ function rqAuctionRowsHtml(pid){
     const until = m ? ' · until ' + new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + Number(m[3]) : '';
     const names = cs.map(c => escapeHtml(String(c.customer_name || '').trim())).join(' · ');
     const btn = (ch, ico, tip) => `<button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="${tip}" aria-label="${tip}" onclick="rqAuctionSend('${escapeHtml(a.id)}','${ch}')">${ico}</button>`;
-    return `<tr class="rq-sheet-new"><td style="min-width:170px;"><b>${escapeHtml(String(a.plant_name || '').trim())}</b><span class="muted" style="display:block;font-size:11px;">Auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}</span></td>`
+    return `<tr class="rq-sheet-new"><td style="min-width:170px;"><b>${escapeHtml(String(a.plant_name || '').trim())}</b><span class="muted" style="display:block;font-size:11px;">Auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}${(a.alreadySent || []).length ? ' · sent to ' + a.alreadySent.length : ''}</span></td>`
       + `<td title="${names}">${cs.length} customer${cs.length === 1 ? '' : 's'}<span class="muted" style="display:block;font-size:11px;">${names}</span></td>`
       + `<td class="num"><span class="rq-sheet-pill new pkg-tag-blink" title="The plant asks for bids; there is no price">AUCTION${until}</span></td><td><span class="muted">—</span></td>`
       + `<td><div class="rq-sheet-actions" style="justify-content:center;">${btn('wa', waIco, "Open the plant's email in WhatsApp for each customer")}${btn('email', mailIco, "Open the plant's email as an email for each customer")}</div></td></tr>`;
@@ -4283,10 +4286,21 @@ async function rqAuctionSend(id, channel){
   const match = await rqMatchCustomersForProductIds([a.product_id]);
   if (match.failed){ await btAlert("Couldn't load the customers just now — try again."); return; }
   const wa = [], mail = [], skipWa = [], skipMail = [];
-  (match.customers || []).forEach(c => {
+  const left = new Set((a.customers || []).map(c => c.customer_id)); // only who has not been sent it yet
+  (match.customers || []).filter(c => left.has(c.id)).forEach(c => {
     const k = rqCustFor(c, a.product_id), name = String(c.trade_name || '').trim(), phone = String(k.whatsapp || k.phone || '').replace(/\D/g, '');
-    if (phone) wa.push({ id: `auc-${a.id}-${c.id}`, label: name, phone, body: text }); else skipWa.push({ c, pid: a.product_id, why: 'no WhatsApp number on file' });
-    if (k.email) mail.push({ id: `auc-${a.id}-${c.id}`, label: name, to: k.email, subject: a.email_subject || '', body: text, fromAlias: 'offers' }); else skipMail.push({ c, pid: a.product_id, why: 'no email on file' });
+    const id = `auc-${a.id}-${c.id}`;
+    if (phone){
+      const it = { id, label: name, phone, body: text };
+      // recorded only when the trader says "Yes, sent" (the window asks), with the text he actually sent
+      it.onOpened = async () => { try { await rqAuctionRecord(a, c, 'whatsapp', ((rqWaModalItems.find(x => x.id === id) || it).body || '').trim()); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
+      wa.push(it);
+    } else skipWa.push({ c, pid: a.product_id, why: 'no WhatsApp number on file' });
+    if (k.email){
+      const it = { id, label: name, to: k.email, subject: a.email_subject || '', body: text, fromAlias: 'offers' };
+      it.onSent = async () => { try { await rqAuctionRecord(a, c, 'email', ((rqEmailModalItems.find(x => x.id === id) || it).body || '').trim()); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
+      mail.push(it);
+    } else skipMail.push({ c, pid: a.product_id, why: 'no email on file' });
   });
   const title = `${channel === 'wa' ? 'WhatsApp' : 'Email'} — ${rqProductName(a.product_id)} auction`;
   if (channel === 'wa'){
@@ -4296,6 +4310,18 @@ async function rqAuctionSend(id, channel){
     if (!mail.length){ rqShowNotice('Nothing to open — ' + (skipMail.map(x => `${x.c.trade_name}: ${x.why}`).join(' · ') || 'nobody buys this product')); return; }
     rqOpenEmailModal(title, mail, false, 'Send'); rqSetModalNote('rq_email_modal_list', skipMail);
   }
+}
+// A sent auction message is recorded where every message is: the Messaging log (the "Messages Sent Today" tab) — NOT in Offers, because an offer needs a price and an auction has none (owner 2026-10-27: "no en algo nuevo,
+// en la misma pestaña Sent"). Through the existing `messaging` send (angle "offer"), idempotent per customer × auction × channel, with the text the trader actually sent. Then the line shows who is left.
+async function rqAuctionRecord(a, c, channel, text){
+  if (!String(text || '').trim()) return;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(a.deadline_date || ''));
+  const until = m ? ' · bids until ' + new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + Number(m[3]) : '';
+  await callApi('messaging', {
+    action: 'send', actor: currentActor(), customer_id: c.id, reason_key: `compose:${qmToday()}:auction-${a.id}`, angle: 'offer', product_id: a.product_id, message: text, draft: null,
+    reason_why: `Plant auction — ${a.product_name}${until}`, channel, idempotency_key: `messaging|${c.id}|auction:${a.id}|${channel}`,
+  });
+  rqLoadLiveAuctions();
 }
 function rqOpenSheetFromList(productIdsCsv){
   rqResetRequestSelection();
