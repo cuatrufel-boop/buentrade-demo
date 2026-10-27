@@ -4278,7 +4278,7 @@ function rqLiveUnplacedRowHtml(){
       : a.kind === 'unread' ? pill('wait', short ? `${a.plant_name}: answer not read — “${short}” — open it` : `${a.plant_name}: answer not read — open it`, w)
       : pill('wait', short ? `${a.plant_name}: “${short}”` : `${a.plant_name}: answered without a price`, w);
   }).join('');
-  return `<tr class="rq-lq-row wait"><td><b>Plant answers without a product</b><span class="muted" style="display:block;font-size:11px;">they name no product we can place</span><span style="display:block;margin-top:3px;line-height:1.55;">${pills}</span></td><td><span class="muted">—</span></td><td style="text-align:center;"><span class="rq-sheet-pill wait">Answers to read</span></td><td style="text-align:center;"><span class="muted">—</span></td></tr>`;
+  return `<tr class="rq-lq-row wait" data-extra="unplaced"><td><b>Plant answers without a product</b><span class="muted" style="display:block;font-size:11px;">they name no product we can place</span><span style="display:block;margin-top:3px;line-height:1.55;">${pills}</span></td><td><span class="muted">—</span></td><td style="text-align:center;"><span class="rq-sheet-pill wait">Answers to read</span></td><td style="text-align:center;"><span class="muted">—</span></td></tr>`;
 }
 function rqLiveRowHtml(p){
   const pid = p.s.product_id, nm = e => escapeHtml(rqLiveCustomerName(e.cid) || '…');
@@ -4307,7 +4307,7 @@ function rqLiveAuctionRowHtml(a){
   const until = m ? ' · until ' + new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + Number(m[3]) : '';
   const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '', waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
   const open = `rqOpenLiveRow('${escapeHtml(pid)}','${escapeHtml(lead.customer_id)}')`;
-  return `<tr class="rq-lq-row send"><td><a class="name-link" title="Send" onclick="${open}"><b>${escapeHtml(a.product_name)}</b></a><span class="muted" style="display:block;font-size:11px;">${escapeHtml(String(a.plant_name || '').trim())} auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}${(a.alreadySent || []).length ? ' · sent to ' + a.alreadySent.length : ''}</span></td>
+  return `<tr class="rq-lq-row send" data-extra="auction"><td><a class="name-link" title="Send" onclick="${open}"><b>${escapeHtml(a.product_name)}</b></a><span class="muted" style="display:block;font-size:11px;">${escapeHtml(String(a.plant_name || '').trim())} auction${a.received_at ? ' · ' + escapeHtml(rqAgo(a.received_at)) : ''}${(a.alreadySent || []).length ? ' · sent to ' + a.alreadySent.length : ''}</span></td>
     <td><span><b style="font-weight:600;font-size:14px;">${escapeHtml(String(lead.customer_name || '').trim())}</b>${others > 0 ? `<span class="muted"> + ${others} more</span>` : ''}</span></td>
     <td style="text-align:center;"><span class="rq-sheet-pill new pkg-tag-blink" title="The plant asks for bids; there is no price">AUCTION${until}</span></td>
     <td style="text-align:center;"><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="Send" aria-label="Send" onclick="${open}">${waIco}${mailIco}</button></div></td></tr>`;
