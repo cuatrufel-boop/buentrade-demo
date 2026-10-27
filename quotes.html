@@ -1973,6 +1973,8 @@ const QM_TABS = [
     icon: '<path d="M20 6 9 17l-5-5"/>' },
   { kind: 'weekly', label: 'Monday Summary', cls: 'hero', title: 'Last week’s summary', sub: 'One message per client: what we offered him last week.',
     icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
+  { kind: 'open', label: 'Open message', cls: 'hero', title: 'Open message — prototype (nothing is sent or saved)', sub: 'Paste a plant\'s text, pick the products, edit one message per customer.',
+    icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>' },
   { kind: 'market', label: 'Market Flash & News', cls: 'hero', title: 'What the messages are built from', sub: 'The Market Flash bulletin and today’s news, each with its source.',
     icon: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' },
 ];
@@ -2009,9 +2011,9 @@ const qmTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minu
 
 function qmRender(){
   if (!qmData) return;
-  document.getElementById('qm_stats_row').style.gridTemplateColumns = '1.3fr 1fr 1fr 1fr';
+  document.getElementById('qm_stats_row').style.gridTemplateColumns = '1.3fr 1fr 1fr 1fr 1fr';
   document.getElementById('qm_stats_row').innerHTML = QM_TABS.map(t => {
-    const n = t.kind === 'market' ? (qmNews ? qmNews.length : '·') : t.kind === 'weekly' ? (qmWeekly ? qmWeekly.clients.filter(c => !c.sent).length : '·') : qmItems(t.kind).length;
+    const n = t.kind === 'open' ? '+' : t.kind === 'market' ? (qmNews ? qmNews.length : '·') : t.kind === 'weekly' ? (qmWeekly ? qmWeekly.clients.filter(c => !c.sent).length : '·') : qmItems(t.kind).length;
     return `<div class="stat-card ${t.cls}${t.kind === qmTab ? ' active' : ''}" onclick="qmTab='${t.kind}';qmTabPicked=true;qmOpen=null;qmRender();qmFetchDrafts()" style="cursor:pointer;" title="Show ${t.label}">
       <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg></div>
       <div><div class="stat-value">${n}</div><div class="stat-label">${t.label}</div></div></div>`;
@@ -2027,6 +2029,7 @@ function qmRender(){
   document.getElementById('qm_sub').style.display = 'none'; // 2026-10-10 ("reseñas innecesarias"): no explanatory sentence under the title
   if (qmTab === 'market'){ qmRenderNews(); return; }
   if (qmTab === 'weekly'){ qmWeeklyRender(); return; }
+  if (qmTab === 'open'){ qmOpenRender(); return; }
   const items = qmItems(qmTab);
   document.getElementById('qm_count').textContent = `${items.length} client${items.length === 1 ? '' : 's'}`;
   if (!items.length){ document.getElementById('qm_rows').innerHTML = `<div class="empty">${qmTab === 'sent' ? 'Nothing sent yet today.' : 'Everyone has their message for today.'}</div>`; return; }
@@ -2223,6 +2226,127 @@ async function qmWeeklySendWa(cid){
   const edited = () => ((rqWaModalItems.find(x => x.id === (c.key || c.id)) || item).body || '').trim(); // the modal edits its own copy
   item.onOpened = async () => { try { await qmWeeklyLogSend(c, edited(), 'whatsapp'); } catch (e){ rqShowNotice(`WhatsApp opened, but it couldn't be recorded: ${e.message}`); } };
   rqOpenWaModal(`WhatsApp — ${c.trade_name.trim()}`, [item], false);
+}
+// OPEN MESSAGE — A PROTOTYPE TO LOOK AT (owner 2026-10-27: "si no me lo muestras no sé… algo mejor, más impresionante"). Paste a plant's text: the system reads it line by line, matches each product it names to the catalog
+// (or says plainly that the catalog has no such product), lists the customers who buy each one with THEIR contact for that protein and what they buy, and drafts one message per customer in Spanish for you to edit.
+// It only SHOWS: no send button works, nothing is recorded, no call writes anything. The wording of the draft is a proposal for the owner to approve, not approved copy. The real version needs its own approval.
+let qmOpenS = { text: '', sel: new Set(), off: new Set(), msgs: {}, q: '', custs: null };
+const qmOpenNorm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const qmOpenToks = (t) => qmOpenNorm(t).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2).map(w => w.replace(/s$/, ''));
+const QM_OPEN_STOP = new Set(['the', 'and', 'our', 'with', 'for', 'per', 'week', 'load', 'full', 'skinles', 'unslashed', 'slashed', 'cutting']);
+const QM_OPEN_SPECIES = new Set(['pork', 'chicken', 'beef', 'turkey']);
+function qmOpenProducts(){
+  const m = new Map();
+  ((qmData && qmData.clients) || []).forEach(c => (c.products || []).forEach(p => { if (!m.has(p.product_id)) m.set(p.product_id, { id: p.product_id, name: p.name_en || p.name_es || '', es: p.name_es || p.name_en || '', buyers: [] }); m.get(p.product_id).buyers.push(c.id); }));
+  return [...m.values()];
+}
+// one segment per line (or per sentence when the text is one paragraph) that is short enough to be a product heading
+function qmOpenSegments(text){
+  const lines = String(text || '').split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const parts = lines.length > 1 ? lines : String(text || '').split(/(?<=[.!?])\s+/).map(l => l.trim()).filter(Boolean);
+  return parts.filter(l => l.split(/\s+/).length <= 14 && qmOpenToks(l).length >= 2);
+}
+function qmOpenMatch(segment, products){
+  const seg = new Set(qmOpenToks(segment).filter(w => !QM_OPEN_STOP.has(w))), vocab = qmOpenMatch.vocab || (qmOpenMatch.vocab = new Set(products.flatMap(p => qmOpenToks(p.name))));
+  const scored = products.map(p => {
+    const pt = qmOpenToks(p.name).filter(w => !QM_OPEN_SPECIES.has(w) && !QM_OPEN_STOP.has(w));
+    if (!pt.length) return { p, score: 0 };
+    const hit = pt.filter(w => seg.has(w)).length, extras = [...seg].filter(w => !pt.includes(w) && vocab.has(w)).length;
+    return { p, score: hit / pt.length - 0.18 * extras, extras };
+  }).sort((a, b) => b.score - a.score || b.p.buyers.length - a.p.buyers.length);
+  const best = scored[0], hits = [...seg].filter(w => vocab.has(w)).length; // hits: how many catalog words the line has — fewer than 2 is not a product line (a place, a date, a greeting)
+  // a line with a catalog word the product does not have ("Fat WITH SKIN" vs "Cutting Fat") is never offered as a maybe: nothing is guessed
+  if (best && best.score >= 0.85) return { level: 'high', p: best.p, score: best.score, hits };
+  if (best && best.score >= 0.6 && best.extras === 0) return { level: 'maybe', p: best.p, score: best.score, hits };
+  return { level: 'none', p: null, score: best ? best.score : 0, hits };
+}
+function qmOpenDeadline(text){
+  const m = String(text || '').match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)[a-z]*,?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i);
+  if (!m) return '';
+  const D = { monday: 'lunes', tuesday: 'martes', wednesday: 'miércoles', thursday: 'jueves', friday: 'viernes', saturday: 'sábado', sunday: 'domingo' }, M = { january: 'enero', february: 'febrero', march: 'marzo', april: 'abril', may: 'mayo', june: 'junio', july: 'julio', august: 'agosto', september: 'septiembre', october: 'octubre', november: 'noviembre', december: 'diciembre' };
+  return `${D[m[1].toLowerCase()]} ${m[3]} de ${M[m[2].toLowerCase()]}`;
+}
+async function qmOpenLoadContacts(){
+  if (qmOpenS.custs) return;
+  try { qmOpenS.custs = (await callApi('customers-search', {})).results || []; } catch (e) { qmOpenS.custs = []; }
+  qmOpenRefresh();
+}
+function qmOpenRender(){
+  document.getElementById('qm_count').textContent = '';
+  document.getElementById('qm_rows').innerHTML = `<div class="card" style="padding:16px 20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;"><b style="font-size:15px;">Offer a plant's text to the customers who buy it</b><span class="pkg-tag" style="margin:0;">Prototype · nothing is sent or saved</span></div>
+    <label style="font-size:12.5px;font-weight:600;">1 · Paste the plant's text</label>
+    <textarea id="qmo_text" rows="6" style="width:100%;margin:6px 0 14px;" placeholder="Paste the email or message of the plant here" oninput="qmOpenS.text=this.value;qmOpenRefresh()">${escapeHtml(qmOpenS.text)}</textarea>
+    <div id="qmo_summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;"></div>
+    <div id="qmo_read" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;margin-bottom:14px;"></div>
+    <label style="font-size:12.5px;font-weight:600;">2 · What the text offers — each line matched to your catalog</label>
+    <div id="qmo_products" style="display:grid;gap:8px;margin:8px 0 8px;"></div>
+    <input id="qmo_q" type="text" placeholder="Add another product by name" value="${escapeHtml(qmOpenS.q)}" oninput="qmOpenS.q=this.value;qmOpenRefresh()" style="max-width:320px;margin-bottom:6px;">
+    <div id="qmo_found" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+    <label style="font-size:12.5px;font-weight:600;">3 · The customers who buy them — one message each, in Spanish, yours to edit</label>
+    <div id="qmo_clients" style="display:grid;gap:10px;margin-top:8px;"></div>
+    <div id="qmo_bar" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);"></div></div>`;
+  qmOpenLoadContacts(); qmOpenRefresh();
+}
+// WHAT THE SYSTEM READ: the pasted text with what it understood marked (product lines green, the deadline amber, loads blue, places violet) and the facts it pulled out
+function qmOpenReadHtml(text, res){
+  const esc = escapeHtml, lines = String(text || '').split(/\n/);
+  const mark = (t, bg, color) => `<mark style="background:${bg};color:${color};border-radius:4px;padding:0 3px;">${t}</mark>`;
+  const prod = new Set(res.filter(r => r.m.level !== 'none' || r.m.hits >= 2).map(r => r.seg));
+  const out = lines.map(l => {
+    let h = esc(l);
+    if (prod.has(l.trim())) h = mark(h, 'rgba(63,203,126,.22)', '#7BE3A8');
+    h = h.replace(/\b((?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)[a-z]*,?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?)/gi, (m) => mark(m, 'rgba(255,200,118,.25)', '#FFC876'));
+    h = h.replace(/(\b\d+\s+loads?\s+(?:per|a)\s+week\b|\bloads? available[^.]*)/gi, (m) => mark(m, 'rgba(90,170,255,.25)', '#8EC5FF'));
+    h = h.replace(/^([A-Z][A-Za-z]+(?: [A-Z][A-Za-z]+)?)(?=:)/, (m) => mark(m, 'rgba(176,140,255,.25)', '#C9B3FF'));
+    return h;
+  }).join('<br>');
+  const deadline = qmOpenDeadline(text), places = [...new Set(lines.map(l => (l.match(/^([A-Z][A-Za-z]+(?: [A-Z][A-Za-z]+)?):/) || [])[1]).filter(Boolean))];
+  const loads = lines.filter(l => /\d+\s+loads?\s+(?:per|a)\s+week/i.test(l)).map(l => l.trim());
+  const fact = (k, v) => v ? `<div style="display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px;"><span class="muted" style="min-width:86px;">${k}</span><span>${v}</span></div>` : '';
+  const left = `<div class="card" style="padding:10px 14px;"><div class="muted" style="font-size:12px;margin-bottom:6px;">Reading view</div><div style="font-size:12.5px;line-height:1.6;max-height:190px;overflow:auto;">${text.trim() ? out : '<span class="muted">The text you paste shows here, with what the system understood marked.</span>'}</div></div>`;
+  const right = `<div class="card" style="padding:10px 14px;"><div class="muted" style="font-size:12px;margin-bottom:6px;">What it pulled out</div>${text.trim() ? fact('Deadline', deadline ? esc(deadline) : '') + fact('Plants / places', places.map(esc).join(', ')) + fact('Loads', loads.map(esc).join('<br>')) + fact('Products', String(res.length) + ' line' + (res.length === 1 ? '' : 's')) : '<span class="muted" style="font-size:12.5px;">Nothing yet.</span>'}</div>`;
+  return left + right;
+}
+function qmOpenPick(id, on){ if (on) qmOpenS.sel.add(id); else qmOpenS.sel.delete(id); qmOpenRefresh(); }
+function qmOpenInclude(cid, on){ if (on) qmOpenS.off.delete(cid); else qmOpenS.off.add(cid); qmOpenRefresh(false); }
+function qmOpenProto(){ rqShowNotice('Prototype: nothing is sent yet.'); }
+function qmOpenRefresh(redo){
+  const S = qmOpenS, all = qmOpenProducts(), host = document.getElementById('qmo_products');
+  if (!host) return;
+  const res = (S.text.trim() ? qmOpenSegments(S.text) : []).map(seg => ({ seg, m: qmOpenMatch(seg, all) })).filter(r => r.m.hits >= 2), segs = res;
+  if (redo !== false) res.forEach(r => { if (r.m.level === 'high' && !S.autoSeen) S.sel.add(r.m.p.id); });
+  if (S.text.trim() && !S.autoSeen) S.autoSeen = true;
+  if (!S.text.trim()) S.autoSeen = false;
+  document.getElementById('qmo_read').innerHTML = qmOpenReadHtml(S.text, res);
+  host.innerHTML = res.length ? res.map(({ seg, m }) => {
+    const head = `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">“${escapeHtml(seg.length > 90 ? seg.slice(0, 90) + '…' : seg)}”</div>`;
+    if (m.level === 'none') return `<div class="card" style="padding:10px 14px;border-color:rgba(255,200,118,.55);">${head}<b style="color:#FFC876;">No product like this in your catalog.</b><span class="muted" style="font-size:12.5px;display:block;">Create it first (you approve it), or pick another product below.</span></div>`;
+    const on = S.sel.has(m.p.id);
+    return `<div class="card" style="padding:10px 14px;${on ? 'border-color:rgba(63,203,126,.55);' : ''}">${head}<label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap;"><input type="checkbox" ${on ? 'checked' : ''} onchange="qmOpenPick('${m.p.id}',this.checked)"><b>${escapeHtml(m.p.es)}</b><span class="muted" style="font-size:12.5px;">${escapeHtml(m.p.name)}</span><span class="pkg-tag ${m.level === 'high' ? 'ok' : ''}" style="margin:0;">${m.level === 'high' ? 'Strong match' : 'Maybe — check'}</span><span title="how much of the catalog name is in the line" style="display:inline-block;width:80px;height:5px;background:rgba(255,255,255,.14);border-radius:3px;"><span style="display:block;width:${Math.round(Math.max(0, Math.min(1, m.score)) * 100)}%;height:5px;background:#3FCB7E;border-radius:3px;"></span></span><span style="margin-left:auto;font-size:12.5px;">${m.p.buyers.length} customer${m.p.buyers.length === 1 ? '' : 's'} buy it</span></label></div>`;
+  }).join('') : '<div class="muted" style="font-size:12.5px;">Paste a text: each line that names a product shows up here.</div>';
+  const typed = qmOpenNorm(S.q.trim()), found = typed ? all.filter(p => qmOpenNorm(p.name + ' ' + p.es).includes(typed)).slice(0, 8) : [];
+  document.getElementById('qmo_found').innerHTML = found.map(p => `<label class="chip${S.sel.has(p.id) ? ' on' : ''}" style="cursor:pointer;"><input type="checkbox" ${S.sel.has(p.id) ? 'checked' : ''} onchange="qmOpenPick('${p.id}',this.checked)" style="margin-right:6px;">${escapeHtml(p.name)} · ${p.buyers.length}</label>`).join('');
+  const picked = [...S.sel].map(id => all.find(p => p.id === id)).filter(Boolean), buyers = new Map();
+  picked.forEach(p => p.buyers.forEach(cid => { if (!buyers.has(cid)) buyers.set(cid, []); buyers.get(cid).push(p); }));
+  const clients = ((qmData && qmData.clients) || []).filter(c => buyers.has(c.id) && c.trade_name).sort((a, b) => ((Math.max(0, ...buyers.get(b.id).map(p => ((b.products || []).find(x => x.product_id === p.id) || {}).loads_month || 0))) - (Math.max(0, ...buyers.get(a.id).map(p => ((a.products || []).find(x => x.product_id === p.id) || {}).loads_month || 0)))) || a.trade_name.trim().localeCompare(b.trade_name.trim())); // the ones who buy the most first
+  const sum = (n, label) => `<div style="background:var(--surface-1,rgba(255,255,255,.05));border-radius:10px;padding:10px 14px;"><div style="font-size:22px;font-weight:600;">${n}</div><div class="muted" style="font-size:12px;">${label}</div></div>`;
+  const included = clients.filter(c => !S.off.has(c.id));
+  document.getElementById('qmo_summary').innerHTML = sum(segs.length, 'lines about products') + sum(res.filter(r => r.m.level === 'high').length, 'strong matches') + sum(res.filter(r => r.m.level === 'none').length, 'not in the catalog') + sum(included.length, 'customers to message');
+  const deadline = qmOpenDeadline(S.text), custs = S.custs || [];
+  document.getElementById('qmo_clients').innerHTML = clients.length ? clients.map(c => {
+    const cu = custs.find(x => x.id === c.id), mine = buyers.get(c.id), cat = (products.find(x => x.id === mine[0].id) || {}).category_id;
+    const k = cu && typeof btCustomerFor === 'function' ? btCustomerFor(cu, cat) : null, who = (k && (k.contact_name || cu.contact_name)) || c.contact_name || '', phone = (k && (k.whatsapp || k.phone)) || c.whatsapp || c.phone || '', byProtein = !!(k && k.contact_by_protein);
+    const first = String(who || c.trade_name).trim().split(/\s+/)[0], prodTxt = mine.map(p => p.es).join(' y ');
+    const msg = S.msgs[c.id] != null ? S.msgs[c.id] : `${first}, la planta abrió su producción de noviembre: ${prodTxt}.${deadline ? ` Las ofertas (bids) se reciben hasta el ${deadline}.` : ''} ¿Te interesa que te consiga precio?`;
+    const cad = ((c.products || []).find(x => mine.some(p => p.id === x.product_id)) || {}).cadence;
+    return `<div class="card" style="padding:10px 14px;${S.off.has(c.id) ? 'opacity:.55;' : ''}"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <label style="font-weight:600;cursor:pointer;"><input type="checkbox" ${S.off.has(c.id) ? '' : 'checked'} onchange="qmOpenInclude('${c.id}',this.checked)" style="margin-right:6px;">${escapeHtml(c.trade_name.trim())}</label>
+      <span class="muted" style="font-size:12.5px;">${escapeHtml(who)}${byProtein ? ' · his contact for this protein' : ''}${phone ? ' · ' + escapeHtml(phone) : ''}${cad ? ' · buys ' + escapeHtml(cad) : ''}</span>
+      <span style="display:flex;gap:6px;"><button type="button" class="wa-btn" style="padding:6px 12px;" onclick="qmOpenProto()">WhatsApp</button><button type="button" class="wa-btn outline" style="padding:6px 12px;" onclick="qmOpenProto()">Email</button></span></div>
+      <textarea rows="3" style="width:100%;margin-top:8px;" oninput="qmOpenS.msgs['${c.id}']=this.value">${escapeHtml(msg)}</textarea></div>`;
+  }).join('') : '<span class="muted" style="font-size:12.5px;">Confirm a product to see its customers.</span>';
+  document.getElementById('qmo_bar').innerHTML = `<span style="font-size:13px;">${included.length ? `Would go to <b>${included.length}</b> customer${included.length === 1 ? '' : 's'}, each with his own message` : 'Nobody selected yet'}</span><button type="button" class="btn" onclick="qmOpenProto()">Send all (prototype)</button>`;
 }
 async function qmReloadKeepingDrafts(){
   const kept = new Map((qmData ? qmData.clients : []).map(c => [c.id, c.compose]));
