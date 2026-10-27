@@ -1697,7 +1697,23 @@ function getInputs(){
   };
 }
 
+// SEABOARD IS ALWAYS WITH DOCS — decided by the SYSTEM, wherever the QT comes from (owner 2026-10-27: "te dije que siempre Seaboard era con docs, ahora por qué pone precio de docs… del sistema, en cualquier parte del QT").
+// Seaboard's inspection cost is $0 in the Cases box AND the Combos box whatever opened this QT (Quotes, a saved version, an offer's negotiation, a typed number): it is put back to 0 on every calculation and the two boxes are
+// locked. Every other plant keeps the Docs rule as it is ($350 cases / $200 combos / 0 with docs, the trader's number stays).
+function ttIsSeaboardQt(){
+  try { return products.some(p => /seaboard/i.test(String(p.name || ''))) || /seaboard/i.test(__qp.get('name') || __qp.get('productName') || ''); } catch (e) { return false; }
+}
+function ttEnforceSeaboardDocs(){
+  if (!ttIsSeaboardQt()) return;
+  ['inspectionCases', 'inspectionCombos'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if ((parseFloat(el.value) || 0) !== 0) el.value = '0';
+    if (!el.readOnly){ el.readOnly = true; el.title = 'Seaboard always includes the docs: no inspection cost'; }
+  });
+}
 function calc(){
+  ttEnforceSeaboardDocs();
   const inp = getInputs();
   // Mexico price only calculates once Exchange Rate is set AND both Import Cost and
   // Mexican Freight have been manually filled in — a Mexico-delivered price is not
