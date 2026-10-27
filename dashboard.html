@@ -491,6 +491,11 @@ function todayListHtml(all){
   // URGENT = real work only (owner 2026-10-26: "urgent solo cuando un cliente pidió o una planta que preguntamos respondió"): (1) a plant WE asked for that product answered after we asked and that price has gone to no customer; (2) a customer asked, the price is here and nothing went to him.
   // A routine price list of a product with an open live quote is NOT urgent: it is an ordinary match, listed in Optional.
   const urgent = (dashLive || []).filter(s => s.product_id && s.product_name && (s.arrivals || []).some(a => !(a.sent_customer_ids || []).length && (s.plants || []).some(p => p.plant_id === a.plant_id && p.asked_at && new Date(a.arrived_at) >= new Date(p.asked_at)))).map(s => ({ ...s, why: 'A plant you asked answered' }));
+  // An answer that needs READING is urgent too (owner 2026-10-27: "no quiero estar arreglando todo muchas veces"): a counter-offer, a reply to our bid, an answer the system could not read — within 2 days, from the quote's own answers.
+  (dashLive || []).filter(s => s.product_id && s.product_name && !urgent.some(u => u.product_id === s.product_id)).forEach(s => {
+    const toRead = (s.answers || []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000);
+    if (toRead.length) urgent.push({ ...s, why: toRead.map(a => `${a.plant_name} ${a.kind === 'bid_reply' ? 'answered your bid' : a.kind === 'counter' ? 'offered something else' : 'answered (not read)'} — read it`).join(' · ') });
+  });
   (all || []).filter(i => i.group === 'ask' && i.product && (i.options || []).length).forEach(i => {
     const who = i.lead && i.lead.name ? i.lead.name : '', m = /products=([0-9a-f-]{36})/.exec(String(i.href || ''));
     let e = urgent.find(u => u.product_name === i.product);

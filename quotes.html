@@ -4229,6 +4229,35 @@ function rqOpenLiveRow(pid, cid){
   if (cid){ rqUrlPreselect = { pid, cid }; rqPreselectScrolled = false; } // that customer is the one marked in the Send panel
   rqOpenSheetFromList(pid);
 }
+// EVERY ANSWER OF A PLANT IS SEEN (owner 2026-10-27: "no quiero estar arreglando todo muchas veces, que siga funcionando solo"): under the product, what each plant answered — its price, "N/A", the plant's own words when it
+// answered without a price ("Will see what I can find"), a counter-offer, a reply to our bid, an answer the system could not read — and how many have not answered yet. The words are the plant's, shortened, never rewritten.
+// What needs reading (a counter-offer, a reply to our bid, an unread answer, within 2 days) turns the status into "Answers to read" and is Today's Urgent too.
+const RQ_ANSWER_READ_KINDS = ['counter', 'bid_reply', 'unread'], RQ_ANSWER_READ_DAYS = 2;
+function rqLiveAnswersToRead(s){
+  return (s.answers || []).filter(a => RQ_ANSWER_READ_KINDS.includes(a.kind) && Date.now() - new Date(a.at).getTime() < RQ_ANSWER_READ_DAYS * 86400000);
+}
+function rqLiveAnswersHtml(p){
+  const pill = (cls, text, title) => `<span class="rq-sheet-pill ${cls}" style="margin:0 4px 3px 0;white-space:normal;text-align:left;"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(text)}</span>`;
+  const nm = id => { const pl = (typeof rqAllPlants !== 'undefined' ? rqAllPlants : []).find(x => x.id === id); return pl ? String(pl.name).trim() : ''; };
+  const out = [], shown = new Set();
+  (p.plants || []).forEach(x => {
+    const n = nm(x.plant_id) || ((p.s.answers || []).find(a => a.plant_id === x.plant_id) || {}).plant_name || 'A plant';
+    if (x.state === 'priced' && x.link && x.link.current_price != null) { out.push(pill('ok', `${n} $${Number(x.link.current_price).toFixed(2)}`)); shown.add(x.plant_id); }
+    else if (x.state === 'na') { out.push(pill('off', `${n}: N/A`)); shown.add(x.plant_id); }
+    else if (x.state === 'offspec') { out.push(pill('off', `${n}: does not make it`)); shown.add(x.plant_id); }
+  });
+  (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').forEach(a => {
+    const w = String(a.excerpt || '').replace(/\s+/g, ' ').trim(), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
+    shown.add(a.plant_id);
+    if (a.kind === 'no_price') out.push(pill('wait', `${a.plant_name}: “${short}”`, w));
+    else if (a.kind === 'counter') out.push(pill('new', `${a.plant_name} offered something else — read it: ${short}`, w));
+    else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — read it: ${short}`, w));
+    else if (a.kind === 'unread') out.push(pill('wait', `${a.plant_name}: answer not read — open it`, w));
+  });
+  const left = (p.plants || []).filter(x => x.state === 'waiting' && !shown.has(x.plant_id)).length;
+  if (left) out.push(pill('off', `${left} plant${left === 1 ? '' : 's'}: no answer yet`));
+  return out.length ? `<span style="display:block;margin-top:3px;line-height:1.55;">${out.join('')}</span>` : '';
+}
 function rqLiveRowHtml(p){
   const pid = p.s.product_id, nm = e => escapeHtml(rqLiveCustomerName(e.cid) || '…');
   const sending = p.stage === 'send';
@@ -4241,12 +4270,12 @@ function rqLiveRowHtml(p){
   const sub = sending ? (p.newest ? 'Price arrived ' + rqAgo(p.newest) : '') : (p.askedAt ? 'Asked ' + rqAgo(p.askedAt) : '');
   const status = sending
     ? `<span class="rq-sheet-pill new pkg-tag-blink" title="A plant's price arrived and has not been sent">NEW PRICE${p.newest ? ' · ' + escapeHtml(rqAgo(p.newest)) : ''}</span>`
-    : '<span class="rq-sheet-pill wait">Waiting for price</span>';
+    : (rqLiveAnswersToRead(p.s).length ? '<span class="rq-sheet-pill wait" title="A plant answered without a price: its words are under the product">Answers to read</span>' : '<span class="rq-sheet-pill wait">Waiting for price</span>');
   const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '', waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
   const btn = sending
     ? `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="${sending ? 'Send' : 'Open'}" aria-label="Send" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')">${waIco}${mailIco}</button></div>`
     : '<span class="muted">—</span>';
-  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${sending ? 'Send' : 'Open'}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
+  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${sending ? 'Send' : 'Open'}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}${rqLiveAnswersHtml(p)}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
 }
 // An open plant auction as a Live quotes row: the same row as a price waiting to go out (Product · Asked by · Status · Send), with its own status text — "AUCTION · until Wed 28" — and the
 // same button, which opens the product with its first customer marked, like every other row. Nothing in it is a price: an auction has none.
