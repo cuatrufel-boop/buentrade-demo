@@ -4044,10 +4044,18 @@ async function rqLoadLiveQuotes(){
   // Live quotes = quotes in progress: a customer ASKED for the product, or plants were asked for a price, and it is not an Offer yet (user 2026-10-13). The packages the server derives
   // by itself from fresh prices (`auto:`, nobody asked, nobody waiting) are Today's job; here they filled the list with rows nobody requested and hid their products from Ready.
   try { rqLiveQuotes = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) {}
-  if (typeof rqLoadLiveAuctions === 'function') rqLoadLiveAuctions(); // apart and never awaited: whatever happens to it, the list above is exactly what it was
+  if (typeof rqLoadLiveAuctions === 'function') rqLoadLiveAuctions(); // apart and never awaited
+  if (typeof rqLoadLiveUnplaced === 'function') rqLoadLiveUnplaced(); // so is this: whatever happens to it, the list above is exactly what it was
 }
 // Open plant AUCTIONS (owner 2026-10-27: "mismo diseño y flujo de hoy"): the plant offers a product and asks for bids, no price. They arrive matched to a product (an unmatched one waits in
 // Pending), and show here only when someone buys that product. A failed load keeps the last list and says nothing; the server expires them by their deadline.
+// Answers of a plant that name no product we can place (owner 2026-10-27: every answer is seen): one line at the top of Live quotes, by plant, with the plant's own words — never attached to a product by a guess.
+let rqLiveUnplaced = [];
+function rqLiveUnplacedToRead(){ return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
+async function rqLoadLiveUnplaced(){
+  try { rqLiveUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { return; }
+  try { rqRenderLiveQuotes(); renderRqStats(); } catch (e) {}
+}
 let rqLiveAuctions = [];
 async function rqLoadLiveAuctions(){
   try {
@@ -4107,7 +4115,7 @@ function rqLiveQuoteNewArrivals(s){
 }
 // How many cards the Live quotes tab lists (the stat card must say the same): every open package except the ones whose prices all went out.
 function rqLiveVisibleCount(){
-  try { return rqLivePackages(rqLiveEntries()).filter(p => p.stage === 'send' || p.stage === 'wait').length + rqLiveAuctions.length; } catch (e) { return rqLiveQuotes.length + rqLiveAuctions.length; }
+  try { return rqLivePackages(rqLiveEntries()).filter(p => p.stage === 'send' || p.stage === 'wait').length + rqLiveAuctions.length + (rqLiveUnplacedToRead().length ? 1 : 0); } catch (e) { return rqLiveQuotes.length + rqLiveAuctions.length; }
 }
 function rqRenderLiveQuotes(){
   const el = document.getElementById('rq_live_quotes');
@@ -4115,7 +4123,7 @@ function rqRenderLiveQuotes(){
   renderRqStats(); // the Live quotes card carries the same counts
   if (rqActiveSweepTab !== 'live'){ el.style.display = 'none'; return; } // its own tab (the card) — never above a product being worked
   el.style.display = '';
-  if (!rqLiveQuotes.length && !rqLiveAuctions.length){ el.innerHTML = '<div class="card qbucket"><h2>Live quotes</h2><div class="empty">No live quotes right now.</div></div>'; return; }
+  if (!rqLiveQuotes.length && !rqLiveAuctions.length && !rqLiveUnplacedToRead().length){ el.innerHTML = '<div class="card qbucket"><h2>Live quotes</h2><div class="empty">No live quotes right now.</div></div>'; return; }
   // LIVE QUOTES AS A BID RADAR (user 2026-10-11: "lo que quieres es tener un bid del cliente lo más rápido posible… siempre debe ser notificado con lo que llega
   // nuevo para mandar lista actualizada del producto que el cliente pidió… explícame cómo se ve, no lo veo claro, dame algo mejor, tecnológico").
   // One card per product (the thing that can become a bid), in the order of what to do first:
@@ -4133,7 +4141,7 @@ function rqRenderLiveQuotes(){
   el.innerHTML = `<div class="card qbucket rq-glass rq-lq2">
     <h2 style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">Live quotes<span class="rq-lq2-live"><i></i>live</span></h2>
     <div class="table-scroll"><table class="rq-lq-table"><colgroup><col style="width:34%"><col style="width:26%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>Product</th><th>Asked by</th><th>Status</th><th>Send</th></tr></thead><tbody>${
-      (rqLiveAuctions.map(rqLiveAuctionRowHtml).join('') + pkgs.map(rqLiveRowHtml).join(''))
+      (rqLiveUnplacedRowHtml() + rqLiveAuctions.map(rqLiveAuctionRowHtml).join('') + pkgs.map(rqLiveRowHtml).join(''))
       || '<tr><td colspan="4" class="empty">Nothing new to send right now.</td></tr>'}</tbody></table></div></div>`;
 }
 // A brand's price that is still sendable: not Off-Spec, not N/A, not stale (the same checks as rqIsNewArrival, without the "sent to anyone" part).
@@ -4257,6 +4265,20 @@ function rqLiveAnswersHtml(p){
   const left = (p.plants || []).filter(x => x.state === 'waiting' && !shown.has(x.plant_id)).length;
   if (left) out.push(pill('off', `${left} plant${left === 1 ? '' : 's'}: no answer yet`));
   return out.length ? `<span style="display:block;margin-top:3px;line-height:1.55;">${out.join('')}</span>` : '';
+}
+// The line for answers that name no product: "Plant answers without a product", each with the plant's own words (all of them on hover). Nothing when there are none.
+function rqLiveUnplacedRowHtml(){
+  const list = rqLiveUnplacedToRead();
+  if (!list.length) return '';
+  const pill = (cls, text, title) => `<span class="rq-sheet-pill ${cls}" style="margin:0 4px 3px 0;white-space:normal;text-align:left;"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(text)}</span>`;
+  const pills = list.map(a => {
+    const w = String(a.excerpt || '').replace(/\s+/g, ' ').trim(), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
+    return a.kind === 'bid_reply' ? pill('new', `${a.plant_name} answered your bid — read it${short ? ': ' + short : ''}`, w)
+      : a.kind === 'counter' ? pill('new', `${a.plant_name} offered something else — read it${short ? ': ' + short : ''}`, w)
+      : a.kind === 'unread' ? pill('wait', short ? `${a.plant_name}: answer not read — “${short}” — open it` : `${a.plant_name}: answer not read — open it`, w)
+      : pill('wait', short ? `${a.plant_name}: “${short}”` : `${a.plant_name}: answered without a price`, w);
+  }).join('');
+  return `<tr class="rq-lq-row wait"><td><b>Plant answers without a product</b><span class="muted" style="display:block;font-size:11px;">they name no product we can place</span><span style="display:block;margin-top:3px;line-height:1.55;">${pills}</span></td><td><span class="muted">—</span></td><td style="text-align:center;"><span class="rq-sheet-pill wait">Answers to read</span></td><td style="text-align:center;"><span class="muted">—</span></td></tr>`;
 }
 function rqLiveRowHtml(p){
   const pid = p.s.product_id, nm = e => escapeHtml(rqLiveCustomerName(e.cid) || '…');

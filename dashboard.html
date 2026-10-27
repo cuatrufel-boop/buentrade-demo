@@ -485,8 +485,9 @@ const todayKey = i => i.group + '|' + i.title;
 // no customer yet), OPTIONAL on the left (new prices and prices up to date that have not been sent). Under it only money and bids that need an action (collect, pay, credit, bid) stay, folded ("Money and bids").
 // TODAY_LIST = false brings the old board back as it was.
 const TODAY_LIST = true;
-let dashLive = [], todayOtherOpen = false;
-async function loadTodayLive(){ try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ } }
+let dashLive = [], dashUnplaced = [], todayOtherOpen = false;
+async function loadTodayLive(){ try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ }
+  try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } }
 function todayListHtml(all){
   // URGENT = real work only (owner 2026-10-26: "urgent solo cuando un cliente pidió o una planta que preguntamos respondió"): (1) a plant WE asked for that product answered after we asked and that price has gone to no customer; (2) a customer asked, the price is here and nothing went to him.
   // A routine price list of a product with an open live quote is NOT urgent: it is an ordinary match, listed in Optional.
@@ -504,6 +505,8 @@ function todayListHtml(all){
   });
   urgent.forEach(u => { if (u.askers && u.askers.length) u.why = 'Asked by ' + u.askers.join(', ') + (u.why ? ' · ' + u.why.toLowerCase() : ''); });
   const urgentNames = new Set(urgent.map(s => s.product_name));
+  // Answers that name no product we can place are urgent too, by plant (owner 2026-10-27: every answer is seen) — within 2 days, a counter-offer, a bid reply or an unread answer.
+  const unplacedRead = (typeof dashUnplaced !== 'undefined' ? dashUnplaced : []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000);
   // One line per product; behind it EVERY customer (no limit) with the reason he makes sense: asked, buys it, never offered, a note, a similar product he buys (owner 2026-10-24: "debe ser mas inteligente… para ofrecer producto con proposito").
   const by = new Map();
   const grp = i => { let g = by.get(i.product); if (!g) { g = { name: i.product, href: String(i.href || 'quotes.html').replace(/&customer=[0-9a-f-]{36}/, ''), isNew: false, who: new Set(), cust: new Map(), asked: new Set(), hasSell: false }; by.set(i.product, g); } return g; };
@@ -540,7 +543,8 @@ function todayListHtml(all){
   const whoHtml = g => { const gs = groupsOf(g); if (!gs.length) return ''; const only = gs.length === 1 && !gs[0].asked; return `<details class="tdr-who"><summary>Who and why</summary><ul class="tdr-ul">${gs.map(x => `<li>${only ? '' : `<span class="tdr-rs">${escapeHtml(x.head)}</span> `}${x.names.slice().sort((a, b) => a.localeCompare(b)).map(n => `<b>${escapeHtml(n)}</b>`).join(', ')}</li>`).join('')}</ul></details>`; };
   const rowOf = g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`;
   const rows = list.map(rowOf).join('');
-  const urows = urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td><td>${go(href, true)}</td></tr>`; }).join('');
+  const uplaced = unplacedRead.map(a => `<tr><td class="tdr-name"><a class="name-link" href="quotes.html">${escapeHtml(a.plant_name)}</a><span class="tdr-sub">${escapeHtml(a.kind === 'bid_reply' ? 'answered your bid — read it' : a.kind === 'counter' ? 'offered something else — read it' : 'answered (not read) — read it')}${a.excerpt ? ' · ' + escapeHtml(String(a.excerpt).slice(0, 110)) : ''}</span></td><td>${go('quotes.html', true)}</td></tr>`).join('');
+  const urows = uplaced + urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td><td>${go(href, true)}</td></tr>`; }).join('');
   // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
   const needs = new Map(askNoPrice);
   (all || []).filter(i => i.group === 'gap').forEach(i => {
