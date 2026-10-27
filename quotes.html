@@ -4249,10 +4249,10 @@ function rqLiveAnswersHtml(p){
   (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').forEach(a => {
     const w = String(a.excerpt || '').replace(/\s+/g, ' ').trim(), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
     shown.add(a.plant_id);
-    if (a.kind === 'no_price') out.push(pill('wait', `${a.plant_name}: “${short}”`, w));
+    if (a.kind === 'no_price') out.push(pill('wait', short ? `${a.plant_name}: “${short}”` : `${a.plant_name}: answered without a price`, w));
     else if (a.kind === 'counter') out.push(pill('new', `${a.plant_name} offered something else — read it: ${short}`, w));
-    else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — read it: ${short}`, w));
-    else if (a.kind === 'unread') out.push(pill('wait', `${a.plant_name}: answer not read — open it`, w));
+    else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — read it${short ? ': ' + short : ''}`, w));
+    else if (a.kind === 'unread') out.push(pill('wait', short ? `${a.plant_name}: answer not read — “${short}” — open it` : `${a.plant_name}: answer not read — open it`, w));
   });
   const left = (p.plants || []).filter(x => x.state === 'waiting' && !shown.has(x.plant_id)).length;
   if (left) out.push(pill('off', `${left} plant${left === 1 ? '' : 's'}: no answer yet`));
