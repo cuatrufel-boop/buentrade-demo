@@ -2271,18 +2271,22 @@ function qmOpenBlock(es, n){
   const blocks = String(es || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
   return blocks.length >= 3 ? (blocks.slice(1, -1)[n] || '') : '';
 }
+const qmOpenStep = (n, title, hint) => `<div style="display:flex;align-items:center;gap:12px;margin:30px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(90,170,255,.7);color:#8EC5FF;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--dash-font-mono, monospace);flex:0 0 auto;">${n}</span><b style="font-size:15px;">${title}</b><span class="muted" style="font-size:12.5px;">${hint || ''}</span></div>`;
+const qmOpenLabel = (t, extra) => `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font:700 10.5px var(--dash-font-mono, monospace);letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase;">${t}</span>${extra || ''}</div>`;
 function qmOpenRender(){
-  document.getElementById('qm_count').textContent = '';
-  document.getElementById('qm_rows').innerHTML = `<div class="card" style="padding:22px 26px;">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;"><b style="font-size:17px;">Open offer</b><span class="muted" style="font-size:12.5px;">Prototype — nothing is sent or saved</span></div>
-    <div style="margin-top:20px;"><div style="font-weight:600;margin-bottom:8px;">1 · The plant's email in Spanish</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;">
-        <textarea id="qmo_en" rows="10" style="width:100%;" oninput="qmOpenS.en=this.value;qmOpenS.es='';qmOpenRefresh()" placeholder="Paste the plant's email here"></textarea>
-        <textarea id="qmo_es" rows="10" style="width:100%;" oninput="qmOpenS.es=this.value;qmOpenRefresh()" placeholder="The Spanish translation shows here — you can edit it"></textarea></div>
-      <div id="qmo_note" class="muted" style="font-size:12px;margin-top:6px;"></div></div>
-    <div style="margin-top:26px;"><div style="font-weight:600;margin-bottom:8px;">2 · What it offers, and who buys it</div><div id="qmo_products" style="display:grid;gap:8px;"></div></div>
-    <div style="margin-top:26px;"><div style="font-weight:600;margin-bottom:8px;">3 · Send to each customer</div>
-      <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(300px,1.6fr);gap:16px;align-items:start;"><div id="qmo_clients" style="display:grid;gap:2px;"></div><div id="qmo_editor"></div></div></div></div>`;
+  document.getElementById('qm_count').textContent = 'Prototype — nothing is sent or saved';
+  document.getElementById('qm_rows').innerHTML = `<div style="padding:4px 22px 26px;">
+    ${qmOpenStep(1, 'The plant\'s email, in Spanish', 'Paste it on the left; the Spanish is yours to edit')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;">
+      <div>${qmOpenLabel('Plant — English')}<textarea id="qmo_en" rows="11" style="width:100%;line-height:1.55;" oninput="qmOpenS.en=this.value;qmOpenS.es='';qmOpenRefresh()" placeholder="Paste the plant's email here"></textarea></div>
+      <div>${qmOpenLabel('Español', '<span id="qmo_pill"></span>')}<textarea id="qmo_es" rows="11" style="width:100%;line-height:1.55;" oninput="qmOpenS.es=this.value;qmOpenRefresh()" placeholder="The Spanish translation shows here"></textarea></div></div>
+    <div id="qmo_note" class="muted" style="font-size:12px;margin-top:8px;"></div>
+    ${qmOpenStep(2, 'What it offers', 'Each line matched to your catalog')}
+    <div id="qmo_products" style="border-top:1px solid var(--line);"></div>
+    ${qmOpenStep(3, 'Send to each customer', 'Pick one on the left, edit his message, send')}
+    <div style="display:grid;grid-template-columns:minmax(240px,.9fr) minmax(320px,1.7fr);gap:22px;align-items:start;">
+      <div><div id="qmo_clientsLabel"></div><div id="qmo_clients" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;"></div></div>
+      <div id="qmo_editor"></div></div></div>`;
   document.getElementById('qmo_en').value = qmOpenS.en; document.getElementById('qmo_es').value = qmOpenS.es;
   qmOpenLoadContacts(); qmOpenRefresh();
 }
@@ -2310,28 +2314,34 @@ function qmOpenRes(){ const all = qmOpenProducts(); return (qmOpenS.en.trim() ? 
 function qmOpenRefresh(){
   const S = qmOpenS, host = document.getElementById('qmo_products');
   if (!host) return;
-  if (!S.es && S.en.trim() === QM_OPEN_EN.trim()) { S.es = QM_OPEN_ES; document.getElementById('qmo_es').value = S.es; }
-  document.getElementById('qmo_note').textContent = S.en.trim() === QM_OPEN_EN.trim() ? 'Sample translation, written by hand. Translating any other text needs the AI service, which has no balance today.' : (S.es ? '' : 'Translating a new text needs the AI service, which has no balance today — write or paste the Spanish here.');
+  const sample = S.en.trim() === QM_OPEN_EN.trim();
+  if (!S.es && sample) { S.es = QM_OPEN_ES; document.getElementById('qmo_es').value = S.es; }
+  document.getElementById('qmo_pill').innerHTML = sample ? '<span class="rq-sheet-pill wait">SAMPLE TRANSLATION</span>' : '';
+  document.getElementById('qmo_note').textContent = sample ? 'The Spanish of this sample was written by hand. Translating any other text needs the AI service, which has no balance today.' : (S.es ? '' : 'Translating a new text needs the AI service, which has no balance today — write or paste the Spanish here.');
   const res = qmOpenRes();
   if (!S.auto && res.length) { res.forEach(r => { if (r.m.level === 'high') S.sel.add(r.m.p.id); }); S.auto = true; }
+  const row = 'display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:14px 6px;border-bottom:1px solid var(--line);';
   host.innerHTML = res.length ? res.map(({ seg, m }) => {
-    if (m.level === 'none') return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid rgba(255,200,118,.5);border-radius:10px;"><span><b>${escapeHtml(seg)}</b><span class="muted" style="display:block;font-size:12.5px;">Not in your catalog</span></span><button type="button" class="btn small" onclick="qmOpenNeedProduct()">Create product</button></div>`;
+    if (m.level === 'none') return `<div style="${row}"><span></span><span><b style="font-size:14.5px;">${escapeHtml(seg)}</b><span class="muted" style="display:block;font-size:12.5px;margin-top:2px;">There is no such product in your catalog</span></span><span class="rq-sheet-pill exp">NOT IN CATALOG</span><button type="button" class="btn small" onclick="qmOpenNeedProduct()">Create product</button></div>`;
     const on = S.sel.has(m.p.id);
-    return `<label style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid ${on ? 'rgba(63,203,126,.55)' : 'var(--line)'};border-radius:10px;cursor:pointer;"><span><input type="checkbox" ${on ? 'checked' : ''} onchange="qmOpenPick('${m.p.id}',this.checked)" style="margin-right:10px;"><b>${escapeHtml(m.p.es)}</b>${m.level === 'maybe' ? '<span class="muted" style="font-size:12.5px;margin-left:8px;">check it is the right one</span>' : ''}</span><span class="muted">${m.p.buyers.length} customer${m.p.buyers.length === 1 ? '' : 's'} buy it</span></label>`;
-  }).join('') : '<div class="muted" style="font-size:13px;">Paste the plant\'s email: its products show here.</div>';
+    return `<label style="${row}cursor:pointer;"><input type="checkbox" ${on ? 'checked' : ''} onchange="qmOpenPick('${m.p.id}',this.checked)" style="width:18px;height:18px;"><span><b style="font-size:14.5px;">${escapeHtml(m.p.es)}</b><span class="muted" style="display:block;font-size:12.5px;margin-top:2px;">${escapeHtml(m.p.name)}${m.level === 'maybe' ? ' · check it is the right one' : ''}</span></span><span class="rq-sheet-pill ${m.level === 'high' ? 'ok' : 'wait'}">${m.level === 'high' ? 'MATCHED' : 'MAYBE'}</span><span style="font-size:13px;white-space:nowrap;"><b>${m.p.buyers.length}</b> customer${m.p.buyers.length === 1 ? '' : 's'}</span></label>`;
+  }).join('') : '<div class="muted" style="font-size:13px;padding:14px 6px;">Paste the plant\'s email: its products show here.</div>';
   const buyers = new Map();
   res.forEach((r, i) => { if (r.m.p && S.sel.has(r.m.p.id)) r.m.p.buyers.forEach(cid => { if (!buyers.has(cid)) buyers.set(cid, []); buyers.get(cid).push({ p: r.m.p, seg: r.seg, i }); }); });
   const clients = ((qmData && qmData.clients) || []).filter(c => buyers.has(c.id) && c.trade_name).sort((a, b) => ((Math.max(0, ...buyers.get(b.id).map(m => ((b.products || []).find(x => x.product_id === m.p.id) || {}).loads_month || 0))) - (Math.max(0, ...buyers.get(a.id).map(m => ((a.products || []).find(x => x.product_id === m.p.id) || {}).loads_month || 0)))) || a.trade_name.trim().localeCompare(b.trade_name.trim()));
   if (!S.cur || !clients.some(c => c.id === S.cur)) S.cur = clients.length ? clients[0].id : null;
-  document.getElementById('qmo_clients').innerHTML = clients.length ? clients.map(c => {
-    const m = qmOpenMsgFor(c, buyers.get(c.id));
-    return `<div onclick="qmOpenCur('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;${c.id === S.cur ? 'background:rgba(90,170,255,.16);' : ''}"><input type="checkbox" ${S.off.has(c.id) ? '' : 'checked'} onclick="event.stopPropagation()" onchange="qmOpenInclude('${c.id}',this.checked)"><span><b style="font-weight:600;">${escapeHtml(c.trade_name.trim())}</b><span class="muted" style="display:block;font-size:12px;">${escapeHtml(m.who)}</span></span></div>`;
-  }).join('') : '<div class="muted" style="font-size:13px;">Confirm a product to see who buys it.</div>';
+  const n = clients.filter(c => !S.off.has(c.id)).length;
+  document.getElementById('qmo_clientsLabel').innerHTML = qmOpenLabel(`Customers · ${n} selected`);
+  const initials = (t) => String(t).trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  document.getElementById('qmo_clients').innerHTML = clients.length ? clients.map((c, k) => {
+    const m = qmOpenMsgFor(c, buyers.get(c.id)), on = c.id === S.cur;
+    return `<div onclick="qmOpenCur('${c.id}')" style="display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;${k ? 'border-top:1px solid var(--line);' : ''}${on ? 'background:rgba(90,170,255,.14);box-shadow:inset 3px 0 0 #5AAAFF;' : ''}"><input type="checkbox" ${S.off.has(c.id) ? '' : 'checked'} onclick="event.stopPropagation()" onchange="qmOpenInclude('${c.id}',this.checked)" style="width:16px;height:16px;"><span style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:inline-flex;align-items:center;justify-content:center;font:700 11.5px var(--dash-font-mono, monospace);flex:0 0 auto;">${escapeHtml(initials(c.trade_name))}</span><span style="min-width:0;"><b style="font-weight:600;font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.trade_name.trim())}</b><span class="muted" style="font-size:12px;">${escapeHtml(m.who)}</span></span></div>`;
+  }).join('') : '<div class="muted" style="font-size:13px;padding:16px;">Confirm a product to see who buys it.</div>';
   const cur = clients.find(c => c.id === S.cur);
-  document.getElementById('qmo_editor').innerHTML = cur ? (() => { const m = qmOpenMsgFor(cur, buyers.get(cur.id)); return `<div style="font-weight:600;margin-bottom:6px;">${escapeHtml(cur.trade_name.trim())}<span class="muted" style="font-weight:400;font-size:12.5px;margin-left:8px;">${escapeHtml(m.who)}${m.byProtein ? ' · his contact for this protein' : ''}${m.phone ? ' · ' + escapeHtml(m.phone) : ''}</span></div>
-      <textarea id="qmo_msg" rows="12" style="width:100%;" oninput="qmOpenS.msgs['${cur.id}']=this.value">${escapeHtml(m.msg)}</textarea>
-      <div style="display:flex;gap:10px;margin-top:10px;"><button type="button" class="wa-btn" style="padding:9px 18px;" onclick="qmOpenWa('${cur.id}')">WhatsApp</button><button type="button" class="wa-btn outline" style="padding:9px 18px;" onclick="qmOpenEm('${cur.id}')">Email</button></div>
-      <div class="muted" style="font-size:12px;margin-top:8px;">They open the same review windows as every offer. In this prototype they have no recipient.</div>`; })() : '';
+  document.getElementById('qmo_editor').innerHTML = cur ? (() => { const m = qmOpenMsgFor(cur, buyers.get(cur.id)); return `${qmOpenLabel('Message to ' + escapeHtml(cur.trade_name.trim()), `<span class="muted" style="font-size:12px;">${escapeHtml(m.who)}${m.byProtein ? ' · his contact for this protein' : ''}${m.phone ? ' · ' + escapeHtml(m.phone) : ''}</span>`)}
+      <div class="rq-wa-chat" style="padding:14px;"><div class="rq-wa-bubble"><textarea id="qmo_msg" rows="12" oninput="qmOpenS.msgs['${cur.id}']=this.value">${escapeHtml(m.msg)}</textarea></div></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;"><button type="button" class="wa-btn outline" style="padding:10px 22px;min-width:120px;" onclick="qmOpenEm('${cur.id}')">Email</button><button type="button" class="wa-btn" style="padding:10px 22px;min-width:120px;" onclick="qmOpenWa('${cur.id}')">WhatsApp</button></div>
+      <div class="muted" style="font-size:12px;margin-top:10px;text-align:right;">They open the same review windows as every offer. In this prototype they have no recipient.</div>`; })() : '';
 }
 async function qmReloadKeepingDrafts(){
   const kept = new Map((qmData ? qmData.clients : []).map(c => [c.id, c.compose]));
