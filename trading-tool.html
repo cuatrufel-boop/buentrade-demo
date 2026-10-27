@@ -2271,6 +2271,16 @@ async function ttEnsureShipCity(plantId){
     if (c) ttFreightLocations.push({ plant_id: plantId, location_id: ship, location_name: `${c.city}, ${c.state}` });
   } catch (e) {} // the plant's own cities still show
 }
+// The price's own city shows in the picker even when no carrier has a rate for it yet and nothing was picked (owner 2026-10-27, Peco "FOB Macon, GA": the picker said "Pick US freight" and he could not tell
+// which city to choose — "debe salir ciudad siempre, que tenga precio o que no tenga pero se sepa que ciudad es"). It is selected as a named city with no rate ('LOC:'): the $ box stays his to type, nothing is invented.
+function ttSelectShipCityWhenNoRate(plantId){
+  const ship = __qp.get('shipLocationId');
+  if (!plantId || !ship || ttFreightSelectedId || ttPendingFreightPick != null) return;
+  if (!ttLocationsForPlant(plantId).some(l => l.location_id === ship) || ttRatesForLocation(ship).length) return;
+  ttFreightSelectedId = 'LOC:' + ship;
+  window.__ttFreightRateId = null;
+  ttRenderFreightDdown();
+}
 async function ttInitFreightPicker(plantId){
   if (!plantId || ttFreightPlantId === plantId) return;
   ttFreightPlantId = plantId;
@@ -2295,6 +2305,7 @@ async function ttInitFreightPicker(plantId){
   ttFreightLoaded = true;
   ttRenderFreightDdown();
   ttApplyPendingFreightPick();
+  ttSelectShipCityWhenNoRate(plantId);
   ttFreightAttempted = true;
 }
 if (__qp.get('plantId')) ttInitFreightPicker(__qp.get('plantId'));
