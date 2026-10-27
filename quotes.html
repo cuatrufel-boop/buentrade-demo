@@ -2820,6 +2820,12 @@ let rqAllPlantProductPairs = new Map();
 // A plant as one brand of one product in an offer — built the same way wherever Quotes puts a plant into a QT or a send (search, the
 // product's plants, a package row, a version read in the background), from its plant_products link: the price on file and its date, docs,
 // ship-from city / zone, FOB or delivered, and that link's own photo and spec sheet (the PDF that goes with the offer).
+// A plant with exactly ONE known location ships from it (owner 2026-10-27, Rantoul: "Rantoul sale de Rantoul, IL"; "debe salir ciudad siempre"): when the price does not name a city, that one city is the price's city.
+// Two or more locations and the price names none → null, as before (the trader picks; nothing is guessed).
+function rqSoleLocationId(plantId){
+  const all = [...new Set((typeof rqAllLocations !== 'undefined' ? rqAllLocations : []).filter(l => l.plant_id === plantId).map(l => l.location_id).filter(Boolean))];
+  return all.length === 1 ? all[0] : null;
+}
 function rqPlantOfferObj(plant, link, productId){
   const hasPrice = !!link && link.current_price != null;
   return {
@@ -2828,7 +2834,7 @@ function rqPlantOfferObj(plant, link, productId){
     rqPriceDate: hasPrice ? link.price_date : null,
     rqLastRequestedAt: link ? link.last_requested_at || null : null,
     rqDocsOn: plant.docs_included === true,
-    rqProductLocationId: link ? link.location_id || null : null,
+    rqProductLocationId: link ? link.location_id || rqSoleLocationId(plant.id) || null : null,
     rqProductShipRegion: link ? link.ship_region || null : null,
     rqFreightIncluded: link ? link.freight_included === true : false,
     photo_url: link ? link.photo_url || null : null, spec_url: link ? link.spec_url || null : null,
@@ -7829,6 +7835,16 @@ function rqRenderWaModal(){
   list.querySelectorAll('textarea').forEach(rqWaFit);
   rqOfferWindowSync(); // the one offer window (when open) shows these cards
 }
+// The banner did not reach the chat (owner 2026-10-27: "unas abren, unas no" — the chat can open later than the paste waits): copies the banner again and asks this Mac to paste it again, without opening WhatsApp
+// a second time. Same copy and same paste as the green button (Cmd+V only, never Enter); the click is the gesture the browser needs to copy.
+async function rqWaPasteAgain(i){
+  const it = rqWaModalItems[i];
+  if (!it || it.recorded) return;
+  it.pasteState = ''; it.pasteError = '';
+  const ok = await rqWaCopyBanner(it);
+  it.bannerState = ok ? 'copied' : 'failed';
+  if (ok) await rqWaAutoPaste(it); else rqRenderWaModal();
+}
 // A WhatsApp that was opened but never confirmed stays on the list; this lets the trader say "I sent it" by hand (owner 2026-10-22: the line stayed after sending) — the same record as "Yes, sent".
 async function rqWaMarkSent(i){
   const it = rqWaModalItems[i];
@@ -7944,7 +7960,7 @@ function rqOfferWindowSync(){
 function rqComposerWaHtml(it, i){
   const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
   const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
-    : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button>` : '';
+    : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button><button type="button" class="chip" onclick="rqWaPasteAgain(${i})">Paste banner again</button>` : '';
   const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.pasteError ? '<b>not pasted: ' + escapeHtml(it.pasteError) + '</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
   const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button></div>`).join('');
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
