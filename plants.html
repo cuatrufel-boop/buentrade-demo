@@ -2635,10 +2635,12 @@ function renderPlantPendingMatches(){
     // auto-applied there, always waiting here for a human to actually confirm which real catalog
     // product it means before permanently marking that plant off-spec for it.
     const isDeclined = m.signal_type === 'declined';
+    // A plant AUCTION product nobody could match (owner 2026-10-27): it has no price on purpose, so it is matched like any line — pick the product, Match — and no price is ever asked for or applied.
+    const isAuction = m.signal_type === 'auction';
     // A plant line it gave no price for: the trader types the price here (or dismisses the line).
     // A line with no price never comes here any more (2026-10-05, user: "no podemos inventar un precio") — the reader keeps the
     // product's last price and marks it not available. An older row like that can only be dismissed; no price is ever typed here.
-    const needsPrice = !isDeclined && !isUnread && m.detected_price == null;
+    const needsPrice = !isDeclined && !isUnread && !isAuction && m.detected_price == null;
     // A facility code the plant printed that is none of its locations: pick which location it means once, and every reader knows it from then on.
     const facilityMatch = isUnread && m.reason_code === 'facility_not_recognized' ? /^Facility "(.+)"$/.exec(m.raw_text || '') : null;
     const facilityTeachHtml = facilityMatch ? `
@@ -2772,6 +2774,8 @@ async function resolvePlantPendingMatch(id){
         link = res.plant_product;
       } catch (e) { await btAlert(`Couldn't save this plant's link: ${e.message}`); return { ok: false }; }
       await callApi('plant-products-update', { actor: currentActor(), id: link.id, declined_at: new Date().toISOString() });
+    } else if (match.signal_type === 'auction') {
+      // An auction has no price: nothing is applied here. Closing the row below is what saves the auction and teaches the plant's wording (plant-pending-matches-update).
     } else {
       const applied = await callApi('plant-products-apply-match', {
         actor: currentActor(), plant_id: currentPlantId, product_id: productId,
@@ -2844,6 +2848,7 @@ async function dismissPlantPendingMatch(id){
 async function matchAllConfirmedPendingMatches(){
   const eligible = plantPendingMatches.filter(m => {
     if (m.signal_type === 'unread') return false;
+    if (m.signal_type === 'auction') return false; // an auction is matched one by one, never in a batch of prices
     if (m.signal_type === 'price' && m.detected_price == null) return false; // no price, never batched (2026-10-05)
     return !!m._pickedProductId; // only rows the trader picked a product for (2026-10-05: "nunca asume")
   });
