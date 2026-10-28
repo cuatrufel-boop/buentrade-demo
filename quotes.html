@@ -2621,6 +2621,7 @@ function rqOpenSearchPalette(){
     rqResetRequestSelection();
     rqAskedConfirmed = new Set(); // and who asked is decided again in every search
     rqActiveProductFilterIds = [];
+    rqPickedPids = []; // a new search starts without the last one's picks
     rqRenderSweepTables();
     renderRqStats();
   }
@@ -3729,13 +3730,46 @@ function rqRenderRequestView(rows){
       ${rqAllCustomersCache ? (hits.length ? hits.map(c => `<button type="button" class="chip" onclick="rqReqAddCustomer('${c.id}')">${nm(c)}</button>`).join('') : '<span class="muted" style="font-size:12px;">No other customer matches.</span>') : '<span class="muted" style="font-size:12px;">Loading…</span>'}
     </div>`; })() : '');
   rqSetMsgOriginHtml(el, RQ_BRAND_LIST ? rqBrandListHtml({ pid, sheet, sendRows, stale, pending: pending.concat(priced.filter(r => r.na).map(r => ({ ...r, kind: 'na' }))), order, marked: rqReqSel.ids, isPes, mailIco, waIco, askN: askNeedsTop ? askN : 0, remindN: remindIds.length, remindIds, addHtml, hints: hintsHtml, selN, canSend, emailOk, waOk, noEmail, noWa }) : html);
+  if (RQ_BRAND_LIST){ el.querySelectorAll(':scope > .rq-picked').forEach(n => n.remove()); if (rqPickedPids.length > 1) el.insertAdjacentHTML('afterbegin', rqPickedChipsHtml()); } // the picked products, above the one in front (the list itself is only rewritten when it changed)
   if (RQ_BRAND_LIST && rqBrandQFocus){ const i = document.getElementById('rq_brand_q'); if (i && document.activeElement !== i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (rqReqAddOpen){ const i = document.getElementById('rq_req_add_q'); if (i && document.activeElement !== i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   // arriving from Today: land ON this quote (the product, the customer marked, the Send panel glowing) instead of at the top of a generic screen
   if (fromToday && !rqPreselectScrolled){ rqPreselectScrolled = true; setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); }
 }
 
+// FIND PRODUCT WITH SEVERAL PRODUCTS WORKS LIKE ONE (owner 2026-10-27: "ese find product debe funcionar de la misma manera, mismo formato, confirm QT, enviar igual"; "todos los módulos deben estar en el mismo formato"):
+// the picked products stay as chips above the list, and the one in front is worked exactly like a single product — the same brand list, the same QT confirmation, the same send. Nothing else changes: the flow is still
+// Quotes → Offers, and what waits stays in Live. The palette keeps adding picks while it is open; the collapse happens when it closes.
+let rqPickedPids = [];
+function rqCollapsePicked(){
+  const pal = document.getElementById('rq_palette_overlay');
+  if (pal && pal.style.display === 'flex') return;
+  const a = rqActiveProductFilterIds;
+  if (a.length > 1) { rqPickedPids = [...new Set([...rqPickedPids.filter(x => products.some(p => p.id === x)), ...a])]; rqActiveProductFilterIds = [a[a.length - 1]]; }
+  else if (a.length === 1) { if (!rqPickedPids.includes(a[0])) rqPickedPids = [a[0]]; }
+  else rqPickedPids = [];
+}
+function rqPickedChipsHtml(){
+  if (rqPickedPids.length < 2) return '';
+  const cur = rqActiveProductFilterIds[0];
+  return `<div class="rq-picked" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;">${rqPickedPids.map(id => { const pr = products.find(x => x.id === id); if (!pr) return ''; const on = id === cur;
+    return `<span style="display:inline-flex;align-items:center;border:1.5px solid ${on ? 'var(--blue-bright)' : 'rgba(255,255,255,.25)'};background:${on ? 'rgba(90,170,255,.18)' : 'transparent'};border-radius:20px;overflow:hidden;"><button type="button" class="chip" style="border:0;background:transparent;" onclick="rqFocusPicked('${id}')">${escapeHtml(pr.full_name_en)}</button><button type="button" class="chip" style="border:0;background:transparent;padding-left:4px;" title="Take it off the list" aria-label="Remove ${escapeHtml(pr.full_name_en)}" onclick="rqUnpickProduct('${id}')">×</button></span>`; }).join('')}</div>`;
+}
+function rqFocusPicked(pid){
+  rqActiveProductFilterIds = [pid];
+  rqUrlPreselect = null; rqResetRequestSelection();
+  rqRenderSweepTables();
+  renderRqStats();
+}
+function rqUnpickProduct(pid){
+  rqPickedPids = rqPickedPids.filter(x => x !== pid);
+  if (rqActiveProductFilterIds[0] === pid) rqActiveProductFilterIds = rqPickedPids.length ? [rqPickedPids[0]] : [];
+  rqResetRequestSelection();
+  rqRenderSweepTables();
+  renderRqStats();
+}
 function rqRenderSheet(){
+  rqCollapsePicked();
   const wrap = document.getElementById('rq_sheet_section');
   if (!wrap) return;
   rqLoadMsgOrigin();
