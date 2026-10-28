@@ -7942,9 +7942,13 @@ async function rqWaAutoPaste(it){
   try { const r = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j = await r.json(); it.pasteState = j && j.ok ? 'pasted' : 'manual'; it.pasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : ''; } catch (e) { it.pasteState = 'manual'; it.pasteError = String(e.message || e); } // the error is shown on the card, not hidden
   rqRenderWaModal();
 }
+// ON THE PHONE THE GREEN BUTTON SENDS THE PICTURE AND THE TEXT TOGETHER (owner 2026-10-28: "usd peso, con link o sin link, cel o pc, todas iguales"): a phone has no Mac paste, so a wa.me message went out as text only and WhatsApp
+// made the link's own preview card; there the green button does what Share does (picture + text as its caption), like the Mac's paste does on the PC. Where the picture cannot be shared it stays the wa.me message as before.
+const rqWaIsPhone = () => /iPhone|iPad|Android|Mobile/i.test((typeof navigator !== 'undefined' && navigator.userAgent) || '');
 function rqWaModalOpenOne(i){
   const it = rqWaModalItems[i];
   if (!it) return;
+  if (rqWaModalIsOffer && rqWaIsPhone() && rqWaCanShare(it)) { rqWaModalShareOne(i); return; }
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const firstTime = !it.opened;
   if (firstTime) (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename, f.type));
