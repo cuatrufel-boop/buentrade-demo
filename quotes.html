@@ -6764,7 +6764,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     return { extras,
       id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
-      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: rqLinePrice(one.calc), cur: one.calc.mxn ? 'mxn' : 'usd', name: rqSpecEsForPlant(one.plant) || '' }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
+      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: rqLinePrice(one.calc), cur: one.calc.mxn ? 'mxn' : 'usd' }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
   });
@@ -6775,9 +6775,9 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 function rqWaAttachThinImages(items){
   items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
-    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}~${b.name || ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
+    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname) ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=2${list[0].cur === 'mxn' ? '&c=mxn' : ''}${list[0].name ? `&n=${encodeURIComponent(list[0].name)}` : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
@@ -6794,10 +6794,7 @@ function rqWaLine(plant, offer, body, totalLines){
   const docs = plant.rqDocsOn === true ? 'Con docs' : 'Sin docs';
   const hasLink = !!(offer && offer.short_code && (offer.spec_url || offer.photo_url)); // the link is only for a product with a spec or a photo (owner 2026-10-25); without either: banner and text, no link
   const cardCarriesBrand = !!offer; // every brand of a WhatsApp offer has its banner (owner 2026-10-24, "la 2": the brands without photo/spec get the same thin banner, just without a link), so no line repeats its brand or docs; only a line with no offer at all (email's updated list, a failed log) still says both
-  // with its picture (brand, price, docs AND the product's full name are in it) the message's text is the spec link, nothing else (owner 2026-10-27: "es este, pero dámelo con link de spec")
-  if (cardCarriesBrand) body = '';
-  const line = `${cardCarriesBrand ? '' : plant.name.trim() + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
-  return cardCarriesBrand ? line.trim() : line;
+  return `${cardCarriesBrand ? '' : plant.name.trim() + ' — '}${body}${cardCarriesBrand ? '' : ' · ' + docs}${hasLink ? `\n${APP_ORIGIN}/p/${offer.short_code}` : ''}`;
 }
 // `part` (one WhatsApp message per brand, owner 2026-10-24): which message of the customer's set this is — the greeting and the signal line belong to the FIRST, the pending note and the credit note to the
 // LAST, and `cheap` says whether this brand's price is the cheapest of the whole set (the bold). Without it the text is the whole offer, as before.
