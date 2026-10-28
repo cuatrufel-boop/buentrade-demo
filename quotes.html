@@ -3968,22 +3968,32 @@ async function rqSheetSend(channel, onlyKey){
     const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
     rows = wantsAll ? [one, ...others] : rows.filter(r => r.key === onlyKey);
   }
-  if (!rows.length) return;
+  if (!rows.length) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => (!onlyKey || r.key === onlyKey) && r.kind === 'priced'), [], false)); return; }
   await rqSendReadyRows(channel, rows, rqSheetState.customers, rqSheetState.linksByCustomer, pids);
 }
 
 // One line of the brand list (owner 2026-10-22): the USD line (customerId empty) goes to every USD customer who buys the product and does not have this brand yet; a pesos line goes to HIS customer only,
 // with HIS pesos price (rqWithPesos inside the send). Same rule as rqSheetSend: other confirmed brands of the SAME product may go together in one list, the trader chooses. Nothing else changes.
+// A send that has nothing to send SAYS WHY (owner 2026-10-27: the mail and WhatsApp buttons of the brand list "do not send": they returned without a word). One reason, in plain words, for the row's own state.
+function rqSendWhyNot(row, owners, sent){
+  if (!row) return 'This brand has no price to send.';
+  if (!row.calc) return `${String(row.plant.name).trim()}: its sale price is not calculated yet — open its QT.`;
+  if (!row.confirmed) return `${String(row.plant.name).trim()}: confirm the price in its QT first.`;
+  if (row.proposed) return `${String(row.plant.name).trim()}: the price in its QT is only proposed — confirm it first.`;
+  if (row.stale) return `${String(row.plant.name).trim()}: this price is from ${rqFmtDate(row.priceDate)} and has expired — press "Send old price", or ask the plant for an update.`;
+  if (!owners.length) return 'No customer buys this product yet.';
+  return sent ? 'Everyone who buys it already has this brand. To send it again, use the customer\'s own line.' : 'Only pesos customers buy it: send from each customer\'s own pesos line.';
+}
 async function rqBrandSend(channel, key, customerId){
   const pids = rqActiveProductFilterIds.slice();
   let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
   const one = rows.find(r => r.key === key);
-  if (!one) return;
+  if (!one) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => r.key === key && r.kind === 'priced'), [], false)); return; }
   const owners = rqSheetCustomersOwning(one.pid);
   const customers = customerId
     ? rqSheetState.customers.filter(c => c.id === customerId)
     : owners.filter(c => !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
-  if (!customers.length) return;
+  if (!customers.length) { rqShowNotice(rqSendWhyNot(one, owners, owners.some(c => !rqIsPesosCustomer(c)))); return; }
   const others = rows.filter(r => r.key !== key && r.pid === one.pid && customers.some(c => !r.sentTo.some(x => x.id === c.id) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))));
   const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
   rows = wantsAll ? [one, ...others] : [one];
