@@ -6707,7 +6707,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     return { extras,
       id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
-      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: one.calc.mxn ? null : rqLinePrice(one.calc) }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
+      thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: rqLinePrice(one.calc), cur: one.calc.mxn ? 'mxn' : 'usd' }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
   });
@@ -6718,9 +6718,9 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 function rqWaAttachThinImages(items){
   items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
-    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
+    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname) ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
@@ -6751,8 +6751,8 @@ function buildCustomerOfferTextWithLinks(customerFirstName, withCalc, offersByPl
     const offer = offersByPlantId.get(plant.id);
     const price = rqOfferPriceText(calc);
     // with its picture the price is on the picture (owner 2026-10-25): the text is the full name, the docs and the link
-    // a pesos customer's picture carries no price (the banner draws USD/lb only): his text carries it, after the delivery (owner 2026-10-27: pesos offers went out without a price)
-    if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}${calc.mxn ? ' — ' + price : ''}`, withCalc.length);
+    // with its picture the price is on the picture, a pesos customer's too ("$54.00 MXN/kg", owner 2026-10-27)
+    if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
     return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${(p.cheap !== undefined ? p.cheap : cheapest.has(i)) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
   }).join('\n\n');
   const pending = p.last ? rqPendingNote() : '';
@@ -6775,7 +6775,7 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
     const lines = items.map(({ plant, calc }, i) => {
       const offer = offersByPlantId && offersByPlantId.get(plant.id);
       const price = rqOfferPriceText(calc);
-      if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}${calc.mxn ? ' — ' + price : ''}`, withCalc.length); // the price is on its picture; a pesos customer's picture has none: his text carries it
+      if (offer) return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length); // the price is on its picture
       return rqWaLine(plant, offer, `${rqSpecEsForPlant(plant) || ''} — ${isCheap(i) ? '*' + price + '*' : price}${delivery ? ' — Entrega ' + delivery : ''}`, withCalc.length);
     }).join('\n\n');
     return p.noTitle ? lines : title + '\n\n' + lines;
