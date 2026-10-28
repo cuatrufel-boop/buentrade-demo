@@ -3422,9 +3422,20 @@ function rqToggleReqOld(key){ if (rqReqOld.has(key)) rqReqOld.delete(key); else 
 // Carnytek"): coming from Today only that customer is marked, the other buyers are right there to tap — or all at once — and ANY customer (also one who does not buy it yet)
 // can be added with the search. An added customer is this package's customer for this send only; nothing is linked to the product.
 let rqReqAddOpen = false, rqReqAddQ = '', rqReqResendIds = []; // ids marked in the Send panel who already have every price (they get it again)
+// WHO GETS IT (owner 2026-10-27: "me metí por Find Product, busqué un producto por un cliente y lo mando a otro cliente… debe mandar al cliente que elegí al principio"): when a customer was chosen at the start — he
+// asked for it (Find Product's "Who asked for it?") or Today's Go → named him — the brand list sends to HIM; every other buyer is added only by the trader (+ Add customer / Everyone who buys it). With nobody chosen it is
+// everyone who buys it, as before. The list, the "All" button and every brand's send read this one rule.
+// the customers the trader added live in the selection itself (rqReqSel.extra), so a new search or a new product clears them with it
+const rqReqExtra = () => (rqReqSel.extra = rqReqSel.extra || new Set());
+function rqBrandRecipients(pid){
+  const owners = rqSheetCustomersOwning(pid), asked = rqSheetAskedIds(pid), pre = rqUrlPreselect && rqUrlPreselect.pid === pid ? rqUrlPreselect.cid : null;
+  const chosen = owners.filter(c => asked.has(c.id) || c.id === pre);
+  if (!chosen.length) return owners;
+  return owners.filter(c => asked.has(c.id) || c.id === pre || rqReqExtra().has(c.id));
+}
 function rqReqSelectAll(){
   const pid = rqActiveProductFilterIds[0]; if (!rqReqSel.ids || !pid) return;
-  rqSheetCustomersOwning(pid).forEach(c => rqReqSel.ids.add(c.id));
+  rqSheetCustomersOwning(pid).forEach(c => { rqReqSel.ids.add(c.id); rqReqExtra().add(c.id); });
   rqRenderSheet();
 }
 function rqReqSelectOnly(ids){ if (!rqReqSel.ids) return; rqReqSel.ids = new Set(ids); rqRenderSheet(); }
@@ -3443,6 +3454,7 @@ function rqReqAddCustomer(id){
   if (!rqSheetState.customers.some(x => x.id === id)) rqSheetState.customers = rqSheetState.customers.concat(c);
   rqSheetState.linksByCustomer[id] = new Set([pid]); // for this send only: he shows up with the buyers; nothing is saved
   if (rqReqSel.ids) rqReqSel.ids.add(id);
+  rqReqExtra().add(id);
   rqReqAddOpen = false; rqReqAddQ = '';
   rqRenderSheet();
 }
@@ -3588,7 +3600,7 @@ function rqRenderRequestView(rows){
     // a different set of products is a fresh send: nothing from the last one (expired prices "send anyway", the open "add customer" box, the re-send marks) carries over
     rqReqOld.clear(); rqReqAddOpen = false; rqReqAddQ = ''; rqReqResendIds = [];
   }
-  if (RQ_BRAND_LIST) rqReqSel.ids = new Set([...rqReqSel.ids, ...owners.filter(c => !hasAll(c)).map(c => c.id)]); // the list has a line for every customer who lacks a price: they are all ready to receive it (no marking step)
+  if (RQ_BRAND_LIST) rqReqSel.ids = new Set([...rqReqSel.ids, ...rqBrandRecipients(pid).filter(c => !hasAll(c)).map(c => c.id)]); // the list has a line for every customer who lacks a price: they are all ready to receive it (no marking step)
   // A price is "sent" for the people it is going to: when customers are marked to receive it, it counts as sent only if EVERY one of them already has it (user 2026-10-13: Tyson's Inner went to Aqua Terra on
   // Oct 12 and never to Don Timo; with Don Timo marked the panel said "Nothing priced and waiting to go out" because it only looked at the first customer who asked). Nobody marked: as before.
   const hasIt = r => {
@@ -3601,7 +3613,8 @@ function rqRenderRequestView(rows){
   const sendRows = priced.filter(r => !hasIt(r) && (!r.stale || inc(r)) && !r.na);
   const stale = priced.filter(r => r.stale && !r.na && !inc(r)); // an expired price (also one already confirmed in QT): ask again, or choose to send it anyway // same rule as the plants the "Ask for price" button asks (an old price is asked again even if this customer already has it)
   const pending = rows.filter(r => ['waiting', 'noreply', 'possible', 'na'].includes(r.kind));
-  const order = [...askers, ...owners.filter(c => !askedIds.has(c.id)).sort((a, b) => String(a.trade_name).localeCompare(String(b.trade_name)))];
+  const recipients = rqBrandRecipients(pid), isRecipient = new Set(recipients.map(c => c.id));
+  const order = [...askers, ...owners.filter(c => !askedIds.has(c.id)).sort((a, b) => String(a.trade_name).localeCompare(String(b.trade_name)))].filter(c => isRecipient.has(c.id) || !owners.some(o => o.id === c.id));
   const pill = (cls, t) => `<span class="rq-sheet-pill ${cls}">${t}</span>`;
   // Every plant in ONE list, each with where it stands and its one action. Order: what needs you first, what waits, what is already out.
   const meta = (...bits) => bits.filter(Boolean).map(b => `<span>${b}</span>`).join('');
@@ -4023,7 +4036,7 @@ async function rqBrandSend(channel, key, customerId){
   let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
   const one = rows.find(r => r.key === key);
   if (!one) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => r.key === key && r.kind === 'priced'), [], false)); return; }
-  const owners = rqSheetCustomersOwning(one.pid);
+  const owners = rqBrandRecipients(one.pid);
   const customers = customerId
     ? rqSheetState.customers.filter(c => c.id === customerId)
     : owners.filter(c => !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
