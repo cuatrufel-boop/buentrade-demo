@@ -3433,6 +3433,7 @@ function rqBrandRecipients(pid){
   if (!chosen.length) return owners;
   return owners.filter(c => asked.has(c.id) || c.id === pre || rqReqExtra().has(c.id));
 }
+function rqReqAddBuyer(id){ rqReqExtra().add(id); if (rqReqSel.ids) rqReqSel.ids.add(id); rqRenderSheet(); } // a buyer of this product the trader adds to the send (the chosen customer stays; he joins)
 function rqReqSelectAll(){
   const pid = rqActiveProductFilterIds[0]; if (!rqReqSel.ids || !pid) return;
   rqSheetCustomersOwning(pid).forEach(c => { rqReqSel.ids.add(c.id); rqReqExtra().add(c.id); });
@@ -3735,7 +3736,11 @@ function rqRenderRequestView(rows){
     + (resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : '')
     + (canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : '')
     + (canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT.' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`);
-  const addHtml = `<div style="margin-top:10px;"><button type="button" class="chip" onclick="rqReqAddToggle()">+ Add customer</button></div>` + (rqReqAddOpen ? (() => {
+  // the other customers who buy this product, one tap each (owner 2026-10-28: "no están saliendo los clientes que compran el producto, ni me da opción de mandar a más clientes"): with a customer chosen at the start the list
+  // is his; every other buyer stays right here to add — one by one or all together — and the list then includes him.
+  const otherBuyers = owners.filter(c => !isRecipient.has(c.id)).sort((x, y) => String(x.trade_name).localeCompare(String(y.trade_name)));
+  const buyersHtml = otherBuyers.length ? `<div class="rq-req-buyers" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;"><span class="muted" style="font-size:12.5px;">Also buy it:</span>${otherBuyers.map(c => `<button type="button" class="chip" title="Send it to him too" onclick="rqReqAddBuyer('${c.id}')">+ ${nm(c)}</button>`).join('')}<button type="button" class="chip" title="Send it to everyone who buys it" onclick="rqReqSelectAll()">Everyone who buys it</button></div>` : '';
+  const addHtml = buyersHtml + `<div style="margin-top:10px;"><button type="button" class="chip" onclick="rqReqAddToggle()">+ Add customer</button></div>` + (rqReqAddOpen ? (() => {
     const q = rqReqAddQ.trim().toLowerCase(), inOrder = new Set(order.map(c => c.id));
     const hits = (rqAllCustomersCache || []).filter(c => !inOrder.has(c.id) && (!q || String(c.trade_name).toLowerCase().includes(q) || String(c.legal_name || '').toLowerCase().includes(q))).slice(0, 8);
     return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
