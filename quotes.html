@@ -3428,7 +3428,9 @@ let rqReqAddOpen = false, rqReqAddQ = '', rqReqResendIds = []; // ids marked in 
 // the customers the trader added live in the selection itself (rqReqSel.extra), so a new search or a new product clears them with it
 const rqReqExtra = () => (rqReqSel.extra = rqReqSel.extra || new Set());
 function rqBrandRecipients(pid){
-  const owners = rqSheetCustomersOwning(pid), asked = rqSheetAskedIds(pid), pre = rqUrlPreselect && rqUrlPreselect.pid === pid ? rqUrlPreselect.cid : null;
+  // a customer COUNTS AS CHOSEN only when the trader chose him in this open (Find Product's "Who asked for it?" click, rqAskedConfirmed) or Today's Go named him; the customers who asked earlier (what Live quotes lists) are
+  // not a choice: opening a product from Live shows and sends to EVERYONE who buys it (owner 2026-10-28: "deben aparecer todos los clientes que compran ese producto cuando lo abro")
+  const owners = rqSheetCustomersOwning(pid), asked = (typeof rqAskedConfirmed === 'undefined' || rqAskedConfirmed.has(pid)) ? rqSheetAskedIds(pid) : new Set(), pre = rqUrlPreselect && rqUrlPreselect.pid === pid ? rqUrlPreselect.cid : null;
   const chosen = owners.filter(c => asked.has(c.id) || c.id === pre);
   if (!chosen.length) return owners;
   return owners.filter(c => asked.has(c.id) || c.id === pre || rqReqExtra().has(c.id));
@@ -4290,8 +4292,7 @@ function rqLivePackages(entries){
     // or a customer who asked and no plant has priced it yet. A package with neither (it was only opened by a send) is an Offer already and does not appear here.
     const stage = toSend.length ? 'send' : (plants.some(x => x.state === 'waiting') || (asked.length && !plants.length)) ? 'wait' : sentTo.size ? 'out' : 'idle';
     return { s: g.s, list: g.list, plants, answered: plants.filter(x => x.state !== 'waiting').length, priced: plants.filter(x => x.state === 'priced').length, toSend, asked, newest, askedAt, sentTo, stage };
-  }).sort((a, b) => (b.asked.length > 0) - (a.asked.length > 0) // a customer asked: first, whatever the stage — that is the request that can become a bid
-    || rank[a.stage] - rank[b.stage]
+  }).sort((a, b) => rank[a.stage] - rank[b.stage] // ORDER OF ARRIVAL (owner 2026-10-28: "en live deben salir en orden de llegada"): what has a new price first, the newest arrival on top — whether or not a customer asked (a new price that arrived 10 h ago was under the waiting ones)
     || (a.stage === 'wait' ? String(a.askedAt || '9').localeCompare(String(b.askedAt || '9')) : String(b.newest).localeCompare(String(a.newest)))
     || String(a.s.product_name).localeCompare(String(b.s.product_name)));
 }
