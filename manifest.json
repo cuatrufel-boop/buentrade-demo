@@ -2,7 +2,7 @@
   "name": "BuenTrade Trading OS",
   "short_name": "BuenTrade",
   "id": "/orders.html",
-  "start_url": "/quotes.html?find=1",
+  "start_url": "/quotes.html",
   "display": "standalone",
   "background_color": "#0A2547",
   "theme_color": "#0A2547",
