@@ -3078,7 +3078,7 @@ async function loadPlantProducts(){
   // now (2026-08-29: moved off the shared product onto plant_products, where they actually vary).
   plantProducts = (res.results || [])
     .filter(r => r.product)
-    .map(r => ({ ...r.product, linkId: r.id, current_price: r.current_price, price_currency: r.price_currency, price_date: r.price_date, brand_id: r.brand_id, photo_url: r.photo_url, spec_url: r.spec_url, location_id: r.location_id, declined_at: r.declined_at }))
+    .map(r => ({ ...r.product, linkId: r.id, current_price: r.current_price, price_currency: r.price_currency, price_date: r.price_date, brand_id: r.brand_id, photo_url: r.photo_url, spec_url: r.spec_url, location_id: r.location_id, declined_at: r.declined_at, last_requested_at: r.last_requested_at }))
     // Most recently priced first, stale/never-priced ones sinking to the bottom — the trader
     // wants to see what just got loaded, not scroll past it to find it alphabetically.
     .sort((a, b) => (b.price_date || '').localeCompare(a.price_date || ''));
@@ -3108,6 +3108,13 @@ function priceAgeDays(priceDate){
   return Math.round(ms / 86400000);
 }
 
+// WHEN THIS PRODUCT WAS LAST ASKED (owner 2026-10-31: "el sistema debe mostrar cuándo fue la última vez que se pidió ese producto, si está al día, si no…"): a quiet caption under the price — the day of the last ask, or "never asked".
+// Display only; the price pill and its date (current / old) say whether it is up to date.
+function askedCaption(p){
+  const d = p.last_requested_at ? new Date(p.last_requested_at) : null;
+  const day = d && !isNaN(d) ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }) : null;
+  return `<span class="pask" style="display:block;font-size:11px;color:var(--ink-soft);">${day ? 'asked ' + day : 'never asked'}</span>`;
+}
 function fmtPriceCell(p){
   // Real gap fixed 2026-09-01, confirmed live: a declined product (this plant told us they don't
   // make it — see quotes.html's rqDeclinePlantProduct) rendered identically to a product that
@@ -3115,7 +3122,7 @@ function fmtPriceCell(p){
   // point of declined_at is that this is a known, closed fact, not an open "still needs a price"
   // question. See renderPlantProducts for the matching row-level shading.
   if (p.declined_at) return '<span style="color:var(--red);font-weight:600;font-size:12px;">✕ Off-Spec</span>';
-  if (p.current_price == null) return '<span style="color:var(--ink-soft);">—</span>';
+  if (p.current_price == null) return '<div class="pcell"><span style="color:var(--ink-soft);">—</span><span class="pask" style="display:block;font-size:11px;color:var(--ink-soft);">never priced · ' + askedCaption(p).replace(/<[^>]+>/g, '') + '</span></div>';
   const dOnly = toDateOnly(p.price_date);
   const dateStr = dOnly ? new Date(dOnly + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : null;
   const age = priceAgeDays(p.price_date);
@@ -3127,10 +3134,10 @@ function fmtPriceCell(p){
   // also the button for the price history when there is one (▾).
   const tone = stale ? 'stale' : 'ok';
   const price = `<span class="pprice ${tone}">$${Number(p.current_price).toFixed(2)}</span>`;
-  if (!dateStr) return `<div class="pcell">${price}</div>`;
+  if (!dateStr) return `<div class="pcell">${price}${askedCaption(p)}</div>`;
   const ageText = age === 0 ? 'today' : `${age} day${age === 1 ? '' : 's'} old`;
   const hist = earlierPricesParts(p);
-  return `<div class="pcell">${price}<span class="pdate ${tone}${hist.count ? ' pdate-click' : ''}"${hist.count ? ` onclick="togglePriceList(this)" title="Price History (${hist.count})"` : ''}>${dateStr} · ${ageText}${hist.count ? ' <span class="pph-chev">▾</span>' : ''}</span></div>${hist.list}`;
+  return `<div class="pcell">${price}<span class="pdate ${tone}${hist.count ? ' pdate-click' : ''}"${hist.count ? ` onclick="togglePriceList(this)" title="Price History (${hist.count})"` : ''}>${dateStr} · ${ageText}${hist.count ? ' <span class="pph-chev">▾</span>' : ''}</span>${askedCaption(p)}</div>${hist.list}`;
 }
 
 // The earlier prices of this plant for the product (price_history), newest first. The last-upload pill in the cell opens them under
