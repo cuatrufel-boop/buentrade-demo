@@ -7,6 +7,11 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>BuenTrade Trading OS — Orders</title>
+<script>
+// THE OS OPENS ON QUOTES → FIND PRODUCT (owner 2026-10-31: "cuando entro debe llegar a quotes"): the installed app was set up with Orders as its start page and keeps it until it is reinstalled. When this page is opened AS THE APP, straight from the dock
+// (standalone window, no referrer, no link parameters, first load of this window), go to Quotes with Find Product open. Opening Orders from a menu, a link or a browser tab is untouched.
+try { if ((window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) && !document.referrer && !location.search && !sessionStorage.getItem('btLanded')) { sessionStorage.setItem('btLanded', '1'); location.replace('/quotes.html?find=1'); } } catch (e) {}
+</script>
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 <link rel="shortcut icon" href="/icons/favicon.ico">
