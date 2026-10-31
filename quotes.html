@@ -1871,6 +1871,7 @@ async function loadQuotesPage(){
   loadPendingPrices();
   if (new URLSearchParams(location.search).get('tab') === 'messaging') setQuoteTab('messaging');
   else if (new URLSearchParams(location.search).get('tab') === 'live') rqSetSweepTab('live'); // the bell's "Go to Live" (owner 2026-10-27)
+  else if (!urlProducts && new URLSearchParams(location.search).get('find') === '1') rqOpenFindProduct(); // the OS opens here by default (owner 2026-10-31: "cuando entre que me lleve directo a quotes, find product")
 
   // Explicit ask 2026-09-03: "y refresh" — the Dashboard only ever updated on a manual reload or
   // re-entering Quotes, so a price the API had already filled in from a plant's reply sat unseen
