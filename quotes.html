@@ -3552,6 +3552,8 @@ function rqBrandListHtml(x){
   const { pid, sheet, sendRows, stale, pending, order, marked, isPes, mailIco, waIco, askN, remindN, addHtml, hints, selN, canSend, emailOk, waOk, noEmail, noWa } = x;
   const money = n => '$' + Number(n).toFixed(4) + '/lb';
   const sub = t => `<span class="muted" style="display:block;font-size:11px;">${t}</span>`;
+  const statusSub = r => (typeof rqRowStatusLine === 'function' ? sub(escapeHtml(rqRowStatusLine(r))) : ''); // where this plant × product stands (rqRowStatusLine) — the same line on every row
+  const listSub = r => (typeof rqPlantListText === 'function' ? sub(escapeHtml(rqPlantListText(r.plant.id))) : '');
   // ONE send button per line (owner 2026-10-22): both logos; it opens the one offer window where each customer has his WhatsApp and his email (one or both)
   const sendBtns = (ready, emailOn, waOn, callFor, who) => { const on = ready && (emailOn || waOn);
     return `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;${on ? '' : 'opacity:.35;cursor:default;'}" title="${on ? 'Send ' + who + ' — WhatsApp, email or both, in one window' : ready ? 'No email or WhatsApp on file' : 'Confirm the price in its QT first'}" ${on ? `onclick="${callFor('both')}"` : 'disabled'}>${waIco}${mailIco}</button></div>`; };
@@ -3569,7 +3571,7 @@ function rqBrandListHtml(x){
     const fresh = r.status === 'new' || r.status === 'proposed';
     const arr = rqSheetArrival(sheet, r.plant.id);
     const when = r.stale ? `old price from ${rqFmtDate(r.priceDate)}` : arr && arr.arrived_at ? rqFmtArrival(arr.arrived_at) : `price from ${rqFmtDate(r.priceDate)}`;
-    const brand = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${fresh ? ' <span class="rq-sheet-pill new">NEW</span>' : ''}${sub(when)}</td>`;
+    const brand = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${fresh ? ' <span class="rq-sheet-pill new">NEW</span>' : ''}${sub(when)}${statusSub(r)}</td>`;
     const planTag = open => `<span class="pkg-tag price${r.stale ? ' exp' : ''}${fresh && !ready ? ' pkg-tag-blink' : ''}" style="cursor:pointer;" title="Open its QT" onclick="${open}">${money(r.price)}</span>`;
     const lines = [];
     if (usdT.length || !pesT.length){
@@ -3594,7 +3596,7 @@ function rqBrandListHtml(x){
   stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => body.push(`<tr class="rq-sheet-dim"><td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}</td><td></td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
     <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask the plant for an updated price" onclick="rqSheetAsk(['${r.plant.id}'])">Update</button><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Send this old price too — its QT opens so you confirm your price first" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">Send old price</button></div></td></tr>`));
   pending.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => {
-    const name = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}</td>`;
+    const name = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}${statusSub(r)}${listSub(r)}</td>`;
     const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask for price →</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
       : r.kind === 'waiting' ? `<span class="rq-sheet-pill wait">Waiting for price</span>${offSpec(r)}`
       : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
@@ -4015,6 +4017,40 @@ async function rqNeedWhoAsked(){
   el.classList.remove('rq-need-who'); void el.offsetWidth; el.classList.add('rq-need-who');
   setTimeout(() => el.classList.remove('rq-need-who'), 3200);
 }
+// WHAT WE KNOW BEFORE WE ASK A PLANT (owner 2026-10-31: "a las plantas no les gusta que uno pida un producto que ya mandaron… el sistema debe mostrar cuándo llegó la última vez y mostrar si lo voy a pedir, no solo mandar correos pidiendo sin saber";
+// Wholestone had sent its list on Friday and was asked again). Display only — nothing here decides, blocks or sends: the date of the plant's last price list, and for a product when it last had a price and when it was last asked.
+const rqDayLong = (v) => { if (!v) return ''; const s = String(v), ts = /T/.test(s), d = ts ? new Date(s) : new Date(s.slice(0, 10) + 'T12:00:00'); return d.toLocaleDateString('en-US', Object.assign({ weekday: 'short', month: 'short', day: 'numeric' }, ts ? { timeZone: 'America/New_York' } : {})); };
+function rqPlantLastList(plantId){
+  const rows = (typeof rqAllPlantProductRows !== 'undefined' ? rqAllPlantProductRows : []).filter(r => r.plant_id === plantId && r.current_price != null && r.price_date && !r.declined_at);
+  if (!rows.length) return null;
+  const day = rows.map(r => String(r.price_date).slice(0, 10)).sort().pop();
+  return { day, n: rows.filter(r => String(r.price_date).slice(0, 10) === day).length };
+}
+const rqPlantListText = (plantId) => { const l = rqPlantLastList(plantId); return l ? `its last prices arrived ${rqDayLong(l.day)} (${l.n} product${l.n === 1 ? '' : 's'})` : 'no price list from it on file'; };
+function rqProductAskFacts(plantId, pid){
+  const link = (typeof rqAllPlantProductRows !== 'undefined' ? rqAllPlantProductRows : []).find(x => x.plant_id === plantId && x.product_id === pid);
+  const bits = [link && link.current_price != null && link.price_date ? `last price $${Number(link.current_price).toFixed(4)} on ${rqDayLong(link.price_date)}` : 'never priced'];
+  if (link && link.last_requested_at) bits.push(`asked ${rqDayLong(link.last_requested_at)}`);
+  return bits.join(' · ');
+}
+// WHERE EVERY PLANT × PRODUCT STANDS, SAID THE SAME WAY EVERYWHERE (owner 2026-10-31: "hay que arreglar TODO EL FLUJO: el sistema debe mostrar cuándo fue la última vez que se pidió ese producto, si está al día, si no…"): one line per row — up to date / old /
+// waiting / never priced — with the day the price arrived, the day it was last asked, and whether the next "Ask" will include it (the SAME cooldown and rules the Ask buttons use: rqSheetAskTargets). Display only: nothing here asks, blocks or decides.
+function rqRowStatusLine(r){
+  const asked = r.askedAt ? `asked ${rqDayLong(r.askedAt)}` : 'never asked';
+  const cool = RQ_REQUEST_COOLDOWN_DAYS * 86400000;
+  const recent = !!(r.askedAt && (Date.now() - new Date(r.askedAt).getTime()) < cool);
+  const lastPrice = r.link && r.link.current_price != null && r.link.price_date ? `last price ${rqDayLong(r.link.price_date)}` : 'never priced';
+  const since = h => h < 24 ? `${Math.max(1, Math.round(h))} h` : `${Math.round(h / 24)} d`;
+  if (r.kind === 'priced'){
+    const age = rqPriceAgeDays(r.priceDate) || 0;
+    if (!r.stale) return `Up to date · price from ${rqDayLong(r.priceDate)} · ${asked}`;
+    return `Old (${age} days) · price from ${rqDayLong(r.priceDate)} · ${asked} · ${r.na ? 'N/A' : recent ? `won't be asked again until ${rqDayLong(new Date(new Date(r.askedAt).getTime() + cool).toISOString())}` : 'will be asked'}`;
+  }
+  if (r.kind === 'na') return `N/A since ${rqDayLong(r.naSince)} · ${asked}`;
+  if (r.kind === 'waiting') return `${lastPrice} · ${asked}${r.answeredAt ? ` · plant answered ${rqDayLong(r.answeredAt)}` : ` · waiting ${since(r.hours)}`}`;
+  if (r.kind === 'noreply') return `${lastPrice} · ${asked} · no reply in ${since(r.hours)} · can be reminded`;
+  return `${lastPrice} · ${asked} · will be asked`; // possible
+}
 async function rqSheetAsk(plantIds, remind){
   // opened from Today's Go →, the customer is already known (he is marked in the Send panel), so the plants can be asked without marking anyone as having asked
   if (!remind && rqActiveProductFilterIds.some(pid => rqSheetAskedIds(pid).size === 0 && !(rqUrlPreselect && rqUrlPreselect.pid === pid))){ rqNeedWhoAsked(); return; }
@@ -4044,8 +4080,9 @@ async function rqSheetAsk(plantIds, remind){
     const subject = rqPriceRequestSubject(specs.join(' / '));
     const phone = (plant.whatsapp || plant.phone || '').replace(/\D/g, '');
     const doneOnce = rqOnce(onDone(plant, prodRows));
-    if (plant.email) emailItems.push({ id: plant.id, label: plant.name, to: plant.email, cc: rqPlantCc(plant), subject, body, fromAlias: 'purchasing', onSent: doneOnce });
-    if (phone) waItems.push({ id: plant.id, label: plant.name, phone, body: body + RQ_EMAIL_SIGNATURE, onOpened: doneOnce }); // also when it has an email: both channels
+    const know = `${rqPlantListText(plant.id)} · ${prodRows.map((r, i) => `${specs[i]}: ${rqProductAskFacts(plant.id, r.pid)}`).join(' | ')}`; // shown on the card: what the plant already sent and when we asked, before anything goes out
+    if (plant.email) emailItems.push({ id: plant.id, label: `${plant.name} — ${know}`, to: plant.email, cc: rqPlantCc(plant), subject, body, fromAlias: 'purchasing', onSent: doneOnce });
+    if (phone) waItems.push({ id: plant.id, label: `${plant.name} — ${know}`, phone, body: body + RQ_EMAIL_SIGNATURE, onOpened: doneOnce }); // also when it has an email: both channels
   });
   rqOpenChannels(`${remind ? 'Remind' : 'Ask for prices'} — ${emailItems.length} plant${emailItems.length === 1 ? '' : 's'}`, emailItems, `Ask for prices — WhatsApp (${waItems.length})`, waItems, 'Ask for Price');
 }
