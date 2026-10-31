@@ -65,6 +65,8 @@
     + '.btb-b{flex:1;min-width:0}.btb-t{font-weight:600;color:#cfdaf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.btb-i.unread .btb-t{font-weight:700;color:#fff}.btb-s{color:#8ea4cc;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
     + '.btb-side{flex:none;min-width:52px;text-align:right;color:#7f95bd;font-size:12px}.btb-act{display:none;gap:2px;justify-content:flex-end}.btb-i:hover .btb-w,.btb-i.sel .btb-w{display:none}.btb-i:hover .btb-act,.btb-i.sel .btb-act{display:inline-flex}'
     + '.btb-e{padding:36px 20px 40px;text-align:center;color:#8ea4cc}.btb-e svg{display:block;margin:0 auto 10px;color:#2fbf71}.btb-e b{display:block;color:#fff;font-size:14px;margin-bottom:2px}'
+    + '@media (hover:none){.btb-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.btb-i:hover .btb-w,.btb-i.sel .btb-w{display:block}.btb-act{display:inline-flex}.btb-ib{width:34px;height:34px}.btb-i{padding-block:8px}}' // a phone has no hover: the time and the ✓ / ✕ are always there, finger-sized
+    + '@media (max-width:480px){.btb-p{width:calc(100vw - 20px)}.btb-chips{margin-top:8px}}'
     + '@media (prefers-reduced-motion:reduce){.btb-p.open,.btb-ring{animation:none}}';
   document.head.appendChild(css);
   var bell = document.createElement('button');
@@ -108,7 +110,7 @@
     });
     panel.innerHTML = head + body;
     var r = bell.getBoundingClientRect(); panel.style.top = Math.round(r.bottom + 10) + 'px'; panel.style.maxHeight = Math.max(160, Math.round(window.innerHeight - r.bottom - 22)) + 'px'; // the list scrolls inside the panel, never the page behind it (owner 2026-10-28)
-    panel.style.left = 'auto'; panel.style.right = Math.max(10, Math.round(window.innerWidth - r.right)) + 'px'; // anchored under the bell, inside the window
+    var w = Math.min(420, window.innerWidth - 20); panel.style.width = w + 'px'; panel.style.right = 'auto'; panel.style.left = Math.max(10, Math.min(Math.round(r.right - w), window.innerWidth - w - 10)) + 'px'; // under the bell, its right edge on the bell's, always inside the window (a phone included)
   }
   function load(force){
     if (typeof window.callApi !== 'function') return;
