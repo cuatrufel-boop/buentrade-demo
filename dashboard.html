@@ -352,6 +352,7 @@ auth.onAuthStateChanged(user => {
   </nav>
 </header>
 <script src="js/header-chip.js"></script>
+<script src="js/profile-access.js"></script>
 <script src="js/auth-reset.js"></script>
 <script src="js/bt-dialogs.js"></script>
 <script src="js/price-lock.js"></script>
@@ -700,7 +701,7 @@ function addProfileTabs(){
   if (funnelCan('trader')) extra.push(['mybids', 'My bids']);
   if (funnelCan('buyer')) extra.push(['buyer', 'Buyer']);
   if (funnelCan('logistics')) extra.push(['logistics', 'Logistics']);
-  if (funnelCan('payments')) extra.push(['payments', 'Payments']);
+  if (funnelCan('payments')) extra.push(['payments', 'Collections']);
   if (funnelCan('admin')) extra.push(['team', 'Team']);
   DASH_TABS.splice(2, 0, ...extra);
   if (!funnelCan('admin')) ['goals', 'mix'].forEach(k => { const i = DASH_TABS.findIndex(x => x[0] === k); if (i >= 0) DASH_TABS.splice(i, 1); }); // Goals & Money and Sales Mix are the owner's view
@@ -788,7 +789,7 @@ async function loadTeam(){
   try { d = await callApi('sent-offers-search', { funnel: { action: 'list_roles', actor: currentActor() } }); } catch (e) { wrap.innerHTML = `<div class="empty">Could not load: ${escapeHtml(e.message)}</div>`; return; }
   const row = r => `<tr data-email="${escapeHtml(r.email)}"><td style="text-align:left;">${escapeHtml(r.email)}</td>${TEAM_ROLES.map(k => `<td><input type="checkbox" data-role="${k}" ${r.roles.includes(k) ? 'checked' : ''} onchange="teamSave('${escapeHtml(r.email)}')"></td>`).join('')}</tr>`;
   wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><div><b>Profiles are ${d.enforced ? 'ON' : 'OFF'}</b><div style="color:var(--ink-soft);font-size:12.5px;">${d.enforced ? 'Each person can do only what their profile allows.' : 'Everyone can do everything, as today. Set the profiles below, then turn them on.'}</div></div><button class="btn small" onclick="teamSwitch(${!d.enforced})">${d.enforced ? 'Turn profiles off' : 'Turn profiles on'}</button></div>`
-    + pvTable(['Person', ...TEAM_ROLES.map(k => k[0].toUpperCase() + k.slice(1))], d.roles.map(row))
+    + pvTable(['Person', ...TEAM_ROLES.map(k => k === 'payments' ? 'Collections' : k[0].toUpperCase() + k.slice(1))], d.roles.map(row))
     + `<div style="margin-top:12px;display:flex;gap:8px;align-items:center;"><input id="teamNewEmail" placeholder="email of a new person" style="width:260px;"><button class="btn small" onclick="teamAdd()">Add person</button></div>`;
 }
 async function teamSave(email){
