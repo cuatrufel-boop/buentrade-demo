@@ -2082,7 +2082,7 @@ function qmRowHtml(c, cols){
     </div></td>`;
   }
   return `<tr data-qm-key="${escapeHtml(c.id)}" style="cursor:pointer;${open ? 'background:rgba(90,170,255,.08);' : ''}" onclick="qmOpen=${open ? 'null' : `'${c.id}'`};qmRender()" title="Client details">${clientCell}${whyCell}${msgCell}${tail}</tr>
-    ${open ? `<tr data-qm-detail="${escapeHtml(c.id)}"><td colspan="${cols}" style="text-align:left;padding:14px 12px 18px;background:rgba(10,20,36,.35);">${qmDetailHtml(c)}</td></tr>` : ''}`;
+    ${open && qmTab === 'sent' ? (qmEnsureQueue(c), '') : ''}    ${open ? `<tr data-qm-detail="${escapeHtml(c.id)}"><td colspan="${cols}" style="text-align:left;padding:14px 12px 18px;background:rgba(10,20,36,.35);">${qmDetailHtml(c)}</td></tr>` : ''}`;
 }
 function qmRefreshRow(c){
   const tr = [...document.querySelectorAll('#qm_rows tr[data-qm-key]')].find(x => x.dataset.qmKey === c.id);
@@ -2114,8 +2114,12 @@ function qmDetailHtml(c){
     ? `<div class="qm-msg-box">${text ? escapeHtml(text) : '<span class="muted">Writing…</span>'}</div>`
     : `<textarea id="qm_msg_${c.id}" class="qm-msg-box" ${stop} oninput="qmEdit('${c.id}', this.value)">${escapeHtml(d.edited ?? text)}</textarea>`;
   // THE MESSAGE QUEUE (owner 2026-10-31: "una fila de mensajes para que el cliente responda interesado… cortos y poderosos, varias opciones"): short messages built from HIS products, his place, the bulletin and our side — one click puts one in the box above
-  const opts = !sent && d && Array.isArray(d.options) ? d.options : [];
-  const queue = opts.length ? `<div class="qm-queue"><div class="qm-sec" style="margin:4px 0 0;">More messages to choose from</div>${opts.map((o, i) => `<button type="button" class="qm-q${o.message === (d.edited ?? text) ? ' on' : ''}" title="${escapeHtml(o.why || '')}" onclick="event.stopPropagation();qmUseOption('${c.id}', ${i})"><span class="rq-sheet-pill ok">${escapeHtml(QM_ANGLE_LABEL[o.angle] || o.angle)}</span><span class="qm-q-t">${escapeHtml(o.message)}</span>${o.message === (d.edited ?? text) ? '<span class="qm-q-on">in the box ✓</span>' : ''}</button>`).join('')}</div>` : '';
+  // THE QUEUE IS THERE BEFORE AND AFTER A SEND (owner 2026-10-31: "debo poder escoger mensaje, no solo uno por día"): the messages he has NOT sent today stay listed; in the Sent tab a click puts one back in Today's list, in the box, to send another to the same client (no daily cap)
+  const qsrc = c.compose && Array.isArray(c.compose.options) ? c.compose.options : [];
+  const sentSet = new Set((c.sentToday || []).map(m => String(m.sent_message || '').trim()));
+  const opts = qsrc.filter(o => o.message && !sentSet.has(String(o.message).trim()));
+  const inBox = sent ? null : (d && (d.edited ?? text));
+  const queue = opts.length ? `<div class="qm-queue"><div class="qm-sec" style="margin:4px 0 0;">${sent ? 'Send another message today' : 'More messages to choose from'}</div>${opts.map(o => `<button type="button" class="qm-q${o.message === inBox ? ' on' : ''}" title="${escapeHtml(o.why || '')}" onclick="event.stopPropagation();${sent ? 'qmSendAnother' : 'qmUseOption'}('${c.id}', ${qsrc.indexOf(o)})"><span class="rq-sheet-pill ok">${escapeHtml(QM_ANGLE_LABEL[o.angle] || o.angle)}</span><span class="qm-q-t">${escapeHtml(o.message)}</span>${o.message === inBox ? '<span class="qm-q-on">in the box ✓</span>' : ''}</button>`).join('')}</div>` : (sent && !c.compose ? '<div class="muted" style="font-size:12px;margin-top:10px;">Loading the other messages…</div>' : '');
   const left = `<section class="qm-panel">
       <div class="qm-panel-head"><div class="qm-sec" style="margin:0;">${sent ? 'Message sent' : 'Message'}</div>${sent || !text ? '' : '<span class="muted" style="font-size:11.5px;">Edit here, not in WhatsApp.</span>'}</div>
       ${msg}${queue}
@@ -2143,6 +2147,18 @@ function qmUseOption(cid, i){
   const c = qmFind(cid), o = c && c.compose && (c.compose.options || [])[i]; if (!o) return;
   c.compose.edited = o.message; c.compose.used_bullet_id = o.bullet_id || ''; c.compose.angle = o.angle; c.compose.why_en = o.why || c.compose.why_en;
   qmRefreshRow(c);
+}
+// After a send: a message of the queue goes back to Today's list, in the box, to send another to the same client
+function qmSendAnother(cid, i){
+  const c = qmFind(cid), o = c && c.compose && (c.compose.options || [])[i]; if (!o) return;
+  c.compose = Object.assign({}, c.compose, { message: o.message, edited: undefined, used_bullet_id: o.bullet_id || '', angle: o.angle, why_en: o.why || '', after_send: true });
+  qmTab = 'todo'; qmOpen = cid; qmRender();
+}
+// a client who already got a message today and whose queue was never loaded (the page was reloaded): load it once so the Sent tab can offer the others
+function qmEnsureQueue(c){
+  if (!c || c.compose || c._queueLoading) return;
+  c._queueLoading = true;
+  callApi('messaging', { action: 'compose', actor: currentActor(), customer_id: c.id }).then(r => { c.compose = r; }).catch(() => { c.compose = { message: '', failed: true, why_en: '', options: [] }; }).finally(() => { c._queueLoading = false; qmRefreshRow(c); });
 }
 // One composed message per client, written on demand (4 at a time) and kept for the day.
 async function qmFetchDrafts(){
