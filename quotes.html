@@ -829,6 +829,7 @@
   textarea.qm-msg-box:focus{outline:none;border-color:var(--blue-bright);}
   div.qm-msg-box{border-color:rgba(255,255,255,.12);}
   .qm-pill-btn{margin-left:0;height:36px;box-sizing:border-box;text-decoration:none !important;}
+  .qm-recent{display:grid;gap:3px;padding:7px 0;border-top:1px solid rgba(255,255,255,.08);} .qm-recent:first-of-type{border-top:0;} .qm-recent-h{display:flex;gap:8px;align-items:center;}
   .qm-sendrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:2px;}
   .qm-send{display:inline-flex;align-items:center;gap:9px;height:42px;padding:0 20px;border-radius:12px;font:700 14px/1 inherit;font-family:inherit;cursor:pointer;border:1.5px solid rgba(63,203,126,.55);background:rgba(63,203,126,.12);color:#3FCB7E;}
   .qm-send:hover:not([disabled]){background:rgba(63,203,126,.24);} .qm-send.mail{border-color:rgba(90,170,255,.55);background:rgba(90,170,255,.1);color:#5AAAFF;} .qm-send.mail:hover:not([disabled]){background:rgba(90,170,255,.22);}
@@ -2138,13 +2139,17 @@ function qmDetailHtml(c){
       ${d && d.news ? `<div class="muted" style="font-size:11.5px;">Source: <a href="${escapeHtml(d.news.url)}" target="_blank" rel="noopener" ${stop}>${escapeHtml(d.news.source || 'article')} · ${escapeHtml(d.news.date)} ↗</a> — check it before sending.</div>` : ''}
       ${sent || !text || opts.length || (d && Array.isArray(d.options) && d.options.length) ? '' : `<div class="qm-panel-foot"><button type="button" class="pkg-trigger-btn qm-pill-btn" onclick="event.stopPropagation();qmAnotherAngle('${c.id}')">Write a different message →</button></div>`}
     </section>`;
+  // THE PANEL IS FED RIGHT HERE (owner 2026-10-31: "¿por qué no alimentarlo ahí mismo sin que me lleve al perfil? y que me siga saliendo ahí lo último que hablé con él"): what we last sent him, what he told you (write a note and save it here),
+  // and how many loads a month of the product in the message he buys (type it and save). Same actions the profile uses (messaging: add_note, set_loads).
   const biz = qmData && qmData.business_types && c.business_type_id ? (qmData.business_types.find(b => b.id === c.business_type_id) || {}).name_es : '';
-  const about = [[ 'Where', [c.city, c.state].filter(Boolean).join(', ') ], [ 'Business', biz ], [ 'Buys', `${(c.products || []).length} product${(c.products || []).length === 1 ? '' : 's'}` ]].filter(r => r[1]);
-  const blocks = [`<div class="qm-list">${about.map(r => `<div class="qm-list-row"><span class="muted" style="width:64px;flex:none;">${r[0]}</span><span>${escapeHtml(r[1])}</span></div>`).join('')}</div>`];
-  if (prod) blocks.push(`<div><div class="qm-prod-name">${escapeHtml(prod.name_en)}</div>
-      <div class="qm-pills">${prod.cadence ? `<span class="rq-sheet-pill ok">${escapeHtml(prod.cadence)}</span><span class="rq-sheet-pill off">${prod.from_us_month} from us this month</span>` : '<span class="rq-sheet-pill wait">Missing: how often they buy it</span>'}</div></div>`);
+  const where = [[c.city, c.state].filter(Boolean).join(', '), biz, `${(c.products || []).length} product${(c.products || []).length === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
+  const recent = (c.recent || []).map(m => `<div class="qm-recent"><div class="qm-recent-h"><span class="muted qm-date">${escapeHtml(qmDay(m.sent_at))}</span><span class="rq-sheet-pill off">${escapeHtml(m.channel === 'email' ? 'Email' : 'WhatsApp')}</span><span class="muted" style="font-size:11px;">${escapeHtml(QM_KIND_LABEL[m.kind] || m.kind || '')}</span></div><div class="qm-clamp" style="font-size:12.5px;line-height:1.4;">${escapeHtml(String(m.message || '').split('\n').filter(Boolean).slice(0, 3).join(' · '))}</div></div>`).join('');
+  const notes = c.notes.map(n => `<div class="qm-list-row"><span class="muted qm-date">${escapeHtml(String(n.created_at).slice(5, 10))}</span><span class="qm-clamp">${escapeHtml(n.note)}</span></div>`).join('');
+  const blocks = [`<div class="muted" style="font-size:12.5px;line-height:1.4;">${escapeHtml(where)}</div>`,
+    `<div><div class="qm-sec">Last things we sent him</div>${recent || '<div class="muted" style="font-size:12.5px;">Nothing sent to him yet.</div>'}</div>`,
+    `<div><div class="qm-sec">What he told you</div>${notes ? `<div class="qm-list" style="margin-bottom:8px;">${notes}</div>` : ''}<textarea id="qm_note_${c.id}" class="qm-note" ${stop} placeholder="Write what he told you…"></textarea><div style="display:flex;justify-content:flex-end;margin-top:6px;"><button type="button" class="pkg-trigger-btn qm-pill-btn" style="height:32px;" onclick="event.stopPropagation();qmAddNote('${c.id}')">Save note</button></div></div>`];
+  if (prod) blocks.push(`<div><div class="qm-sec">${escapeHtml(prod.name_en)}</div><div class="qm-vol"><span>Loads a month he buys (all suppliers)</span><input type="text" inputmode="numeric" maxlength="3" id="qm_loads_${c.id}" class="qm-num" ${stop} oninput="this.value=this.value.replace(/\D/g,'')" value="${prod.loads_month || ''}" placeholder="—"></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span class="muted" style="font-size:11.5px;">${prod.cadence ? escapeHtml(prod.cadence) : 'Not known yet'} · ${prod.from_us_month} from us this month</span><button type="button" class="pkg-trigger-btn qm-pill-btn" style="height:32px;" onclick="event.stopPropagation();qmSaveLoads('${c.id}', '${prod.link_id}')">Save</button></div></div>`);
   if ((c.preferences || []).length) blocks.push(`<div class="qm-list">${c.preferences.map(t => `<div class="qm-list-row"><span class="rq-sheet-pill wait">Preference</span><span>${escapeHtml(t)}</span></div>`).join('')}</div>`);
-  if (c.notes.length) blocks.push(`<div><div class="qm-sec">What they told you</div><div class="qm-list">${c.notes.map(n => `<div class="qm-list-row"><span class="muted qm-date">${escapeHtml(String(n.created_at).slice(5, 10))}</span><span class="qm-clamp">${escapeHtml(n.note)}</span></div>`).join('')}</div></div>`);
   if (c.works.length) blocks.push(`<div><div class="qm-sec">What works</div><div class="qm-list">${c.works.map(w => `<div class="qm-list-row"><span>${QM_KIND_LABEL[w.kind] || w.kind} · ${w.requests} of ${w.sent} led to a request</span></div>`).join('')}</div></div>`);
   const right = `<section class="qm-panel">
       <div class="qm-sec" style="margin:0;">About ${escapeHtml(c.trade_name.trim())}</div>
@@ -2159,6 +2164,24 @@ function qmUseOption(cid, i){
   const c = qmFind(cid), o = c && c.compose && (c.compose.options || [])[i]; if (!o) return;
   c.compose.edited = o.message; c.compose.used_bullet_id = o.bullet_id || ''; c.compose.angle = o.angle; c.compose.why_en = o.why || c.compose.why_en;
   qmRefreshRow(c);
+}
+const qmDay = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+// a note written in the client's panel (the same action the profile uses; the key makes a double click one note)
+async function qmAddNote(cid){
+  const c = qmFind(cid), box = document.getElementById('qm_note_' + cid), text = box ? box.value.trim() : ''; if (!c || !text) return;
+  try {
+    const r = await callApi('messaging', { action: 'add_note', actor: currentActor(), customer_id: cid, note: text, idempotency_key: `messaging|note|${cid}|${text.length}|${Date.now()}` });
+    c.notes.unshift({ id: r.note.id, note: r.note.note, created_at: r.note.created_at, used: false });
+    box.value = ''; qmRefreshRow(c); rqShowNotice('Note saved.');
+  } catch (e){ rqShowNotice(`Couldn't save the note: ${e.message}`); }
+}
+// how many loads a month of this product he buys (all suppliers), typed in the panel
+async function qmSaveLoads(cid, linkId){
+  const c = qmFind(cid), inp = document.getElementById('qm_loads_' + cid); if (!c || !inp) return;
+  try {
+    await callApi('messaging', { action: 'set_loads', actor: currentActor(), link_id: linkId, loads_month: inp.value === '' ? null : Number(inp.value) });
+    rqShowNotice('Saved.'); await qmLoad(true);
+  } catch (e){ rqShowNotice(`Couldn't save: ${e.message}`); }
 }
 // After a send: a message of the queue goes back to Today's list, in the box, to send another to the same client
 function qmSendAnother(cid, i){
