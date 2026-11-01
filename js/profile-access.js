@@ -49,5 +49,6 @@
       });
     } catch (e) { /* same */ }
   }
-  start();
+  // after the page's own scripts have declared the sign-in and the API (the Dashboard declares them below this tag)
+  if (document.readyState === 'loading') root.addEventListener('load', start); else start();
 })(typeof window !== 'undefined' ? window : this);
