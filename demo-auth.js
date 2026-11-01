@@ -71,7 +71,7 @@
     b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#0f766e;color:#fff;font:600 12px/1.2 Inter,system-ui,sans-serif;text-align:center;padding:6px 10px;letter-spacing:.2px;pointer-events:none';
     document.body.appendChild(b);
     // "Viewing as": switch between the demo's profiles on any screen without logging in again (the demo has only sample data; this exists nowhere in the real system).
-    var PROFILES = [['felipe@buentrade.demo', 'Admin (felipe)'], ['trader@buentrade.demo', 'Trader'], ['buyer@buentrade.demo', 'Buyer'], ['logistics@buentrade.demo', 'Logistics'], ['payments@buentrade.demo', 'Payments']];
+    var PROFILES = [['felipe@buentrade.demo', 'Admin (felipe)'], ['trader@buentrade.demo', 'Trader'], ['buyer@buentrade.demo', 'Buyer'], ['logistics@buentrade.demo', 'Logistics'], ['payments@buentrade.demo', 'Collections']];
     if (!current) return;
     var w = document.createElement('div');
     w.style.cssText = 'position:fixed;right:12px;bottom:36px;z-index:2147483001;background:#0f766e;color:#fff;font:600 12px/1.2 Inter,system-ui,sans-serif;padding:5px 8px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);display:flex;align-items:center;gap:6px';
