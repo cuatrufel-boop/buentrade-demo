@@ -822,13 +822,18 @@
   /* row detail (2026-09-29 redesign): two equal-height panels, same pill buttons */
   .qm-detail{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:stretch;cursor:default;}
   .qm-panel{display:flex;flex-direction:column;gap:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px 18px;min-width:0;}
-  .qm-queue{margin-top:12px;display:grid;gap:6px;} .qm-q{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:transparent;color:inherit;padding:8px 10px;cursor:pointer;font:inherit;font-size:13px;line-height:1.4;} .qm-q:hover{background:rgba(90,170,255,.1);border-color:rgba(90,170,255,.45);} .qm-q .rq-sheet-pill{flex:none;margin-top:1px;} .qm-q-t{min-width:0;flex:1;color:#e8eefb;} .qm-q.on{border-color:rgba(63,203,126,.6);background:rgba(63,203,126,.08);} .qm-q-on{flex:none;font-size:11.5px;font-weight:700;color:#3FCB7E;white-space:nowrap;}
+  .qm-queue{margin-top:12px;display:grid;gap:6px;} .qm-q{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:transparent;color:inherit;padding:7px 10px;cursor:pointer;font:inherit;font-size:13px;line-height:1.4;} .qm-q:hover{background:rgba(90,170,255,.1);border-color:rgba(90,170,255,.45);} .qm-q .rq-sheet-pill{flex:none;margin-top:1px;} .qm-q-t{min-width:0;flex:1;color:#e8eefb;} .qm-q.on{border-color:rgba(63,203,126,.6);background:rgba(63,203,126,.08);} .qm-q-on{flex:none;font-size:11.5px;font-weight:700;color:#3FCB7E;white-space:nowrap;}
   .qm-panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .qm-panel-foot{margin-top:auto;display:flex;justify-content:flex-end;padding-top:4px;}
   .qm-msg-box{flex:1;min-height:110px;width:100%;box-sizing:border-box;font-size:14px;line-height:1.55;background:rgba(255,255,255,.05);border:1.5px solid rgba(90,170,255,.4);border-radius:10px;padding:12px 14px;color:var(--ink);font-family:inherit;resize:vertical;}
   textarea.qm-msg-box:focus{outline:none;border-color:var(--blue-bright);}
   div.qm-msg-box{border-color:rgba(255,255,255,.12);}
   .qm-pill-btn{margin-left:0;height:36px;box-sizing:border-box;text-decoration:none !important;}
+  .qm-sendrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:2px;}
+  .qm-send{display:inline-flex;align-items:center;gap:9px;height:42px;padding:0 20px;border-radius:12px;font:700 14px/1 inherit;font-family:inherit;cursor:pointer;border:1.5px solid rgba(63,203,126,.55);background:rgba(63,203,126,.12);color:#3FCB7E;}
+  .qm-send:hover:not([disabled]){background:rgba(63,203,126,.24);} .qm-send.mail{border-color:rgba(90,170,255,.55);background:rgba(90,170,255,.1);color:#5AAAFF;} .qm-send.mail:hover:not([disabled]){background:rgba(90,170,255,.22);}
+  .qm-send[disabled]{opacity:.35;cursor:default;}
+  #qPanel_messaging a.qm-profile-link{font-size:12.5px;color:var(--ink-soft);} #qPanel_messaging a.qm-profile-link:hover{color:var(--blue-bright);}
   .qm-prod-name{font-weight:700;font-size:13.5px;margin-bottom:8px;}
   .qm-pills{display:flex;gap:6px;flex-wrap:wrap;}
   .qm-list{display:flex;flex-direction:column;gap:7px;font-size:12.5px;line-height:1.4;}
@@ -2120,24 +2125,31 @@ function qmDetailHtml(c){
   const opts = qsrc.filter(o => o.message && !sentSet.has(String(o.message).trim()));
   const inBox = sent ? null : (d && (d.edited ?? text));
   const queue = opts.length ? `<div class="qm-queue"><div class="qm-sec" style="margin:4px 0 0;">${sent ? 'Send another message today' : 'More messages to choose from'}</div>${opts.map(o => `<button type="button" class="qm-q${o.message === inBox ? ' on' : ''}" title="${escapeHtml(o.why || '')}" onclick="event.stopPropagation();${sent ? 'qmSendAnother' : 'qmUseOption'}('${c.id}', ${qsrc.indexOf(o)})"><span class="rq-sheet-pill ok">${escapeHtml(QM_ANGLE_LABEL[o.angle] || o.angle)}</span><span class="qm-q-t">${escapeHtml(o.message)}</span>${o.message === inBox ? '<span class="qm-q-on">in the box ✓</span>' : ''}</button>`).join('')}</div>` : (sent && !c.compose ? '<div class="muted" style="font-size:12px;margin-top:10px;">Loading the other messages…</div>' : '');
+  // THE DETAIL IS A COMPOSER (owner 2026-10-31: "no entiendo nada: el botón de la derecha me lleva al perfil, 'write a different message' no hace nada, no sale dónde mandar; no es funcionalmente bueno ni visual"): the message, the two SEND buttons right under it,
+  // the queue of other messages, and on the right what we know about the client. Nothing sends by itself: the buttons open the same review windows as the row's.
+  const first = String(c.first_name || c.trade_name || '').trim();
+  const ico = { wa: RQ_WA_ICON.replace('fill="#fff"', 'fill="currentColor"').replace('width:12px;height:12px', 'width:17px;height:17px'), mail: '<svg viewBox="0 0 24 24" width="17" height="17" style="fill:none;stroke:currentColor;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' };
+  const ready = !!(!sent && d && d.message);
+  const sendBtn = (kind, ok, why) => `<button type="button" class="qm-send ${kind}" ${ok && ready ? '' : 'disabled'} title="${ok ? (ready ? '' : 'The message is being written…') : why}" onclick="event.stopPropagation();${kind === 'wa' ? 'qmSendWa' : 'qmSendEmail'}('${c.id}')">${ico[kind]}<span>${kind === 'wa' ? 'Send on WhatsApp' : 'Send by email'}</span></button>`;
+  const sendRow = sent || !text ? '' : `<div class="qm-sendrow">${sendBtn('wa', !!c.phone, 'No WhatsApp number on file')}${sendBtn('mail', !!c.email, 'No email on file')}${!c.phone || !c.email ? `<span class="muted" style="font-size:12px;">${!c.phone && !c.email ? 'No WhatsApp or email on file for this client.' : !c.phone ? 'No WhatsApp number on file.' : 'No email on file.'}</span>` : ''}</div>`;
   const left = `<section class="qm-panel">
-      <div class="qm-panel-head"><div class="qm-sec" style="margin:0;">${sent ? 'Message sent' : 'Message'}</div>${sent || !text ? '' : '<span class="muted" style="font-size:11.5px;">Edit here, not in WhatsApp.</span>'}</div>
-      ${msg}${queue}
+      <div class="qm-panel-head"><div class="qm-sec" style="margin:0;">${sent ? 'Message sent' : `Message to ${escapeHtml(first)}`}</div>${sent || !text ? '' : '<span class="muted" style="font-size:11.5px;">Edit it here, then send.</span>'}</div>
+      ${msg}${sendRow}${queue}
       ${d && d.news ? `<div class="muted" style="font-size:11.5px;">Source: <a href="${escapeHtml(d.news.url)}" target="_blank" rel="noopener" ${stop}>${escapeHtml(d.news.source || 'article')} · ${escapeHtml(d.news.date)} ↗</a> — check it before sending.</div>` : ''}
-      ${sent || !text ? '' : `<div class="qm-panel-foot"><button type="button" class="pkg-trigger-btn qm-pill-btn" onclick="event.stopPropagation();qmAnotherAngle('${c.id}')">Write a different message →</button></div>`}
+      ${sent || !text || opts.length || (d && Array.isArray(d.options) && d.options.length) ? '' : `<div class="qm-panel-foot"><button type="button" class="pkg-trigger-btn qm-pill-btn" onclick="event.stopPropagation();qmAnotherAngle('${c.id}')">Write a different message →</button></div>`}
     </section>`;
-  const blocks = [];
+  const biz = qmData && qmData.business_types && c.business_type_id ? (qmData.business_types.find(b => b.id === c.business_type_id) || {}).name_es : '';
+  const about = [[ 'Where', [c.city, c.state].filter(Boolean).join(', ') ], [ 'Business', biz ], [ 'Buys', `${(c.products || []).length} product${(c.products || []).length === 1 ? '' : 's'}` ]].filter(r => r[1]);
+  const blocks = [`<div class="qm-list">${about.map(r => `<div class="qm-list-row"><span class="muted" style="width:64px;flex:none;">${r[0]}</span><span>${escapeHtml(r[1])}</span></div>`).join('')}</div>`];
   if (prod) blocks.push(`<div><div class="qm-prod-name">${escapeHtml(prod.name_en)}</div>
       <div class="qm-pills">${prod.cadence ? `<span class="rq-sheet-pill ok">${escapeHtml(prod.cadence)}</span><span class="rq-sheet-pill off">${prod.from_us_month} from us this month</span>` : '<span class="rq-sheet-pill wait">Missing: how often they buy it</span>'}</div></div>`);
   if ((c.preferences || []).length) blocks.push(`<div class="qm-list">${c.preferences.map(t => `<div class="qm-list-row"><span class="rq-sheet-pill wait">Preference</span><span>${escapeHtml(t)}</span></div>`).join('')}</div>`);
   if (c.notes.length) blocks.push(`<div><div class="qm-sec">What they told you</div><div class="qm-list">${c.notes.map(n => `<div class="qm-list-row"><span class="muted qm-date">${escapeHtml(String(n.created_at).slice(5, 10))}</span><span class="qm-clamp">${escapeHtml(n.note)}</span></div>`).join('')}</div></div>`);
   if (c.works.length) blocks.push(`<div><div class="qm-sec">What works</div><div class="qm-list">${c.works.map(w => `<div class="qm-list-row"><span>${QM_KIND_LABEL[w.kind] || w.kind} · ${w.requests} of ${w.sent} led to a request</span></div>`).join('')}</div></div>`);
-  // one way to the profile: to complete the product when its cadence is missing, otherwise to add a note
-  const go = prod && !prod.cadence ? `<a class="pkg-trigger-btn qm-pill-btn" href="${profile('products')}" ${stop}>Complete in profile →</a>`
-    : `<a class="pkg-trigger-btn qm-pill-btn" href="${profile('about')}" ${stop}>Add a note in the profile →</a>`;
   const right = `<section class="qm-panel">
-      ${blocks.join('<div class="qm-divider"></div>') || '<div class="muted" style="font-size:12.5px;">Nothing written about this client yet.</div>'}
-      <div class="qm-panel-foot">${go}</div>
+      <div class="qm-sec" style="margin:0;">About ${escapeHtml(c.trade_name.trim())}</div>
+      ${blocks.join('<div class="qm-divider"></div>')}
+      <div class="qm-panel-foot" style="justify-content:flex-start;"><a class="qm-profile-link" href="${profile('about')}" ${stop}>Open the client's profile ↗</a></div>
     </section>`;
   return `<div class="qm-detail" ${stop}>${left}${right}</div>`;
 }
