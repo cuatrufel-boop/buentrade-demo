@@ -756,6 +756,7 @@ auth.onAuthStateChanged(user => {
       <input id="searchBox" type="text" placeholder="Search" oninput="renderCustomers()" class="cu-search-input">
     </div>
     <button class="btn" onclick="openForm()">+ Add Customer</button>
+    <button class="btn" id="assignTradersBtn" style="display:none;" onclick="openAssignTraders()">Assign traders</button>
   </div>
   <div class="card" id="customerListCard">
     <div class="table-scroll">
@@ -1119,7 +1120,7 @@ function creditSentence(avail, avgLoad){
 async function loadCustomers(){
   try {
     await Promise.all([loadCustomsAgencies(), loadCurrenciesCountriesStates(), loadIncoterms()]);
-    const res = await callApi('customers-search', {});
+    const res = await callApi('customers-search', { actor: currentActor() });
     customers = res.results || [];
     renderCustomers();
     renderCustomerStats();
@@ -1994,6 +1995,42 @@ function btEnhanceAllSelects(root){
 }
 document.addEventListener('DOMContentLoaded', () => btEnhanceAllSelects());
 if (document.readyState !== 'loading') btEnhanceAllSelects();
+</script>
+<script>
+// Assign traders (owner 2026-11-01): a customer belongs to exactly ONE trader. Only an admin, and only where profiles are ON (never in the real system today), sees the button.
+// The list shows every customer with one box for his trader; choosing saves right away; "— nobody yet —" clears it. A customer nobody owns is seen only by an admin.
+async function showAssignTraders(){
+  try {
+    const st = await callApi('sent-offers-search', { funnel: { action: 'status', actor: currentActor() } });
+    if (st && st.enforced === true && Array.isArray(st.roles) && st.roles.includes('admin')) document.getElementById('assignTradersBtn').style.display = '';
+  } catch (e) { /* any doubt: the button stays hidden */ }
+}
+if (typeof auth !== 'undefined') auth.onAuthStateChanged(u => { if (u) showAssignTraders(); });
+async function openAssignTraders(){
+  let panel = document.getElementById('assignTradersPanel');
+  if (!panel){
+    panel = document.createElement('div'); panel.id = 'assignTradersPanel';
+    panel.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(2,6,23,.7);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;';
+    document.body.appendChild(panel);
+  }
+  panel.innerHTML = '<div class="card" style="max-width:640px;width:100%;padding:18px;"><div class="empty">Loading…</div></div>';
+  try {
+    const [cs, ow, tr] = await Promise.all([
+      callApi('customers-search', { actor: currentActor() }),
+      callApi('sent-offers-search', { funnel: { action: 'customer_owners' } }),
+      callApi('sent-offers-search', { funnel: { action: 'traders' } }),
+    ]);
+    const owner = {}; (ow.owners || []).forEach(o => { owner[o.customer_id] = o.trader_email; });
+    const opts = id => `<option value="">— nobody yet —</option>` + (tr.traders || []).map(t => `<option value="${escapeHtml(t)}"${owner[id] === t ? ' selected' : ''}>${escapeHtml(t)}</option>`).join('');
+    panel.innerHTML = `<div class="card" style="max-width:640px;width:100%;padding:18px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><b>Assign traders</b><button class="btn" onclick="document.getElementById('assignTradersPanel').remove()">Close</button></div>`
+      + `<div style="color:var(--ink-soft);font-size:12.5px;margin-bottom:10px;">Each customer belongs to one trader only. A trader sees only his own customers.</div>`
+      + `<table style="width:100%;"><tbody>${(cs.results || []).map(c => `<tr><td style="text-align:left;padding:6px 8px;">${escapeHtml(c.trade_name)}</td><td style="padding:6px 8px;"><select data-bt-enhanced="1" style="width:100%;" onchange="saveCustomerTrader('${c.id}', this)">${opts(c.id)}</select></td></tr>`).join('')}</tbody></table></div>`;
+  } catch (e) { panel.innerHTML = `<div class="card" style="max-width:640px;width:100%;padding:18px;"><div class="empty">Could not load: ${escapeHtml(e.message)}</div><button class="btn" onclick="document.getElementById('assignTradersPanel').remove()">Close</button></div>`; }
+}
+async function saveCustomerTrader(customerId, sel){
+  try { await callApi('sent-offers-search', { funnel: { action: 'set_customer_owner', actor: currentActor(), customer_id: customerId, trader_email: sel.value || null } }); sel.style.outline = '2px solid #3FCB7E'; setTimeout(() => { sel.style.outline = ''; }, 800); }
+  catch (e) { await btAlert('Could not save: ' + e.message); }
+}
 </script>
 </body>
 </html>
