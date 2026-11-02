@@ -571,7 +571,7 @@ async function loadToday(){
   if (!dashToday) wrap.innerHTML = '<div class="empty">Loading today…</div>'; // a refresh keeps the list on screen
   const prev = dashToday ? dashToday.slice() : null;
   let items = [];
-  try { items = (await Promise.all([callApi('dashboard-summary', { view: 'today' }), loadTodayLive()]))[0].today || []; }
+  try { items = (await Promise.all([callApi('dashboard-summary', { view: 'today', actor: currentActor() }), loadTodayLive()]))[0].today || []; }
   catch (e) { wrap.innerHTML = `<div class="empty">Could not load today: ${escapeHtml(e.message)}</div>`; return; }
   dashToday = items;
   const gone = prev ? prev.filter(p => !items.some(n => todayKey(n) === todayKey(p))) : [];
