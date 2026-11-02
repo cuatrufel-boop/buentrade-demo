@@ -2984,6 +2984,15 @@ function rqSoleLocationId(plantId){
   const all = [...new Set((typeof rqAllLocations !== 'undefined' ? rqAllLocations : []).filter(l => l.plant_id === plantId).map(l => l.location_id).filter(Boolean))];
   return all.length === 1 ? all[0] : null;
 }
+// The name of the city a plant ships from, for the sheet rows: the price's own city, else the plant's ONE known location (same rule as above), else — a plant with no location at all — the city the plant itself is registered in.
+// Two or more locations and none chosen → '' (nothing is guessed). Used with or without a price (owner 2026-11-02).
+function rqPickupCityName(plantId, locationId, plant){
+  const locs = (typeof rqAllLocations !== 'undefined' ? rqAllLocations : []).filter(l => l.plant_id === plantId);
+  const id = locationId || rqSoleLocationId(plantId);
+  const l = id ? locs.find(x => x.location_id === id) : null;
+  if (l && l.location_name) return String(l.location_name);
+  return !locs.length && plant && plant.city ? String(plant.city).trim() : '';
+}
 function rqPlantOfferObj(plant, link, productId){
   const hasPrice = !!link && link.current_price != null;
   return {
@@ -3342,7 +3351,8 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
       const pricing = r.current_price != null ? rqBrandPricing(r, r.plant, pid) : null;
       const confirmed = pricing ? pricing.snapshot : null;
       const calc = pricing ? pricing.calc : null;
-      const base = { key, pid, prod, plant: r.plant, link: r, askedAt, answeredAt: asked ? asked.answered_at : null, na: rqIsNa(r), naSince: r.unavailable_since || null };
+      // The pickup city is shown with or without a price (owner 2026-11-02: "así tenga o no tenga precio debe sacar el nombre de la ciudad").
+      const base = { key, pid, prod, plant: r.plant, link: r, askedAt, answeredAt: asked ? asked.answered_at : null, na: rqIsNa(r), naSince: r.unavailable_since || null, city: typeof rqPickupCityName === 'function' ? rqPickupCityName(r.plant_id, r.location_id, r.plant) : '' };
       if (r.current_price == null && base.na && !rqNaIsWaiting(base.naSince, askedAt)){ rows.push({ ...base, kind: 'na' }); return; }
       if (r.current_price != null){
         const stale = (rqPriceAgeDays(r.price_date) || 0) > RQ_PRICE_STALE_DAYS;
@@ -3384,7 +3394,7 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
     if (prod.category_id) rqAllPlants.filter(pl => pl.category_id === prod.category_id && !seen.has(pl.id)).forEach(pl => {
       const asked = sheet && sheet.plants.find(x => x.plant_id === pl.id);
       const askedAt = asked ? (asked.reminded_at || asked.asked_at) : null;
-      const base = { key: pl.id + '|' + pid, pid, prod, plant: pl, link: null, askedAt, possible: true };
+      const base = { key: pl.id + '|' + pid, pid, prod, plant: pl, link: null, askedAt, possible: true, city: typeof rqPickupCityName === 'function' ? rqPickupCityName(pl.id, null, pl) : '' };
       if (askedAt){ const hours = rqHoursSince(askedAt); rows.push({ ...base, kind: hours >= RQ_SHEET_NO_REPLY_HOURS ? 'noreply' : 'waiting', hours }); }
       else rows.push({ ...base, kind: 'possible' });
     });
@@ -4015,12 +4025,12 @@ function rqRenderSheet(){
     if (r.kind !== 'priced'){
       const loadBtn = `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>`;
       const plantActions = r.kind === 'waiting' ? offSpec(r) : r.kind === 'na' ? `${loadBtn}${offSpec(r)}` : `${askBtn(r, r.kind === 'noreply')}${offSpec(r)}`;
-      return `<tr class="rq-sheet-dim">${productCell}${plantCell}<td class="muted">—</td><td class="muted">—</td><td class="muted">—</td><td>${statusHtml(r)}</td><td></td><td><div class="rq-sheet-actions">${plantActions}</div></td></tr>`;
+      return `<tr class="rq-sheet-dim">${productCell}${plantCell}<td class="muted">—</td><td class="muted">—${r.city ? `<span style="display:block;font-size:11px;">${escapeHtml(r.city)}</span>` : ''}</td><td class="muted">—</td><td>${statusHtml(r)}</td><td></td><td><div class="rq-sheet-actions">${plantActions}</div></td></tr>`;
     }
     const priceTag = `<span class="pkg-tag price${r.stale ? ' exp' : ''}">$${r.price.toFixed(4)}/lb</span>`;
     const freight = r.freight
       ? `<span class="num">${r.freight.label}</span>${r.freight.city ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(r.freight.city)}</span>` : ''}`
-      : '<span class="rq-sheet-pill exp" title="No freight yet — set it in QT">—</span>';
+      : `<span class="rq-sheet-pill exp" title="No freight yet — set it in QT">—</span>${r.city ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(r.city)}</span>` : ''}`;
     const sale = r.calc ? `<span class="num">$${r.calc.salePerLb.toFixed(4)}/lb</span>`
       : r.sentSale != null ? `<span class="num">$${Number(r.sentSale).toFixed(4)}/lb</span>` : '<span class="muted">—</span>';
     // Two fixed columns so every row lines up: customer side (QT, Email, WhatsApp) and plant side (Ask for Update).
