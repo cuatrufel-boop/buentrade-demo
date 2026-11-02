@@ -1,6 +1,6 @@
 // Which screens each profile uses (owner 2026-11-01: "todo lo que está en el OS debe ser decidido por usuario"; Quotes, Offers, Orders, Clients, Products = trader; Plants, Market Flash = buyer;
 // Carrier rates, Providers = logistics; Pay & Receive = collections). It only HIDES and BLOCKS what already exists: no screen, button or flow changes inside.
-// Off unless the system says profiles are ON for this person (the funnel status: enabled + enforced); in the real system they are off, so nothing here does anything. An admin sees everything.
+// Off unless the system says profiles are ON for this person (the status answer: enforced), whether or not the Bid funnel is switched on; in the real system they are off, so nothing here does anything. An admin sees everything.
 // A screen not listed here (Dashboard, the public site, the trading tool) is not restricted. The internal role key of Pay & Receive stays 'payments'; its name for people is Collections.
 (function (root) {
   var ACCESS = {
@@ -44,7 +44,7 @@
             body: JSON.stringify({ funnel: { action: 'status', actor: user.email, id_token: tok } })
           });
         }).then(function (r) { return r.ok ? r.json() : null; }).then(function (st) {
-          if (st && st.enabled === true && st.enforced === true && Array.isArray(st.roles)) apply(st.roles);
+          if (st && st.enforced === true && Array.isArray(st.roles)) apply(st.roles);
         }).catch(function () { /* any doubt: the screen stays exactly as it is */ });
       });
     } catch (e) { /* same */ }
