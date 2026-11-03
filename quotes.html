@@ -1819,6 +1819,7 @@ function rqPickTemplate(list, lastIndexVarSetter, lastIndex){
 }
 
 let rqAllLocations = [];
+let rqAllCities = []; // every known city (id → city, state): the pickup city of a price shows even before it is one of the plant's confirmed locations
 let rqRegionTerms = []; // a plant's zone words → its cities (plant_region_terms), e.g. Smithfield "Midwest" (2026-10-05)
 let rqAllProviders = [];
 let rqAllProviderRates = [];
@@ -1857,6 +1858,7 @@ async function loadQuotesPage(){
   products = prodRes.results || [];
   rqAllPlants = plantRes.results || [];
   rqAllLocations = locRes.results || [];
+  rqAllCities = locRes.cities || [];
   rqRegionTerms = locRes.region_terms || [];
   rqAllProviders = provRes.results || [];
   rqAllProviderRates = rateRes.results || [];
@@ -2991,6 +2993,8 @@ function rqPickupCityName(plantId, locationId, plant){
   const id = locationId || rqSoleLocationId(plantId);
   const l = id ? locs.find(x => x.location_id === id) : null;
   if (l && l.location_name) return String(l.location_name);
+  const c = locationId && typeof rqAllCities !== 'undefined' ? rqAllCities.find(x => x.id === locationId) : null; // the price names a city the plant has not confirmed yet
+  if (c && c.city) return c.state ? `${c.city}, ${c.state}` : String(c.city);
   return !locs.length && plant && plant.city ? String(plant.city).trim() : '';
 }
 function rqPlantOfferObj(plant, link, productId){
@@ -3796,7 +3800,7 @@ function rqRenderRequestView(rows){
   sendRows.forEach(r => {
     const ready = r.calc && !r.proposed;
     const sale = r.calc ? `$${r.calc.salePerLb.toFixed(2)}/lb` : r.sentSale != null ? `$${Number(r.sentSale).toFixed(2)}/lb` : null;
-    items.push({ o: ready ? 1 : 0, html: row(ready ? 'ready' : 'confirm', r, meta(r.stale ? `<span class="rq-req2-old">expired price from ${rqFmtDate(r.priceDate)} · <b>$${r.price.toFixed(2)}</b>/lb</span>` : `new price from the plant <b>$${r.price.toFixed(2)}</b>/lb`, r.freight ? `freight ${r.freight.label}` : '', sale ? `<span class="sale">your price <b>${sale}</b></span>` : ''),
+    items.push({ o: ready ? 1 : 0, html: row(ready ? 'ready' : 'confirm', r, meta(r.stale ? `<span class="rq-req2-old">expired price from ${rqFmtDate(r.priceDate)} · <b>$${r.price.toFixed(2)}</b>/lb</span>` : `new price from the plant <b>$${r.price.toFixed(2)}</b>/lb`, r.city ? `pickup ${escapeHtml(r.city)}` : '', r.freight ? `freight ${r.freight.label}` : '', sale ? `<span class="sale">your price <b>${sale}</b></span>` : ''),
       `<div style="display:flex;gap:8px;align-items:center;">${ready ? `${pill('ok', 'Ready')}<button type="button" class="pkg-trigger-btn" title="Open this QT again" onclick="rqConfirmPriceClick(this,'${r.pid}','${r.plant.id}')">Open QT</button>` : `<button type="button" class="pkg-trigger-btn hot" onclick="rqConfirmPriceClick(this,'${r.pid}','${r.plant.id}')">Confirm price →</button>`}${r.stale ? `<button type="button" class="pkg-trigger-btn" title="Don't send this expired price" onclick="rqToggleReqOld('${r.key}')">✕</button>` : ''}</div>`) });
   });
   pending.filter(r => r.kind !== 'na').forEach(r => {
