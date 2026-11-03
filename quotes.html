@@ -2272,9 +2272,11 @@ async function qmLogSend(c, message, channel){
   qmRender();
 }
 // Same review modals every quote goes through: editable there, and what was actually sent is what gets recorded.
+// A message that arrives with no subject (an older draft, the AI off) is sent with the product it is about, or the brand name alone — never invented words, never blank (owner 2026-11-02).
+function qmFallbackSubject(d){ const p = String((d && d.product) || '').trim(); return p ? p.charAt(0).toUpperCase() + p.slice(1) : 'BuenTrade'; }
 function qmSendEmail(cid){
   const c = qmFind(cid); const d = c && c.compose; if (!d || !c.email || !d.message) return;
-  const item = { id: c.id, label: c.trade_name.trim(), to: c.email, subject: d.subject || '', body: d.edited ?? d.message, fromAlias: 'offers' };
+  const item = { id: c.id, label: c.trade_name.trim(), to: c.email, subject: d.subject || qmFallbackSubject(d), body: d.edited ?? d.message, fromAlias: 'offers' }; // never blank: the in-app send refuses an empty subject and the trader fell to Gmail
   const edited = () => ((rqEmailModalItems.find(x => x.id === c.id) || item).body || '').trim(); // the modal edits its own copy
   item.onSent = async () => { try { await qmLogSend(c, edited(), 'email'); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
   rqOpenEmailModal(`Email — ${c.trade_name.trim()}`, [item], true, 'Send');
@@ -8009,6 +8011,7 @@ async function rqEmailModalSendOne(i){
   const it = rqEmailModalItems[i];
   if (!it || it.sent || it.gmailFallbackUrl) return;
   if (!rqEmailModalIsOffer) return; // the plain-ask case is a real <a> now — nothing for JS to do
+  if (!String(it.subject || '').trim()){ rqShowNotice('Write a subject first.'); return; } // the send refuses an empty subject: say so here instead of dropping him into Gmail
   const ccList = (it.cc || '').split(',').map(s => s.trim()).filter(Boolean);
   try {
     await sendEmailApiRaw(it.fromAlias, it.to, it.subject, it.body, it.html && (it.htmlText == null || it.htmlText === it.body) ? it.html : undefined, it.attachments, ccList.join(',')); // an html card is sent only while its text is untouched (an edit sends the edited text)

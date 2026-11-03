@@ -6,13 +6,14 @@
   const LOGO = 'https://buentradegroup.com/icons/icon-192.png';
   const C = { bg: '#0b1f45', line: '#20386a', blue: '#5AAAFF', green: '#3FCB7E', txt: '#ffffff', mut: '#9db4d6' };
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const money = (p) => '$' + Number(p).toFixed(2);
+  // a pesos customer's summary says MX$ per kilo (owner 2026-11-02); everyone else $ per lb as always
+  const money = (p, c) => (c && c.currency === 'MXN' ? 'MX$' + Number(p).toFixed(2) + '/kg' : '$' + Number(p).toFixed(2));
 
   function weeklyCardHtml(c, label) {
     const th = (t, al) => `<td align="${al}" style="padding:8px 6px;font-size:12px;font-weight:700;color:${C.blue};border-bottom:1px solid ${C.line};">${t}</td>`;
     const rows = (c.products || []).map((p) => `<tr>
       <td align="left" style="padding:11px 6px;font-size:14px;color:${C.txt};border-bottom:1px solid ${C.line};">${esc(p.spec)}</td>
-      <td align="center" style="padding:11px 6px;font-size:16px;font-weight:700;color:${C.green};border-bottom:1px solid ${C.line};white-space:nowrap;font-family:'Courier New',monospace;">${money(p.price)}</td>
+      <td align="center" style="padding:11px 6px;font-size:16px;font-weight:700;color:${C.green};border-bottom:1px solid ${C.line};white-space:nowrap;font-family:'Courier New',monospace;">${money(p.price, c)}</td>
       <td align="center" style="padding:11px 6px;font-size:14px;color:${C.txt};border-bottom:1px solid ${C.line};">${esc(c.city || '')}</td></tr>`).join('');
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${C.bg};border-radius:14px;border:1px solid ${C.line};font-family:Arial,Helvetica,sans-serif;"><tr><td style="padding:20px 20px 12px 20px;">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
@@ -48,7 +49,7 @@
       g.fillStyle = C.txt; g.font = '500 28px Inter, sans-serif'; g.textAlign = 'left';
       const lines = wrap(p.spec, X_PRICE - PAD - 90);
       lines.forEach((ln, k) => g.fillText(ln, PAD, top + (lines.length === 1 ? 52 : 40 + k * 34)));
-      g.fillStyle = C.green; g.font = '700 34px "Courier New", monospace'; g.textAlign = 'center'; g.fillText(money(p.price), X_PRICE, top + 54);
+      g.fillStyle = C.green; g.font = '700 ' + (c.currency === 'MXN' ? 22 : 34) + 'px "Courier New", monospace'; g.textAlign = 'center'; g.fillText(money(p.price, c), X_PRICE, top + 54);
       g.fillStyle = C.txt; g.font = '500 28px Inter, sans-serif'; g.fillText(c.city || '', X_CITY + 110, top + 52);
       g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath(); g.moveTo(PAD, top + ROW - 1); g.lineTo(W - PAD, top + ROW - 1); g.stroke();
     });
