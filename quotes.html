@@ -3828,7 +3828,7 @@ function rqRenderRequestView(rows){
   const remindIds = [...new Set(pending.filter(r => r.kind === 'noreply').map(r => r.plant.id))]; // the same plants each row's Remind → asks, all in one preview
   const readyNew = sendRows.filter(r => r.calc && !r.proposed).length, confirmN = sendRows.length - readyNew;
   const selN = order.filter(c => rqReqSel.ids.has(c.id)).length;
-  const resendCs = order.filter(c => rqReqSel.ids.has(c.id) && hasAll(c)); // marked, but he already has every price: it goes again
+  const resendCs = []; // a price already sent to a customer is never sent to him again (owner 2026-11-02: "no se puede repetir envío"): the product left Quotes and Live and lives in Offers
   rqReqResendIds = resendCs.map(c => c.id);
   const rowsOk = priced.filter(r => r.calc && r.confirmed && !r.proposed && (!r.stale || inc(r)) && !r.na).length; // every price that can go out
   const readyN = readyNew || (resendCs.length ? rowsOk : 0);
@@ -3840,7 +3840,7 @@ function rqRenderRequestView(rows){
   const liveRows = priced.filter(r => !r.na && (!r.stale || inc(r)));
   const usdOk = r => !!(r.calc && r.confirmed && !r.proposed);
   const hisRows = c => liveRows.filter(r => usdOk(r) && (!isPes(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id)));
-  const canSendHim = c => { const mine = hisRows(c); return mine.length > 0 && (mine.some(r => !r.sentTo.some(x => x.id === c.id)) || hasAll(c)); };
+  const canSendHim = c => { const mine = hisRows(c); return mine.length > 0 && mine.some(r => !r.sentTo.some(x => x.id === c.id)); };
   const markedCs = order.filter(c => rqReqSel.ids.has(c.id));
   const sendable = markedCs.filter(canSendHim);
   rqReqReadyIds = sendable.map(c => c.id);
@@ -4330,7 +4330,7 @@ async function rqLoadLiveQuotes(){
 // Pending), and show here only when someone buys that product. A failed load keeps the last list and says nothing; the server expires them by their deadline.
 // Answers of a plant that name no product we can place (owner 2026-10-27: every answer is seen): one line at the top of Live quotes, by plant, with the plant's own words — never attached to a product by a guess.
 // OFF by the owner's word (2026-10-27: "por qué saca en live una marca sola y lo llenaste de notas"): the answers are STILL kept (plant_answers) but Live quotes shows none of this until he decides how he wants to see them.
-let RQ_LIVE_ANSWERS = false;
+let RQ_LIVE_ANSWERS = true; // every plant's answer shows under its Live quote (owner 2026-11-02: "debe mostrar todas las respuestas en Live")
 let rqLiveUnplaced = [];
 function rqLiveUnplacedToRead(){ if (!RQ_LIVE_ANSWERS) return []; return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
 async function rqLoadLiveUnplaced(){
