@@ -2214,6 +2214,20 @@ function ttToggleFreightDdown(){
   }
   ttRenderFreightDdown();
 }
+// A freight amount that belongs to NO carrier of the price's city is never kept (owner 2026-11-03, Smithfield Strap Off Loin: the email said "FOB Sioux Falls, SD", the carriers listed were $5,800 / $6,100 / $6,400 and the box still said $5,200,
+// left from an older version whose carrier rate was gone — "trae un precio y muestra otros… debe ser: precio del correo, ciudad de recogida con nombre, y de esa ciudad las opciones de los transportistas"). With no carrier picked and the city's
+// carriers on file, an amount that matches none of them is cleared, so the carrier has to be picked and the freight is always a real rate of that city. A carrier that WAS picked keeps its amount (a negotiated number stays his).
+function ttDropStaleFreight(){
+  if (!ttFreightLoaded || ttFreightSelectedId) return false;
+  const el = document.getElementById('freight');
+  const ship = __qp.get('shipLocationId');
+  const rates = ship ? ttRatesForLocation(ship) : [];
+  const amount = el ? Number(el.value) || 0 : 0;
+  if (!el || !rates.length || !(amount > 0) || rates.some(r => Number(r.rate) === amount)) return false;
+  el.value = '';
+  calc();
+  return true;
+}
 function ttPickFreightRate(value){
   ttFreightSelectedId = value;
   // 'LOC:<location_id>' is a known city with no carrier rate on file — not a real provider_rates
@@ -2307,6 +2321,7 @@ async function ttInitFreightPicker(plantId){
   ttRenderFreightDdown();
   ttApplyPendingFreightPick();
   ttSelectShipCityWhenNoRate(plantId);
+  ttDropStaleFreight();
   ttFreightAttempted = true;
 }
 if (__qp.get('plantId')) ttInitFreightPicker(__qp.get('plantId'));
@@ -2406,6 +2421,7 @@ function ttApplyState(st){
     ttPendingFreightPick = typeof st.freight_pick === 'string' ? st.freight_pick : null;
     buildProductRows();
     ttApplyPendingFreightPick();
+    ttDropStaleFreight();
     calc();
   } finally { ttStateRestoring = false; }
   ttStateSavedJson = JSON.stringify(ttGetState());
