@@ -517,6 +517,8 @@ function todayListHtml(all){
     if (e) e.why = (e.why ? e.why + ' · ' : '') + why; else urgent.push({ ...s, why });
   });
   urgent.forEach(u => { if (u.askers && u.askers.length) u.why = 'Asked by ' + u.askers.join(', ') + (u.why ? ' · ' + u.why.toLowerCase() : ''); });
+  // A best price that arrived today is urgent too (owner 2026-11-03: "las dos": at the top of Today AND in Urgent): the lowest border cost among all the plants, with its reason.
+  (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).filter(b => b.new).forEach(b => { const e = urgent.find(u => u.product_id === b.product_id); if (e) e.why = (e.why ? e.why + ' · ' : '') + 'Best price today: ' + b.reason; else urgent.push({ product_id: b.product_id, product_name: b.product, why: 'Best price today: ' + b.reason }); });
   const urgentNames = new Set(urgent.map(s => s.product_name));
   // Answers that name no product we can place are urgent too, by plant (owner 2026-10-27: every answer is seen) — within 2 days, a counter-offer, a bid reply or an unread answer.
   const unplacedRead = (typeof TODAY_ANSWERS !== 'undefined' && TODAY_ANSWERS && typeof dashUnplaced !== 'undefined' ? dashUnplaced : []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000);
@@ -566,7 +568,10 @@ function todayListHtml(all){
   });
   const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => Number(!!b.asked) - Number(!!a.asked) || b.who.length - a.who.length || a.name.localeCompare(b.name));
   const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.asked ? '<b class="tdr-ask-now">Asked</b> · ' : ''}${x.who.length} customer${x.who.length === 1 ? '' : 's'} ${x.asked ? 'waiting' : 'buy it'}${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td><td>${go(x.href, false, 'Ask in Quotes →')}</td></tr>`).join('');
-  return `<div class="tdr"><div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
+  // BEST PRICES TODAY, most relevant first (owner 2026-11-03): every product with a price today, the plant that is cheapest at the border (or the only one), the customers who buy it with each one's own reason, and the note for him.
+  const bprows = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it · the note</summary><ul class="tdr-ul">${(b.customer_reasons || []).map(c => `<li>${escapeHtml(c.name)}${c.reason ? ` — ${escapeHtml(c.reason)}` : ''}</li>`).join('')}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td><td>${go(b.href, false, 'Offer it →')}</td></tr>`).join('');
+  const bestCard = `<div class="tdr-card tdr-askcard tdr-best"><h3 class="tdr-h">Best prices today — most relevant first</h3><div class="tdr-hint">The lowest price at the border across all the plants, with the customers who buy it</div>${bprows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${bprows}</tbody></table></div>` : '<div class="empty">No fresh prices right now.</div>'}</div>`;
+  return `<div class="tdr">${bestCard}<div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
     + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A customer asked, or a plant you asked answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div>`
     + (arows ? `<div class="tdr-card tdr-askcard"><h3 class="tdr-h">Ask the plants — customers are waiting</h3><div class="tdr-hint">No plant has a fresh price · the most customers first</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${arows}</tbody></table></div></div>` : '') + `</div>`;
 }
@@ -580,7 +585,7 @@ async function loadToday(){
   if (!dashToday) wrap.innerHTML = '<div class="empty">Loading today…</div>'; // a refresh keeps the list on screen
   const prev = dashToday ? dashToday.slice() : null;
   let items = [];
-  try { items = (await Promise.all([callApi('dashboard-summary', { view: 'today', actor: currentActor() }), loadTodayLive()]))[0].today || []; }
+  try { const best = callApi('dashboard-summary', { view: 'best_prices', actor: currentActor() }).then(r => r.best_prices || []).catch(() => []); items = (await Promise.all([callApi('dashboard-summary', { view: 'today', actor: currentActor() }), loadTodayLive()]))[0].today || []; dashBest = await best; }
   catch (e) { wrap.innerHTML = `<div class="empty">Could not load today: ${escapeHtml(e.message)}</div>`; return; }
   dashToday = items;
   const gone = prev ? prev.filter(p => !items.some(n => todayKey(n) === todayKey(p))) : [];
@@ -694,6 +699,7 @@ function renderToday(gone = []){
 // ---------- CEO / CFO ----------
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const bar = (pct, color) => `<div style="height:8px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:10px;overflow:hidden;"><div style="height:100%;width:${Math.min(100, pct)}%;background:${color};border-radius:99px;"></div></div>`;
+let dashBest = []; // the best price of each product across ALL plants, most relevant first (dashboard-summary best_prices)
 let dashCeo = null, dashToday = null, dashTab = 'today'; const todayHeldOpen = new Set(); // which "held" lists the trader opened, kept across the minute refresh
 function toggleHeld(k){ if (todayHeldOpen.has(k)) todayHeldOpen.delete(k); else todayHeldOpen.add(k); renderToday(); }
 const DASH_TABS = [['today', 'Today'], ['goals', 'Goals & Money'], ['mix', 'Sales Mix']];
