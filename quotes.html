@@ -4257,6 +4257,13 @@ async function rqBrandSend(channel, key, customerId){
   const customers = customerId
     ? rqSheetState.customers.filter(c => c.id === customerId)
     : owners.filter(c => !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
+  // the other buyers of the product (owner 2026-11-03: "si entro solo a una planta no me da la opción de mandar a todos los clientes que compran el producto"): with a customer chosen at the start the line is his; the rest
+  // who still lack this brand are offered here, one question, and join the send when the trader says yes
+  const otherBuyers = customerId ? [] : rqSheetCustomersOwning(one.pid).filter(c => !owners.some(o => o.id === c.id) && !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
+  if (otherBuyers.length && await rqConfirm(`${otherBuyers.length} other customer${otherBuyers.length > 1 ? 's' : ''} who buy${otherBuyers.length > 1 ? '' : 's'} it also ${otherBuyers.length > 1 ? 'lack' : 'lacks'} this price: ${otherBuyers.map(c => String(c.trade_name).trim()).join(', ')}. Send to ${otherBuyers.length > 1 ? 'them' : 'him'} too?`)){
+    customers.push(...otherBuyers);
+    otherBuyers.forEach(c => rqReqExtra().add(c.id));
+  }
   if (!customers.length) { rqShowNotice(rqSendWhyNot(one, owners, owners.some(c => !rqIsPesosCustomer(c)))); return; }
   const others = rows.filter(r => r.key !== key && r.pid === one.pid && customers.some(c => !r.sentTo.some(x => x.id === c.id) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))));
   const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
@@ -4282,7 +4289,10 @@ async function rqBrandUseOld(key, productId, plantId){
 // Sends the brands confirmed in their QT (a package's Send): the regular customer send, one message per customer × product with its
 // brands highest → lowest, each reviewed by the trader before it goes. rows: ready package rows (r.confirmed + r.calc).
 // opts.openPackage (default true): a package's send records its customers on the package; Ready's share sends without opening one.
-let rqBothBusy = false;
+let rqBothBusy = false, rqBothBusyAt = 0;
+const RQ_BOTH_BUSY_MS = 45000;
+// a build that never finished (a call that hung) must not lock the send until the page is reloaded (owner 2026-11-03: "no me deja volver a entrar si ya entré a mandar precios")
+function rqBothBusyExpire(){ if (rqBothBusy && Date.now() - rqBothBusyAt > RQ_BOTH_BUSY_MS) rqBothBusy = false; }
 async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids = [...new Set(rows.map(r => r.pid))], opts = {}){
   if (opts.openPackage !== false){
     try {
@@ -4299,8 +4309,9 @@ async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids =
   const afterSend = () => { rqSheetState.key = ''; rqUrlPreselect = null; rqResetRequestSelection(); setTimeout(() => rqRenderSweepTables(), 1500); };
   try {
     if (channel === 'both'){ // one window: WhatsApp and/or email (rqOfferWindowBegin..Show) — each review window is built and sent exactly as when opened alone
+      rqBothBusyExpire();
       if (rqBothBusy) return; // a second press while the window is still being built would reset it under the first one
-      rqBothBusy = true;
+      rqBothBusyAt = Date.now(); rqBothBusy = true;
       rqOfferWindowBegin();
       try {
         const both = { skipChase: true, resend: opts.resend }; both.onSent = afterSend; // the same after-send refresh as each channel alone
