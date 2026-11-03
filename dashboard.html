@@ -507,6 +507,15 @@ function todayListHtml(all){
     if (!e && m) { e = { product_id: m[1], product_name: i.product, why: '' }; urgent.push(e); }
     if (e) { e.askers = e.askers || []; if (who && !e.askers.includes(who)) e.askers.push(who); }
   });
+  // A plant answered one of our price requests WITH a price (what its reply was read as, plant_answers) and that price has gone to no customer since: urgent, by the same definition (owner 2026-11-02: Wayne, Perdue, Brakebush
+  // answered and the card said "Nothing urgent now" — the quote's own list of asked plants held only one of the eight we had asked, and the "already sent" test compared a whole DAY with the arrival).
+  (dashLive || []).filter(s => s.product_id && s.product_name).forEach(s => {
+    const pend = (s.answers || []).filter(a => a.kind === 'price' && Date.now() - new Date(a.at).getTime() < 2 * 86400000 && !(s.sent || []).some(x => x.plant_id === a.plant_id && new Date(x.sent_at) >= new Date(a.at)));
+    if (!pend.length) return;
+    const why = pend.map(a => `${a.plant_name} answered with a price — send it`).join(' · ');
+    const e = urgent.find(u => u.product_id === s.product_id);
+    if (e) e.why = (e.why ? e.why + ' · ' : '') + why; else urgent.push({ ...s, why });
+  });
   urgent.forEach(u => { if (u.askers && u.askers.length) u.why = 'Asked by ' + u.askers.join(', ') + (u.why ? ' · ' + u.why.toLowerCase() : ''); });
   const urgentNames = new Set(urgent.map(s => s.product_name));
   // Answers that name no product we can place are urgent too, by plant (owner 2026-10-27: every answer is seen) — within 2 days, a counter-offer, a bid reply or an unread answer.
