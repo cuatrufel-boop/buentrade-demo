@@ -523,7 +523,7 @@ auth.onAuthStateChanged(user => {
     gate.style.display = 'none';
     app.style.display = 'block';
     document.getElementById('userBadge').textContent = user.email;
-    if (!btAuthLoaded) { btAuthLoaded = true; loadEverything(); }
+    if (!btAuthLoaded) { btAuthLoaded = true; Promise.resolve(loadEverything()).then(() => btOpenFromUrl()); }
   } else {
     gate.style.display = 'flex';
     app.style.display = 'none';
@@ -2327,6 +2327,15 @@ const PROFILE_FIELDS = ['country_id','city','address','contact_name','email','em
 // list-row badge now jumps straight to the plant's own Pending Matches tab instead of just naming
 // a count with nowhere to click, matching the same "notification leads to action" rule this
 // session already applied everywhere else (Orders' attention panel, urgent queue, etc.).
+// A NOTIFICATION OPENS THE EXACT PLACE (owner 2026-11-03: "en notifications no puede llevarme solo a plants sino al módulo específico"): plants.html?plant=<id>&tab=pending opens that plant on its Pending Matches.
+// Read once when the page has loaded; an unknown plant or a failure leaves the page as it always was.
+async function btOpenFromUrl(){
+  try {
+    const q = new URLSearchParams(location.search), id = q.get('plant');
+    if (!id || !plants.some(p => p.id === id)) return;
+    if (q.get('tab') === 'pending') await openPlantPendingMatches(id); else await selectPlant(id);
+  } catch (e) { /* the page stays as it was */ }
+}
 async function openPlantPendingMatches(id){
   await selectPlant(id);
   setPlantTab('pending');

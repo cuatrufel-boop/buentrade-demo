@@ -3005,6 +3005,7 @@ function rqPlantOfferObj(plant, link, productId){
     ...plant, rqProductId: productId, rqLinkId: link ? link.id : null,
     rqPrice: hasPrice ? link.current_price : undefined,
     rqPriceDate: hasPrice ? link.price_date : null,
+    rqPriceArrivedAt: hasPrice ? link.price_arrived_at || null : null,
     rqLastRequestedAt: link ? link.last_requested_at || null : null,
     rqDocsOn: plant.docs_included === true,
     rqProductLocationId: link ? link.location_id || rqSoleLocationId(plant.id) || null : null,
@@ -3314,6 +3315,15 @@ async function rqSheetLoad(){
   rqSheetState = { key, loading: false, ...ctx };
   rqRenderSheet();
 }
+// A customer HAS a price when something went out to him at or after the moment THAT price arrived (owner 2026-11-03, Pork Tongues: Seaboard's 9:30 AM price showed as sent to five customers because they had Seaboard's
+// price of the night before — sent 8:16 PM Miami = Nov 3 in UTC, the same "day" as the new price — and a same-day price that comes in after a send never counted as new). The arrival instant is
+// plant_products.price_arrived_at (price_history); without it, the business day (Miami) of the send against the price's own day — never the UTC date. Same rule the server's Today and Live use.
+const rqEtDay = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+function rqSentCoversPrice(sentAt, priceDate, arrivedAt){
+  if (!sentAt) return false;
+  if (arrivedAt) return new Date(sentAt).getTime() >= new Date(arrivedAt).getTime();
+  return !priceDate || rqEtDay(sentAt) >= String(priceDate).slice(0, 10);
+}
 function rqSheetFor(productId, ctx = rqSheetState){ return ctx.sheets.find(s => s.product_id === productId) || null; }
 function rqHoursSince(ts){ return ts ? Math.floor((Date.now() - new Date(ts).getTime()) / 3600000) : null; }
 function rqSheetCustomersOwning(productId, ctx = rqSheetState){
@@ -3371,7 +3381,7 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
           if (rate) freight = { label: '$' + Number(rate.rate).toLocaleString('en-US'), perLb: Number(rate.rate) / 40000, city: loc ? loc.location_name : '' };
         }
         const owners = rqSheetCustomersOwning(pid, ctx);
-        const sentTo = owners.filter(c => { const at = (ctx.sentByCustomer[c.id] || {})[key]; return at && at.slice(0, 10) >= String(r.price_date || '').slice(0, 10); });
+        const sentTo = owners.filter(c => rqSentCoversPrice((ctx.sentByCustomer[c.id] || {})[key], r.price_date, r.price_arrived_at));
         const isNew = !!(base.answeredAt || (askedAt && r.price_date && String(r.price_date).slice(0, 10) >= String(askedAt).slice(0, 10) && !stale))
           || rqIsNewArrival(rqSheetArrival(sheet, r.plant_id), r);
         // A sale read in the background from the saved QT is only a proposal: it goes out once the trader has opened that QT and
@@ -3386,7 +3396,7 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
         else if (isNew && !sentTo.length) status = 'new';
         else if (base.na) status = 'na';
         else status = stale ? 'expired' : 'priced';
-        const sentSale = rqLastSentSale[key] && String(rqLastSentSale[key].sent_at).slice(0, 10) >= String(r.price_date || '').slice(0, 10) ? rqLastSentSale[key].sale_per_lb : null;
+        const sentSale = rqLastSentSale[key] && rqSentCoversPrice(String(rqLastSentSale[key].sent_at), r.price_date, r.price_arrived_at) ? rqLastSentSale[key].sale_per_lb : null;
         rows.push({ ...base, kind: 'priced', price: Number(r.current_price), priceDate: r.price_date, stale, freight, calc, confirmed, proposed, sentTo, owners, status, sentSale,
           border: Number(r.current_price) + (freight ? freight.perLb : 0) });
       } else if (askedAt){
@@ -4394,7 +4404,7 @@ async function rqCloseFinishedLiveQuotes(links){
       try { offers = (await callApi('sent-offers-search', { product_id: s.product_id, limit: 500 })).results || []; }
       catch (e) { continue; } // can't confirm: stays, the next refresh checks again
       const wentOut = priced.every(p => customers.every(cid => offers.some(o =>
-        o.plant_id === p.plantId && o.customer_id === cid && o.sent_at && String(o.sent_at).slice(0, 10) >= p.priceDay)));
+        o.plant_id === p.plantId && o.customer_id === cid && o.sent_at && rqSentCoversPrice(String(o.sent_at), p.priceDay, p.link && p.link.price_arrived_at))));
       if (!wentOut) continue;
     }
     try {
@@ -4514,6 +4524,7 @@ function rqLivePackages(entries){
     const stage = toSend.length ? 'send' : (plants.some(x => x.state === 'waiting') || (asked.length && !plants.length)) ? 'wait' : sentTo.size ? 'out' : 'idle';
     return { s: g.s, list: g.list, plants, answered: plants.filter(x => x.state !== 'waiting').length, priced: plants.filter(x => x.state === 'priced').length, toSend, asked, newest, askedAt, sentTo, stage };
   }).sort((a, b) => rank[a.stage] - rank[b.stage] // ORDER OF ARRIVAL (owner 2026-10-28: "en live deben salir en orden de llegada"): what has a new price first, the newest arrival on top — whether or not a customer asked (a new price that arrived 10 h ago was under the waiting ones)
+    || (a.stage === 'send' ? (b.toSend.some(e => e.asked) - a.toSend.some(e => e.asked)) : 0) // a customer ASKED for it and a plant answered: that is the first thing to work (owner 2026-11-03: "si un cliente me pidió un producto y tengo una respuesta esa es mi prioridad"); then the order of arrival
     || (a.stage === 'wait' ? String(a.askedAt || '9').localeCompare(String(b.askedAt || '9')) : String(b.newest).localeCompare(String(a.newest)))
     || String(a.s.product_name).localeCompare(String(b.s.product_name)));
 }
@@ -5482,13 +5493,13 @@ async function rqFetchPlantLinksForProduct(productId){
     if (matchedCustomerIds.length){
       alreadyOffered = !!link.price_date && matchedCustomerIds.every(cid => {
         const sentAt = sentMap[cid];
-        return sentAt && sentAt.slice(0, 10) >= link.price_date;
+        return rqSentCoversPrice(sentAt, link.price_date, link.price_arrived_at);
       });
     } else {
       // No matched-customer list to check against (none linked to this product yet) — fall back
       // to "sent to anyone" so a real past send still counts for something.
       const anySentAt = Object.values(sentMap).sort().pop();
-      alreadyOffered = !!(anySentAt && link.price_date && anySentAt.slice(0, 10) >= link.price_date);
+      alreadyOffered = !!(anySentAt && link.price_date && rqSentCoversPrice(anySentAt, link.price_date, link.price_arrived_at));
     }
     if (alreadyOffered) return null;
     const hasPrice = link.current_price != null;
@@ -7244,7 +7255,7 @@ function rqUnsentPlantsFor(customerId, sentByCustomer, filterProductIds, filterP
   return rqPricedPlantsSorted(filterProductIds, filterPlantIds).filter(({ plant }) => {
     if (ownedProductIds && !ownedProductIds.has(plant.rqProductId)) return false;
     const sentAt = sentMap[plant.id + '|' + plant.rqProductId];
-    return !(sentAt && plant.rqPriceDate && sentAt.slice(0, 10) >= String(plant.rqPriceDate).slice(0, 10));
+    return !(sentAt && plant.rqPriceDate && rqSentCoversPrice(sentAt, plant.rqPriceDate, plant.rqPriceArrivedAt));
   });
 }
 
@@ -8724,6 +8735,41 @@ function rqOpenCalendarModal(){
 // that isn't reachable from wherever the trader is right now (see rqRequireDeliveryDay) — closing
 // the notice on click first so the action's own UI (e.g. the calendar modal) isn't left stacked
 // underneath it.
+// A NEW PRICE OF WHAT HE IS WORKING ON ALERTS HIM WHERE HE IS (owner 2026-11-03: "alertarme por todas partes que tengo un precio nuevo de lo que estoy trabajando"). While ONE product is open the page asks the server for
+// that product's plant prices every 45 s; a price (or its arrival instant) that is not the one on screen is put on screen, the sheet and Live quotes are read again — so the row says NEW and the customers who asked
+// are offered it, by the same rule as Today and Live (sent_at >= the price's arrival) — and he is told in the notice and in the tab title, also from another tab. Reads only; nothing is sent or written.
+const RQ_WATCH_MS = 45000, RQ_WATCH_FIELDS = ['current_price', 'price_date', 'price_arrived_at', 'unavailable_since', 'declined_at', 'location_id', 'ship_region', 'freight_included', 'availability'];
+let rqWatchBusy = false, rqWatchTitle = null;
+function rqWatchChanged(row, x){ return [row.current_price, row.price_date, row.price_arrived_at].join('|') !== [x.current_price, x.price_date, x.price_arrived_at].join('|'); }
+async function rqWatchNewPrices(){
+  const pids = typeof rqActiveProductFilterIds !== 'undefined' ? rqActiveProductFilterIds : [];
+  if (pids.length !== 1 || rqWatchBusy) return;
+  rqWatchBusy = true;
+  try {
+    const res = (await callApi('plant-products-search', { product_id: pids[0] })).results || [];
+    const fresh = [];
+    res.forEach(x => {
+      const row = rqAllPlantProductRows.find(r => r.id === x.id);
+      if (!row || !rqWatchChanged(row, x)) return;
+      const hadPrice = row.current_price != null;
+      RQ_WATCH_FIELDS.forEach(k => { if (k in x) row[k] = x[k]; });
+      if (x.current_price != null) fresh.push(row);
+      void hadPrice;
+    });
+    if (!fresh.length) return;
+    const names = fresh.map(r => `${String(r.plant.name).trim()} $${Number(r.current_price).toFixed(2)}`).join(', ');
+    rqShowNotice(`New price for ${rqProductName(pids[0])}: ${names}`);
+    if (rqWatchTitle === null) rqWatchTitle = document.title;
+    document.title = '● New price · ' + rqWatchTitle;
+    try { await rqLoadLiveQuotes(); } catch (e) {}
+    rqSheetState.key = ''; rqRenderSweepTables();
+  } catch (e) { /* the next round asks again */ }
+  finally { rqWatchBusy = false; }
+}
+function rqWatchClearTitle(){ if (rqWatchTitle !== null){ document.title = rqWatchTitle; rqWatchTitle = null; } }
+setInterval(rqWatchNewPrices, RQ_WATCH_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) rqWatchClearTitle(); });
+window.addEventListener('focus', rqWatchClearTitle);
 function rqShowNotice(message, actionLabel, actionFn){
   document.getElementById('rq_notice_text').textContent = message;
   const actionBtn = document.getElementById('rq_notice_action');

@@ -158,7 +158,10 @@
   .tdr-why{display:block;font-size:12.5px;color:#fff;margin-top:3px;opacity:.88;}
   .tdr-who{margin-top:6px;} .tdr-who>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--blue-bright);user-select:none;} .tdr-who>summary::-webkit-details-marker{display:none;} .tdr-who>summary::before{content:'▸ ';} .tdr-who[open]>summary::before{content:'▾ ';}
   .tdr-ul{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:6px;} .tdr-ul li{font-size:12.5px;line-height:1.4;} .tdr-ul li b{font-weight:600;} .tdr-rs{color:#FFC876;font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;margin-right:4px;}
+  /* URGENT FIRST (owner 2026-11-03: "si un cliente me pidió un producto y tengo una respuesta esa es mi prioridad"): the urgent card is drawn on top, full width, above the best prices — by CSS order, the cards keep their place in the page */
+  .tdr-urgent{order:-1;grid-column:1/-1;}
   .tdr-askcard{grid-column:1/-1;} .tdr-scroll{max-height:360px;overflow:auto;}
+  .tdr-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.28) transparent;} .tdr-scroll::-webkit-scrollbar{width:8px;} .tdr-scroll::-webkit-scrollbar-track{background:transparent;} .tdr-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.28);border-radius:8px;}
   .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
   .tdg{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035);overflow:hidden;}
