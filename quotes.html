@@ -3687,7 +3687,7 @@ function rqBrandListHtml(x){
   const sendBtns = (ready, emailOn, waOn, callFor, who) => { const on = ready && (emailOn || waOn);
     return `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;${on ? '' : 'opacity:.35;cursor:default;'}" title="${on ? 'Send ' + who + ' — WhatsApp, email or both, in one window' : ready ? 'No email or WhatsApp on file' : 'Confirm the price in its QT first'}" ${on ? `onclick="${callFor('both')}"` : 'disabled'}>${waIco}${mailIco}</button></div>`; };
   // what the plants ANSWERED that needs reading (a counter-offer, a reply to our bid, an unread answer), under the plant's own name — also here, not only in Live (owner 2026-11-04: "no está ni en Live ni en Find Product")
-  const ansToRead = ((typeof rqSheetFor === 'function' && rqSheetFor(pid)) || { answers: [] }).answers.filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind));
+  const ansToRead = (((typeof rqSheetFor === 'function' && rqSheetFor(pid)) || {}).answers || []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind));
   const ansFor = r => { const list = ansToRead.filter(a => a.plant_id === r.plant.id).slice(0, 3); if (!list.length) return '';
     return `<span style="display:block;margin-top:4px;line-height:1.5;">${list.map(a => { const w = rqAnswerWords(a.excerpt), short = w.length > 80 ? w.slice(0, 79) + '…' : w;
       return `<span class="rq-sheet-pill new" style="margin:0 4px 3px 0;white-space:normal;text-align:left;" title="${escapeHtml(w)}">Answered ${escapeHtml(rqAgo(a.at))}: ${short ? '“' + escapeHtml(short) + '”' : 'open the email'}</span>`; }).join('')}</span>`; };
