@@ -278,5 +278,25 @@ window.btFetch = async function(url, opts){
     || (fn === 'messaging' && (b.action === 'list' || b.action === 'weekly_summary'))
     || (fn === 'sent-offers-search' && b.offer_sheet && (b.offer_sheet.action === 'list' || b.offer_sheet.action === 'get'));
   if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read); }, read);
+  if (read) return btReadOneAtATime(fn, url, opts);
   return btFetchOnce(url, opts, read);
 };
+// READS: THE SAME FUNCTION IS NEVER ASKED TWICE AT ONCE (owner 2026-11-04: "no carga, lentísimo, todos los módulos"; MEASURED against the real API: six different functions called together all answer in under 1 s, but the SAME
+// function called twice at the same moment (lookups-search, plant-locations-search…) leaves one of the two hanging for 30 s — each function has ONE database connection, and the page itself asked for the same ones twice at load).
+// An identical read that is already on its way shares that answer; different reads of one function go one after the other (a hung one still frees the line after 60 s). Other functions still run at the same time.
+var btRdTail = {}, btRdShared = {};
+function btReadOneAtATime(fn, url, opts){
+  var key = String(url) + '|' + String((opts && opts.body) || '');
+  var mine = function(r){ return (r && typeof r.clone === 'function') ? r.clone() : r; };
+  if (btRdShared[key]) return btRdShared[key].then(mine);
+  var prev = btRdTail[fn] || Promise.resolve();
+  var run = prev.then(function(){ return btFetchOnce(url, opts, true); });
+  btRdShared[key] = run;
+  var freed = false, free;
+  var line = new Promise(function(res){ free = function(){ if (!freed){ freed = true; res(); } }; });
+  btRdTail[fn] = line;
+  setTimeout(free, 60000);
+  var done = function(){ free(); if (btRdShared[key] === run) delete btRdShared[key]; };
+  run.then(done, done);
+  return run.then(mine);
+}
