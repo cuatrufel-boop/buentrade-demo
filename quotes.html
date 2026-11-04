@@ -3319,8 +3319,9 @@ async function rqSheetLoad(){
 // price of the night before — sent 8:16 PM Miami = Nov 3 in UTC, the same "day" as the new price — and a same-day price that comes in after a send never counted as new). The arrival instant is
 // plant_products.price_arrived_at (price_history); without it, the business day (Miami) of the send against the price's own day — never the UTC date. Same rule the server's Today and Live use.
 const rqEtDay = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-function rqSentCoversPrice(sentAt, priceDate, arrivedAt){
+function rqSentCoversPrice(sentAt, priceDate, arrivedAt, sentPrice, price){
   if (!sentAt) return false;
+  if (sentPrice != null && price != null && Number(sentPrice) === Number(price)) return true; // the last thing that went out to him carried THIS plant price: a new day with the same number is not a new price (owner 2026-11-03)
   if (arrivedAt) return new Date(sentAt).getTime() >= new Date(arrivedAt).getTime();
   return !priceDate || rqEtDay(sentAt) >= String(priceDate).slice(0, 10);
 }
@@ -3381,7 +3382,7 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
           if (rate) freight = { label: '$' + Number(rate.rate).toLocaleString('en-US'), perLb: Number(rate.rate) / 40000, city: loc ? loc.location_name : '' };
         }
         const owners = rqSheetCustomersOwning(pid, ctx);
-        const sentTo = owners.filter(c => rqSentCoversPrice((ctx.sentByCustomer[c.id] || {})[key], r.price_date, r.price_arrived_at));
+        const sentTo = owners.filter(c => { const m = ctx.sentByCustomer[c.id] || {}; return rqSentCoversPrice(m[key], r.price_date, r.price_arrived_at, m[key + '#price'], r.current_price); });
         const isNew = !!(base.answeredAt || (askedAt && r.price_date && String(r.price_date).slice(0, 10) >= String(askedAt).slice(0, 10) && !stale))
           || rqIsNewArrival(rqSheetArrival(sheet, r.plant_id), r);
         // A sale read in the background from the saved QT is only a proposal: it goes out once the trader has opened that QT and
@@ -4404,7 +4405,7 @@ async function rqCloseFinishedLiveQuotes(links){
       try { offers = (await callApi('sent-offers-search', { product_id: s.product_id, limit: 500 })).results || []; }
       catch (e) { continue; } // can't confirm: stays, the next refresh checks again
       const wentOut = priced.every(p => customers.every(cid => offers.some(o =>
-        o.plant_id === p.plantId && o.customer_id === cid && o.sent_at && rqSentCoversPrice(String(o.sent_at), p.priceDay, p.link && p.link.price_arrived_at))));
+        o.plant_id === p.plantId && o.customer_id === cid && o.sent_at && rqSentCoversPrice(String(o.sent_at), p.priceDay, p.link && p.link.price_arrived_at, o.purchase_price, p.link && p.link.current_price))));
       if (!wentOut) continue;
     }
     try {
@@ -7087,6 +7088,12 @@ function buildCustomerUpdateText(customerFirstName, withCalc, newKeys, offersByP
   return greeting + blocks.join('\n\n');
 }
 // A customer "already received this product" when any plant of these products was sent to them before.
+// The message of a customer carries ONLY the brands he does not have yet, highest price first as the list already is: what he got before is never written to him again (owner 2026-11-03: "el cliente debe recibir el precio
+// de mayor a menor de distintas plantas sin repetir precios"). Pure: the priced list and the unsent list in, the priced list without what he has out.
+function rqOnlyWhatHeLacks(priced, unsent){
+  const lacking = new Set((unsent || []).map(u => u.plant.id + '|' + u.plant.rqProductId));
+  return (priced || []).filter(x => lacking.has(x.plant.id + '|' + x.plant.rqProductId));
+}
 function rqCustomerHadProducts(sentMap, productIds){
   return Object.keys(sentMap || {}).some(k => !productIds || productIds.includes(k.split('|')[1]));
 }
@@ -7222,13 +7229,14 @@ async function rqAlreadySentPlantIdsByCustomer(productIds, channel){
     let sentRows = [];
     try { sentRows = (await callApi('sent-offers-search', { product_id: pid, limit: 500 })).results || []; }
     catch (e) { continue; }
-    sentRows.filter(r => !channel || r.channel === channel).forEach(r => {
+    sentRows.filter(r => !channel || r.channel === channel).forEach(r => { // per channel (owner 2026-10-09: sending by WhatsApp must not hide the email)
+      if (!r.sent_at) return; // a draft is not an offer; an expired one WAS sent (owner 2026-11-03)
       if (!byCustomer[r.customer_id]) byCustomer[r.customer_id] = {};
       const key = r.plant_id + '|' + r.product_id;
       const prev = byCustomer[r.customer_id][key];
       // what the customer last RECEIVED about this plant: the send, or the updated list he was told after it (price_drop_told) — whichever is later
       const told = r.price_drop_told && r.price_drop_told.at, got = told && new Date(told).getTime() > new Date(r.sent_at).getTime() ? String(told) : r.sent_at;
-      if (!prev || new Date(got).getTime() > new Date(prev).getTime()) byCustomer[r.customer_id][key] = got;
+      if (!prev || new Date(got).getTime() > new Date(prev).getTime()){ byCustomer[r.customer_id][key] = got; byCustomer[r.customer_id][key + '#price'] = r.purchase_price; } // the plant price of what he last received travels beside the date
       if (r.sale_per_lb != null && (!rqLastSentSale[key] || r.sent_at > rqLastSentSale[key].sent_at)) rqLastSentSale[key] = { sale_per_lb: r.sale_per_lb, sent_at: r.sent_at };
     });
   }
@@ -7255,7 +7263,7 @@ function rqUnsentPlantsFor(customerId, sentByCustomer, filterProductIds, filterP
   return rqPricedPlantsSorted(filterProductIds, filterPlantIds).filter(({ plant }) => {
     if (ownedProductIds && !ownedProductIds.has(plant.rqProductId)) return false;
     const sentAt = sentMap[plant.id + '|' + plant.rqProductId];
-    return !(sentAt && plant.rqPriceDate && rqSentCoversPrice(sentAt, plant.rqPriceDate, plant.rqPriceArrivedAt));
+    return !(sentAt && plant.rqPriceDate && rqSentCoversPrice(sentAt, plant.rqPriceDate, plant.rqPriceArrivedAt, sentMap[plant.id + '|' + plant.rqProductId + '#price'], plant.rqPrice));
   });
 }
 
@@ -8546,7 +8554,9 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       }
       const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
       if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
-      jobs.push({ c, cc, unsent, full, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
+      const lacks = rqOnlyWhatHeLacks(full, unsent); // never a price he already has (owner 2026-11-03: "sin repetir precios")
+      if (!lacks.length){ skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'email') }); continue; }
+      jobs.push({ c, cc, unsent, full: lacks, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
     }
     // every customer's credit check (a dry run: reads only), signal line and pesos PDFs are asked AT ONCE (owner 2026-10-24: "hazlo más rápido"); the messages keep the customers' order
     const prepared = await Promise.all(jobs.map(async ({ c, full, isUpdate }) => {
@@ -8619,7 +8629,9 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     }
     const full = await rqRequirePesos(c, pid, filterPlantIds); // a customer who buys in pesos is sent only what he confirmed in his own QT
     if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
-    jobs.push({ pid, c, cc, full, unsent, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
+    const lacks = rqOnlyWhatHeLacks(full, unsent); // never a price he already has (owner 2026-11-03: "sin repetir precios")
+    if (!lacks.length){ skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'whatsapp') }); continue; }
+    jobs.push({ pid, c, cc, full: lacks, unsent, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
   }
   if (jobs.length) {
     // ALL the customers' drafts go in ONE request (the server writes them one after the other — the audit log is a hash chain — but the browser waits for one answer, not one per customer), while every customer's
