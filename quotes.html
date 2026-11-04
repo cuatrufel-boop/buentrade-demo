@@ -3617,7 +3617,7 @@ function rqBrandRecipients(pid){
   const owners = rqSheetCustomersOwning(pid), asked = (typeof rqAskedConfirmed === 'undefined' || rqAskedConfirmed.has(pid)) ? rqSheetAskedIds(pid) : new Set(), pre = rqUrlPreselect && rqUrlPreselect.pid === pid ? rqUrlPreselect.cid : null;
   const chosen = owners.filter(c => asked.has(c.id) || c.id === pre);
   if (!chosen.length) return owners;
-  return owners.filter(c => asked.has(c.id) || c.id === pre || rqReqExtra().has(c.id));
+  return owners; // EVERY buyer who lacks the price is on the list, the one who asked first (owner 2026-11-04: "por qué no saca los que compran ese producto… debe dejarme mandarles a esos clientes también")
 }
 function rqReqAddBuyer(id){ rqReqExtra().add(id); if (rqReqSel.ids) rqReqSel.ids.add(id); rqRenderSheet(); } // a buyer of this product the trader adds to the send (the chosen customer stays; he joins)
 function rqReqSelectAll(){
