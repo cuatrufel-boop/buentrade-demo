@@ -3659,7 +3659,7 @@ async function rqRequestSend(channel){
   // The updated list goes out only when EVERY new price of a plant the customer already has an offer from is confirmed (user 2026-10-12: "tengo que confirmar los dos
   // precios nuevos antes de mandar"): otherwise he would receive a list that silently leaves that plant out.
   const waiting = rqSheetRows().filter(r => r.kind === 'priced' && !r.na && !r.stale
-    && customers.some(c => (rqSheetState.sentByCustomer[c.id] || {})[r.key] && !((r.calc && r.confirmed && !r.proposed) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id)))));
+    && customers.some(c => (rqSheetState.sentByCustomer[c.id] || {})[r.key] && !((r.calc && r.confirmed && !r.proposed) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))) && !r.sentTo.some(x => x.id === c.id)));
   if (waiting.length){
     const names = [...new Set(waiting.map(r => r.plant.name.trim()))].join(', ');
     await btAlert(`Not sent yet. Confirm the new price of ${names} first (Confirm price). The updated list goes out only when every new price is confirmed.`);
