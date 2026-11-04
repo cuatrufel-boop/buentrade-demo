@@ -3686,6 +3686,11 @@ function rqBrandListHtml(x){
   // ONE send button per line (owner 2026-10-22): both logos; it opens the one offer window where each customer has his WhatsApp and his email (one or both)
   const sendBtns = (ready, emailOn, waOn, callFor, who) => { const on = ready && (emailOn || waOn);
     return `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;${on ? '' : 'opacity:.35;cursor:default;'}" title="${on ? 'Send ' + who + ' — WhatsApp, email or both, in one window' : ready ? 'No email or WhatsApp on file' : 'Confirm the price in its QT first'}" ${on ? `onclick="${callFor('both')}"` : 'disabled'}>${waIco}${mailIco}</button></div>`; };
+  // what the plants ANSWERED that needs reading (a counter-offer, a reply to our bid, an unread answer), under the plant's own name — also here, not only in Live (owner 2026-11-04: "no está ni en Live ni en Find Product")
+  const ansToRead = ((typeof rqSheetFor === 'function' && rqSheetFor(pid)) || { answers: [] }).answers.filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind));
+  const ansFor = r => { const list = ansToRead.filter(a => a.plant_id === r.plant.id).slice(0, 3); if (!list.length) return '';
+    return `<span style="display:block;margin-top:4px;line-height:1.5;">${list.map(a => { const w = rqAnswerWords(a.excerpt), short = w.length > 80 ? w.slice(0, 79) + '…' : w;
+      return `<span class="rq-sheet-pill new" style="margin:0 4px 3px 0;white-space:normal;text-align:left;" title="${escapeHtml(w)}">Answered ${escapeHtml(rqAgo(a.at))}: ${short ? '“' + escapeHtml(short) + '”' : 'open the email'}</span>`; }).join('')}</span>`; };
   const body = [];
   const recent = r => r.askedAt && (Date.now() - new Date(r.askedAt).getTime()) < RQ_REQUEST_COOLDOWN_DAYS * 86400000;
   const askIds = [...new Set(stale.concat(pending.filter(r => r.kind === 'possible')).filter(r => !recent(r)).map(r => r.plant.id))]; // the plants that have their own "Update" / "Ask for price" on the list
@@ -3717,15 +3722,16 @@ function rqBrandListHtml(x){
         <td>${sendBtns(!!conf, !!conf && rqCanEmail(c, [pid]), !!conf && rqCanWhatsApp(c, [pid]), ch => `rqBrandSend('${ch}','${r.key}','${c.id}')`, 'his offer')}</td>`);
     });
     const shownLines = lines.filter(l => (rqBrandCur === 'all' || (rqBrandCur === 'usd') === /Border Clients/.test(l)) && (!qq || (r.plant.name + ' ' + l.replace(/<[^>]*>/g, ' ')).toLowerCase().includes(qq)));
-    shownLines.forEach((l, i) => body.push(`<tr class="${fresh && !ready ? 'rq-sheet-new' : ''}">${i ? '<td></td>' : brand}${l}</tr>`));
+    const brandCell = brand.replace(/<\/td>$/, `${ansFor(r)}</td>`); // the plant's answers under its name (the brand cell above keeps its approved shape)
+    shownLines.forEach((l, i) => body.push(`<tr class="${fresh && !ready ? 'rq-sheet-new' : ''}">${i ? '<td></td>' : brandCell}${l}</tr>`));
     readyLines += shownLines.filter(l => !/disabled/.test(l)).length;
   });
   const offSpec = r => `<button type="button" class="qbucket-waiting-row-decline" title="Doesn't produce it — never asked again" onclick="rqSheetDecline('${r.plant.id}','${r.pid}')">✕ Off-Spec</button>`;
   // an old (expired) price is listed with its two ways out: ask the plant for an update, or send the old price anyway (then it is a normal line: its QT, its sale)
-  stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq)) && order.some(c => !r.sentTo.some(y => y.id === c.id))).forEach(r => body.push(`<tr class="rq-sheet-dim"><td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}</td><td>${(() => { const who = order.filter(c => !r.sentTo.some(y => y.id === c.id)).map(c => escapeHtml(String(c.trade_name).trim())); return who.length ? `Only him${sub(who.join(' · '))}`.replace('Only him', who.length > 1 ? 'Only these' : 'Only him') : ''; })()}</td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
+  stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq)) && order.some(c => !r.sentTo.some(y => y.id === c.id))).forEach(r => body.push(`<tr class="rq-sheet-dim"><td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}${ansFor(r)}</td><td>${(() => { const who = order.filter(c => !r.sentTo.some(y => y.id === c.id)).map(c => escapeHtml(String(c.trade_name).trim())); return who.length ? `Only him${sub(who.join(' · '))}`.replace('Only him', who.length > 1 ? 'Only these' : 'Only him') : ''; })()}</td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
     <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask the plant for an updated price" onclick="rqSheetAsk(['${r.plant.id}'])">Update</button><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Send this old price too — its QT opens so you confirm your price first" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">Send old price</button></div></td></tr>`));
   pending.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => {
-    const name = `<td style="min-width:170px;"${rowTip(r, true)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}</td>`;
+    const name = `<td style="min-width:170px;"${rowTip(r, true)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}${ansFor(r)}</td>`;
     const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask for price →</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
       : r.kind === 'waiting' ? `<span class="rq-sheet-pill wait">Waiting for price</span>${offSpec(r)}`
       : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
@@ -4529,7 +4535,15 @@ function rqLivePackages(entries){
   }).sort((a, b) => rank[a.stage] - rank[b.stage] // ORDER OF ARRIVAL (owner 2026-10-28: "en live deben salir en orden de llegada"): what has a new price first, the newest arrival on top — whether or not a customer asked (a new price that arrived 10 h ago was under the waiting ones)
     || (a.stage === 'send' ? (b.toSend.some(e => e.asked) - a.toSend.some(e => e.asked)) : 0) // a customer ASKED for it and a plant answered: that is the first thing to work (owner 2026-11-03: "si un cliente me pidió un producto y tengo una respuesta esa es mi prioridad"); then the order of arrival
     || (a.stage === 'wait' ? rqLiveLastAsk(b).localeCompare(rqLiveLastAsk(a)) /* the MOST RECENT ask on top (owner 2026-11-04: "en live debe quedar lo más reciente arriba") */ : String(b.newest).localeCompare(String(a.newest)))
-    || String(a.s.product_name).localeCompare(String(b.s.product_name)));
+    || String(a.s.product_name).localeCompare(String(b.s.product_name)))
+    // LAST WORD: the most recent thing on top, whatever its stage (owner 2026-11-04: "en live debe quedar lo más reciente arriba"; "si pedí un producto es porque un cliente lo necesita"): the moment of its newest price, its newest answer
+    // that needs reading, or its latest ask. The order above stays as the tie-break (the sort is stable).
+    .sort((a, b) => rqLiveRecencyMs(b) - rqLiveRecencyMs(a));
+}
+// the latest moment anything happened on a package: a price arrived, a plant answered something to read, a customer asked
+function rqLiveRecencyMs(p){
+  const t = x => { const v = new Date(x).getTime(); return isNaN(v) ? 0 : v; };
+  return Math.max(t(p.newest), t(rqLiveLastAsk(p)), ...((p.s.answers || []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind)).map(a => t(a.at))), 0);
 }
 // "12 min ago", "3 h ago", "2 d ago" — the time since something happened, the one a trader reads at a glance.
 function rqAgo(ts){
@@ -4553,6 +4567,13 @@ function rqLiveAnswersToRead(s){
   if (!RQ_LIVE_ANSWERS) return [];
   return (s.answers || []).filter(a => RQ_ANSWER_READ_KINDS.includes(a.kind) && Date.now() - new Date(a.at).getTime() < RQ_ANSWER_READ_DAYS * 86400000);
 }
+// What the plant WROTE, without its email signature (owner 2026-11-04: "¿qué es esto? un texto imbécil": the answer showed "Fernando Marquez Export Sales / Mexico Seaboard Foods 9000 W. 67th Street…"): the text stops where the signature starts
+// (the sender's name + title, a [logo] / [image] marker, "Sent from", a phone). Nothing left = the answer had no typed words: the pill says to open the email.
+function rqAnswerWords(excerpt){
+  const w = String(excerpt || '').replace(/\s+/g, ' ').trim();
+  const m = w.search(/\b[A-Z][a-z]+(?: [A-Z]\.?)? [A-Z][a-zA-Z'’-]+ (?:Export|International|Senior|Director|Sales|Account|Manager|VP|President|Pork|Beef|Chicken|Purchasing|Trading)\b|\[[^\]]*\]|Sent from|\bo:\s?\d|\bm:\s?\(/);
+  return (m >= 0 ? w.slice(0, m) : w).replace(/[\s,;–—-]+$/, '').trim();
+}
 function rqLiveAnswersHtml(p){
   if (!RQ_LIVE_ANSWERS) return '';
   const pill = (cls, text, title) => `<span class="rq-sheet-pill ${cls}" style="margin:0 4px 3px 0;white-space:normal;text-align:left;"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(text)}</span>`;
@@ -4564,14 +4585,15 @@ function rqLiveAnswersHtml(p){
     else if (x.state === 'na') { out.push(pill('off', `${n}: N/A`)); shown.add(x.plant_id); }
     else if (x.state === 'offspec') { out.push(pill('off', `${n}: does not make it`)); shown.add(x.plant_id); }
   });
-  (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').forEach(a => {
-    const w = String(a.excerpt || '').replace(/\s+/g, ' ').trim(), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
-    shown.add(a.plant_id);
+  const answeredBy = {}; // up to THREE answers per plant (a negotiation is several emails: "1.34", "1.34 firm price", the order), newest first
+  (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').filter(a => (answeredBy[a.plant_id] = (answeredBy[a.plant_id] || 0) + 1) <= 3).forEach(a => {
+    const w = rqAnswerWords(a.excerpt), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
     if (a.kind === 'no_price') out.push(pill('wait', short ? `${a.plant_name}: “${short}”` : `${a.plant_name}: answered without a price`, w));
     else if (a.kind === 'counter') out.push(pill('new', `${a.plant_name} offered something else — read it: ${short}`, w));
     else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — read it${short ? ': ' + short : ''}`, w));
     else if (a.kind === 'unread') out.push(pill('wait', short ? `${a.plant_name}: answer not read — “${short}” — open it` : `${a.plant_name}: answer not read — open it`, w));
   });
+  Object.keys(answeredBy).forEach(id => shown.add(id)); // a plant that answered is not "no answer yet"
   const left = (p.plants || []).filter(x => x.state === 'waiting' && !shown.has(x.plant_id)).length;
   if (left) out.push(pill('off', `${left} plant${left === 1 ? '' : 's'}: no answer yet`));
   return out.length ? `<span style="display:block;margin-top:3px;line-height:1.55;">${out.join('')}</span>` : '';
