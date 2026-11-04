@@ -4499,6 +4499,8 @@ function rqLiveEntries(){
     || String(a.s.product_name).localeCompare(String(b.s.product_name)) || String(rqLiveCustomerName(a.cid)).localeCompare(String(rqLiveCustomerName(b.cid))));
 }
 const rqLqPlantName = id => { const p = rqAllPlants.find(x => x.id === id); return p ? String(p.name).trim() : 'Plant'; };
+// the latest moment a customer asked for this package (its row's recency while it waits for a price)
+const rqLiveLastAsk = p => (p.asked || []).map(e => String(e.askedAt || '')).sort().pop() || '';
 // One card per live package: where each asked plant stands, who asked, who waits, and where the package is on the way to a bid.
 function rqLivePackages(entries){
   const by = new Map();
@@ -4526,7 +4528,7 @@ function rqLivePackages(entries){
     return { s: g.s, list: g.list, plants, answered: plants.filter(x => x.state !== 'waiting').length, priced: plants.filter(x => x.state === 'priced').length, toSend, asked, newest, askedAt, sentTo, stage };
   }).sort((a, b) => rank[a.stage] - rank[b.stage] // ORDER OF ARRIVAL (owner 2026-10-28: "en live deben salir en orden de llegada"): what has a new price first, the newest arrival on top — whether or not a customer asked (a new price that arrived 10 h ago was under the waiting ones)
     || (a.stage === 'send' ? (b.toSend.some(e => e.asked) - a.toSend.some(e => e.asked)) : 0) // a customer ASKED for it and a plant answered: that is the first thing to work (owner 2026-11-03: "si un cliente me pidió un producto y tengo una respuesta esa es mi prioridad"); then the order of arrival
-    || (a.stage === 'wait' ? String(a.askedAt || '9').localeCompare(String(b.askedAt || '9')) : String(b.newest).localeCompare(String(a.newest)))
+    || (a.stage === 'wait' ? rqLiveLastAsk(b).localeCompare(rqLiveLastAsk(a)) /* the MOST RECENT ask on top (owner 2026-11-04: "en live debe quedar lo más reciente arriba") */ : String(b.newest).localeCompare(String(a.newest)))
     || String(a.s.product_name).localeCompare(String(b.s.product_name)));
 }
 // "12 min ago", "3 h ago", "2 d ago" — the time since something happened, the one a trader reads at a glance.
