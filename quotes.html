@@ -4360,9 +4360,11 @@ async function rqLoadLiveQuotes(){
 // Pending), and show here only when someone buys that product. A failed load keeps the last list and says nothing; the server expires them by their deadline.
 // Answers of a plant that name no product we can place (owner 2026-10-27: every answer is seen): one line at the top of Live quotes, by plant, with the plant's own words — never attached to a product by a guess.
 // OFF by the owner's word (2026-10-27: "por qué saca en live una marca sola y lo llenaste de notas"): the answers are STILL kept (plant_answers) but Live quotes shows none of this until he decides how he wants to see them.
+// Live shows the plants' PRICE answers (price, N/A) — never a pill about an answer that is not a price (counter-offer, reply to a bid, "not read", free text): owner 2026-11-04 "no quiero ese texto en Live". Their words stay kept (plant_answers) and open from the email.
+const RQ_LIVE_NONPRICE_ANSWERS = false;
 let RQ_LIVE_ANSWERS = true; // every plant's answer shows under its Live quote (owner 2026-11-02: "debe mostrar todas las respuestas en Live")
 let rqLiveUnplaced = [];
-function rqLiveUnplacedToRead(){ if (!RQ_LIVE_ANSWERS) return []; return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
+function rqLiveUnplacedToRead(){ if (!RQ_LIVE_ANSWERS || !RQ_LIVE_NONPRICE_ANSWERS) return []; return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
 async function rqLoadLiveUnplaced(){
   if (!RQ_LIVE_ANSWERS) return;
   try { rqLiveUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { return; }
@@ -4589,6 +4591,7 @@ function rqLiveAnswersHtml(p){
   (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').filter(a => (answeredBy[a.plant_id] = (answeredBy[a.plant_id] || 0) + 1) <= 3).forEach(a => {
     const w = rqAnswerWords(a.excerpt), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
     // The plant's own words show ONLY on hover (owner 2026-11-04: "solo si me paro encima me muestra una nube con el texto… no así"): the pill itself is one short fixed line.
+    if (!RQ_LIVE_NONPRICE_ANSWERS) return; // the plant answered (so it is not "no answer yet") but no pill is drawn for an answer that is not a price
     if (a.kind === 'no_price') out.push(pill('wait', `${a.plant_name}: answered without a price`, w));
     else if (a.kind === 'counter') out.push(pill('new', `${a.plant_name} offered something else — open it`, w));
     else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — open it`, w));
