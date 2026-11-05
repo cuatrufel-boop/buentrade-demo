@@ -4617,10 +4617,11 @@ function rqLiveUnplacedRowHtml(){
   return `<tr class="rq-lq-row wait" data-extra="unplaced"><td><b>Plant answers without a product</b><span class="muted" style="display:block;font-size:11px;">they name no product we can place</span><span style="display:block;margin-top:3px;line-height:1.55;">${pills}</span></td><td><span class="muted">—</span></td><td style="text-align:center;"><span class="rq-sheet-pill wait">Answers to read</span></td><td style="text-align:center;"><span class="muted">—</span></td></tr>`;
 }
 // "Already sent: IDE Foods · Mon 5:31 PM · Neza · Mon 5:32 PM" — each customer of the package who has been sent this product, with the day and time of his last send (Miami time); three names, then "+N more".
-function rqLiveSentLine(p){
+function rqLiveSentLine(p, all){
   const done = (p.list || []).filter(e => e.has && e.has.length).map(e => ({ name: rqLiveCustomerName(e.cid) || '…', at: String(e.has[0].sent_at) })).sort((a, b) => b.at.localeCompare(a.at));
   if (!done.length) return '';
   const when = t => new Date(t).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+  if (all) return 'Already sent: ' + done.map(d => `${d.name} · ${when(d.at)}`).join(' · '); // the hover shows everyone
   return 'Already sent: ' + done.slice(0, 3).map(d => `${d.name} · ${when(d.at)}`).join(' · ') + (done.length > 3 ? ` · +${done.length - 3} more` : '');
 }
 function rqLiveRowHtml(p){
@@ -4634,7 +4635,6 @@ function rqLiveRowHtml(p){
     : '<span class="muted">Nobody buys it yet</span>';
   const sub = sending ? (p.newest ? 'Price arrived ' + rqAgo(p.newest) : '') : (p.askedAt ? 'Asked ' + rqAgo(p.askedAt) : '');
   // Who already got this product and when (owner 2026-11-02: "live me permite entrar y volver a enviar; debe decirme cuándo y a quién ya mandé, para no repetir el envío"): written on the row itself, newest first.
-  const sentLine = rqLiveSentLine(p);
   const status = sending
     ? `<span class="rq-sheet-pill new pkg-tag-blink" title="A plant's price arrived and has not been sent">NEW PRICE${p.newest ? ' · ' + escapeHtml(rqAgo(p.newest)) : ''}</span>`
     : (rqLiveAnswersToRead(p.s).length ? '<span class="rq-sheet-pill wait" title="A plant answered without a price: hover the product name to read its words">Answers to read</span>' : '<span class="rq-sheet-pill wait">Waiting for price</span>');
@@ -4644,7 +4644,7 @@ function rqLiveRowHtml(p){
     : '<span class="muted">—</span>';
   // What the plants answered that is not a price (counter-offer, reply to a bid, free text) lives ONLY here, in the hover of the product name — never as text on the row (owner 2026-11-04: "solo si me paro arriba del producto").
   const answerTip = (p.s.answers || []).filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind)).slice(0, 6).map(a => `${a.plant_name}: ${rqAnswerWords(a.excerpt) || '(open the email)'}`).join('\n');
-  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${escapeHtml((sending ? 'Send' : 'Open') + (answerTip ? '\n' + answerTip : ''))}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}${sentLine ? `<span class="rq-lq-sent" style="display:block;font-size:11px;color:#8fd3a8;">${escapeHtml(sentLine)}</span>` : ''}${rqLiveAnswersHtml(p)}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
+  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${escapeHtml((sending ? 'Send' : 'Open') + (rqLiveSentLine(p, true) ? '\n' + rqLiveSentLine(p, true) : '') + (answerTip ? '\n' + answerTip : ''))}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}${rqLiveAnswersHtml(p)}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
 }
 // An open plant auction as a Live quotes row: the same row as a price waiting to go out (Product · Asked by · Status · Send), with its own status text — "AUCTION · until Wed 28" — and the
 // same button, which opens the product with its first customer marked, like every other row. Nothing in it is a price: an auction has none.
