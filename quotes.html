@@ -3690,7 +3690,7 @@ function rqBrandListHtml(x){
   const ansToRead = (((typeof rqSheetFor === 'function' && rqSheetFor(pid)) || {}).answers || []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind));
   const ansFor = r => { const list = ansToRead.filter(a => a.plant_id === r.plant.id).slice(0, 3); if (!list.length) return '';
     return `<span style="display:block;margin-top:4px;line-height:1.5;">${list.map(a => { const w = rqAnswerWords(a.excerpt), short = w.length > 80 ? w.slice(0, 79) + '…' : w;
-      return `<span class="rq-sheet-pill new" style="margin:0 4px 3px 0;white-space:normal;text-align:left;" title="${escapeHtml(w)}">Answered ${escapeHtml(rqAgo(a.at))}: ${short ? '“' + escapeHtml(short) + '”' : 'open the email'}</span>`; }).join('')}</span>`; };
+      return `<span class="rq-sheet-pill new" style="margin:0 4px 3px 0;white-space:normal;text-align:left;" title="${escapeHtml(w)}">Answered ${escapeHtml(rqAgo(a.at))} — open the email</span>`; }).join('')}</span>`; };
   const body = [];
   const recent = r => r.askedAt && (Date.now() - new Date(r.askedAt).getTime()) < RQ_REQUEST_COOLDOWN_DAYS * 86400000;
   const askIds = [...new Set(stale.concat(pending.filter(r => r.kind === 'possible')).filter(r => !recent(r)).map(r => r.plant.id))]; // the plants that have their own "Update" / "Ask for price" on the list
@@ -4588,10 +4588,11 @@ function rqLiveAnswersHtml(p){
   const answeredBy = {}; // up to THREE answers per plant (a negotiation is several emails: "1.34", "1.34 firm price", the order), newest first
   (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').filter(a => (answeredBy[a.plant_id] = (answeredBy[a.plant_id] || 0) + 1) <= 3).forEach(a => {
     const w = rqAnswerWords(a.excerpt), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
-    if (a.kind === 'no_price') out.push(pill('wait', short ? `${a.plant_name}: “${short}”` : `${a.plant_name}: answered without a price`, w));
-    else if (a.kind === 'counter') out.push(pill('new', `${a.plant_name} offered something else — read it: ${short}`, w));
-    else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — read it${short ? ': ' + short : ''}`, w));
-    else if (a.kind === 'unread') out.push(pill('wait', short ? `${a.plant_name}: answer not read — “${short}” — open it` : `${a.plant_name}: answer not read — open it`, w));
+    // The plant's own words show ONLY on hover (owner 2026-11-04: "solo si me paro encima me muestra una nube con el texto… no así"): the pill itself is one short fixed line.
+    if (a.kind === 'no_price') out.push(pill('wait', `${a.plant_name}: answered without a price`, w));
+    else if (a.kind === 'counter') out.push(pill('new', `${a.plant_name} offered something else — open it`, w));
+    else if (a.kind === 'bid_reply') out.push(pill('new', `${a.plant_name} answered your bid — open it`, w));
+    else if (a.kind === 'unread') out.push(pill('wait', `${a.plant_name}: answer not read — open it`, w));
   });
   Object.keys(answeredBy).forEach(id => shown.add(id)); // a plant that answered is not "no answer yet"
   const left = (p.plants || []).filter(x => x.state === 'waiting' && !shown.has(x.plant_id)).length;
@@ -4605,10 +4606,10 @@ function rqLiveUnplacedRowHtml(){
   const pill = (cls, text, title) => `<span class="rq-sheet-pill ${cls}" style="margin:0 4px 3px 0;white-space:normal;text-align:left;"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(text)}</span>`;
   const pills = list.map(a => {
     const w = String(a.excerpt || '').replace(/\s+/g, ' ').trim(), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
-    return a.kind === 'bid_reply' ? pill('new', `${a.plant_name} answered your bid — read it${short ? ': ' + short : ''}`, w)
-      : a.kind === 'counter' ? pill('new', `${a.plant_name} offered something else — read it${short ? ': ' + short : ''}`, w)
-      : a.kind === 'unread' ? pill('wait', short ? `${a.plant_name}: answer not read — “${short}” — open it` : `${a.plant_name}: answer not read — open it`, w)
-      : pill('wait', short ? `${a.plant_name}: “${short}”` : `${a.plant_name}: answered without a price`, w);
+    return a.kind === 'bid_reply' ? pill('new', `${a.plant_name} answered your bid — open it`, w)
+      : a.kind === 'counter' ? pill('new', `${a.plant_name} offered something else — open it`, w)
+      : a.kind === 'unread' ? pill('wait', `${a.plant_name}: answer not read — open it`, w)
+      : pill('wait', `${a.plant_name}: answered without a price`, w);
   }).join('');
   return `<tr class="rq-lq-row wait" data-extra="unplaced"><td><b>Plant answers without a product</b><span class="muted" style="display:block;font-size:11px;">they name no product we can place</span><span style="display:block;margin-top:3px;line-height:1.55;">${pills}</span></td><td><span class="muted">—</span></td><td style="text-align:center;"><span class="rq-sheet-pill wait">Answers to read</span></td><td style="text-align:center;"><span class="muted">—</span></td></tr>`;
 }
