@@ -4285,6 +4285,8 @@ async function rqBrandSend(channel, key, customerId){
   const others = rows.filter(r => r.key !== key && r.pid === one.pid && customers.some(c => !r.sentTo.some(x => x.id === c.id) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))));
   const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
   rows = wantsAll ? [one, ...others] : [one];
+  // the brands every customer already has still go in the message so he can compare, highest → lowest (owner 2026-11-05: "el cliente tiene que poder comparar"); they are never recorded as sent again — unless the trader said no to a list
+  if (wantsAll || !others.length) rows = rows.concat(rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && !r.stale && r.pid === one.pid && !rows.some(x => x.key === r.key)));
   await rqSendReadyRows(channel, rows, customers, rqSheetState.linksByCustomer, pids);
 }
 
@@ -8586,17 +8588,17 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
       const lacks = rqOnlyWhatHeLacks(full, unsent); // never a price he already has (owner 2026-11-03: "sin repetir precios")
       if (!lacks.length){ skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'email') }); continue; }
-      jobs.push({ c, cc, unsent, full: lacks, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
+      jobs.push({ c, cc, unsent, full, lacks, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) }); // the email carries EVERY brand, highest → lowest, so he can compare; only `lacks` is recorded as sent (owner 2026-11-05)
     }
     // every customer's credit check (a dry run: reads only), signal line and pesos PDFs are asked AT ONCE (owner 2026-10-24: "hazlo más rápido"); the messages keep the customers' order
-    const prepared = await Promise.all(jobs.map(async ({ c, full, isUpdate }) => {
+    const prepared = await Promise.all(jobs.map(async ({ c, full, lacks, isUpdate }) => {
       const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
       // 2026-09-26: credit check only (dry run) — the offer itself is logged when the trader confirms the send (onSent below).
-      const [{ warnings }, signalLine] = await Promise.all([rqLogSentOffersRows(full, [c], 'email', true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // the credit check and the signal line are both reads: asked together
+      const [{ warnings }, signalLine] = await Promise.all([rqLogSentOffersRows(lacks, [c], 'email', true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // the credit check and the signal line are both reads: asked together
       return { pesosFiles, warnings, signalLine };
     }));
     const filesByPlant = await filesP;
-    jobs.forEach(({ c, cc, unsent, full, isUpdate }, k) => {
+    jobs.forEach(({ c, cc, unsent, full, lacks, isUpdate }, k) => {
       const { pesosFiles, warnings, signalLine } = prepared[k];
       warnings.forEach(w => rqShowNotice(w.message));
       const firstName = rqFirstName(cc.contact_name || c.trade_name);
@@ -8604,7 +8606,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       toSend.push({
         id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
-        body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, c,
+        body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, lacks, c,
         attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
         downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
       });
@@ -8629,7 +8631,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
   rqOpenEmailModal(`Email offer — ${toSend.length} message${toSend.length > 1 ? 's' : ''} (one product each)`, toSend.map(it => ({
     id: it.id, label: it.label, to: it.to, subject: it.subject, body: it.body, fromAlias: 'offers',
     attachments: it.attachments, downloadFiles: it.downloadFiles,
-    onSent: async () => { await rqLogSentOffersRows(it.full, [it.c], 'email'); await rqConfirmBullets(it.id, 'email'); if (opts.onSent) opts.onSent(it.c); },
+    onSent: async () => { await rqLogSentOffersRows(it.lacks, [it.c], 'email'); await rqConfirmBullets(it.id, 'email'); if (opts.onSent) opts.onSent(it.c); },
   })), true);
   rqSetModalNote('rq_email_modal_list', skipped);
 }
@@ -8661,13 +8663,13 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
     if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
     const lacks = rqOnlyWhatHeLacks(full, unsent); // never a price he already has (owner 2026-11-03: "sin repetir precios")
     if (!lacks.length){ skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'whatsapp') }); continue; }
-    jobs.push({ pid, c, cc, full: lacks, unsent, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) });
+    jobs.push({ pid, c, cc, full, lacks, unsent, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) }); // the message carries EVERY brand, highest → lowest, so he can compare; only `lacks` is recorded as sent (owner 2026-11-05)
   }
   if (jobs.length) {
     // ALL the customers' drafts go in ONE request (the server writes them one after the other — the audit log is a hash chain — but the browser waits for one answer, not one per customer), while every customer's
     // signal line is read at the same time (owner 2026-10-24: "hazlo más rápido")
     const [logged, signals] = await Promise.all([
-      rqLogSentOffersRows(jobs[0].full, [jobs[0].c], 'whatsapp', false, true, jobs.slice(1).map(j => ({ withCalc: j.full, customers: [j.c] }))), // drafts: they become offers at "Yes, sent"
+      rqLogSentOffersRows(jobs[0].lacks, [jobs[0].c], 'whatsapp', false, true, jobs.slice(1).map(j => ({ withCalc: j.lacks, customers: [j.c] }))), // drafts of what he LACKS: they become offers at "Yes, sent"
       Promise.all(jobs.map(j => j.isUpdate ? '' : rqFetchCustomerSignalLine(j.c.id, j.full))),
     ]);
     jobs.forEach(({ pid, c, cc, full, unsent, isUpdate }, k) => {
