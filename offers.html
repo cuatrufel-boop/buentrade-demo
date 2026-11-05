@@ -482,6 +482,7 @@
 <script src="js/email-modal.js"></script>
 <script src="js/bt-dialogs.js"></script>
 <script src="js/pickup-picker.js"></script>
+<script src="js/customs-block.js"></script>
 <script src="js/po-pdf.js"></script>
 <script src="js/fo-pdf.js"></script>
 <script src="js/so-pdf.js"></script>
@@ -1703,7 +1704,7 @@ async function buildPODoc(orderNumber){
   catch (e) { throw new Error(e.data && e.data.error === 'unknown order_number' ? 'PO not found.' : e.message); }
   const { document: composed, po, plant } = result;
   // Drawn by js/po-pdf.js (one drawing for orders.html and offers.html) from what orders-compose-po composed.
-  return { doc: bcRenderPO(composed, orderNumber), po, plant };
+  return { doc: bcRenderPO(composed, orderNumber), po, plant, composed };
 }
 
 async function exportPO(orderNumber){
@@ -1845,12 +1846,13 @@ async function sharePO(orderNumber){
   const po = built.po;
   const poProductName = po.product_spec || po.product_name || '';
   const subject = `PO-BT-${btNum(orderNumber)} — BuenTrade — ${poProductName}`;
-  const body = `Hi,\n\nPlease find the Purchase Order PO-BT-${btNum(orderNumber)} attached.\n\n`
+  // The plant delivers (DAP): the e-mail also carries the customs agency's data (address, contact, phone…) — js/customs-block.js, owner 2026-11-04.
+  const body = BTCustomsBlock.appendCustoms(`Hi,\n\nPlease find the Purchase Order PO-BT-${btNum(orderNumber)} attached.\n\n`
     + `Product: ${poProductName}\n`
     + `Quantity: ${(po.weight || 0).toLocaleString('en-US')} lbs\n`
     + `Unit Cost: $${(po.purchase_price || 0).toFixed(4)}\n`
     + `Total: $${(po.total_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
-    + `Pick-up / Delivery Date: ${fmtDatesList(po.delivery_dates)}`;
+    + `Pick-up / Delivery Date: ${fmtDatesList(po.delivery_dates)}`, built.composed.customs_agency);
   try {
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (waCardPO), so no waInfo here to avoid a duplicate inside the
@@ -1954,10 +1956,11 @@ async function shareFO(orderNumber){
     let url;
     try { url = await uploadOrderPdf(b.doc, b.filename); } catch(e){ await btAlert('Upload error: ' + e.message); continue; }
     const subject = `FO-BT-${btNum(orderNumber)} — ${b.composed.pick_up_city || b.fo.origin || '—'} → ${b.composed.customs_broker || b.fo.destination || '—'}`;
-    const body = `Please find the Freight Order FO-BT-${btNum(orderNumber)} attached.\n\n`
+    // We deliver (the carrier is ours): the customs agency's data (address, contact, phone…) goes to the carrier — js/customs-block.js, owner 2026-11-04.
+    const body = BTCustomsBlock.appendCustoms(`Please find the Freight Order FO-BT-${btNum(orderNumber)} attached.\n\n`
       + `Pick-up: ${b.fo.origin || '—'}\n`
       + `Delivery: ${b.fo.destination || '—'}\n`
-      + `Agreed Rate: $${(b.composed.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      + `Agreed Rate: $${(b.composed.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, BTCustomsBlock.agencyOfFO(b.composed));
     try {
       await sendEmailApi('logistics', emails, subject, body, [pdfAttachment(b.doc, b.filename)], null);
       showToast('FO sent', emails.join(', '));
