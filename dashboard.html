@@ -498,7 +498,8 @@ let dashLive = [], dashUnplaced = [], dashPending = [], todayOtherOpen = false;
 function todayPendingGroups(rows, plants){
   const names = new Map((plants || []).map(p => [p.id, String(p.name || '').trim()]));
   const by = new Map();
-  (rows || []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)).forEach(r => {
+  // a price line, or a message nobody could read without the AI (owner 2026-11-05): both wait for a person
+  (rows || []).filter(r => !r.resolved_at && ((r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)) || (r.signal_type === 'unread' && r.reason_code === 'ai_unavailable'))).forEach(r => {
     const g = by.get(r.plant_id) || { plant_id: r.plant_id, name: names.get(r.plant_id) || 'A plant', n: 0 };
     g.n++; by.set(r.plant_id, g);
   });
