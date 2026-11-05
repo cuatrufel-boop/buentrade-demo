@@ -3688,7 +3688,7 @@ function rqBrandListHtml(x){
     return `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;${on ? '' : 'opacity:.35;cursor:default;'}" title="${on ? 'Send ' + who + ' — WhatsApp, email or both, in one window' : ready ? 'No email or WhatsApp on file' : 'Confirm the price in its QT first'}" ${on ? `onclick="${callFor('both')}"` : 'disabled'}>${waIco}${mailIco}</button></div>`; };
   // what the plants ANSWERED that needs reading (a counter-offer, a reply to our bid, an unread answer), under the plant's own name — also here, not only in Live (owner 2026-11-04: "no está ni en Live ni en Find Product")
   const ansToRead = (((typeof rqSheetFor === 'function' && rqSheetFor(pid)) || {}).answers || []).filter(a => ['counter', 'bid_reply', 'unread'].includes(a.kind));
-  const ansFor = r => { const list = ansToRead.filter(a => a.plant_id === r.plant.id).slice(0, 3); if (!list.length) return '';
+  const ansFor = r => { const list = (typeof RQ_LIVE_NONPRICE_ANSWERS !== 'undefined' && RQ_LIVE_NONPRICE_ANSWERS) ? ansToRead.filter(a => a.plant_id === r.plant.id).slice(0, 3) : []; if (!list.length) return ''; // no pill for an answer that is not a price (owner 2026-11-04), here as in Live
     return `<span style="display:block;margin-top:4px;line-height:1.5;">${list.map(a => { const w = rqAnswerWords(a.excerpt), short = w.length > 80 ? w.slice(0, 79) + '…' : w;
       return `<span class="rq-sheet-pill new" style="margin:0 4px 3px 0;white-space:normal;text-align:left;" title="${escapeHtml(w)}">Answered ${escapeHtml(rqAgo(a.at))} — open the email</span>`; }).join('')}</span>`; };
   const body = [];
@@ -4637,12 +4637,14 @@ function rqLiveRowHtml(p){
   const sentLine = rqLiveSentLine(p);
   const status = sending
     ? `<span class="rq-sheet-pill new pkg-tag-blink" title="A plant's price arrived and has not been sent">NEW PRICE${p.newest ? ' · ' + escapeHtml(rqAgo(p.newest)) : ''}</span>`
-    : (rqLiveAnswersToRead(p.s).length ? '<span class="rq-sheet-pill wait" title="A plant answered without a price: its words are under the product">Answers to read</span>' : '<span class="rq-sheet-pill wait">Waiting for price</span>');
+    : (rqLiveAnswersToRead(p.s).length ? '<span class="rq-sheet-pill wait" title="A plant answered without a price: hover the product name to read its words">Answers to read</span>' : '<span class="rq-sheet-pill wait">Waiting for price</span>');
   const mailIco = (document.getElementById('rq_sheet_send_email') || {}).innerHTML || '', waIco = (document.getElementById('rq_sheet_send_wa') || {}).innerHTML || '';
   const btn = sending
     ? `<div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="rq-customer-bulk-btn whatsapp" style="padding:7px 12px;" title="${sending ? 'Send' : 'Open'}" aria-label="Send" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')">${waIco}${mailIco}</button></div>`
     : '<span class="muted">—</span>';
-  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${sending ? 'Send' : 'Open'}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}${sentLine ? `<span class="rq-lq-sent" style="display:block;font-size:11px;color:#8fd3a8;">${escapeHtml(sentLine)}</span>` : ''}${rqLiveAnswersHtml(p)}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
+  // What the plants answered that is not a price (counter-offer, reply to a bid, free text) lives ONLY here, in the hover of the product name — never as text on the row (owner 2026-11-04: "solo si me paro arriba del producto").
+  const answerTip = (p.s.answers || []).filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind)).slice(0, 6).map(a => `${a.plant_name}: ${rqAnswerWords(a.excerpt) || '(open the email)'}`).join('\n');
+  return `<tr class="rq-lq-row ${p.stage}${sending ? '' : ' rq-sheet-dim'}"><td><a class="name-link" title="${escapeHtml((sending ? 'Send' : 'Open') + (answerTip ? '\n' + answerTip : ''))}" onclick="rqOpenLiveRow('${pid}','${lead ? lead.cid : ''}')"><b>${escapeHtml(p.s.product_name)}</b></a>${sub ? `<span class="muted" style="display:block;font-size:11px;">${escapeHtml(sub)}</span>` : ''}${sentLine ? `<span class="rq-lq-sent" style="display:block;font-size:11px;color:#8fd3a8;">${escapeHtml(sentLine)}</span>` : ''}${rqLiveAnswersHtml(p)}</td><td>${custCell}</td><td style="text-align:center;">${status}</td><td style="text-align:center;">${btn}</td></tr>`;
 }
 // An open plant auction as a Live quotes row: the same row as a price waiting to go out (Product · Asked by · Status · Send), with its own status text — "AUCTION · until Wed 28" — and the
 // same button, which opens the product with its first customer marked, like every other row. Nothing in it is a price: an auction has none.
