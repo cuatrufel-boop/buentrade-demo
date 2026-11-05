@@ -2149,7 +2149,7 @@ function ttFreightDdownHtml(){
     }
   }
   // the price's pickup city is ALWAYS visible, also while no carrier is picked (owner 2026-11-04: "sigue sin subir PU location" — Indiana, Pork Stomachs: Delphi had three carrier rates, the picker said only "Pick US freight")
-  if (!selected && __qp.get('fob') === '1' && locations.length === 1 && locations[0].location_name) nameText += ' — ' + locations[0].location_name;
+  if (!selected && __qp.get('fob') === '1' && locations.length === 1 && locations[0].location_name) nameText = locations[0].location_name; // ONLY the city, never "Pick US freight — city": the longer text widened the picker and pushed the whole Direct Costs column off-center (owner 2026-11-05)
   const freightEl = document.getElementById('freight');
   const amount = freightEl ? (parseFloat(freightEl.value) || 0) : 0;
   // No "average" fallback, ever — explicit, repeated instruction: a real per-carrier rate or
