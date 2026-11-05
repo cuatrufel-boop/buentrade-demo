@@ -2663,7 +2663,7 @@ function renderPlantPendingMatches(){
     const isStale = (ageDays || 0) > PENDING_MATCH_STALE_DAYS;
     const staleBadge = isStale ? ` <span style="font-size:10.5px;font-weight:700;color:#FF9C8A;background:transparent;border:1px solid rgba(196,67,46,.5);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">${ageDays}d old</span>` : '';
     return `<tr>
-      <td class="pm-name" style="max-width:280px;">${escapeHtml(m.raw_text)}${staleBadge}${m.reason_detail ? `<div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">${escapeHtml(m.reason_detail)}</div>` : ''}${isDeclined ? ' <span style="font-size:10.5px;font-weight:700;color:#FFC876;background:transparent;border:1px solid rgba(255,200,118,.4);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">Does not produce</span>' : ''}</td>
+      <td class="pm-name" style="max-width:280px;"${m.reason_detail ? ` title="${escapeHtml(m.reason_detail)}"` : ''}>${escapeHtml(m.raw_text)}${staleBadge}${isDeclined ? ' <span style="font-size:10.5px;font-weight:700;color:#FFC876;background:transparent;border:1px solid rgba(255,200,118,.4);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">Does not produce</span>' : ''}</td>
       <td class="num">${m.detected_price != null ? '$' + Number(m.detected_price).toFixed(4) : '—'}</td>
       <td>${isUnread ? facilityTeachHtml : BTPicker.html(m.id, current ? (current.full_name_en || current.name_en || current.name) : '')}</td>
       <td class="row-actions">
