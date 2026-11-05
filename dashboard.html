@@ -492,9 +492,23 @@ const todayKey = i => i.group + '|' + i.title;
 const TODAY_LIST = true;
 // OFF by the owner's word (2026-10-27): Urgent is exactly what he defined (a customer asked / a plant we asked answered with a price). The answers are kept; Today does not read them, and does not wait for them.
 const TODAY_ANSWERS = false;
-let dashLive = [], dashUnplaced = [], todayOtherOpen = false;
-async function loadTodayLive(){ try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ }
-  if (TODAY_ANSWERS){ try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } } }
+let dashLive = [], dashUnplaced = [], dashPending = [], todayOtherOpen = false;
+// PENDING IS URGENT (owner 2026-11-05: "te dije que tiene que notificar pending como urgente, sino no me entero de que hay pending" — Indiana's Ham End $0.92 waited in Pending and nobody was told): one line per plant with PRICE lines
+// waiting for a match (an auction, an unread file or a declined line carries no price to decide on), most lines first, opening that plant's Pending Matches. Pure: the open Pending rows and the plants in, the lines out.
+function todayPendingGroups(rows, plants){
+  const names = new Map((plants || []).map(p => [p.id, String(p.name || '').trim()]));
+  const by = new Map();
+  (rows || []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)).forEach(r => {
+    const g = by.get(r.plant_id) || { plant_id: r.plant_id, name: names.get(r.plant_id) || 'A plant', n: 0 };
+    g.n++; by.set(r.plant_id, g);
+  });
+  return [...by.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+}
+async function loadTodayLive(){
+  const pendingP = Promise.all([callApi('plant-pending-matches-search', {}), callApi('plants-search', {})]).then(([pm, pl]) => { dashPending = todayPendingGroups(pm.results, pl.results); }).catch(() => { /* the list stays as it was */ }); // asked at the same time as the rest: it never makes Today wait longer
+  try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ }
+  if (TODAY_ANSWERS){ try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } }
+  await pendingP; }
 function todayListHtml(all){
   // URGENT = real work only (owner 2026-10-26: "urgent solo cuando un cliente pidió o una planta que preguntamos respondió"): (1) a plant WE asked for that product answered after we asked and that price has gone to no customer; (2) a customer asked, the price is here and nothing went to him.
   // A routine price list of a product with an open live quote is NOT urgent: it is an ordinary match, listed in Optional.
@@ -562,7 +576,8 @@ function todayListHtml(all){
   const rowOf = g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`;
   const rows = list.map(rowOf).join('');
   const uplaced = unplacedRead.map(a => `<tr><td class="tdr-name"><a class="name-link" href="quotes.html">${escapeHtml(a.plant_name)}</a><span class="tdr-sub">${escapeHtml(a.kind === 'bid_reply' ? 'answered your bid — read it' : a.kind === 'counter' ? 'offered something else — read it' : 'answered (not read) — read it')}${a.excerpt ? ' · ' + escapeHtml(String(a.excerpt).slice(0, 110)) : ''}</span></td><td>${go('quotes.html', true)}</td></tr>`).join('');
-  const urows = uplaced + urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td><td>${go(href, true)}</td></tr>`; }).join('');
+  const upending = (typeof dashPending !== 'undefined' && dashPending ? dashPending : []).map(g => { const href = 'plants.html?plant=' + encodeURIComponent(g.plant_id) + '&tab=pending'; return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.n} line${g.n === 1 ? '' : 's'} waiting in Pending for your match</span></td><td>${go(href, true, 'Go to Pending →')}</td></tr>`; }).join('');
+  const urows = upending + uplaced + urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td><td>${go(href, true)}</td></tr>`; }).join('');
   // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
   const needs = new Map(askNoPrice);
   (all || []).filter(i => i.group === 'gap').forEach(i => {
