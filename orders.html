@@ -1780,10 +1780,11 @@ function computeAttentionItems(){
     // it in-system (sends a real payment-confirmation email to the plant); 2) only once paid does
     // a separate item ask for the release number — "el pago habilita a buentrade a pedir el
     // release number." Timing (1 day after won) is still provisional, per the user ("te confirmo").
-    const PLANT_PAYMENT_REMINDER_DAYS_AFTER_WON = 1;
-    if (stage === 'pending_pickup' && o.created_at && !o.plant_paid_at){
-      const daysSinceWon = (Date.now() - new Date(o.created_at).getTime()) / 86400000;
-      if (daysSinceWon >= PLANT_PAYMENT_REMINDER_DAYS_AFTER_WON){
+    // Owner's rule 2026-11-05: the load is paid 3 days BEFORE the delivery date (same rule as shipment-alerts-poll).
+    const PLANT_PAYMENT_DAYS_BEFORE_DELIVERY = 3;
+    if (stage === 'pending_pickup' && o.pickup_date && !o.plant_paid_at){
+      const daysToDelivery = Math.round((new Date(String(o.pickup_date).slice(0, 10) + 'T00:00:00').getTime() - today.getTime()) / 86400000);
+      if (daysToDelivery <= PLANT_PAYMENT_DAYS_BEFORE_DELIVERY){
         // Real bug found live 2026-09-21: this urgent-queue reminder is a THIRD entry point to
         // the same "pay the plant" action (alongside the Documents panel row and the timeline
         // chip, both already fixed) — was unconditionally wired to payPlantClick (direct-pay),
