@@ -162,6 +162,22 @@
   .tdr-urgent{order:-1;grid-column:1/-1;}
   .tdr-askcard{grid-column:1/-1;} .tdr-scroll{max-height:360px;overflow:auto;}
   .tdr-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.28) transparent;} .tdr-scroll::-webkit-scrollbar{width:8px;} .tdr-scroll::-webkit-scrollbar-track{background:transparent;} .tdr-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.28);border-radius:8px;}
+  /* TODAY, TWO COLUMNS WITH TABS (owner 2026-11-06, option 3): left = Urgent (a tab per kind of line), right = one box at a time picked by tabs; no buttons — the name is the link; each column scrolls inside itself. Phone: the old stacked boxes. */
+  .tdr-t td:last-child{text-align:left;width:auto;white-space:normal;} .tdr-name .name-link:hover{text-decoration:underline;}
+  .tdr-tabs,.tdr-seg{display:none;} .tdr-urgent{position:relative;} .tdr-n{position:absolute;top:16px;right:22px;font:600 12px 'IBM Plex Mono',monospace;color:#FFC876;}
+  @media (min-width:901px){
+    .tdr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;align-items:stretch;height:calc(100vh - 140px);min-height:420px;}
+    .tdr-tabs,.tdr-seg{display:flex;gap:2px;padding:3px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(255,255,255,.03);}
+    .tdr-tabs{grid-column:2;grid-row:1;} .tdr-seg{margin:2px 0 6px;} .tdr .tdr-seg span{font-weight:500;font-size:12px;padding:4px 8px;}
+    .tdr-tabs span,.tdr-seg span{flex:1;text-align:center;font:600 13px 'Inter',sans-serif;color:var(--ink-soft);padding:8px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;user-select:none;} .tdr-tabs span em,.tdr-seg span em{font:500 12px 'IBM Plex Mono',monospace;font-style:normal;opacity:.85;}
+    .tdr-tabs span.on,.tdr-seg span.on{background:rgba(255,255,255,.1);color:#FFC876;} .tdr-seg span.on{color:var(--blue-bright);}
+    .tdr-urgent{order:0;grid-column:1;grid-row:1/3;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+    .tdr .tdr-best,.tdr>.tdr-card:not(.tdr-urgent):not(.tdr-askcard),.tdr .tdr-askcard:not(.tdr-best){grid-column:2;grid-row:2;display:none;flex-direction:column;min-height:0;overflow:hidden;}
+    .tdr[data-r="best"] .tdr-best,.tdr[data-r="opt"]>.tdr-card:not(.tdr-urgent):not(.tdr-askcard),.tdr[data-r="ask"] .tdr-askcard:not(.tdr-best){display:flex;}
+    .tdr .tdr-scroll{flex:1 1 auto;min-height:0;max-height:none;overflow:auto;}
+    .tdr-t td{padding:9px 4px;}
+    .tdr[data-u="pending"] .tdr-urgent tr:not([data-kind="pending"]),.tdr[data-u="answer"] .tdr-urgent tr:not([data-kind="answer"]),.tdr[data-u="best"] .tdr-urgent tr:not([data-kind="best"]){display:none;}
+  }
   .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
   .tdg{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035);overflow:hidden;}
@@ -573,11 +589,11 @@ function todayListHtml(all){
     return gs.length === 1 ? gs[0].head : `${gs[0].head} · ${gs[0].names.length} of ${g.cust.size}`;
   };
   const whoHtml = g => { const gs = groupsOf(g); if (!gs.length) return ''; const only = gs.length === 1 && !gs[0].asked; return `<details class="tdr-who"><summary>Who and why</summary><ul class="tdr-ul">${gs.map(x => `<li>${only ? '' : `<span class="tdr-rs">${escapeHtml(x.head)}</span> `}${x.names.slice().sort((a, b) => a.localeCompare(b)).map(n => `<b>${escapeHtml(n)}</b>`).join(', ')}</li>`).join('')}</ul></details>`; };
-  const rowOf = g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td><td>${go(g.href)}</td></tr>`;
+  const rowOf = g => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(g.href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.isNew ? '<b class="tdr-new">New</b>' : '<b class="tdr-up">Up to date</b>'} · ${g.who.size} customer${g.who.size === 1 ? '' : 's'}</span>${purposeOf(g) ? `<span class="tdr-why">${escapeHtml(purposeOf(g))}</span>` : ''}${whoHtml(g)}</td></tr>`;
   const rows = list.map(rowOf).join('');
-  const uplaced = unplacedRead.map(a => `<tr><td class="tdr-name"><a class="name-link" href="quotes.html">${escapeHtml(a.plant_name)}</a><span class="tdr-sub">${escapeHtml(a.kind === 'bid_reply' ? 'answered your bid — read it' : a.kind === 'counter' ? 'offered something else — read it' : 'answered (not read) — read it')}${a.excerpt ? ' · ' + escapeHtml(String(a.excerpt).slice(0, 110)) : ''}</span></td><td>${go('quotes.html', true)}</td></tr>`).join('');
-  const upending = (typeof dashPending !== 'undefined' && dashPending ? dashPending : []).map(g => { const href = 'plants.html?plant=' + encodeURIComponent(g.plant_id) + '&tab=pending'; return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.n} line${g.n === 1 ? '' : 's'} waiting in Pending for your match</span></td><td>${go(href, true, 'Go to Pending →')}</td></tr>`; }).join('');
-  const urows = upending + uplaced + urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td><td>${go(href, true)}</td></tr>`; }).join('');
+  const uplaced = unplacedRead.map(a => `<tr data-kind="answer"><td class="tdr-name"><a class="name-link" href="quotes.html">${escapeHtml(a.plant_name)}</a><span class="tdr-sub">${escapeHtml(a.kind === 'bid_reply' ? 'answered your bid — read it' : a.kind === 'counter' ? 'offered something else — read it' : 'answered (not read) — read it')}${a.excerpt ? ' · ' + escapeHtml(String(a.excerpt).slice(0, 110)) : ''}</span></td></tr>`).join('');
+  const upending = (typeof dashPending !== 'undefined' && dashPending ? dashPending : []).map(g => { const href = 'plants.html?plant=' + encodeURIComponent(g.plant_id) + '&tab=pending'; return `<tr data-kind="pending"><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(g.name)}</a><span class="tdr-sub">${g.n} line${g.n === 1 ? '' : 's'} waiting in Pending for your match</span></td></tr>`; }).join('');
+  const urows = upending + uplaced + urgent.map(s => { const href = 'quotes.html?products=' + encodeURIComponent(s.product_id); return `<tr data-kind="${/^Best price today/.test(s.why || '') ? 'best' : 'answer'}"><td class="tdr-name"><a class="name-link" href="${escapeHtml(href)}">${escapeHtml(s.product_name)}</a><span class="tdr-sub">${escapeHtml(s.why || 'A plant you asked answered')}</span></td></tr>`; }).join('');
   // Products customers buy that no plant has a fresh price for: the plants to ask, the most customers waiting first (every one listed, the card scrolls).
   const needs = new Map(askNoPrice);
   (all || []).filter(i => i.group === 'gap').forEach(i => {
@@ -585,12 +601,19 @@ function todayListHtml(all){
     (i.held || []).forEach(h => { if (h.product && !needs.has(h.product)) needs.set(h.product, { name: h.product, href: h.href, who: (h.reasons || []).slice(), why: String(h.price || '') }); });
   });
   const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => Number(!!b.asked) - Number(!!a.asked) || b.who.length - a.who.length || a.name.localeCompare(b.name));
-  const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.asked ? '<b class="tdr-ask-now">Asked</b> · ' : ''}${x.who.length} customer${x.who.length === 1 ? '' : 's'} ${x.asked ? 'waiting' : 'buy it'}${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td><td>${go(x.href, false, 'Ask in Quotes →')}</td></tr>`).join('');
+  const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.asked ? '<b class="tdr-ask-now">Asked</b> · ' : ''}${x.who.length} customer${x.who.length === 1 ? '' : 's'} ${x.asked ? 'waiting' : 'buy it'}${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td></tr>`).join('');
   // BEST PRICES TODAY, most relevant first (owner 2026-11-03): every product with a price today, the plant that is cheapest at the border (or the only one), the customers who buy it with each one's own reason, and the note for him.
-  const bprows = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it · the note</summary><ul class="tdr-ul">${(b.customer_reasons || []).map(c => `<li>${escapeHtml(c.name)}${c.reason ? ` — ${escapeHtml(c.reason)}` : ''}</li>`).join('')}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td><td>${go(b.href, false, 'Offer it →')}</td></tr>`).join('');
+  const bprows = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it · the note</summary><ul class="tdr-ul">${(b.customer_reasons || []).map(c => `<li>${escapeHtml(c.name)}${c.reason ? ` — ${escapeHtml(c.reason)}` : ''}</li>`).join('')}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
   const bestCard = `<div class="tdr-card tdr-askcard tdr-best"><h3 class="tdr-h">Best prices today — most relevant first</h3><div class="tdr-hint">The lowest price at the border across all the plants, with the customers who buy it</div>${bprows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${bprows}</tbody></table></div>` : '<div class="empty">No fresh prices right now.</div>'}</div>`;
-  return `<div class="tdr">${bestCard}<div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<table class="tdr-t"><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
-    + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3><div class="tdr-hint">A customer asked, or a plant you asked answered: send it now</div>${urows ? `<table class="tdr-t"><tbody>${urows}</tbody></table>` : '<div class="empty">Nothing urgent now.</div>'}</div>`
+  // TWO COLUMNS WITH TABS (owner 2026-11-06, option 3 of the five drawn): LEFT = Urgent, with a tab per kind of line (All · Pending · Answers · Best price); RIGHT = one box at a time (Best prices · Optional · Ask the plants) picked by the tabs with their counts.
+  // No buttons: the product (or plant) name is the link. Each column scrolls inside itself so both fit one screen. The chosen tabs live in TDR_UI so a reload of the list keeps them; on a phone every box stays stacked as before.
+  const ui = (typeof TDR_UI !== 'undefined' && TDR_UI) ? TDR_UI : { u: 'all', r: 'best' };
+  const rsel = ui.r === 'ask' && !arows ? 'best' : ui.r;
+  const rtab = (k, label, n) => `<span class="tdr-tab${rsel === k ? ' on' : ''}" role="tab" data-tdr-r="${k}">${label} <em>${n}</em></span>`;
+  const utab = (k, label) => `<span class="${ui.u === k ? 'on' : ''}" role="tab" data-tdr-u="${k}">${label}</span>`;
+  const nBest = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).length;
+  return `<div class="tdr" data-u="${ui.u}" data-r="${rsel}"><div class="tdr-tabs" role="tablist">${rtab('best', 'Best prices', nBest)}${rtab('opt', 'Optional', list.length)}${arows ? rtab('ask', 'Ask the plants', ask.length) : ''}</div>${bestCard}<div class="tdr-card"><h3 class="tdr-h">Optional — send when you can</h3><div class="tdr-hint">New prices and prices up to date, not sent yet</div>${rows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${rows}</tbody></table></div>` : '<div class="empty">Nothing to offer right now.</div>'}</div>`
+    + `<div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Urgent — answers to your live quotes</h3>${urows ? `<span class="tdr-n">${(urows.match(/<tr /g) || []).length}</span>` : ''}<div class="tdr-hint">A customer asked, or a plant you asked answered: send it now</div>${urows ? `<div class="tdr-seg" role="tablist">${utab('all', 'All')}${utab('pending', 'Pending')}${utab('answer', 'Answers')}${utab('best', 'Best price')}</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${urows}</tbody></table></div>` : '<div class="empty">Nothing urgent now.</div>'}</div>`
     + (arows ? `<div class="tdr-card tdr-askcard"><h3 class="tdr-h">Ask the plants — customers are waiting</h3><div class="tdr-hint">No plant has a fresh price · the most customers first</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${arows}</tbody></table></div></div>` : '') + `</div>`;
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) reloadTodayIfStale(); });
@@ -705,6 +728,7 @@ function renderToday(gone = []){
     const blocks = pr === 2 ? [[label, items.filter(i => i.prio === pr && i.group !== 'gap')], ['Needs a price', items.filter(i => i.prio === pr && i.group === 'gap')]] : [[label, items.filter(i => i.prio === pr)]];
     return blocks.map(([lb, part]) => part.length ? secRow(lb, lvl, part.length, part) + sectionBody(part) : '').join(''); }).join('')}</div>`;
   wrap.innerHTML = TODAY_LIST ? todayListHtml(all) + (items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Money and bids · ${items.length}</summary>${boardHtml}</details>` : '') : boardHtml;
+  fitTdr();
 }
 
 
@@ -718,6 +742,15 @@ function renderToday(gone = []){
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const bar = (pct, color) => `<div style="height:8px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:10px;overflow:hidden;"><div style="height:100%;width:${Math.min(100, pct)}%;background:${color};border-radius:99px;"></div></div>`;
 let dashBest = []; // the best price of each product across ALL plants, most relevant first (dashboard-summary best_prices)
+let TDR_UI = { u: 'all', r: 'best' }; // Today's tabs: which kind of Urgent line shows (all · pending · answer · best) and which box shows on the right (best · opt · ask) — kept here so a reload of the list keeps them
+// The two columns fill the rest of the screen (owner 2026-11-06: both columns in the same view, no long page scroll); each one scrolls inside itself. A phone keeps the old stacked boxes.
+function fitTdr(){ const t = document.querySelector('.tdr'); if (!t) return; if (window.innerWidth < 901 || !t.offsetParent) { t.style.height = ''; return; } const top = t.getBoundingClientRect().top + window.scrollY; t.style.height = Math.max(420, window.innerHeight - top - 14) + 'px'; }
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-tdr-r],[data-tdr-u]'); const root = t && t.closest('.tdr'); if (!root) return;
+  if (t.dataset.tdrR) TDR_UI.r = t.dataset.tdrR; if (t.dataset.tdrU) TDR_UI.u = t.dataset.tdrU;
+  root.dataset.r = TDR_UI.r; root.dataset.u = TDR_UI.u;
+  root.querySelectorAll('[data-tdr-r]').forEach(x => x.classList.toggle('on', x.dataset.tdrR === TDR_UI.r));
+  root.querySelectorAll('[data-tdr-u]').forEach(x => x.classList.toggle('on', x.dataset.tdrU === TDR_UI.u)); });
+window.addEventListener('resize', fitTdr);
 let dashCeo = null, dashToday = null, dashTab = 'today'; const todayHeldOpen = new Set(); // which "held" lists the trader opened, kept across the minute refresh
 function toggleHeld(k){ if (todayHeldOpen.has(k)) todayHeldOpen.delete(k); else todayHeldOpen.add(k); renderToday(); }
 const DASH_TABS = [['today', 'Today'], ['goals', 'Goals & Money'], ['mix', 'Sales Mix']];
