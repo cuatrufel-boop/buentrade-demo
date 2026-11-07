@@ -74,6 +74,11 @@
     return L.length ? '<span class="pc-k">Email</span>' + L.map(esc).join('<br>') : '';
   };
 
+  // The lines around this one in the SAME e-mail (already saved), each with its price and what happened to it (applied / pending / skipped); this line is highlighted.
+  const nearBlock = (near) => (near && near.length)
+    ? '<span class="pc-k">Same email · its other lines</span>' + near.map((n) => `<div class="pc-nr${n.me ? ' pc-me' : ''}"><span>${esc(n.raw_text)}</span><span>${n.price != null ? '$' + Number(n.price).toFixed(2) + ' · ' : ''}${esc(n.outcome || '')}</span></div>`).join('')
+    : '';
+
   // The card over a product: this product next to what the plant wrote, in the same four fields; amber where they disagree. lines = the email's reasons / pickup / date.
   function productTip(label, p, line, ctx, lines) {
     const f = productFields(p, ctx), bad = mismatch(line, f);
@@ -84,10 +89,10 @@
   }
 
   // The card over the plant's product: what it wrote, how it was read ("?" for what it did not say), and the email's own reasons.
-  function plantTip(raw, line, lines) {
+  function plantTip(raw, line, lines, near) {
     const read = [line.cuts.length ? line.cuts.join(', ') : 'cut ?', line.variations.length ? line.variations.join(', ') : 'no variation', line.temp || 'temp ?', line.pack || 'packaging ?'];
     return `<div class="pc-t">What the plant sent</div><span class="pc-k">The plant wrote</span>${esc(raw)}<span class="pc-k">Reads as</span>` +
-      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + emailBlock(lines);
+      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + emailBlock(lines) + nearBlock(near);
   }
 
   const css = '.pc-hv{border-bottom:1px dotted rgba(255,255,255,.45);cursor:help;}' +
@@ -98,6 +103,10 @@
     '#bt-tip .pc-h{font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.03em;}' +
     '#bt-tip .pc-f,#bt-tip .pc-m{color:rgba(255,255,255,.55);}' +
     '#bt-tip .pc-bad{color:#FFC876;font-weight:600;}' +
+    '#bt-tip .pc-nr{display:flex;justify-content:space-between;gap:10px;padding:3px 7px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.55);}' +
+    '#bt-tip .pc-nr span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+    '#bt-tip .pc-nr span:last-child{flex-shrink:0;}' +
+    '#bt-tip .pc-nr.pc-me{background:rgba(90,170,255,.14);color:#fff;font-weight:600;}' +
     '#bt-tip .pc-chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 9px;margin:2px 5px 2px 0;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.85);}' +
     '#bt-tip .pc-chip.pc-q{border-style:dashed;border-color:rgba(255,200,118,.6);color:#FFC876;}';
 

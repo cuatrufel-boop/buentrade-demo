@@ -2593,7 +2593,7 @@ async function resolveMailIssue(i){
 
 async function loadPlantPendingMatches(){
   try {
-    const res = await callApi('plant-pending-matches-search', { plant_id: currentPlantId });
+    const res = await callApi('plant-pending-matches-search', { plant_id: currentPlantId, with_email: true }); // with_email: each line also carries the lines around it in its e-mail (the card over the plant's product)
     plantPendingMatches = res.results || [];
     plantPendingMatchCounts[currentPlantId] = plantPendingMatches.length;
     // Real bug found live 2026-09-10 ("nada" — tab showed only its own header, nothing below, no
@@ -2735,7 +2735,7 @@ const pickerOptionsForLine = (text, m) => { const line = pendingLineFields(text)
 function decoratePendingTips(){
   document.querySelectorAll('#plantPendingMatchRows .pm-name').forEach((td, i) => {
     const m = plantPendingMatches[i]; if (!m) return;
-    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m));
+    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m), m.email && m.email.lines);
     td.style.cursor = 'help'; // its plain title stays: the card sets it aside while the mouse is over the cell
   });
 }
