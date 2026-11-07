@@ -2664,9 +2664,9 @@ function renderPlantPendingMatches(){
     const isStale = (ageDays || 0) > PENDING_MATCH_STALE_DAYS;
     const staleBadge = isStale ? ` <span style="font-size:10.5px;font-weight:700;color:#FF9C8A;background:transparent;border:1px solid rgba(196,67,46,.5);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">${ageDays}d old</span>` : '';
     return `<tr>
-      <td class="pm-name" style="max-width:280px;"${m.reason_detail ? ` title="${escapeHtml(m.reason_detail)}"` : ''}>${escapeHtml(m.raw_text)}${staleBadge}${isDeclined ? ' <span style="font-size:10.5px;font-weight:700;color:#FFC876;background:transparent;border:1px solid rgba(255,200,118,.4);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">Does not produce</span>' : ''}${isUnread || typeof pendingLineChips !== 'function' ? '' : pendingLineChips(m.raw_text)}</td>
+      <td class="pm-name" style="max-width:280px;"${m.reason_detail ? ` title="${escapeHtml(m.reason_detail)}"` : ''}>${escapeHtml(m.raw_text)}${staleBadge}${isDeclined ? ' <span style="font-size:10.5px;font-weight:700;color:#FFC876;background:transparent;border:1px solid rgba(255,200,118,.4);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">Does not produce</span>' : ''}</td>
       <td class="num">${m.detected_price != null ? '$' + Number(m.detected_price).toFixed(4) : '—'}</td>
-      <td>${isUnread ? facilityTeachHtml : BTPicker.html(m.id, current ? (current.full_name_en || current.name_en || current.name) : '')}</td>
+      <td>${isUnread ? facilityTeachHtml : BTPicker.html(m.id, current ? (current.full_name_en || current.name_en || current.name) : '', current && typeof pickerTipFor === 'function' ? pickerTipFor(current, m.raw_text, m) : '')}</td>
       <td class="row-actions">
         ${(isUnread || needsPrice) ? '' : `<button class="btn${isDeclined ? ' danger' : ''}" onclick="resolvePlantPendingMatch('${m.id}')">${isDeclined ? 'Mark Off-Spec' : 'Match'}</button>`}
         ${(isUnread || needsPrice) ? `<button class="btn secondary" onclick="dismissPlantPendingMatch('${m.id}')">Dismiss</button>` : ''}
@@ -2674,6 +2674,7 @@ function renderPlantPendingMatches(){
       </td>
     </tr>`;
   }).join('');
+  if (typeof decoratePendingTips === 'function') decoratePendingTips();
 }
 
 // Applies the price the same way Load Prices always has (plant-products-apply-match — the one
@@ -2714,16 +2715,30 @@ function pickerSuggestedForLine(text, candidateIds){
     .filter(x => x.score > 0).sort((a, b) => b.score - a.score || (a.p.full_name_en || '').localeCompare(b.p.full_name_en || '')).map(x => x.p.id);
   return [...tight, ...near];
 }
-// What the system reads from a line, in the same four fields every product carries (cut · variation · temperature · packaging) — js/product-context.js. Display only.
+// CLEAN PRODUCT WITH PRODUCT, THE CONTEXT ON HOVER (owner 2026-11-07, "hazlo así"): the row shows only the plant's product and the BuenTrade product; standing over either one
+// opens a card (js/product-context.js) — what the plant wrote and how it was read, or "this product" next to "the plant wrote" in cut · variation · temperature · packaging — plus the email's own lines.
 function pendingLineFields(text){
   return BTProductContext.readLine(text || '', { temperatures, packagings, cutNames, variations, aliasMap: plantTermAliasMap, detected: detectTempPackFromLine(text || '') });
 }
-// The plant's line split in those four fields (what it said; a dashed "?" for what it did not say).
-function pendingLineChips(text){ return typeof BTProductContext === 'undefined' ? '' : BTProductContext.chipsHtml(pendingLineFields(text)); }
-// Each product comes with its four fields in fixed columns; what the plant wrote that does not agree with that product is amber.
-const pickerOption = (p, line) => ({ id: p.id, label: p.full_name_en || p.name_en || p.name, search: [p.full_name_en, p.name_en, p.full_name_es, p.name].filter(Boolean).join(' '),
-  ...(line ? { cols: BTProductContext.optionCols(p, line, { temperatures, packagings }) } : {}) });
-const pickerOptionsForLine = (text) => { const line = pendingLineFields(text); return pickerPoolForLine(text).map((p) => pickerOption(p, line)); };
+// The email's own words for a Pending row: why it is here (the reasons, the subject), the pickup and the price date. Nothing is written or invented.
+function pendingContextLines(m){
+  if (!m) return [];
+  const reasons = String(m.reason_detail || '').split(' · ');
+  return [...reasons, m.pickup_location && !/Pickup in the email/i.test(m.reason_detail || '') ? 'Pickup: ' + m.pickup_location : '', m.price_date ? 'Price date: ' + String(m.price_date).slice(0, 10) : ''].filter(Boolean);
+}
+const pickerLabel = (p) => p.full_name_en || p.name_en || p.name;
+const pickerTipFor = (p, text, m) => BTProductContext.productTip(pickerLabel(p), p, pendingLineFields(text), { temperatures, packagings }, pendingContextLines(m));
+const pickerOption = (p, tip) => ({ id: p.id, label: pickerLabel(p), search: [p.full_name_en, p.name_en, p.full_name_es, p.name].filter(Boolean).join(' '), ...(tip ? { tip } : {}) });
+const pickerOptionsForLine = (text, m) => { const line = pendingLineFields(text), lines = pendingContextLines(m), ctx = { temperatures, packagings };
+  return pickerPoolForLine(text).map((p) => pickerOption(p, BTProductContext.productTip(pickerLabel(p), p, line, ctx, lines))); };
+// The card over the plant's product, set on its cell after the rows are drawn (the cell's own text and its template stay as they were).
+function decoratePendingTips(){
+  document.querySelectorAll('#plantPendingMatchRows .pm-name').forEach((td, i) => {
+    const m = plantPendingMatches[i]; if (!m) return;
+    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m));
+    td.style.cursor = 'help'; // its plain title stays: the card sets it aside while the mouse is over the cell
+  });
+}
 // The words that say WHICH cut a line is about — never its temperature, packaging, species or list noise, which every product shares
 // ("Frozen — Cushions Poly" → cushion). Singular, lower case.
 function pendingKeywords(text){
@@ -2747,7 +2762,7 @@ function pendingKeywords(text){
 }
 function registerPendingPicker(m){
   BTPicker.register(m.id, {
-    options: () => pickerOptionsForLine(m.raw_text),
+    options: () => pickerOptionsForLine(m.raw_text, m),
     suggested: () => pickerSuggestedForLine(m.raw_text, Array.isArray(m.candidate_product_ids) ? m.candidate_product_ids : []),
     onPick: (productId) => pickPendingMatchCandidate(m.id, productId),
     onCreate: m.signal_type === 'declined' ? null : () => startCreateProductForPending(m.id),
@@ -4069,15 +4084,15 @@ function renderPriceListReview(){
       row.freightIncluded ? '🚚 Delivered — freight included' : '',
     ].filter(Boolean).join(' &nbsp; ');
     BTPicker.register('plr:' + i, {
-      options: () => pickerOptionsForLine(row.rawText),
+      options: () => pickerOptionsForLine(row.rawText, null),
       suggested: () => pickerSuggestedForLine(row.rawText, row.candidateIds || []),
       onPick: (productId) => pickCandidate(i, productId),
       onCreate: () => startCreateProductForRow(i),
     });
     return `<tr id="plrRow_${i}">
-      <td title="${escapeHtml(row.rawText)}">${escapeHtml(row.rawText)}${pendingLineChips(row.rawText)}</td>
+      <td data-tip="${escapeHtml(BTProductContext.plantTip(row.rawText, pendingLineFields(row.rawText), []))}" style="cursor:help;">${escapeHtml(row.rawText)}</td>
       <td class="num">${priceLabel}${tags ? `<div class="muted" style="font-size:11px;margin-top:2px;">${tags}</div>` : ''}</td>
-      <td>${BTPicker.html('plr:' + i, p ? (p.full_name_en || p.name_en || p.name) : '')}</td>
+      <td>${BTPicker.html('plr:' + i, p ? (p.full_name_en || p.name_en || p.name) : '', p ? pickerTipFor(p, row.rawText, null) : '')}</td>
       <td>${p ? '<span class="payment-badge ok">✓</span>' : ''}</td>
     </tr>`;
   }).join('');
