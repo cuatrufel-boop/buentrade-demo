@@ -30,7 +30,16 @@
     '.btp-opt.cur{background:var(--blue-light,rgba(90,170,255,.14));color:var(--blue-bright,#5AAAFF);font-weight:600;}' +
     '.btp-sep{height:1px;background:var(--line,rgba(255,255,255,.18));margin:5px 2px;}' +
     '.btp-new{color:var(--blue-bright,#5AAAFF);font-weight:700;}' +
-    '.btp-empty{padding:8px 10px;font-size:11.5px;color:var(--ink-soft,rgba(255,255,255,.55));}';
+    '.btp-empty{padding:8px 10px;font-size:11.5px;color:var(--ink-soft,rgba(255,255,255,.55));}' +
+    // A product that comes with its four fields (opt.cols: cut · variation · temp · packaging) prints them in fixed columns; amber = what the plant wrote does not agree.
+    '.btp-list.btp-wide{right:auto;min-width:min(460px,92vw);}' +
+    '.btp-g{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 74px 66px;gap:8px;align-items:center;}' +
+    '.btp-g>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+    '.btp-gh{padding:4px 10px 2px;font-size:10.5px;font-weight:700;color:var(--ink-soft,rgba(255,255,255,.55));text-transform:uppercase;letter-spacing:.03em;}' +
+    '.btp-m{color:var(--ink-soft,rgba(255,255,255,.55));}' +
+    '.btp-p{display:inline-block;font-size:11px;font-weight:600;padding:1px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.85);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}' +
+    '.btp-p.btp-t{border-color:rgba(90,170,255,.6);color:var(--blue-bright,#5AAAFF);background:var(--blue-light,rgba(90,170,255,.14));}' +
+    '.btp-p.btp-bad{border-color:rgba(255,200,118,.6);color:#FFC876;background:rgba(255,200,118,.1);}';
   document.head.appendChild(css);
 
   function items(key, q) {
@@ -55,10 +64,22 @@
     const list = items(key, q);
     const cfg = reg.get(key);
     const cur = (box.querySelector('.btp-in').dataset.label || '');
-    const html = list.map((o, i) => `<div class="btp-opt${i === active ? ' act' : ''}${o.label === cur ? ' cur' : ''}" data-id="${esc(o.id)}">${o.label === cur ? '✓ ' : ''}${esc(o.label)}</div>`).join('') +
+    // The same four fields on every product, in the same columns (cut · variation · temp · packaging), when the page gives them.
+    const colsRow = (o, i) => {
+      const c = o.cols, isCur = o.label === cur;
+      const pill = (v, k, extra) => c.bad[k]
+        ? `<span class="btp-p btp-bad" title="The line says ${esc(c.said[k] || '')}">${esc(v || '—')}${k === 'variation' && c.said.variation ? ' ≠ ' + esc(c.said.variation) : ''}</span>`
+        : (v ? `<span class="btp-p${extra || ''}">${esc(v)}</span>` : '<span class="btp-m">—</span>');
+      return `<div class="btp-opt btp-g${i === active ? ' act' : ''}${isCur ? ' cur' : ''}" data-id="${esc(o.id)}" title="${esc(o.label)}">` +
+        `<span>${isCur ? '✓ ' : ''}${c.bad.cut ? pill(c.cut, 'cut') : esc(c.cut)}</span><span>${c.bad.variation ? pill(c.variation, 'variation') : (c.variation ? esc(c.variation) : '<span class="btp-m">—</span>')}</span>` +
+        `<span>${pill(c.temp, 'temp', ' btp-t')}</span><span>${pill(c.pack, 'pack')}</span></div>`;
+    };
+    const head = list.some((o) => o.cols) ? '<div class="btp-g btp-gh"><span>Cut</span><span>Variation</span><span>Temp</span><span>Packaging</span></div>' : '';
+    const html = head + list.map((o, i) => o.cols ? colsRow(o, i) : `<div class="btp-opt${i === active ? ' act' : ''}${o.label === cur ? ' cur' : ''}" data-id="${esc(o.id)}">${o.label === cur ? '✓ ' : ''}${esc(o.label)}</div>`).join('') +
       (list.length ? '' : `<div class="btp-empty">${q ? 'No product matches' : 'No close product — type to search'}</div>`) +
       (cfg.onCreate ? `<div class="btp-sep"></div><div class="btp-opt btp-new${active === list.length ? ' act' : ''}" data-new="1">+ Create new product</div>` : '');
     const el = box.querySelector('.btp-list');
+    el.className = 'btp-list' + (head ? ' btp-wide' : '');
     el.innerHTML = html; el.hidden = false;
     box._list = list;
   }
