@@ -97,26 +97,54 @@
 
   const css = '.pc-hv{border-bottom:1px dotted rgba(255,255,255,.45);cursor:help;}' +
     '#bt-tip{position:fixed;z-index:3000;display:none;pointer-events:none;width:min(400px,92vw);background:#0A2547;border:1.5px solid rgba(90,170,255,.55);border-radius:12px;padding:12px 14px;box-shadow:0 14px 34px rgba(4,12,26,.6);font-size:12.5px;line-height:1.5;color:#fff;text-align:left;font-weight:400;}' +
-    '#bt-tip .pc-t{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13.5px;margin-bottom:8px;}' +
-    '#bt-tip .pc-k{display:block;margin-top:9px;margin-bottom:2px;color:rgba(255,255,255,.55);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}' +
-    '#bt-tip .pc-cmp{display:grid;grid-template-columns:78px minmax(0,1fr) minmax(0,1fr);gap:4px 10px;font-size:12px;}' +
-    '#bt-tip .pc-h{font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.03em;}' +
-    '#bt-tip .pc-f,#bt-tip .pc-m{color:rgba(255,255,255,.55);}' +
-    '#bt-tip .pc-bad{color:#FFC876;font-weight:600;}' +
-    '#bt-tip .pc-nr{display:flex;justify-content:space-between;gap:10px;padding:3px 7px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.55);}' +
-    '#bt-tip .pc-nr span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
-    '#bt-tip .pc-nr span:last-child{flex-shrink:0;}' +
-    '#bt-tip .pc-nr.pc-me{background:rgba(90,170,255,.14);color:#fff;font-weight:600;}' +
-    '#bt-tip .pc-chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 9px;margin:2px 5px 2px 0;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.85);}' +
-    '#bt-tip .pc-chip.pc-q{border-style:dashed;border-color:rgba(255,200,118,.6);color:#FFC876;}';
+    '#bt-tip .pc-t,#bt-sheet .pc-t{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13.5px;margin-bottom:8px;}' +
+    '#bt-tip .pc-k,#bt-sheet .pc-k{display:block;margin-top:9px;margin-bottom:2px;color:rgba(255,255,255,.55);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}' +
+    '#bt-tip .pc-cmp,#bt-sheet .pc-cmp{display:grid;grid-template-columns:78px minmax(0,1fr) minmax(0,1fr);gap:4px 10px;font-size:12px;}' +
+    '#bt-tip .pc-h,#bt-sheet .pc-h{font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.03em;}' +
+    '#bt-tip .pc-f,#bt-tip .pc-m,#bt-sheet .pc-f,#bt-tip .pc-m{color:rgba(255,255,255,.55);}' +
+    '#bt-tip .pc-bad,#bt-sheet .pc-bad{color:#FFC876;font-weight:600;}' +
+    '#bt-tip .pc-nr,#bt-sheet .pc-nr{display:flex;justify-content:space-between;gap:10px;padding:3px 7px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.55);}' +
+    '#bt-tip .pc-nr span:first-child,#bt-sheet .pc-nr span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+    '#bt-tip .pc-nr span:last-child,#bt-sheet .pc-nr span:last-child{flex-shrink:0;}' +
+    '#bt-tip .pc-nr.pc-me,#bt-sheet .pc-nr.pc-me{background:rgba(90,170,255,.14);color:#fff;font-weight:600;}' +
+    '#bt-tip .pc-chip,#bt-sheet .pc-chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 9px;margin:2px 5px 2px 0;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.85);}' +
+    '#bt-tip .pc-chip.pc-q,#bt-sheet .pc-chip.pc-q{border-style:dashed;border-color:rgba(255,200,118,.6);color:#FFC876;}' +
+    // On a phone there is no mouse: the card opens from the bottom, with its own buttons.
+    '#bt-sheet{position:fixed;inset:0;z-index:3100;}' +
+    '#bt-sheet .pc-back{position:absolute;inset:0;background:rgba(0,0,0,.5);}' +
+    '#bt-sheet .pc-sheet{position:absolute;left:8px;right:8px;bottom:8px;max-height:78vh;overflow-y:auto;background:#0A2547;border:1.5px solid rgba(90,170,255,.55);border-radius:16px;padding:14px;font-size:13px;line-height:1.5;color:#fff;text-align:left;-webkit-overflow-scrolling:touch;}' +
+    '#bt-sheet .pc-acts{display:flex;gap:8px;margin-top:14px;}' +
+    '#bt-sheet .pc-acts .btn{flex:1;}';
+
+  // PHONE (no cursor — owner 2026-11-07, "en el cel uno no tiene cursor"; option C): tapping a product opens its card from the bottom with "Pick this product" and "Close" — first the context, then the choice.
+  // Tapping the plant's product opens its card with "Close". Where there is a mouse nothing changes. Display only: the pick is the same call the click made.
+  let sheetDoc = null, sheetWin = null, sheetEl = null, sheetAt = 0;
+  const touchMode = () => !!(sheetWin && sheetWin.matchMedia && sheetWin.matchMedia('(hover: none)').matches);
+  function closeSheet() { if (sheetEl) { try { sheetEl.remove(); } catch (e) {} sheetEl = null; } }
+  function openSheet(html, onPick) {
+    if (!sheetDoc) return;
+    closeSheet();
+    const box = sheetDoc.createElement('div'); box.id = 'bt-sheet';
+    box.innerHTML = '<div class="pc-back"></div><div class="pc-sheet pc-card"><div class="pc-body">' + html + '</div><div class="pc-acts">' +
+      (onPick ? '<button type="button" class="btn" data-act="pick">Pick this product</button>' : '') + '<button type="button" class="btn secondary" data-act="close">Close</button></div></div>';
+    box.addEventListener('click', (e) => {
+      // the click that belongs to the tap that opened the card is not a tap on the card (it must never close it or pick at once)
+      if (Date.now() - sheetAt < 350) return;
+      const a = e.target && e.target.closest && e.target.closest('[data-act]');
+      if (a && a.dataset.act === 'pick') { closeSheet(); if (onPick) onPick(); }
+      else if (a || (e.target && e.target.classList && e.target.classList.contains('pc-back'))) closeSheet();
+    });
+    sheetDoc.body.appendChild(box); sheetEl = box; sheetAt = Date.now();
+  }
+  const touch = { active: touchMode, open: openSheet, close: closeSheet };
 
   // One shared card for the whole page: anything with data-tip (the HTML of the card) shows it while the mouse is over it.
   function attachTips(doc, win) {
     doc = doc || root.document; win = win || root;
     if (!doc || doc.__btTips) return;
-    doc.__btTips = true;
+    doc.__btTips = true; sheetDoc = doc; sheetWin = win;
     let tip = null, on = null;
-    const el = () => { if (!tip) { tip = doc.createElement('div'); tip.id = 'bt-tip'; doc.body.appendChild(tip); } return tip; };
+    const el = () => { if (!tip) { tip = doc.createElement('div'); tip.id = 'bt-tip'; tip.className = 'pc-card'; doc.body.appendChild(tip); } return tip; };
     // While the card is open the plain browser tooltip (title) of the same element is set aside, so two tooltips never stack; it comes back when the card closes.
     const hide = () => { if (on && on.dataset.btTitle != null) { on.setAttribute('title', on.dataset.btTitle); delete on.dataset.btTitle; } on = null; if (tip) tip.style.display = 'none'; };
     const place = (t, r) => {
@@ -127,6 +155,7 @@
       t.style.left = left + 'px'; t.style.top = Math.max(8, Math.min(top, vh - h - 8)) + 'px';
     };
     doc.addEventListener('mouseover', (e) => {
+      if (touchMode()) return;
       const host = e.target && e.target.closest && e.target.closest('[data-tip]');
       if (!host || !host.dataset.tip) { if (on) hide(); return; }
       if (host === on) return;
@@ -134,11 +163,18 @@
       on = host; if (host.hasAttribute && host.hasAttribute('title')) { host.dataset.btTitle = host.getAttribute('title'); host.removeAttribute('title'); }
       const t = el(); t.innerHTML = host.dataset.tip; t.style.display = 'block'; place(t, host.getBoundingClientRect());
     });
+    // a tap on the plant's product (its cell) opens its card from the bottom; a product in the list is handled by the picker (it asks for the card before picking)
+    doc.addEventListener('click', (e) => {
+      if (!touchMode()) return;
+      const host = e.target && e.target.closest && e.target.closest('[data-tip]');
+      if (!host || !host.dataset.tip || (host.classList && (host.classList.contains('btp-opt') || host.classList.contains('btp-in')))) return;
+      openSheet(host.dataset.tip, null);
+    });
     doc.addEventListener('mousedown', hide, true);
     doc.addEventListener('scroll', hide, true);
   }
 
-  const api = { wordRegex, readLine, productFields, mismatch, productTip, plantTip, attachTips, css };
+  const api = { wordRegex, readLine, productFields, mismatch, productTip, plantTip, attachTips, touch, css };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.BTProductContext = api;

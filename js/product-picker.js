@@ -97,7 +97,13 @@
   });
   document.addEventListener('mousedown', (e) => {
     const opt = e.target.closest && e.target.closest('.btp-opt');
-    if (opt) { e.preventDefault(); choose(opt.closest('.btp').dataset.btp, opt); return; }
+    if (opt) {
+      e.preventDefault();
+      const key = opt.closest('.btp').dataset.btp, tc = window.BTProductContext && window.BTProductContext.touch;
+      // phone: a tap opens the product's card first, and the card's "Pick this product" does the choosing (js/product-context.js)
+      if (tc && opt.dataset.tip && tc.active()) { tc.open(opt.dataset.tip, () => choose(key, opt)); return; }
+      choose(key, opt); return;
+    }
     if (openKey && !(e.target.closest && e.target.closest('.btp'))) close(openKey, true);
   });
 
