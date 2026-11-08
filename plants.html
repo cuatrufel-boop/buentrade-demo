@@ -2726,16 +2726,37 @@ function pendingContextLines(m){
   const reasons = String(m.reason_detail || '').split(' · ');
   return [...reasons, m.pickup_location && !/Pickup in the email/i.test(m.reason_detail || '') ? 'Pickup: ' + m.pickup_location : '', m.price_date ? 'Price date: ' + String(m.price_date).slice(0, 10) : ''].filter(Boolean);
 }
+// The title a Pending line sits under in its e-mail, and every title of that e-mail (saved by the mail reader; null = an older line that did not save it). undefined = this line has no e-mail (nothing to show).
+function pendingTitles(m){
+  if (!m || !m.email) return undefined;
+  const me = (m.email.lines || []).find((l) => l.me);
+  return { section: me && me.section != null ? me.section : null, sections: m.email.sections || [] };
+}
 const pickerLabel = (p) => p.full_name_en || p.name_en || p.name;
-const pickerTipFor = (p, text, m) => BTProductContext.productTip(pickerLabel(p), p, pendingLineFields(text), { temperatures, packagings }, pendingContextLines(m));
+// THE CARD THAT DECIDES (owner 2026-11-07, "hazlo así"): cut, temperature, packaging and variation of the product, each with the evidence — the title above the line, the line, the subject (never OUR own subject
+// of a reply) and what this plant already sells. The title and the subject are read with the same rules as a line (aliases, VAC = Box…). Display only.
+function pendingEvidence(text, m){
+  const t = pendingTitles(m);
+  const subject = m && m.email && m.email.subject && !/^\s*(re|fw|fwd)\s*:/i.test(m.email.subject) ? m.email.subject : null;
+  return {
+    title: t ? t.section : undefined, titleRead: t && t.section ? pendingLineFields(t.section) : null, sections: t ? t.sections : [],
+    subject, subjectRead: subject ? pendingLineFields(subject) : null, lines: pendingContextLines(m),
+  };
+}
+function plantHistoryFor(p){
+  const mine = (typeof plantProducts !== 'undefined' ? plantProducts : []).find((x) => x.id === p.id);
+  return mine ? { has: mine.current_price != null, linked: true, price: mine.current_price, date: mine.price_date } : { has: false, linked: false };
+}
+const pickerTipFor = (p, text, m) => BTProductContext.decisionTip(pickerLabel(p), p, pendingLineFields(text), { temperatures, packagings }, { ...pendingEvidence(text, m), plant: plantHistoryFor(p) });
 const pickerOption = (p, tip) => ({ id: p.id, label: pickerLabel(p), search: [p.full_name_en, p.name_en, p.full_name_es, p.name].filter(Boolean).join(' '), ...(tip ? { tip } : {}) });
-const pickerOptionsForLine = (text, m) => { const line = pendingLineFields(text), lines = pendingContextLines(m), ctx = { temperatures, packagings };
-  return pickerPoolForLine(text).map((p) => pickerOption(p, BTProductContext.productTip(pickerLabel(p), p, line, ctx, lines))); };
+const pickerOptionsForLine = (text, m) => { const line = pendingLineFields(text), ev = pendingEvidence(text, m), ctx = { temperatures, packagings };
+  return pickerPoolForLine(text).map((p) => pickerOption(p, BTProductContext.decisionTip(pickerLabel(p), p, line, ctx, { ...ev, plant: plantHistoryFor(p) }))); };
 // The card over the plant's product, set on its cell after the rows are drawn (the cell's own text and its template stay as they were).
 function decoratePendingTips(){
   document.querySelectorAll('#plantPendingMatchRows .pm-name').forEach((td, i) => {
     const m = plantPendingMatches[i]; if (!m) return;
-    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m), m.email && m.email.lines);
+    const near = (m.email && m.email.lines); // the lines around it in its e-mail
+    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m), near, pendingTitles(m));
     td.style.cursor = 'help'; // its plain title stays: the card sets it aside while the mouse is over the cell
   });
 }

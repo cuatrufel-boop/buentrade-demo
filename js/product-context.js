@@ -79,6 +79,57 @@
     ? '<span class="pc-k">Same email · its other lines</span>' + near.map((n) => `<div class="pc-nr${n.me ? ' pc-me' : ''}"><span>${esc(n.raw_text)}</span><span>${n.price != null ? '$' + Number(n.price).toFixed(2) + ' · ' : ''}${esc(n.outcome || '')}</span></div>`).join('')
     : '';
 
+  // The title a line sits under in the plant's e-mail: null = not saved (an older line), '' = no title above it. sections = every title of that e-mail.
+  const titleText = (t) => (t === null || t === undefined ? '<span class="pc-m">not saved (older line)</span>' : t === '' ? '<span class="pc-m">no title above this line</span>' : esc(t));
+  const titlesBlock = (tt) => {
+    if (!tt || tt.section === undefined) return '';
+    const all = (tt.sections || []).filter(Boolean);
+    return '<span class="pc-k">Title above this line</span>' + titleText(tt.section) +
+      (all.length ? '<span class="pc-k">All titles in this email</span>' + all.map((x) => `<span class="pc-chip${x === tt.section ? ' pc-temp' : ''}">${esc(x)}</span>`).join('') : '');
+  };
+
+  // THE CARD THAT DECIDES (owner 2026-11-07: "debe enfocar en el título, en las variaciones, en todo lo que me pueda decir cuál es; si es fresco debo saber si es combo o caja"): four questions — cut, temperature,
+  // packaging, variation — each with the answer of THIS product and the evidence the e-mail gives: the title above the line, the line itself, the subject and (packaging) what this plant already sells.
+  // ev: { title (string | null = not saved | '' = none | undefined = this screen has no titles), titleRead, subject, subjectRead, plant: {has, price, date} | null, sections, lines }.
+  function decisionTip(label, p, line, ctx, ev) {
+    ev = ev || {};
+    const f = productFields(p, ctx);
+    const vals = (v) => (Array.isArray(v) ? v : (v ? [v] : [])).filter(Boolean);
+    const verdict = (pv, said, isVar) => {
+      const sv = vals(said);
+      if (!sv.length) return 'none';
+      const mine = isVar ? String(pv || '').split(/\s*(?:,|&|\band\b)\s*/i).map(norm).filter(Boolean) : [norm(pv)];
+      return sv.some((x) => mine.includes(norm(x))) ? 'ok' : 'bad';
+    };
+    const said = (v, kind) => (vals(v).length ? esc(vals(v).join(', ')) : `<span class="pc-m">${kind || 'not said'}</span>`);
+    const titleCell = (read, key) => {
+      if (ev.title === undefined) return null;
+      if (ev.title === null) return '<span class="pc-m">not saved (older line)</span>';
+      if (ev.title === '') return '<span class="pc-m">no title above</span>';
+      const v = vals(read && read[key]);
+      return v.length ? `<span class="pc-chip pc-temp">${esc(v.join(', '))}</span>` : '<span class="pc-m">—</span>';
+    };
+    const block = (name, pv, status, rows) => {
+      const word = status === 'ok' ? 'matches' : status === 'bad' ? 'does not match' : 'no evidence';
+      return `<div class="pc-qb"><div class="pc-qh"><span class="pc-qn">${name}</span><span class="pc-ans ${status === 'ok' ? 'pc-ok' : 'pc-warn'}">${pv ? esc(pv) : '—'} · ${word}</span></div><div class="pc-ev">` +
+        rows.filter(Boolean).map((r) => `<span class="pc-es">${r[0]}</span><span>${r[1]}</span>`).join('') + '</div></div>';
+    };
+    const tr = ev.titleRead || null, sr = ev.subjectRead || null;
+    const sub = (key) => (ev.subject == null ? null : (vals(sr && sr[key]).length ? `<span class="pc-chip pc-temp">${esc(vals(sr[key]).join(', '))}</span>` : '<span class="pc-m">—</span>'));
+    const tcell = (key, label2) => { const c = titleCell(tr, key); return c == null ? null : ['Title', c]; };
+    const scell = (key) => { const c = sub(key); return c == null ? null : ['Subject', c]; };
+    const st = (pv, parts, isVar) => { const all = [].concat(...parts.map((x) => vals(x))); return verdict(pv, all, isVar); };
+    const plantRow = ev.plant === undefined || ev.plant === null ? null
+      : ['This plant sells', ev.plant.has ? `<span class="pc-ok">Already sells it</span>${ev.plant.price != null ? ' · $' + Number(ev.plant.price).toFixed(2) : ''}${ev.plant.date ? ' · ' + esc(String(ev.plant.date).slice(0, 10)) : ''}` : ev.plant.linked ? '<span class="pc-m">Linked, no price yet</span>' : '<span class="pc-warn">Has never had it</span>'];
+    const html = `<div class="pc-t">${esc(label)}</div>` +
+      block('Cut', f.cut, st(f.cut, [line.cuts, tr && tr.cuts], false), [['The line', said(line.cuts)], tcell('cuts')]) +
+      block('Temperature', f.temp, st(f.temp, [line.temp, tr && tr.temp, sr && sr.temp], false), [tcell('temp'), ['The line', said(line.temp)], scell('temp')]) +
+      block('Packaging', f.pack, st(f.pack, [line.pack, tr && tr.pack, sr && sr.pack], false), [tcell('pack'), ['The line', said(line.pack)], scell('pack'), plantRow]) +
+      block('Variation', f.variation, st(f.variation, [line.variations, tr && tr.variations], true), [['The line', said(line.variations)], tcell('variations')]);
+    const tt = ev.title === undefined ? '' : titlesBlock({ section: ev.title, sections: ev.sections });
+    return html + tt + (ev.subject ? '<span class="pc-k">Subject</span>' + esc(ev.subject) : '') + emailBlock(ev.lines);
+  }
+
   // The card over a product: this product next to what the plant wrote, in the same four fields; amber where they disagree. lines = the email's reasons / pickup / date.
   function productTip(label, p, line, ctx, lines) {
     const f = productFields(p, ctx), bad = mismatch(line, f);
@@ -89,10 +140,10 @@
   }
 
   // The card over the plant's product: what it wrote, how it was read ("?" for what it did not say), and the email's own reasons.
-  function plantTip(raw, line, lines, near) {
+  function plantTip(raw, line, lines, near, titles) {
     const read = [line.cuts.length ? line.cuts.join(', ') : 'cut ?', line.variations.length ? line.variations.join(', ') : 'no variation', line.temp || 'temp ?', line.pack || 'packaging ?'];
     return `<div class="pc-t">What the plant sent</div><span class="pc-k">The plant wrote</span>${esc(raw)}<span class="pc-k">Reads as</span>` +
-      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + emailBlock(lines) + nearBlock(near);
+      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + emailBlock(lines) + titlesBlock(titles) + nearBlock(near);
   }
 
   const css = '.pc-hv{border-bottom:1px dotted rgba(255,255,255,.45);cursor:help;}' +
@@ -109,6 +160,14 @@
     '#bt-tip .pc-nr.pc-me,#bt-sheet .pc-nr.pc-me{background:rgba(90,170,255,.14);color:#fff;font-weight:600;}' +
     '#bt-tip .pc-chip,#bt-sheet .pc-chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 9px;margin:2px 5px 2px 0;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.85);}' +
     '#bt-tip .pc-chip.pc-q,#bt-sheet .pc-chip.pc-q{border-style:dashed;border-color:rgba(255,200,118,.6);color:#FFC876;}' +
+    '#bt-tip .pc-qb,#bt-sheet .pc-qb{border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;margin-bottom:7px;}' +
+    '#bt-tip .pc-qh,#bt-sheet .pc-qh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px;}' +
+    '#bt-tip .pc-qn,#bt-sheet .pc-qn{font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.04em;}' +
+    '#bt-tip .pc-ans,#bt-sheet .pc-ans{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13px;text-align:right;}' +
+    '#bt-tip .pc-ok,#bt-sheet .pc-ok{color:#3FCB7E;}' +
+    '#bt-tip .pc-warn,#bt-sheet .pc-warn{color:#FFC876;}' +
+    '#bt-tip .pc-ev,#bt-sheet .pc-ev{display:grid;grid-template-columns:96px minmax(0,1fr);gap:2px 8px;font-size:11.5px;}' +
+    '#bt-tip .pc-es,#bt-sheet .pc-es{color:rgba(255,255,255,.55);}' +
     // On a phone there is no mouse: the card opens from the bottom, with its own buttons.
     '#bt-sheet{position:fixed;inset:0;z-index:3100;}' +
     '#bt-sheet .pc-back{position:absolute;inset:0;background:rgba(0,0,0,.5);}' +
@@ -174,7 +233,7 @@
     doc.addEventListener('scroll', hide, true);
   }
 
-  const api = { wordRegex, readLine, productFields, mismatch, productTip, plantTip, attachTips, touch, css };
+  const api = { wordRegex, readLine, productFields, mismatch, productTip, decisionTip, plantTip, attachTips, touch, css };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.BTProductContext = api;
