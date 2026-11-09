@@ -7035,18 +7035,22 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     // (first message) and the pending / credit notes (last message) are SUGGESTIONS beside it (`extras`), one tap to copy and paste into the chat if the trader wants them.
     const part = { first: false, last: false, noTitle: true, cheap: cheap.has(i) };
     const offer = offersByPlantId.get(one.plant.id);
-    const body = isUpdate
+    // A BRAND HE ALREADY HAS STILL GETS ITS CARD (owner 2026-11-09: "por qué no saca fichas a TODOS los precios"): no new offer is minted for a price he holds, so `offer` is empty — and the line used to go out as plain text with
+    // no banner (Dycinsa, Outer: Tyson with its card, Rantoul as a bare line). Its text and its banner are built as for an offer without a link; nothing is recorded for it (sentOffers / onOpened below still use the real offer).
+    const body = ((offersByPlantId) => isUpdate // the text builders read "his offers" from this map: for a brand he already holds it carries an offer without a link
       ? buildCustomerUpdateText(firstName, [one], newKeys, offersByPlantId, true, part)
-      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, false, '', part);
+      : buildCustomerOfferTextWithLinks(firstName, [one], offersByPlantId, false, '', part))(offer ? offersByPlantId : new Map(offersByPlantId).set(one.plant.id, { short_code: null }));
     const extras = [];
     if (i === 0) { if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(one.plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine }); }
     if (i === sorted.length - 1 && outro) extras.push({ label: 'Note', text: outro });
-    return { extras,
+    const item = { extras,
       id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
       thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: rqLinePrice(one.calc), cur: one.calc.mxn ? 'mxn' : 'usd' }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
     };
+    if (!offer) item.thinImages = [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: rqLinePrice(one.calc), cur: one.calc.mxn ? 'mxn' : 'usd' }]; // its card too (see above)
+    return item;
   });
 }
 // The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
@@ -7054,9 +7058,10 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 function rqWaAttachThinImages(items){
+  if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
   items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
     const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
-    const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname) ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
+    const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
     const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
