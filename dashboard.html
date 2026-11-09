@@ -154,6 +154,10 @@
   .tdr-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:18px 22px 10px;} .tdr-urgent{border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.05);}
   .tdr-h{margin:0 0 2px;font:700 12.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);} .tdr-h.u{color:#FFC876;} .tdr-hint{font-size:12.5px;color:var(--ink-soft);margin:0 0 6px;}
   .tdr-t{width:100%;border-collapse:collapse;} .tdr-t td{padding:13px 4px;border-top:1px solid rgba(255,255,255,.1);vertical-align:middle;text-align:left;} .tdr-t tr:first-child td{border-top:none;} .tdr-t td:last-child{text-align:right;width:1%;white-space:nowrap;}
+  .tdr-agenda{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:12px;color:var(--ink-soft);margin:6px 0 4px;} .tdr-agenda b{color:#fff;font-weight:700;} .tdr-prog{flex:0 1 120px;height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;} .tdr-prog i{display:block;height:100%;background:#3FCB7E;}
+  .tdr-pchip{font-weight:600;color:#f0b429;border:1px solid rgba(240,180,41,.6);border-radius:999px;padding:1px 10px;font-size:11.5px;} .tdr-keys{font-size:11px;color:var(--ink-soft);margin-bottom:6px;} .tdr-keys kbd{font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid rgba(255,255,255,.25);border-radius:4px;padding:0 5px;margin:0 2px;}
+  .tdr-nums{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 4px;} .tdr-nums div{font-size:11px;color:var(--ink-soft);} .tdr-nums b{display:block;font-family:'IBM Plex Mono',monospace;font-size:16px;color:#fff;font-weight:600;} .tdr-acts{margin:6px 0 8px;display:flex;gap:8px;flex-wrap:wrap;} tr.tdr-sel>td{background:rgba(90,170,255,.1);box-shadow:inset 3px 0 0 #5AAAFF;}
+  .tdr-act{font-size:12px;font-weight:700;color:var(--blue-bright);text-decoration:none;border:1px solid rgba(90,170,255,.5);border-radius:999px;padding:2px 12px;} .tdr-act:hover{background:rgba(90,170,255,.14);}
   .tdr-v{display:inline-block;font-size:10.5px;font-weight:700;padding:0 8px;border-radius:999px;border:1px solid;margin-right:4px;white-space:nowrap;} .tdr-v.g{color:#3FCB7E;border-color:rgba(63,203,126,.6);} .tdr-v.a{color:#FFC876;border-color:rgba(255,200,118,.6);} .tdr-v.r{color:#FF9C8A;border-color:rgba(255,156,138,.6);}
   .tdr-name .name-link{font-size:15px;font-weight:700;display:block;} .tdr-sub{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;} .tdr-new{color:#3FCB7E;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;} .tdr-up{color:#8EC5FF;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
   .tdr-why{display:block;font-size:12.5px;color:#fff;margin-top:3px;opacity:.88;}
@@ -627,8 +631,28 @@ function todayListHtml(all){
       return `<li>${chip} <b>${escapeHtml(v.name)}</b>${last}${v.reason ? ` — ${escapeHtml(v.reason)}` : ''}</li>`;
     }).join('');
   };
-  const bprows = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it${b.send_n ? ` · ${b.send_n} with a margin` : ''} · the note</summary><ul class="tdr-ul">${todayVerdictRows(b)}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
-  const bestCard = `<div class="tdr-card tdr-askcard tdr-best"><h3 class="tdr-h">Best prices today — most relevant first</h3><div class="tdr-hint">The lowest price at the border across all the plants, with the customers who buy it</div>${bprows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${bprows}</tbody></table></div>` : '<div class="empty">No fresh prices right now.</div>'}</div>`;
+  // THE REST OF THE AGENDA CARD (owner 2026-11-08, approved design): what the plant charges now and before (a little line), what the day looks like (to send / potential / sent today / Pending waiting), and "Later" for a product the trader leaves for tomorrow.
+  const miamiDay = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const laterIds = (() => { try { const j = JSON.parse((typeof localStorage !== 'undefined' && localStorage.getItem('btTodayLater')) || 'null'); return j && j.day === miamiDay() ? new Set(j.ids || []) : new Set(); } catch (e) { return new Set(); } })();
+  const spark = (pts) => {
+    if (!Array.isArray(pts) || pts.length < 2) return '';
+    const v = pts.map(p => Number(p.price)), lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+    const xy = v.map((n, i) => `${Math.round(4 + i * (112 / (v.length - 1)))},${Math.round(30 - ((n - lo) / span) * 24)}`);
+    const last = xy[xy.length - 1].split(',');
+    return `<svg class="tdr-spark" width="120" height="36" viewBox="0 0 120 36" role="img" aria-label="Recent prices of this plant"><polyline fill="none" stroke="#5AAAFF" stroke-width="2" points="${xy.join(' ')}"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="#3FCB7E"/></svg>`;
+  };
+  const focusHtml = (b) => {
+    const m = n => '$' + Number(n).toFixed(2), h = Array.isArray(b.history) ? b.history : [], before = h.length > 1 ? h[h.length - 2] : null;
+    const nums = `<div class="tdr-nums">${spark(h)}<div><b>${m(b.price)}</b>${escapeHtml(b.plant.trim())} today</div>${before ? `<div><b>${m(before.price)}</b>${escapeHtml(String(before.date).slice(5))}</div>` : ''}${b.landed != null ? `<div><b>${m(b.landed)}</b>at the border</div>` : ''}</div>`;
+    const acts = `<div class="tdr-acts"><a class="tdr-act" href="${escapeHtml(b.href)}">Open in Quotes →</a><a class="tdr-act tdr-later" href="#" data-pid="${escapeHtml(b.product_id)}">Later</a></div>`;
+    return nums + acts;
+  };
+  const bestShown = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).filter(b => !laterIds.has(b.product_id));
+  const sentN = bestShown.filter(b => Number(b.sent_today) > 0).length, potential = bestShown.reduce((t, b) => t + (Number(b.potential_usd) || 0), 0);
+  const pendPlants = new Set((typeof dashPendingRows !== 'undefined' && dashPendingRows ? dashPendingRows : []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)).map(r => r.plant_id)).size;
+  const agendaHtml = bestShown.length ? `<div class="tdr-agenda"><span><b>${bestShown.length}</b> to send${potential ? ` · ≈ $${Math.round(potential).toLocaleString('en-US')} per load` : ''}</span><span class="tdr-prog"><i style="width:${Math.round(100 * sentN / bestShown.length)}%"></i></span><span>${sentN} of ${bestShown.length} sent today</span>${pendPlants ? `<span class="tdr-pchip" title="They keep notifying in the bell">${pendPlants} plant${pendPlants === 1 ? '' : 's'} wait${pendPlants === 1 ? 's' : ''} for your match in Pending</span>` : ''}</div><div class="tdr-keys"><kbd>J</kbd><kbd>K</kbd> move · <kbd>Enter</kbd> open in Quotes · <kbd>S</kbd> later</div>` : '';
+  const bprows = bestShown.map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it${b.send_n ? ` · ${b.send_n} with a margin` : ''} · the note</summary>${focusHtml(b)}<ul class="tdr-ul">${todayVerdictRows(b)}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
+  const bestCard = `<div class="tdr-card tdr-askcard tdr-best"><h3 class="tdr-h">Best prices today — most relevant first</h3><div class="tdr-hint">The lowest price at the border across all the plants, with the customers who buy it</div>${agendaHtml}${bprows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${bprows}</tbody></table></div>` : '<div class="empty">No fresh prices right now.</div>'}</div>`;
   // TWO COLUMNS WITH TABS (owner 2026-11-06, option 3 of the five drawn): LEFT = Urgent, with a tab per kind of line (All · Pending · Answers · Best price); RIGHT = one box at a time (Best prices · Optional · Ask the plants) picked by the tabs with their counts.
   // No buttons: the product (or plant) name is the link. Each column scrolls inside itself so both fit one screen. The chosen tabs live in TDR_UI so a reload of the list keeps them; on a phone every box stays stacked as before.
   const ui = (typeof TDR_UI !== 'undefined' && TDR_UI) ? TDR_UI : { u: 'all', r: 'best' };
@@ -769,6 +793,19 @@ let dashBest = []; // the best price of each product across ALL plants, most rel
 let TDR_UI = { u: 'all', r: 'best' }; // Today's tabs: which kind of Urgent line shows (all · pending · answer · best) and which box shows on the right (best · opt · ask) — kept here so a reload of the list keeps them
 // The two columns fill the rest of the screen (owner 2026-11-06: both columns in the same view, no long page scroll); each one scrolls inside itself. A phone keeps the old stacked boxes.
 function fitTdr(){ const t = document.querySelector('.tdr'); if (!t) return; if (window.innerWidth < 901 || !t.offsetParent) { t.style.height = ''; return; } const top = t.getBoundingClientRect().top + window.scrollY; t.style.height = Math.max(420, window.innerHeight - top - 14) + 'px'; }
+// THE AGENDA'S "LATER" AND ITS KEYS (owner 2026-11-08, approved design): "Later" leaves a product for tomorrow (this browser, this Miami day); J / K move along the Best prices lines, Enter opens the line in Quotes, S = Later. Display only.
+const todayLaterSave = (pid) => { try { const day = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); const cur = JSON.parse(localStorage.getItem('btTodayLater') || 'null'); const ids = cur && cur.day === day ? (cur.ids || []) : []; if (pid && !ids.includes(pid)) ids.push(pid); localStorage.setItem('btTodayLater', JSON.stringify({ day, ids })); } catch (e) { /* without storage the line simply stays */ } };
+document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('.tdr-later'); if (!a) return; e.preventDefault(); todayLaterSave(a.dataset.pid); renderToday(); });
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target, tag = (t && t.tagName) || ''; if (/^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(tag) || (t && t.isContentEditable)) return;
+  const root = document.querySelector('.tdr-best'); if (!root || !root.offsetParent) return;
+  const rows = [...root.querySelectorAll('tr')]; if (!rows.length) return;
+  let i = rows.findIndex(r => r.classList.contains('tdr-sel')); const k = String(e.key).toLowerCase();
+  if (k === 'j' || k === 'k') { e.preventDefault(); i = k === 'j' ? Math.min(rows.length - 1, i + 1) : Math.max(0, i < 0 ? 0 : i - 1); rows.forEach(r => r.classList.remove('tdr-sel')); rows[i].classList.add('tdr-sel'); rows[i].scrollIntoView({ block: 'nearest' }); }
+  else if (k === 'enter' && i >= 0) { const l = rows[i].querySelector('a.name-link'); if (l) { e.preventDefault(); window.location.href = l.href; } }
+  else if (k === 's' && i >= 0) { const l = rows[i].querySelector('.tdr-later'); if (l) { e.preventDefault(); todayLaterSave(l.dataset.pid); renderToday(); } }
+});
 document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-tdr-r],[data-tdr-u]'); const root = t && t.closest('.tdr'); if (!root) return;
   if (t.dataset.tdrR) TDR_UI.r = t.dataset.tdrR; if (t.dataset.tdrU) TDR_UI.u = t.dataset.tdrU;
   root.dataset.r = TDR_UI.r; root.dataset.u = TDR_UI.u;
