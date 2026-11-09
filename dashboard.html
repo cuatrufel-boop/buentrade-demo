@@ -513,7 +513,7 @@ const todayKey = i => i.group + '|' + i.title;
 const TODAY_LIST = true;
 // OFF by the owner's word (2026-10-27): Urgent is exactly what he defined (a customer asked / a plant we asked answered with a price). The answers are kept; Today does not read them, and does not wait for them.
 const TODAY_ANSWERS = false;
-let dashLive = [], dashUnplaced = [], dashPending = [], todayOtherOpen = false;
+let dashLive = [], dashUnplaced = [], dashPending = [], dashPendingRows = [], todayOtherOpen = false; // dashPendingRows: every open Pending line (the strip counts the plants waiting; Urgent only lists the ones that answer what we asked)
 // PENDING IS URGENT (owner 2026-11-05: "te dije que tiene que notificar pending como urgente, sino no me entero de que hay pending" — Indiana's Ham End $0.92 waited in Pending and nobody was told): one line per plant with PRICE lines
 // waiting for a match (an auction, an unread file or a declined line carries no price to decide on), most lines first, opening that plant's Pending Matches. Pure: the open Pending rows and the plants in, the lines out.
 function todayPendingGroups(rows, plants, asked){
@@ -537,7 +537,7 @@ async function loadTodayLive(){
   // Pending in Urgent = only the plant's answers to a product WE asked for (owner 2026-11-08: "el pending déjalo pero solo las respuestas de producto que pedimos"); every other Pending line keeps notifying in the bell.
   // The live quotes (what we asked, of which plant) are needed to tell, so the grouping waits for them; a failed read of the live quotes keeps the card empty of Pending rather than listing everything.
   let liveReady; const liveP = new Promise(r => { liveReady = r; });
-  const pendingP = Promise.all([callApi('plant-pending-matches-search', {}), callApi('plants-search', {})]).then(async ([pm, pl]) => { await liveP; dashPending = todayPendingGroups(pm.results, pl.results, todayAskedSet(dashLive)); }).catch(() => { /* the list stays as it was */ }); // asked at the same time as the rest: it never makes Today wait longer
+  const pendingP = Promise.all([callApi('plant-pending-matches-search', {}), callApi('plants-search', {})]).then(r => { dashPendingRows = (r[0] && r[0].results) || []; return r; }).then(async ([pm, pl]) => { await liveP; dashPending = todayPendingGroups(pm.results, pl.results, todayAskedSet(dashLive)); }).catch(() => { /* the list stays as it was */ }); // asked at the same time as the rest: it never makes Today wait longer
   try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ } finally { liveReady(); }
   if (TODAY_ANSWERS){ try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } }
   await pendingP; }
