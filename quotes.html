@@ -2378,7 +2378,7 @@ function qmWeeklySendEmail(cid){
   const c = qmWeeklyFind(cid); if (!c || !c.email) return;
   const item = { id: c.key || c.id, label: c.trade_name.trim() + (c.contact_name ? ' — ' + c.contact_name : ''), to: c.email, subject: c.subject, body: c.message, fromAlias: 'offers', html: BTWeeklyCard.weeklyCardHtml(c, qmWeeklyLabel(c)), htmlText: c.message }; // the BuenTrade card; the text is what shows if the trader edits it
   const edited = () => ((rqEmailModalItems.find(x => x.id === (c.key || c.id)) || item).body || '').trim(); // the modal edits its own copy
-  item.onSent = async () => { try { await qmWeeklyLogSend(c, edited(), 'email'); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
+  item.onSent = async () => { c.sent = { sent_at: new Date().toISOString(), channel: 'email', message: edited() }; qmRender(); /* out already: the row says so at once; the record below replaces it (it hung on 2026-11-09 and the row stayed unsent) */ try { await qmWeeklyLogSend(c, edited(), 'email'); } catch (e){ rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); } };
   rqOpenEmailModal(`Email — ${c.trade_name.trim()}`, [item], true, 'Send');
 }
 async function qmWeeklySendWa(cid){
@@ -8078,6 +8078,7 @@ async function rqEmailModalSendOne(i){
   try {
     await sendEmailApiRaw(it.fromAlias, it.to, it.subject, it.body, it.html && (it.htmlText == null || it.htmlText === it.body) ? it.html : undefined, it.attachments, ccList.join(',')); // an html card is sent only while its text is untouched (an edit sends the edited text)
     it.sent = true;
+    rqRenderEmailModal(); // the email is OUT: the card says "Sent" at once, never after the record call (2026-11-09: that call hung, the card looked unsent, Cervantes was sent the Monday summary twice)
     if (it.onSent) await it.onSent();
   } catch(e){
     // Real bug fixed 2026-09-01: this used to call window.open() right here to fall back to
