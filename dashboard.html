@@ -154,6 +154,7 @@
   .tdr-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:18px 22px 10px;} .tdr-urgent{border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.05);}
   .tdr-h{margin:0 0 2px;font:700 12.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);} .tdr-h.u{color:#FFC876;} .tdr-hint{font-size:12.5px;color:var(--ink-soft);margin:0 0 6px;}
   .tdr-t{width:100%;border-collapse:collapse;} .tdr-t td{padding:13px 4px;border-top:1px solid rgba(255,255,255,.1);vertical-align:middle;text-align:left;} .tdr-t tr:first-child td{border-top:none;} .tdr-t td:last-child{text-align:right;width:1%;white-space:nowrap;}
+  .tdr-v{display:inline-block;font-size:10.5px;font-weight:700;padding:0 8px;border-radius:999px;border:1px solid;margin-right:4px;white-space:nowrap;} .tdr-v.g{color:#3FCB7E;border-color:rgba(63,203,126,.6);} .tdr-v.a{color:#FFC876;border-color:rgba(255,200,118,.6);} .tdr-v.r{color:#FF9C8A;border-color:rgba(255,156,138,.6);}
   .tdr-name .name-link{font-size:15px;font-weight:700;display:block;} .tdr-sub{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;} .tdr-new{color:#3FCB7E;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;} .tdr-up{color:#8EC5FF;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
   .tdr-why{display:block;font-size:12.5px;color:#fff;margin-top:3px;opacity:.88;}
   .tdr-who{margin-top:6px;} .tdr-who>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--blue-bright);user-select:none;} .tdr-who>summary::-webkit-details-marker{display:none;} .tdr-who>summary::before{content:'▸ ';} .tdr-who[open]>summary::before{content:'▾ ';}
@@ -511,18 +512,29 @@ const TODAY_ANSWERS = false;
 let dashLive = [], dashUnplaced = [], dashPending = [], todayOtherOpen = false;
 // PENDING IS URGENT (owner 2026-11-05: "te dije que tiene que notificar pending como urgente, sino no me entero de que hay pending" — Indiana's Ham End $0.92 waited in Pending and nobody was told): one line per plant with PRICE lines
 // waiting for a match (an auction, an unread file or a declined line carries no price to decide on), most lines first, opening that plant's Pending Matches. Pure: the open Pending rows and the plants in, the lines out.
-function todayPendingGroups(rows, plants){
+function todayPendingGroups(rows, plants, asked){
   const names = new Map((plants || []).map(p => [p.id, String(p.name || '').trim()]));
   const by = new Map();
-  (rows || []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)).forEach(r => {
+  // asked (optional, owner 2026-11-08: "el pending déjalo pero solo las respuestas de producto que pedimos"): a Set of "plantId|productId" we asked that plant for; a line counts only when one of its possible products is in it. Without it, every priced line counts as before.
+  const answersWhatWeAsked = r => !asked || (Array.isArray(r.candidate_product_ids) && r.candidate_product_ids.some(id => asked.has(r.plant_id + '|' + id)));
+  (rows || []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type) && answersWhatWeAsked(r)).forEach(r => {
     const g = by.get(r.plant_id) || { plant_id: r.plant_id, name: names.get(r.plant_id) || 'A plant', n: 0 };
     g.n++; by.set(r.plant_id, g);
   });
   return [...by.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
 }
+// Which products we asked which plant for: the live quotes' asked plants, within 14 days ("plantId|productId").
+function todayAskedSet(live){
+  const s = new Set(), since = Date.now() - 14 * 86400000;
+  (live || []).forEach(q => (q.plants || []).forEach(p => { if (q.product_id && p.plant_id && p.asked_at && new Date(p.asked_at).getTime() >= since) s.add(p.plant_id + '|' + q.product_id); }));
+  return s;
+}
 async function loadTodayLive(){
-  const pendingP = Promise.all([callApi('plant-pending-matches-search', {}), callApi('plants-search', {})]).then(([pm, pl]) => { dashPending = todayPendingGroups(pm.results, pl.results); }).catch(() => { /* the list stays as it was */ }); // asked at the same time as the rest: it never makes Today wait longer
-  try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ }
+  // Pending in Urgent = only the plant's answers to a product WE asked for (owner 2026-11-08: "el pending déjalo pero solo las respuestas de producto que pedimos"); every other Pending line keeps notifying in the bell.
+  // The live quotes (what we asked, of which plant) are needed to tell, so the grouping waits for them; a failed read of the live quotes keeps the card empty of Pending rather than listing everything.
+  let liveReady; const liveP = new Promise(r => { liveReady = r; });
+  const pendingP = Promise.all([callApi('plant-pending-matches-search', {}), callApi('plants-search', {})]).then(async ([pm, pl]) => { await liveP; dashPending = todayPendingGroups(pm.results, pl.results, todayAskedSet(dashLive)); }).catch(() => { /* the list stays as it was */ }); // asked at the same time as the rest: it never makes Today wait longer
+  try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ } finally { liveReady(); }
   if (TODAY_ANSWERS){ try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } }
   await pendingP; }
 function todayListHtml(all){
@@ -603,7 +615,19 @@ function todayListHtml(all){
   const ask = [...needs.values()].filter(x => x.who.length).sort((a, b) => Number(!!b.asked) - Number(!!a.asked) || b.who.length - a.who.length || a.name.localeCompare(b.name));
   const arows = ask.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(x.href)}">${escapeHtml(x.name)}</a><span class="tdr-sub">${x.asked ? '<b class="tdr-ask-now">Asked</b> · ' : ''}${x.who.length} customer${x.who.length === 1 ? '' : 's'} ${x.asked ? 'waiting' : 'buy it'}${x.why ? ' · ' + escapeHtml(x.why) : ''}</span><details class="tdr-who"><summary>Who</summary><ul class="tdr-ul">${x.who.map(n => `<li><b>${escapeHtml(n)}</b></li>`).join('')}</ul></details></td></tr>`).join('');
   // BEST PRICES TODAY, most relevant first (owner 2026-11-03): every product with a price today, the plant that is cheapest at the border (or the only one), the customers who buy it with each one's own reason, and the note for him.
-  const bprows = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it · the note</summary><ul class="tdr-ul">${(b.customer_reasons || []).map(c => `<li>${escapeHtml(c.name)}${c.reason ? ` — ${escapeHtml(c.reason)}` : ''}</li>`).join('')}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
+  // WHAT TO SEND AND TO WHOM (owner 2026-11-08, the Today agenda): each customer who buys the product, with what HIS OWN last offer says against today's border cost — Send (a margin), Try (never offered) or Old price too low — his last price and
+  // when it was sent. Every customer stays listed; the trader decides. The server sends the verdicts (best_prices); without them the line is the plain list as before.
+  const todayVerdictRows = (b) => {
+    const vs = Array.isArray(b.verdicts) && b.verdicts.length ? b.verdicts : (b.customer_reasons || []).map(c => ({ name: c.name, reason: c.reason, verdict: null }));
+    const money = n => '$' + Number(n).toFixed(2);
+    const ago = iso => { if (!iso) return ''; const d = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 86400000)); return d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; };
+    return vs.map(v => {
+      const chip = v.verdict === 'send' ? `<span class="tdr-v g">Send · ${money(v.margin)}/lb margin</span>` : v.verdict === 'low' ? `<span class="tdr-v r">Old price too low</span>` : v.verdict === 'try' ? `<span class="tdr-v a">${v.offers_n ? 'No border cost yet' : 'Never offered'}</span>` : '';
+      const last = v.last_sale != null ? ` · his last price ${money(v.last_sale)}${v.last_offer_at ? ' (' + ago(v.last_offer_at) + ')' : ''}` : '';
+      return `<li>${chip} <b>${escapeHtml(v.name)}</b>${last}${v.reason ? ` — ${escapeHtml(v.reason)}` : ''}</li>`;
+    }).join('');
+  };
+  const bprows = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it${b.send_n ? ` · ${b.send_n} with a margin` : ''} · the note</summary><ul class="tdr-ul">${todayVerdictRows(b)}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
   const bestCard = `<div class="tdr-card tdr-askcard tdr-best"><h3 class="tdr-h">Best prices today — most relevant first</h3><div class="tdr-hint">The lowest price at the border across all the plants, with the customers who buy it</div>${bprows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${bprows}</tbody></table></div>` : '<div class="empty">No fresh prices right now.</div>'}</div>`;
   // TWO COLUMNS WITH TABS (owner 2026-11-06, option 3 of the five drawn): LEFT = Urgent, with a tab per kind of line (All · Pending · Answers · Best price); RIGHT = one box at a time (Best prices · Optional · Ask the plants) picked by the tabs with their counts.
   // No buttons: the product (or plant) name is the link. Each column scrolls inside itself so both fit one screen. The chosen tabs live in TDR_UI so a reload of the list keeps them; on a phone every box stays stacked as before.
