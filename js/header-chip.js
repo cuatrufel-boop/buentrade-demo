@@ -277,6 +277,10 @@ window.btFetch = async function(url, opts){
     || (fn === 'customer-product-signal' && !b.log_notification)
     || (fn === 'messaging' && (b.action === 'list' || b.action === 'weekly_summary'))
     || (fn === 'sent-offers-search' && b.offer_sheet && (b.offer_sheet.action === 'list' || b.offer_sheet.action === 'get'));
-  if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read); }, read);
-  return btFetchOnce(url, opts, read);
+  // A RECORD NEVER HANGS EITHER (owner 2026-11-09: "TIENEN QUE FUNCIONAR"): the two writes that only RECORD something that already happened — the message record (`messaging` send) and "Yes, sent" (`sent-offers-create` confirm) —
+  // carry an idempotency_key and the server answers a repeat with the first one's result (insert … on conflict do nothing; only a draft changes), so a second ask is safe: they are asked again like a read (6 s, 14 s, the first
+  // answer wins). Every other write is still sent exactly once.
+  var record = !!b.idempotency_key && ((fn === 'messaging' && b.action === 'send') || (fn === 'sent-offers-create' && b.action === 'confirm'));
+  if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read || record); }, read);
+  return btFetchOnce(url, opts, read || record);
 };
