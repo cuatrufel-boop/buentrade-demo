@@ -3714,12 +3714,15 @@ function rqBrandListHtml(x){
         <td>${ready ? `<span class="num" style="cursor:pointer;" title="Open its QT again" onclick="${open}">${money(r.calc.salePerLb)}</span>` : '<span class="muted">—</span>'}</td>
         <td>${sendBtns(ready, ready && usdT.some(c => rqCanEmail(c, [pid])), ready && usdT.some(c => rqCanWhatsApp(c, [pid])), ch => `rqBrandSend('${ch}','${r.key}')`, 'this offer')}</td>`);
     }
-    pesT.forEach(c => {
+    // the pesos customers of the SAME city are ONE line (owner 2026-11-09: "si los precios de US frontera están juntos, por qué los de la misma ciudad están aparte… confirmarlo dos veces"): one Mexican freight tariff = one price, confirmed once in
+    // the QT of any of them and valid for all (rqPesosConfirmation); a city with one customer is exactly the line it always was
+    (typeof rqPesosCityGroups === 'function' ? rqPesosCityGroups(pesT) : pesT.map(c => [c])).forEach(g => {
+      const c = g[0], many = g.length > 1, ids = g.map(x => x.id).join(','), names = g.map(x => escapeHtml(String(x.trade_name).trim()));
       const conf = ready ? rqPesosConfirmation(r.plant.id, pid, c.id) : null;
       const open = `rqBrandOpenPesos('${pid}','${r.plant.id}','${c.id}')`;
-      lines.push(`<td>${escapeHtml(String(c.trade_name).trim())}${sub(escapeHtml(c.usual_destination || 'pesos'))}</td><td class="num">${planTag(open)}</td>
+      lines.push(`<td${many ? ` title="${names.join(', ')}"` : ''}>${many ? escapeHtml(rqPesosCityName(c)) + sub('pesos · ' + names.join(' · ')) : escapeHtml(String(c.trade_name).trim()) + sub(escapeHtml(c.usual_destination || 'pesos'))}</td><td class="num">${planTag(open)}</td>
         <td>${conf ? `<span class="num" style="cursor:pointer;" title="Open his QT again" onclick="${open}">MX$ ${Number(conf.calc.pesosQt.perKg).toFixed(2)}/kg</span>` : '<span class="muted">—</span>'}</td>
-        <td>${sendBtns(!!conf, !!conf && rqCanEmail(c, [pid]), !!conf && rqCanWhatsApp(c, [pid]), ch => `rqBrandSend('${ch}','${r.key}','${c.id}')`, 'his offer')}</td>`);
+        <td>${sendBtns(!!conf, !!conf && g.some(x => rqCanEmail(x, [pid])), !!conf && g.some(x => rqCanWhatsApp(x, [pid])), ch => many ? `rqBrandSend('${ch}','${r.key}','${ids}')` : `rqBrandSend('${ch}','${r.key}','${c.id}')`, many ? 'these offers' : 'his offer')}</td>`);
     });
     const shownLines = lines.filter(l => (rqBrandCur === 'all' || (rqBrandCur === 'usd') === /Border Clients/.test(l)) && (!qq || (r.plant.name + ' ' + l.replace(/<[^>]*>/g, ' ')).toLowerCase().includes(qq)));
     const brandCell = brand.replace(/<\/td>$/, `${ansFor(r)}</td>`); // the plant's answers under its name (the brand cell above keeps its approved shape)
@@ -4272,7 +4275,7 @@ async function rqBrandSend(channel, key, customerId){
   if (!one) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => r.key === key && r.kind === 'priced'), [], false)); return; }
   const owners = rqBrandRecipients(one.pid);
   const customers = customerId
-    ? rqSheetState.customers.filter(c => c.id === customerId)
+    ? rqSheetState.customers.filter(c => String(customerId).split(',').includes(c.id)) // a pesos CITY line carries every customer of that city (ids joined by commas); one id is one customer, as before
     : owners.filter(c => !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
   // the other buyers of the product (owner 2026-11-03: "si entro solo a una planta no me da la opción de mandar a todos los clientes que compran el producto"): with a customer chosen at the start the line is his; the rest
   // who still lack this brand are offered here, one question, and join the send when the trader says yes

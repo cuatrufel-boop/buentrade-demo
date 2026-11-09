@@ -70,14 +70,28 @@ function rqPesosConfirmation(plantId, productId, customerId){
   if (!rqIsPesosCustomer(c) || !link || link.current_price == null) return null;
   const rate = rqPesosDestRate(c), usdJson = rqUsdConfirmedJson(plantId, productId);
   if (!rate || !usdJson) return null;
-  const saved = link.qt_state && link.qt_state.pesos && link.qt_state.pesos[customerId];
-  const cands = [rqPesosSession[plantId + '|' + productId + '|' + customerId], saved && saved.confirmed].filter(Boolean).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  const conf = cands[0];
-  if (!conf || !conf.calc || !conf.calc.pesosQt || conf.built_from !== usdJson) return null;
-  if (Number(conf.price) !== Number(link.current_price) || String(conf.price_date || '').slice(0, 10) !== String(link.price_date || '').slice(0, 10)) return null;
-  if (conf.calc.pesosQt.rateId !== rate.id) return null;
-  return conf;
+  // ONE CONFIRMATION PER CITY (owner 2026-11-09: "si ya confirmé una ciudad con un flete debe aplicar para los clientes de Guadalajara y no tener que confirmarlo dos veces"): two pesos customers whose destination uses the SAME
+  // Mexican freight tariff (the same city) have the same pesos price, so the newest valid confirmation made in ANY of their QTs is the price of all of them. A customer of another city, or one whose numbers were made with
+  // another tariff, never borrows it (the rate id must match), and every validity rule below still applies to whichever confirmation is used.
+  const prefix = plantId + '|' + productId + '|', saved = (link.qt_state && link.qt_state.pesos) || {};
+  const ids = new Set([customerId, ...Object.keys(saved), ...Object.keys(rqPesosSession).filter(k => k.startsWith(prefix)).map(k => k.slice(prefix.length))]);
+  const cands = [];
+  ids.forEach(id => {
+    if (id !== customerId) { const m = rqAnyCustomer(id), mr = m && rqIsPesosCustomer(m) ? rqPesosDestRate(m) : null; if (!mr || mr.id !== rate.id) return; } // only a customer of the same city lends his confirmation
+    cands.push(rqPesosSession[prefix + id], saved[id] && saved[id].confirmed);
+  });
+  const valid = cands.filter(Boolean).filter(conf => conf.calc && conf.calc.pesosQt && conf.built_from === usdJson
+    && Number(conf.price) === Number(link.current_price) && String(conf.price_date || '').slice(0, 10) === String(link.price_date || '').slice(0, 10)
+    && conf.calc.pesosQt.rateId === rate.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  return valid[0] || null;
 }
+// The pesos customers of one city are ONE line (the same Mexican freight tariff = the same price, one confirmation): groups of customers in the order given; a customer whose city has no tariff is alone.
+function rqPesosCityGroups(list){
+  const byRate = new Map(), out = [];
+  (list || []).forEach(c => { const r = rqPesosDestRate(c); if (!r) { out.push([c]); return; } if (!byRate.has(r.id)) { const g = []; byRate.set(r.id, g); out.push(g); } byRate.get(r.id).push(c); });
+  return out;
+}
+const rqPesosCityName = (c) => { const r = rqPesosDestRate(c); return r ? String(r.destination).split(',')[0].trim() : String((c && c.usual_destination) || 'pesos'); };
 // An offer entry ({plant, calc}) for this customer. A border customer's is returned untouched (same object). A pesos customer gets ONLY his own pesos confirmation — its numbers, its
 // version, its price in MX$/kg — and a plant he has not confirmed in his own QT gives null: a pesos customer is never sent a border price.
 function rqWithPesos(customerId, it){
