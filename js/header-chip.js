@@ -281,6 +281,8 @@ window.btFetch = async function(url, opts){
   // carry an idempotency_key and the server answers a repeat with the first one's result (insert … on conflict do nothing; only a draft changes), so a second ask is safe: they are asked again like a read (6 s, 14 s, the first
   // answer wins). Every other write is still sent exactly once.
   var record = !!b.idempotency_key && ((fn === 'messaging' && b.action === 'send') || (fn === 'sent-offers-create' && b.action === 'confirm'));
-  if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read || record); }, read);
+  // The record of a send goes FIRST IN LINE (2026-11-09, measured in the server logs: the Messaging tab asks the AI to write a message for every client — `compose`, 10 to 68 s each — one at a time in this same line, and the
+  // record of Cervantes' email waited behind about ten of them: 2.5 minutes). A record never waits behind the background writing; it only waits for the one call already running.
+  if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read || record); }, read || record);
   return btFetchOnce(url, opts, read || record);
 };
