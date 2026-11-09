@@ -2551,7 +2551,14 @@ function ttLoadPesosVersion(row){
     return;
   }
   ttPesosBuiltFrom = usd.state_json;
-  const entry = row.qt_state.pesos && row.qt_state.pesos[ttPesosCid];
+  // ONE VERSION PER CITY (owner 2026-11-09: "todas las ciudades… que funcione igual", "no tener que confirmarlo dos veces"): the pesos QT of a customer opens from the newest valid version saved by ANY customer of the same city (the entries
+  // carry the tariff they were made with, rate_id — the same one Quotes uses to group them), confirmed or not; his own when nobody's is newer. A version made with another tariff is never borrowed.
+  const wantRate = __qp.get('pesosRateId') || null, pesosOn = row.qt_state.pesos || {};
+  const valid = (e) => !!(e && e.built_from === usd.state_json && e.plant_price && samePrice(e.plant_price.price, e.plant_price.date));
+  const stamp = (e) => String((e.confirmed && e.confirmed.at) || e.saved_at || '');
+  const own = pesosOn[ttPesosCid];
+  const entry = [own, ...Object.entries(pesosOn).filter(([cid, e]) => cid !== ttPesosCid && wantRate && e && (e.rate_id || null) === wantRate).map(([, e]) => e)]
+    .filter(valid).sort((a, b) => (!!(b.confirmed && b.confirmed.built_from === usd.state_json) - !!(a.confirmed && a.confirmed.built_from === usd.state_json)) || stamp(b).localeCompare(stamp(a)))[0] || own;
   const reuse = !!(entry && entry.built_from === usd.state_json && entry.plant_price && samePrice(entry.plant_price.price, entry.plant_price.date));
   let st;
   if (reuse){
