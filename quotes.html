@@ -8196,7 +8196,7 @@ async function rqWaPasteAgain(i){
 async function rqWaMarkSent(i){
   const it = rqWaModalItems[i];
   if (!it || it.recorded) return;
-  rqWaWatching.delete(it); it.recorded = true;
+  rqWaRecord(it); rqWaWatching.delete(it); it.recorded = true;
   try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
   rqRenderWaModal();
 }
@@ -8268,6 +8268,7 @@ function rqWaAsk(){
     for (const it of [...rqWaWatching]) {
       rqWaWatching.delete(it);
       const who = String(it.label).split(' — ')[0];
+      rqWaRecord(it);
       if (await btConfirm(`Did you send the WhatsApp to ${who}?`, 'Yes, sent', 'Not sent')) {
         it.recorded = true;
         try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
@@ -8276,6 +8277,20 @@ function rqWaAsk(){
     }
   })().finally(() => { rqWaAskP = null; });
   return rqWaAskP;
+}
+// THE RECORD OF A "YES, SENT" NEVER FREEZES THE NEXT QUESTION AND IS NEVER LOST (owner 2026-11-09: "el yes sent no funciona y no quedan grabados"). The server sometimes never answers a write (the Monday record hung for minutes the same morning);
+// the asking waited for it for ever: no more "Did you send…", the window could not close, and the drafts stayed drafts (4 Nov: 13 cards, 1 recorded). Now the next question waits at most 20 s for the record; a record that fails — now or
+// later — puts the card back to "not recorded" and the trader is asked again (confirming twice is a no-op on the server).
+const RQ_WA_RECORD_WAIT_MS = 20000;
+function rqWaRecord(it){ // wraps the card's own record once: the callers keep calling it.onOpened() exactly as before
+  if (it.recordBound || typeof it.onOpened !== 'function') return;
+  it.recordBound = true;
+  const real = it.onOpened;
+  it.onOpened = () => {
+    const rec = (async () => { await real.call(it); })();
+    rec.catch((e) => { it.recorded = false; rqWaWatching.add(it); rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}. You will be asked again.`); rqRenderWaModal(); });
+    return Promise.race([rec.catch(() => {}), new Promise((r) => setTimeout(r, RQ_WA_RECORD_WAIT_MS))]);
+  };
 }
 window.addEventListener('blur', () => { if (rqWaWatching.size) rqWaLeft = true; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (rqWaWatching.size) rqWaLeft = true; } else if (rqWaLeft) rqWaAsk(); });
