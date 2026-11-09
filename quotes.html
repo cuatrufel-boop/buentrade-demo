@@ -7033,6 +7033,21 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   const pairKey = `${c.trade_name} — ${rqProductName(pid)}`;
   const outro = [rqPendingNote(), warnings.length ? rqCreditNote(warnings) : ''].filter(Boolean).join('\n\n');
   let customerDone = false;
+  // MANY BRANDS = ONE MESSAGE (owner 2026-11-09: "tenía más de 5 marcas y me tocó enviar uno por uno… que manden todas solo enviando una vez"; the bars picture approved from his own mock-up, "construyelo para pesos y border USD"): a customer's offer of one
+  // product with TWO OR MORE brands is ONE message — ONE picture with the product's name, every brand highest price first with a bar and its price in HIS currency ($ USD/lb at the border, $ MXN/kg for a pesos customer), the cheapest in green, a
+  // document mark beside a brand that has a spec sheet — ONE green button and ONE "Yes, sent" that confirms EVERY brand he lacked. The picture is the message: no text, no links (a picture cannot hold one). One brand stays the single message it always was.
+  if (sorted.length >= 2) {
+    const rows = sorted.map((one) => { const offer = offersByPlantId.get(one.plant.id); const files = typeof rqFindProductFilesFor === 'function' ? (rqFindProductFilesFor(one.plant) || {}) : {};
+      return { one, offer, spec: !!((offer && (offer.spec_url || offer.photo_url)) || files.spec_url || files.photo_url) }; });
+    const offs = rows.filter(r => r.offer).map(r => ({ offer: r.offer, plantName: r.one.plant.name }));
+    const extras = [];
+    if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
+    if (outro) extras.push({ label: 'Note', text: outro });
+    return [{ extras, id: c.id, label: `${pairKey} — all brands`, pairKey, phone, body: '', // pairKey: the customer × product row of the one offer window
+      sentOffers: offs, thinImages: [],
+      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
+      onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
+  }
   return sorted.map((one, i) => {
     // THE MESSAGE IS THE PRICE (owner 2026-10-25: "quita los mensajes fuera del precio, déjalo a un lado como sugerencia para poder hacer copy paste"): the product, the price and its link — nothing else goes in the bubble. The opening line / the "Lista actualizada" title
     // (first message) and the pending / credit notes (last message) are SUGGESTIONS beside it (`extras`), one tap to copy and paste into the chat if the trader wants them.
@@ -7062,17 +7077,17 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
-  items.filter(it => it.thinImages && it.thinImages.length).forEach(it => {
-    const list = it.thinImages, key = list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the same banners stacked in ONE picture, in the message's order
+  items.filter(it => (it.thinImages && it.thinImages.length) || it.bars).forEach(it => {
+    const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
       if (!bytes) return;
       if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
       it.bannerUrl = rqThinUrls.get(key);
-      it.downloadFiles = [{ bytes, filename: `${list.map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
+      it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
@@ -8711,7 +8726,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       : 'No customer with a WhatsApp number is linked to any variant in this quote yet — link one in Customers first.');
     return;
   }
-  rqOpenWaModal(`WhatsApp offer — ${items.length} message${items.length > 1 ? 's' : ''} (one per brand)`, items, true);
+  rqOpenWaModal(`WhatsApp offer — ${items.length} message${items.length > 1 ? 's' : ''} (one per customer and product)`, items, true);
   rqSetModalNote('rq_wa_modal_list', skipped);
 }
 
