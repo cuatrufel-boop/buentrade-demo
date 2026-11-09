@@ -647,7 +647,8 @@ function todayListHtml(all){
     const acts = `<div class="tdr-acts"><a class="tdr-act" href="${escapeHtml(b.href)}">Open in Quotes →</a><a class="tdr-act tdr-later" href="#" data-pid="${escapeHtml(b.product_id)}">Later</a></div>`;
     return nums + acts;
   };
-  const bestShown = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).filter(b => !laterIds.has(b.product_id));
+  // The agenda's order (owner 2026-11-08): the products with at least one customer who has a margin first, the server's order (potential per load) inside each group; nothing is cut.
+  const bestShown = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).filter(b => !laterIds.has(b.product_id)).map((b, i) => ({ b, i })).sort((x, y) => Number((y.b.send_n || 0) > 0) - Number((x.b.send_n || 0) > 0) || x.i - y.i).map(x => x.b);
   const sentN = bestShown.filter(b => Number(b.sent_today) > 0).length, potential = bestShown.reduce((t, b) => t + (Number(b.potential_usd) || 0), 0);
   const pendPlants = new Set((typeof dashPendingRows !== 'undefined' && dashPendingRows ? dashPendingRows : []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)).map(r => r.plant_id)).size;
   const agendaHtml = bestShown.length ? `<div class="tdr-agenda"><span><b>${bestShown.length}</b> to send${potential ? ` · ≈ $${Math.round(potential).toLocaleString('en-US')} per load` : ''}</span><span class="tdr-prog"><i style="width:${Math.round(100 * sentN / bestShown.length)}%"></i></span><span>${sentN} of ${bestShown.length} sent today</span>${pendPlants ? `<span class="tdr-pchip" title="They keep notifying in the bell">${pendPlants} plant${pendPlants === 1 ? '' : 's'} wait${pendPlants === 1 ? 's' : ''} for your match in Pending</span>` : ''}</div><div class="tdr-keys"><kbd>J</kbd><kbd>K</kbd> move · <kbd>Enter</kbd> open in Quotes · <kbd>S</kbd> later</div>` : '';
