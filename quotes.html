@@ -1320,6 +1320,7 @@ auth.onAuthStateChanged(user => {
 <script src="js/bt-dialogs.js"></script>
 <script src="js/market-flash-send.js"></script>
 <script src="js/weekly-card.js"></script>
+<script src="js/offer-card.js"></script>
 <script src="js/bulletin-card.js"></script>
 <script src="js/quote-pesos.js"></script>
 
@@ -7008,6 +7009,16 @@ function buildCustomerOfferText(customerFirstName, plantsOverride, overCreditLim
   return greeting + signalBlock + lines + (pending ? '\n\n' + pending : '') + (overCreditLimit ? '\n\n' + rqCreditNote(overCreditLimit) : '');
 }
 
+// THE OFFER EMAIL AS THE BLUE BARS TABLE (owner 2026-11-09, "emails? — Sí, constrúyela"; js/offer-card.js): an offer of ONE product with TWO OR MORE brands goes as the BuenTrade navy card — the product's name, every brand highest first with a bar and
+// its price in HIS currency (USD/lb at the border, MXN/kg for pesos), the cheapest in green, and a "ficha" link beside a brand that has a spec sheet or photo (in an email the link CAN sit inside the table). The plain text is the message's
+// own text (what shows if the trader edits it). One brand keeps the plain text as always; the PDFs stay attached exactly as before.
+function rqOfferEmailHtml(firstName, full, o){
+  if (typeof BTOfferCard === 'undefined' || !Array.isArray(full) || full.length < 2) return undefined;
+  const opts = o || {};
+  const rows = full.map(({ plant, calc }) => { const f = rqFindProductFilesFor(plant) || {}; return { brand: String(plant.name).trim(), price: rqLinePrice(calc), ficha: f.spec_url || f.photo_url || null }; });
+  return BTOfferCard.offerCardHtml({ name: firstName, signalLine: opts.isUpdate ? '' : opts.signalLine, title: rqSpecEsForPlant(full[0].plant) || '', cur: full[0].calc.mxn ? 'mxn' : 'usd', isUpdate: !!opts.isUpdate,
+    delivery: rqDeliveryDatesText(), pending: rqPendingNote(), credit: opts.warnings && opts.warnings.length ? rqCreditNote(opts.warnings) : '', rows });
+}
 // Real ask 2026-09-15: WhatsApp-only twin of buildCustomerOfferText — email keeps the plain text
 // above (the real combined PDF is the attachment there, see rqBuildCombinedPdf), but WhatsApp
 // can't attach a file to a pre-filled wa.me message, so each plant's line here also carries its
@@ -8539,6 +8550,7 @@ async function sendOfferEmailTo(customerId){
     const downloadFiles = pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean);
     cards.push({
       id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject, body, fromAlias: 'offers', attachments, downloadFiles,
+      html: rqOfferEmailHtml(firstName, full, { signalLine, warnings }), htmlText: body, // the blue bars table when there are two or more brands (the plain text stays its text)
       onSent: async () => { await rqConfirmBullets(c.id, 'email'); rqShowNotice(`Cotización enviada a ${cc.email}.`); },
     });
   }
@@ -8648,6 +8660,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
         body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, lacks, c,
         attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
         downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
+        html: rqOfferEmailHtml(firstName, full, { signalLine, warnings, isUpdate }), // the blue bars table when there are two or more brands (the plain text above stays its text)
       });
     });
   }
@@ -8668,7 +8681,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
   // Every customer's message is reviewed and confirmed by the trader (editable card + its own Send, or "Make All Offers"
   // once they have looked at them) — nothing goes out automatically. A failed API send offers the Gmail fallback on that card.
   rqOpenEmailModal(`Email offer — ${toSend.length} message${toSend.length > 1 ? 's' : ''} (one product each)`, toSend.map(it => ({
-    id: it.id, label: it.label, to: it.to, subject: it.subject, body: it.body, fromAlias: 'offers',
+    id: it.id, label: it.label, to: it.to, subject: it.subject, body: it.body, fromAlias: 'offers', html: it.html, htmlText: it.html ? it.body : undefined,
     attachments: it.attachments, downloadFiles: it.downloadFiles,
     onSent: async () => { await rqLogSentOffersRows(it.lacks, [it.c], 'email'); await rqConfirmBullets(it.id, 'email'); if (opts.onSent) opts.onSent(it.c); },
   })), true);
