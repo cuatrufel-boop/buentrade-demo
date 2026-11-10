@@ -2584,6 +2584,7 @@ function qmTermsHtml(pending){
       options: () => qmMf.catalog_options.filter(x => !p.species || x.species === p.species).map(x => ({ id: x.key, label: (x.full_names && x.full_names[0]) || x.label_en, search: [x.label_en, x.label_es, x.search, ...(x.full_names || [])].join(' ') })),
       suggested: () => p.suggested_keys,
       onPick: (k) => qmMfPick(i, k),
+      onClear: () => qmMfClear(i),
       onCreate: null,
     });
     return `<tr><td style="text-align:left;min-width:220px;"><b>${escapeHtml(p.term)}</b>${p.buyers ? ` <span class="rq-sheet-pill ok" style="margin-left:6px;">${p.buyers} client${p.buyers === 1 ? '' : 's'} buy this</span>` : ''}<span class="muted" style="display:block;font-size:11.5px;margin-top:3px;">${escapeHtml(p.example.length > 120 ? p.example.slice(0, 120) + '…' : p.example)}</span></td>
@@ -2596,6 +2597,7 @@ function qmTermsHtml(pending){
     ${rqTableSection(rows, ['From the bulletin', 'Means this product', ''])}</div>`;
 }
 function qmMfPick(i, key){ qmMfPicks[qmMfPending()[i].term] = key; qmRenderSource(); }
+function qmMfClear(i){ const p = qmMfPending()[i]; if (p) delete qmMfPicks[p.term]; qmRenderSource(); } // a picked product can be taken back (owner 2026-11-10)
 async function qmMfTeach(i){
   const p = qmMfPending()[i]; const key = p && qmMfPicks[p.term];
   if (!key) return;

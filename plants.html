@@ -2692,6 +2692,13 @@ function renderPlantPendingMatches(){
 // list on every keystroke would recreate this very <input> and drop its focus/cursor position.
 
 
+// A picked product can be taken back (owner 2026-11-10): the row goes back to "nothing picked", exactly as it arrived.
+function clearPendingMatchPick(matchId){
+  const m = plantPendingMatches.find(x => x.id === matchId);
+  if (!m) return;
+  m._pickedProductId = null;
+  renderPlantPendingMatches();
+}
 function pickPendingMatchCandidate(matchId, productId){
   const m = plantPendingMatches.find(x => x.id === matchId);
   if (!m) return;
@@ -2787,6 +2794,7 @@ function registerPendingPicker(m){
     options: () => pickerOptionsForLine(m.raw_text, m),
     suggested: () => pickerSuggestedForLine(m.raw_text, Array.isArray(m.candidate_product_ids) ? m.candidate_product_ids : []),
     onPick: (productId) => pickPendingMatchCandidate(m.id, productId),
+    onClear: () => clearPendingMatchPick(m.id),
     onCreate: m.signal_type === 'declined' ? null : () => startCreateProductForPending(m.id),
   });
 }
@@ -3588,6 +3596,13 @@ function sortCandidatesBySimilarity(rawText, products){
 // One row picked its product directly from the candidate chips (or the browse search) — checks
 // for exactly one leftover, unexplained word right after the pick (see findLeftoverWords above)
 // instead of leaving the separate teach form open alongside the picker the whole time.
+// A picked product can be taken back (owner 2026-11-10): the line goes back to "no product yet" (on Apply All it waits in Pending, as any line without a product).
+function clearCandidate(i){
+  if (!priceListRows[i]) return;
+  priceListRows[i].matchedProductId = null;
+  priceListRows[i]._forceOpen = false; priceListRows[i]._teachOpen = false;
+  renderPriceListReview();
+}
 function pickCandidate(i, productId){
   priceListRows[i].matchedProductId = productId;
   // Picking a card is the whole confirm — the row collapses straight back to its closed, resolved
@@ -4109,6 +4124,7 @@ function renderPriceListReview(){
       options: () => pickerOptionsForLine(row.rawText, null),
       suggested: () => pickerSuggestedForLine(row.rawText, row.candidateIds || []),
       onPick: (productId) => pickCandidate(i, productId),
+      onClear: () => clearCandidate(i),
       onCreate: () => startCreateProductForRow(i),
     });
     return `<tr id="plrRow_${i}">

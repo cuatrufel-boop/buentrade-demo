@@ -30,7 +30,12 @@
     '.btp-opt.cur{background:var(--blue-light,rgba(90,170,255,.14));color:var(--blue-bright,#5AAAFF);font-weight:600;}' +
     '.btp-sep{height:1px;background:var(--line,rgba(255,255,255,.18));margin:5px 2px;}' +
     '.btp-new{color:var(--blue-bright,#5AAAFF);font-weight:700;}' +
-    '.btp-empty{padding:8px 10px;font-size:11.5px;color:var(--ink-soft,rgba(255,255,255,.55));}';
+    '.btp-empty{padding:8px 10px;font-size:11.5px;color:var(--ink-soft,rgba(255,255,255,.55));}' +
+    // A picked product can be taken back (owner 2026-11-10: "si escogí un producto pero después lo quiero quitar no me deja"): an × in the box and "Remove selection" at the bottom of the list.
+    '.btp-x{position:absolute;right:9px;top:18.5px;transform:translateY(-50%);width:22px;height:22px;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:15px;line-height:20px;padding:0;cursor:pointer;}' +
+    '.btp-x:hover{background:rgba(255,255,255,.28);}' +
+    '.btp-in.btp-hasx{padding-right:38px;}' +
+    '.btp-clear{color:var(--ink-soft,rgba(255,255,255,.7));}';
   document.head.appendChild(css);
 
   function items(key, q) {
@@ -55,9 +60,12 @@
     const list = items(key, q);
     const cfg = reg.get(key);
     const cur = (box.querySelector('.btp-in').dataset.label || '');
+    const hasClear = !!(cur && cfg.onClear);
     const html = list.map((o, i) => `<div class="btp-opt${i === active ? ' act' : ''}${o.label === cur ? ' cur' : ''}" data-id="${esc(o.id)}"${o.tip ? ` data-tip="${esc(o.tip)}"` : ''}>${o.label === cur ? '✓ ' : ''}${esc(o.label)}</div>`).join('') +
       (list.length ? '' : `<div class="btp-empty">${q ? 'No product matches' : 'No close product — type to search'}</div>`) +
-      (cfg.onCreate ? `<div class="btp-sep"></div><div class="btp-opt btp-new${active === list.length ? ' act' : ''}" data-new="1">+ Create new product</div>` : '');
+      (cfg.onCreate || hasClear ? '<div class="btp-sep"></div>' : '') +
+      (hasClear ? `<div class="btp-opt btp-clear${active === list.length ? ' act' : ''}" data-clear="1">✕ Remove selection</div>` : '') +
+      (cfg.onCreate ? `<div class="btp-opt btp-new${active === list.length + (hasClear ? 1 : 0) ? ' act' : ''}" data-new="1">+ Create new product</div>` : '');
     const el = box.querySelector('.btp-list');
     el.innerHTML = html; el.hidden = false;
     box._list = list;
@@ -72,6 +80,7 @@
     const cfg = reg.get(key);
     close(key, false);
     if (el.dataset.new) { cfg.onCreate && cfg.onCreate(); return; }
+    if (el.dataset.clear) { cfg.onClear && cfg.onClear(); return; }
     cfg.onPick(el.dataset.id);
   }
 
@@ -89,13 +98,15 @@
   document.addEventListener('keydown', (e) => {
     const inp = e.target.closest && e.target.closest('.btp-in'); if (!inp) return;
     const box = inp.closest('.btp'); const key = box.dataset.btp; if (!reg.has(key)) return;
-    const n = (box._list || []).length + (reg.get(key).onCreate ? 1 : 0);
+    const n = (box._list || []).length + (box.querySelector('.btp-clear') ? 1 : 0) + (reg.get(key).onCreate ? 1 : 0);
     if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(n - 1, active + 1); render(key, inp.value); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(0, active - 1); render(key, inp.value); }
     else if (e.key === 'Enter') { e.preventDefault(); const el = box.querySelectorAll('.btp-opt')[active < 0 ? 0 : active]; if (el) choose(key, el); }
     else if (e.key === 'Escape') { close(key, true); inp.blur(); }
   });
   document.addEventListener('mousedown', (e) => {
+    const x = e.target.closest && e.target.closest('.btp-x');
+    if (x) { e.preventDefault(); const key = x.closest('.btp').dataset.btp, cfg = reg.get(key); if (openKey === key) close(key, false); if (cfg && cfg.onClear) cfg.onClear(); return; }
     const opt = e.target.closest && e.target.closest('.btp-opt');
     if (opt) {
       e.preventDefault();
@@ -109,7 +120,7 @@
 
   window.BTPicker = {
     // tip (optional): the card shown while the mouse is over the product already picked (js/product-context.js).
-    html: (key, label, tip) => `<div class="btp" data-btp="${esc(key)}"><svg class="btp-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="btp-in${label ? ' has' : ''}" value="${esc(label || '')}" data-label="${esc(label || '')}"${label && tip ? ` data-tip="${esc(tip)}"` : ''} placeholder="Pick or type a product…" autocomplete="off"><div class="btp-list" hidden></div></div>`,
+    html: (key, label, tip) => { const canClear = !!(label && reg.get(key) && reg.get(key).onClear); return `<div class="btp" data-btp="${esc(key)}"><svg class="btp-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="btp-in${label ? ' has' : ''}${canClear ? ' btp-hasx' : ''}" value="${esc(label || '')}" data-label="${esc(label || '')}"${label && tip ? ` data-tip="${esc(tip)}"` : ''} placeholder="Pick or type a product…" autocomplete="off">${canClear ? '<button type="button" class="btp-x" aria-label="Remove selection" tabindex="-1">×</button>' : ''}<div class="btp-list" hidden></div></div>`; },
     register: (key, cfg) => reg.set(key, cfg),
   };
 })();
