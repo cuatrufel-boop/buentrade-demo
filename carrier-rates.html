@@ -118,6 +118,7 @@ const KEY = 'sb_publishable_9CmSNojsSstjBunfSF2smw_y3NYCXl7';
 const TOKEN = new URLSearchParams(location.search).get('t') || '';
 let RATES = [];
 const edits = {};
+let WRONG = {}; // key → message: a typed amount the server judged a typo (owner 2026-11-10), cleared when the carrier edits it
 
 async function call(body){
   const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + KEY, apikey: KEY }, body: JSON.stringify(body) });
@@ -142,7 +143,7 @@ function rowHtml(r){
     <div class="city">${esc(r.origin)}<small>→ Frontera</small></div>
     <div>${hasRate(r) ? `<div class="now${n != null ? ' struck' : ''}">${money(r.rate)}</div>` : `<div class="now struck" style="text-decoration:none;">Sin tarifa</div>`}${n != null && hasRate(r) ? `<div class="delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${money(Math.abs(d))}</div>` : ''}</div>
     <span class="bt-money-wrap"><span class="bt-money-cur">$</span><input class="new" data-money data-id="${esc(k)}" placeholder="${hasRate(r) ? 'nuevo' : 'tu tarifa'}" value="${esc(btMoney.group(edits[k] ?? ''))}" oninput="edit('${esc(k)}', this)"><span class="bt-money-cur">USD</span></span>
-    ${big ? `<div class="check">Es un cambio grande respecto a ${money(r.rate)} — por favor revísalo.</div>` : ''}
+    ${WRONG[k] ? `<div class="check wrong" style="color:#b42318;font-weight:600;">${esc(WRONG[k])}</div>` : big ? `<div class="check">Es un cambio grande respecto a ${money(r.rate)} — por favor revísalo.</div>` : ''}
   </div>`;
 }
 // One block per U.S. state, states A→Z by name, cities A→Z inside (owner 2026-10-16: "por estado en orden alfabético, todas las TX juntas, IA juntas").
@@ -167,6 +168,7 @@ function edit(id, el){
   const raw = btMoney.raw(el), pos = el.selectionStart == null ? raw.length : el.selectionStart;
   const before = raw.slice(0, pos).replace(/[^0-9.]/g, '').length;
   edits[id] = btMoney.typing(raw, 2);
+  delete WRONG[id];
   render();
   const again = document.querySelector(`.new[data-id="${id}"]`);
   if (again){ again.focus(); const q = btMoney.caretFor(btMoney.raw(again), before); try { again.setSelectionRange(q, q); } catch (e) {} }
@@ -179,7 +181,7 @@ function updateBar(){
   const n = changed().length;
   const f = missing().length;
   document.getElementById('count').innerHTML = `<b>${n}</b> ${n === 1 ? 'cambiada' : 'cambiadas'} · ${RATES.length - n} igual` + (f ? ` · <b>${f}</b> sin tarifa` : '');
-  document.getElementById('send').disabled = n === 0 || f > 0;
+  document.getElementById('send').disabled = n === 0 || f > 0 || Object.keys(WRONG).length > 0;
   document.getElementById('noChange').disabled = f > 0;
 }
 async function submit(noChanges){
@@ -187,6 +189,23 @@ async function submit(noChanges){
   const list = noChanges ? [] : changed();
   const msg = document.getElementById('sendMsg');
   msg.hidden = true;
+  // A typo never goes in (owner 2026-11-10: $510 typed for ~$5,100 — "que no deje seguir si no meten bien, que le diga que corrija"): the server compares each
+  // typed amount with what that city normally costs and, if it looks like a missing/extra zero, the row turns red with "corrige" and nothing can be sent until it is fixed.
+  if (list.length){
+    const changes = list.map((r) => (r.id ? { rate_id: r.id, rate: newValue(r) } : { location_id: r.location_id, rate: newValue(r) }));
+    try { await call({ action: 'carrier_check', token: TOKEN, changes }); }
+    catch (e) {
+      if (e.data && e.data.error === 'rate_looks_wrong'){
+        WRONG = {};
+        (e.data.wrong || []).forEach((w) => { WRONG[w.rate_id || 'loc:' + w.location_id] = `${money(w.rate)} se ve muy ${w.verdict === 'low' ? 'bajo — ¿le falta un cero?' : 'alto — ¿le sobra un cero?'} Corrige el monto.`; });
+        render();
+        msg.textContent = e.data.message; msg.hidden = false;
+        const first = document.querySelector('.check.wrong'); if (first) first.scrollIntoView({ block: 'center' });
+        return;
+      }
+      // any other answer (a hiccup, an older server without the check): the review and the send go on as before — the server checks again on send
+    }
+  }
   // Wise-style review (owner 2026-10-16: no wrong amount may go through): every changed city shows "Antes → Ahora" and the carrier confirms or fixes.
   if (list.length && !(await btMoney.confirmChange(list.map((r) => ({ label: r.origin, before: hasRate(r) ? Number(r.rate) : null, after: newValue(r) })), { title: 'Revisa tus tarifas', note: 'Estas son las tarifas que vas a enviar, en dólares (USD). ¿Son correctas?', okLabel: 'Confirmar y enviar', fixLabel: 'Corregir' }))) return;
   document.getElementById('send').disabled = true; document.getElementById('noChange').disabled = true;
