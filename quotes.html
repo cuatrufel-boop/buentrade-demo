@@ -2811,7 +2811,8 @@ function rqCloseSearchPalette(){
   if (unconfirmed) rqActiveProductFilterIds = [];
   const restore = wasOpen && rqPaletteBackupIds.length && !rqActiveProductFilterIds.length;
   if (restore) rqActiveProductFilterIds = rqPaletteBackupIds; // closed without picking: keep what was open before
-  if (unconfirmed || restore) {
+  const several = rqActiveProductFilterIds.length > 1; // several picked in ONE search: the screen must end on the one-product format (the brand list), like Today's link (owner 2026-11-10: "debe funcionar igual que esta")
+  if (unconfirmed || restore || several) {
     rqRenderSweepTables();
     renderRqStats();
   }
@@ -3164,6 +3165,7 @@ function rqRenderSweepTables(){
   const expiredList = document.getElementById('rq_expired_results');
   const updatingList = document.getElementById('rq_updating_results');
   if (!readyList || !expiredList || !updatingList) return;
+  rqCollapsePicked(); // several products (a link, a Live row, the closed Find Product window) are ONE worked product + chips, so the focus screen and the brand list are the same from everywhere; while the window is open it does nothing (picks add up)
   const filterIds = rqActiveProductFilterIds;
   const filterId = filterIds.length > 0; // any product picked
   // Offer Sheet (2026-09-26): products picked in Find Product are worked in ONE table (rqRenderSheet) instead of the
@@ -3995,6 +3997,8 @@ function rqRenderSheet(){
   if (rqSheetState.key !== rqSheetKey()){
     if (!rqSheetState.loading || rqSheetState.pendingKey !== rqSheetKey()){ rqSheetState.pendingKey = rqSheetKey(); rqSheetLoad(); }
     document.getElementById('rq_sheet_rows').innerHTML = '<div class="empty">Loading…</div>';
+    const det0 = document.getElementById('rq_sheet_details'); // ONE product: the old full table never shows, not even for the second it takes to load (several picked in Find Product, then Done)
+    if (det0 && RQ_BRAND_LIST && rqActiveProductFilterIds.length === 1) det0.style.display = 'none';
     return;
   }
   // Same guard the old sections rely on (see loadPendingPrices' 45s poll): never rebuild the table while a plant's QT
