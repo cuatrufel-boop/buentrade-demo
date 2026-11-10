@@ -1,4 +1,5 @@
 // Demo login: replaces Firebase. Nothing here reaches the real BUENTRADE system.
+window.__btDemo = true; // the real pages' "View as" selector (js/view-as.js) stays out of the demo: the demo switches between its own accounts below
 (function(){
   var KEY = 'bt_demo_session';
   // email -> SHA-256 of its password. "invitado" is the friend's login and never changes; "felipe" is the owner's; "trader" and "buyer" show the two profiles of the Bid funnel.

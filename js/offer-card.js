@@ -16,16 +16,16 @@
     const max = Math.max(...rows.map((r) => Number(r.price))), min = Math.min(...rows.map((r) => Number(r.price)));
     const body = rows.map((r, i) => {
       const best = rows.length > 1 && Number(r.price) === min, color = best ? C.green : C.blue, pct = Math.max(6, Math.round(100 * Number(r.price) / max));
-      const link = okUrl(r.ficha) ? `<a href="${esc(okUrl(r.ficha))}" style="color:${C.link};font-size:12px;font-weight:normal;text-decoration:none;border:1px solid ${C.linkLine};border-radius:6px;padding:1px 6px;margin-left:8px;white-space:nowrap;">ficha</a>` : '';
+      const link = okUrl(r.ficha) ? `<a href="${esc(okUrl(r.ficha))}" style="color:${C.link};font-size:12px;font-weight:normal;text-decoration:none;border:1px solid ${C.linkLine};border-radius:6px;padding:1px 6px;margin-left:8px;white-space:nowrap;display:inline-block;">ficha</a>` : '';
       return `<tr>
-        <td align="left" style="padding:10px 6px 10px 16px;border:0;border-top:1px solid ${C.line};font-size:14px;font-weight:bold;color:${C.txt};white-space:nowrap;">${esc(r.brand)}${link}</td>
-        <td width="100%" style="width:100%;padding:10px 8px;border:0;border-top:1px solid ${C.line};"><table role="presentation" width="${pct}%" cellpadding="0" cellspacing="0" style="width:${pct}%;border-collapse:collapse;"><tr><td height="10" bgcolor="${color}" style="height:10px;padding:0;border:0;background:${color};border-radius:5px;font-size:1px;line-height:10px;">&nbsp;</td></tr></table></td>
-        <td align="right" style="padding:10px 16px 10px 6px;border:0;border-top:1px solid ${C.line};font-family:'Courier New',monospace;font-size:13px;font-weight:bold;color:${best ? C.green : C.txt};white-space:nowrap;">${esc(priceText(r.price, o.cur))}</td></tr>`;
+        <td align="left" style="padding:12px 6px 4px 16px;border:0;border-top:1px solid ${C.line};font-size:15px;font-weight:bold;color:${C.txt};">${esc(r.brand)}${link}</td>
+        <td align="right" style="padding:12px 16px 4px 6px;border:0;border-top:1px solid ${C.line};font-family:'Courier New',monospace;font-size:13px;font-weight:bold;color:${best ? C.green : C.txt};white-space:nowrap;">${esc(priceText(r.price, o.cur))}</td></tr>
+      <tr><td colspan="2" style="padding:0 16px 12px 16px;border:0;"><table role="presentation" width="${pct}%" cellpadding="0" cellspacing="0" style="width:${pct}%;border-collapse:collapse;"><tr><td height="10" bgcolor="${color}" style="height:10px;padding:0;border:0;background:${color};border-radius:5px;font-size:1px;line-height:10px;">&nbsp;</td></tr></table></td></tr>`;
     }).join('');
-    const card = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;border-collapse:separate;background:${C.navy};border-radius:14px;font-family:Arial,Helvetica,sans-serif;"><tr><td colspan="3" style="padding:16px 16px 12px 16px;border:0;">
+    const card = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;border-collapse:separate;background:${C.navy};border-radius:14px;font-family:Arial,Helvetica,sans-serif;"><tr><td colspan="2" style="padding:16px 16px 12px 16px;border:0;">
         <div style="font-size:12px;color:${C.mut};">Buen<span style="color:${C.blue};">Trade</span>${o.isUpdate ? ' · Lista actualizada' : ''}</div>
         ${o.title ? `<div style="font-size:19px;font-weight:bold;color:${C.txt};margin-top:3px;">${esc(o.title)}</div>` : ''}</td></tr>${body}
-      <tr><td colspan="3" style="padding:0 0 6px 0;border:0;font-size:1px;line-height:6px;">&nbsp;</td></tr></table>`;
+      <tr><td colspan="2" style="padding:0 0 6px 0;border:0;font-size:1px;line-height:6px;">&nbsp;</td></tr></table>`;
     return (o.name ? para(`Hola ${o.name},`) : '') + (o.signalLine ? para(o.signalLine) : '') + card
       + (o.delivery ? `<p style="margin:12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;">Entrega ${esc(o.delivery)}</p>` : '')
       + (o.pending ? `<div style="height:12px;line-height:12px;">&nbsp;</div>${para(o.pending)}` : '') + (o.credit ? para(o.credit) : '');

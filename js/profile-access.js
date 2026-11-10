@@ -36,6 +36,7 @@
   function start() {
     try {
       if (typeof auth === 'undefined' || typeof API_ROOT === 'undefined' || typeof API_KEY === 'undefined') return;
+      if (root.top && root.top !== root) return; // never inside an embedded frame (Quotes embeds the trading tool once per plant): the screen around it already did
       auth.onAuthStateChanged(function (user) {
         if (!user || !user.email) return;
         Promise.resolve(user.getIdToken ? user.getIdToken() : '').catch(function () { return ''; }).then(function (tok) {
@@ -44,7 +45,9 @@
             body: JSON.stringify({ funnel: { action: 'status', actor: user.email, id_token: tok } })
           });
         }).then(function (r) { return r.ok ? r.json() : null; }).then(function (st) {
-          if (st && st.enforced === true && Array.isArray(st.roles)) apply(st.roles);
+          var lens = root.btViewAs && root.btViewAs.allowed(st) ? root.btViewAs.current() : null; // "View as" (js/view-as.js, owner 2026-11-09): the person with full access looking through ANOTHER profile; null = his own view, as always
+          if (lens) apply([lens]); else if (st && st.enforced === true && Array.isArray(st.roles)) apply(st.roles);
+          if (root.btViewAs) root.btViewAs.mount(st);
         }).catch(function () { /* any doubt: the screen stays exactly as it is */ });
       });
     } catch (e) { /* same */ }
