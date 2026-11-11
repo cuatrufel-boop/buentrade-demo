@@ -7151,14 +7151,14 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   // document mark beside a brand that has a spec sheet — ONE green button and ONE "Yes, sent" that confirms EVERY brand he lacked. The picture is the message: no text, no links (a picture cannot hold one). One brand stays the single message it always was.
   if (sorted.length >= 1) { // ALWAYS the bars picture, even for ONE brand (owner 2026-11-10: "claro siempre así sea solo una" · "barra y link"): one brand = its bar and its own link (its card, when it has a spec or a photo)
     const rows = sorted.map((one) => { const offer = offersByPlantId.get(one.plant.id); const files = typeof rqFindProductFilesFor === 'function' ? (rqFindProductFilesFor(one.plant) || {}) : {};
-      const url = (offer && (offer.spec_url || offer.photo_url)) || files.spec_url || files.photo_url || null; // the ficha itself, sent as a DOCUMENT beside the picture (owner 2026-11-10: "sin link, solo el doc al lado de la marca abre la ficha")
-      return { one, offer, spec: !!url, url }; });
+      const specU = (offer && offer.spec_url) || files.spec_url || null, photoU = (offer && offer.photo_url) || files.photo_url || null; // BOTH, when the brand has both (owner 2026-11-10: "si además de ficha hay fotos tiene que mostrar las dos")
+      return { one, offer, spec: !!(specU || photoU), specU, photoU }; });
     const offs = rows.filter(r => r.offer).map(r => ({ offer: r.offer, plantName: r.one.plant.name }));
     const extras = [];
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
-    return [{ extras, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.url).map(r => ({ brand: String(r.one.plant.name).trim(), url: r.url })), // pairKey: the customer × product row of the one offer window
+    return [{ extras, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
       bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
@@ -7190,16 +7190,54 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 // 1200×72 (thin), downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
-// The ficha of a brand as a DOCUMENT to drop into the chat beside the picture (owner 2026-11-10): the file itself, named after the brand. Never makes the window wait; a ficha that cannot be read is simply not attached.
+// THE FICHA OF A BRAND AS ONE SMALL, CLEAN BUENTRADE DOCUMENT beside the picture (owner 2026-11-10: "es este pero con colores de buentrade, así chiquito, limpio" · option 1 "logo en cada tarjeta de ficha" · "si además de ficha hay fotos tiene que mostrar las dos"):
+// ONE PDF per brand named Brand_ficha.pdf. Its FIRST page is a wide, short BuenTrade card (navy, the plant's logo on white, the brand, "Ficha técnica"/"Ficha técnica + Foto") — the page WhatsApp draws as the document's preview, so it
+// reads as a small card, not a red PDF icon; then the photo page when there is a photo, then the ficha's own pages copied untouched. A ficha that is not a PDF (Word…) cannot be merged: it goes as it is, beside the card.
 const rqFichaCache = new Map();
-function rqFetchFicha(f){
-  if (!f || !f.url) return Promise.resolve(null);
-  if (!rqFichaCache.has(f.url)) {
-    const ext = ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(f.url) || [])[1] || 'pdf').toLowerCase();
-    const type = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[ext] || 'application/octet-stream';
-    rqFichaCache.set(f.url, fetch(f.url).then(r => r.ok ? r.arrayBuffer() : null).then(bytes => bytes ? { bytes, filename: `${String(f.brand).replace(/[^\w.-]+/g, '_')}_ficha.${ext}`, type } : null).catch(() => null));
+function rqWaFichaDocs(f){
+  const key = [f.brand, f.spec_url, f.photo_url, f.logo_url].join('|');
+  if (!rqFichaCache.has(key)) rqFichaCache.set(key, rqBuildFichaDocs(f).catch(() => []));
+  return rqFichaCache.get(key);
+}
+async function rqBuildFichaDocs(f){
+  const { PDFDocument, rgb, StandardFonts } = PDFLib;
+  const get = async (u) => { if (!u) return null; try { const r = await fetch(u); return r.ok ? await r.arrayBuffer() : null; } catch (e) { return null; } };
+  const [specB, photoB, logoB] = await Promise.all([get(f.spec_url), get(f.photo_url), get(f.logo_url)]);
+  const magic = (b) => b ? Array.from(new Uint8Array(b.slice(0, 4))) : [];
+  const isPdf = (b) => magic(b).join() === '37,80,68,70', isPng = (b) => magic(b).join() === '137,80,78,71', isJpg = (b) => magic(b)[0] === 255 && magic(b)[1] === 216;
+  const base = String(f.brand).replace(/[^\w.-]+/g, '_') + '_ficha', docs = [];
+  const mimeOf = (u) => ({ pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase()] || 'application/octet-stream');
+  const extOf = (u) => ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase();
+  const out = await PDFDocument.create(), bold = await out.embedFont(StandardFonts.HelveticaBold), reg = await out.embedFont(StandardFonts.Helvetica);
+  const W = 612, H = 124, cover = out.addPage([W, H]);
+  cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(23 / 255, 37 / 255, 75 / 255) });
+  cover.drawText('Buen', { x: 30, y: H - 30, size: 15, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  cover.drawText('Trade', { x: 30 + reg.widthOfTextAtSize('Buen', 15), y: H - 30, size: 15, font: reg, color: rgb(106 / 255, 170 / 255, 245 / 255) });
+  let lx = 30;
+  const logoImg = logoB && (isPng(logoB) ? await out.embedPng(logoB).catch(() => null) : isJpg(logoB) ? await out.embedJpg(logoB).catch(() => null) : null);
+  if (logoImg) { // the logo on a white patch, like the picture of the options he chose
+    const bw = 128, bh = 52, sc = Math.min((bw - 12) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    cover.drawRectangle({ x: 30, y: 18, width: bw, height: bh, color: rgb(1, 1, 1) });
+    cover.drawImage(logoImg, { x: 30 + (bw - w) / 2, y: 18 + (bh - h) / 2, width: w, height: h });
+    lx = 30 + bw + 22;
   }
-  return rqFichaCache.get(f.url);
+  cover.drawText(String(f.brand), { x: lx, y: 38, size: String(f.brand).length > 22 ? 20 : 26, font: bold, color: rgb(1, 1, 1) });
+  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica';
+  cover.drawText(label, { x: W - 30 - reg.widthOfTextAtSize(label, 14), y: 20, size: 14, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  let pages = 0;
+  if (photoB && (isPng(photoB) || isJpg(photoB))) {
+    try {
+      const img = isPng(photoB) ? await out.embedPng(photoB) : await out.embedJpg(photoB), page = out.addPage([612, 792]), sc = Math.min(532 / img.width, 700 / img.height, 1), w = img.width * sc, h = img.height * sc;
+      page.drawImage(img, { x: (612 - w) / 2, y: (792 - h) / 2, width: w, height: h }); pages++;
+    } catch (e) { /* the photo could not be read: the rest still goes */ }
+  }
+  if (specB && isPdf(specB)) {
+    try { const sd = await PDFDocument.load(specB), cp = await out.copyPages(sd, sd.getPageIndices()); cp.forEach(pg => out.addPage(pg)); pages += cp.length; } catch (e) { /* the ficha could not be merged: the rest still goes */ }
+  }
+  if (pages) docs.push({ bytes: await out.save(), filename: base + '.pdf', type: 'application/pdf' });
+  if (specB && !isPdf(specB)) docs.push({ bytes: specB, filename: base + '.' + extOf(f.spec_url), type: mimeOf(f.spec_url) }); // Word and the like: as it is
+  if (photoB && !(isPng(photoB) || isJpg(photoB))) docs.push({ bytes: photoB, filename: base + '_foto.' + extOf(f.photo_url), type: mimeOf(f.photo_url) });
+  return docs;
 }
 function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
@@ -7214,7 +7252,7 @@ function rqWaAttachThinImages(items){
       if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
       it.bannerUrl = rqThinUrls.get(key);
       it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
-      if (it.fichas && it.fichas.length) Promise.all(it.fichas.map(rqFetchFicha)).then(docs => { const got = docs.filter(Boolean); if (!got.length) return; it.downloadFiles = [it.downloadFiles[0], ...got]; const typing2 = document.activeElement && document.activeElement.tagName === 'TEXTAREA'; if (!typing2 && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal(); }); // the fichas as documents, after the picture
+      if (it.fichas && it.fichas.length) Promise.all(it.fichas.map(rqWaFichaDocs)).then(lists => { const got = lists.flat().filter(Boolean); if (!got.length) return; it.downloadFiles = [it.downloadFiles[0], ...got]; const typing2 = document.activeElement && document.activeElement.tagName === 'TEXTAREA'; if (!typing2 && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal(); }); // the fichas as documents, after the picture
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
