@@ -7211,8 +7211,9 @@ async function rqBuildFichaDocs(f){
   const out = await PDFDocument.create(), bold = await out.embedFont(StandardFonts.HelveticaBold), reg = await out.embedFont(StandardFonts.Helvetica);
   // THE APPROVED CARD (owner 2026-11-10: "aprobamos esto"): ONE thin row — the plant's logo on a rounded white patch, the brand, the doc mark and "Ficha técnica" — full navy, no "BuenTrade" line, no margin. WhatsApp rounds the preview itself.
   const W = 612, H = 76, cover = out.addPage([W, H]);
-  cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(23 / 255, 37 / 255, 75 / 255) });
+  cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(217 / 255, 253 / 255, 211 / 255) }); // the page itself is the colour of WhatsApp's own bubble, so the card's ROUNDED corners show no white margin (a PDF page is always square)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
+  rr(0, H, W, H, 18, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
   let lx = 26;
   const logoImg = logoB && (isPng(logoB) ? await out.embedPng(logoB).catch(() => null) : isJpg(logoB) ? await out.embedJpg(logoB).catch(() => null) : null);
   if (logoImg) {
