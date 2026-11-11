@@ -2732,7 +2732,9 @@ function pendingLineFields(text){
 function pendingContextLines(m){
   if (!m) return [];
   const reasons = String(m.reason_detail || '').split(' · ');
-  return [...reasons, m.pickup_location && !/Pickup in the email/i.test(m.reason_detail || '') ? 'Pickup: ' + m.pickup_location : '', m.price_date ? 'Price date: ' + String(m.price_date).slice(0, 10) : ''].filter(Boolean);
+  // The scanned spec sheets attached to this e-mail, as the plant PRINTED them (temperature, pack, weight, bone…): context only (owner 2026-11-11, Amity: "no da contexto").
+  const specs = (m.email && Array.isArray(m.email.specs) ? m.email.specs : []).filter((s) => s && s.summary).map((s) => 'Attached spec (' + (s.file_name || 'file') + '): ' + s.summary);
+  return [...reasons, m.pickup_location && !/Pickup in the email/i.test(m.reason_detail || '') ? 'Pickup: ' + m.pickup_location : '', m.price_date ? 'Price date: ' + String(m.price_date).slice(0, 10) : '', ...specs].filter(Boolean);
 }
 // The title a Pending line sits under in its e-mail, and every title of that e-mail (saved by the mail reader; null = an older line that did not save it). undefined = this line has no e-mail (nothing to show).
 function pendingTitles(m){
