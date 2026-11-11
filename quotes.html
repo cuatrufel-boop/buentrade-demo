@@ -7209,22 +7209,22 @@ async function rqBuildFichaDocs(f){
   const mimeOf = (u) => ({ pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase()] || 'application/octet-stream');
   const extOf = (u) => ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase();
   const out = await PDFDocument.create(), bold = await out.embedFont(StandardFonts.HelveticaBold), reg = await out.embedFont(StandardFonts.Helvetica);
-  const W = 612, H = 124, cover = out.addPage([W, H]);
-  const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners, like the picture of the bars (a PDF page itself is always square: the card sits inside a small white margin)
-  rr(6, H - 6, W - 12, H - 12, 22, rgb(23 / 255, 37 / 255, 75 / 255));
-  cover.drawText('Buen', { x: 30, y: H - 30, size: 15, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
-  cover.drawText('Trade', { x: 30 + reg.widthOfTextAtSize('Buen', 15), y: H - 30, size: 15, font: reg, color: rgb(106 / 255, 170 / 255, 245 / 255) });
-  let lx = 30;
+  // THE APPROVED CARD (owner 2026-11-10: "aprobamos esto"): ONE thin row — the plant's logo on a rounded white patch, the brand, the doc mark and "Ficha técnica" — full navy, no "BuenTrade" line, no margin. WhatsApp rounds the preview itself.
+  const W = 612, H = 76, cover = out.addPage([W, H]);
+  cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(23 / 255, 37 / 255, 75 / 255) });
+  const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
+  let lx = 26;
   const logoImg = logoB && (isPng(logoB) ? await out.embedPng(logoB).catch(() => null) : isJpg(logoB) ? await out.embedJpg(logoB).catch(() => null) : null);
-  if (logoImg) { // the logo on a white patch, like the picture of the options he chose
-    const bw = 128, bh = 52, sc = Math.min((bw - 12) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(30, 18 + bh, bw, bh, 10, rgb(1, 1, 1)); // the white patch behind the logo, rounded too
-    cover.drawImage(logoImg, { x: 30 + (bw - w) / 2, y: 18 + (bh - h) / 2, width: w, height: h });
-    lx = 30 + bw + 22;
+  if (logoImg) {
+    const bw = 104, bh = 48, sc = Math.min((bw - 12) / logoImg.width, (bh - 10) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(18, H - 14, bw, bh, 9, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    cover.drawImage(logoImg, { x: 18 + (bw - w) / 2, y: 14 + (bh - h) / 2, width: w, height: h });
+    lx = 18 + bw + 18;
   }
-  cover.drawText(String(f.brand), { x: lx, y: 38, size: String(f.brand).length > 22 ? 20 : 26, font: bold, color: rgb(1, 1, 1) });
-  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica';
-  cover.drawText(label, { x: W - 30 - reg.widthOfTextAtSize(label, 14), y: 20, size: 14, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  cover.drawText(String(f.brand), { x: lx, y: H / 2 - 8, size: String(f.brand).length > 20 ? 19 : 24, font: bold, color: rgb(1, 1, 1) });
+  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 15);
+  cover.drawText(label, { x: W - 20 - lw, y: H / 2 - 5, size: 15, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: W - 20 - lw - 34, y: H / 2 + 16, scale: 1.2, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 1.7 }); // the doc mark
   let pages = 0;
   if (photoB && (isPng(photoB) || isJpg(photoB))) {
     try {
