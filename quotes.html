@@ -1857,6 +1857,7 @@ async function loadQuotesPage(){
   }
   temperatures = lookupsRes.temperatures || [];
   packagings = lookupsRes.packagings || [];
+  rqUsdCurrencyId = ((lookupsRes.currencies || []).find(c => c.code === 'USD') || {}).id || null; // the waiting-price match applies in dollars, like Plants' Pending
   products = prodRes.results || [];
   rqAllPlants = plantRes.results || [];
   rqAllLocations = locRes.results || [];
@@ -3952,10 +3953,104 @@ function rqRenderRequestView(rows){
     </div>`; })() : '');
   rqSetMsgOriginHtml(el, RQ_BRAND_LIST ? rqBrandListHtml({ pid, sheet, sendRows, stale, pending: pending.concat(priced.filter(r => r.na).map(r => ({ ...r, kind: 'na' }))), order, marked: rqReqSel.ids, isPes, mailIco, waIco, askN: askNeedsTop ? askN : 0, remindN: remindIds.length, remindIds, addHtml, hints: hintsHtml, selN, canSend, emailOk, waOk, noEmail, noWa }) : html);
   if (RQ_BRAND_LIST){ el.querySelectorAll(':scope > .rq-picked').forEach(n => n.remove()); if (rqPickedPids.length > 1) el.insertAdjacentHTML('afterbegin', rqPickedChipsHtml()); } // the picked products, above the one in front (the list itself is only rewritten when it changed)
+  if (RQ_BRAND_LIST){ rqRenderWaiting(); rqLoadWaiting(); } // the prices waiting for a match for THIS product (owner 2026-11-10), under the chips; the bar is drawn on its own, so the list above is not rewritten
   if (RQ_BRAND_LIST && rqBrandQFocus){ const i = document.getElementById('rq_brand_q'); if (i && document.activeElement !== i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (rqReqAddOpen){ const i = document.getElementById('rq_req_add_q'); if (i && document.activeElement !== i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   // arriving from Today: land ON this quote (the product, the customer marked, the Send panel glowing) instead of at the top of a generic screen
   if (fromToday && !rqPreselectScrolled){ rqPreselectScrolled = true; setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); }
+}
+
+// PRICES THAT ARE WAITING FOR A MATCH, RIGHT WHERE YOU OFFER (owner 2026-11-10, option C of the three drawn: "para no estar siempre yendo a pending… que el sistema muestre los productos que vamos a ofrecer que están pending… debe darme la opción de hacerle match con el producto
+// correcto… una vez lo lee y le doy match debe aprender y no volver a preguntar"). The screen of ONE product shows a bar "N prices waiting for this product" (the lines of Pending that have a price and name this product among their possible ones); "Review →" opens
+// the panel: what the plant wrote, its price, and the products it may be — "Yes, it is this one" / "Pick this one instead" — plus the same product box of every Pending screen to choose ANY other product. Matching is exactly Plants' Pending: plant-products-apply-match puts the
+// price on the plant's brand and plant-pending-matches-update closes the line AND teaches the plant's wording (it never asks again). A line without any possible product stays in Pending and the bell. Nothing is offered until it is matched.
+let rqUsdCurrencyId = null;
+let rqWaiting = { rows: [], at: 0, loading: false };
+let rqWaitOpen = false, rqWaitBusy = false, rqWaitNote = '';
+const rqWaitPicks = {};
+async function rqLoadWaiting(force){
+  if (rqWaiting.loading || (!force && rqWaiting.at && Date.now() - rqWaiting.at < 60000)) return;
+  rqWaiting.loading = true;
+  try {
+    const res = await callApi('plant-pending-matches-search', { limit: 5000 });
+    rqWaiting.rows = (res.results || []).filter(r => r.signal_type === 'price' && r.detected_price != null && !r.resolved_at);
+    rqWaiting.at = Date.now();
+  } catch (e) { /* keep what is already on screen; the next render asks again */ }
+  rqWaiting.loading = false;
+  rqRenderWaiting();
+}
+function rqWaitingFor(pid){
+  return rqWaiting.rows.filter(r => Array.isArray(r.candidate_product_ids) && r.candidate_product_ids.includes(pid))
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+}
+function rqWaitPlantName(id){ const pl = (rqAllPlants || []).find(x => x.id === id); return pl ? String(pl.name).trim() : 'Plant'; }
+function rqWaitProductName(id){ const pr = products.find(x => x.id === id); return pr ? (pr.full_name_en || pr.name_en || pr.name) : '(unknown product)'; }
+function rqWaitDay(m){ const d = m.price_date ? String(m.price_date).slice(0, 10) : String(m.created_at).slice(0, 10); const [y, mo, da] = d.split('-'); return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(mo) - 1]} ${Number(da)}`; }
+function rqWaitingHtml(pid){
+  const rows = rqWaitingFor(pid);
+  if (!rows.length) return rqWaitNote ? `<div class="rq-wait" style="margin:0 0 12px;padding:9px 14px;border:1px solid rgba(63,203,126,.6);border-radius:14px;background:rgba(63,203,126,.08);font-size:13px;">${escapeHtml(rqWaitNote)}</div>` : '';
+  const money = m => '$' + Number(m.detected_price).toFixed(4) + '/lb';
+  const bar = `<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+      <span><b style="color:#FFC876;">${rows.length} price${rows.length === 1 ? '' : 's'} waiting</b> for this product · ${rows.slice(0, 3).map(m => `${escapeHtml(rqWaitPlantName(m.plant_id))} ${money(m)}`).join(' · ')}${rows.length > 3 ? ` · +${rows.length - 3} more` : ''}</span>
+      <button type="button" class="pkg-trigger-btn" onclick="rqWaitToggle()">${rqWaitOpen ? 'Close' : 'Review →'}</button></div>`;
+  const note = rqWaitNote ? `<div style="margin-top:8px;font-size:12.5px;color:#3FCB7E;">${escapeHtml(rqWaitNote)}</div>` : '';
+  const panel = rqWaitOpen ? rows.map(m => rqWaitLineHtml(m, pid)).join('') : '';
+  return `<div class="rq-wait" style="margin:0 0 12px;padding:10px 14px;border:1px solid rgba(255,200,118,.65);border-radius:14px;background:rgba(255,200,118,.08);">${bar}${note}${panel}</div>`;
+}
+function rqWaitLineHtml(m, pid){
+  const key = 'wait:' + m.id, picked = rqWaitPicks[m.id] || null, busy = rqWaitBusy ? ' disabled' : '';
+  const temp = (/^\s*(frozen|fresh)\b/i.exec(m.raw_text || '') || [])[1];
+  const cands = (m.candidate_product_ids || []).filter(c => products.some(x => x.id === c));
+  const here = products.find(x => x.id === pid);
+  BTPicker.register(key, {
+    options: () => products.filter(x => (!here || x.category === here.category) && (!temp || new RegExp('\\b' + temp + '\\b', 'i').test(x.full_name_en || ''))).map(x => ({ id: x.id, label: x.full_name_en || x.name_en || x.name, search: [x.full_name_en, x.full_name_es, x.name_en, x.name].filter(Boolean) })),
+    suggested: () => cands,
+    onPick: (id) => { rqWaitPicks[m.id] = id; rqRenderWaiting(); },
+    onClear: () => { delete rqWaitPicks[m.id]; rqRenderWaiting(); },
+    onCreate: null,
+  });
+  const candBtns = cands.map(c => `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid rgba(255,255,255,.12);"><span>${escapeHtml(rqWaitProductName(c))}${c === pid ? ' <span class="rq-sheet-pill ok">this screen</span>' : ''}</span><button type="button" class="pkg-trigger-btn"${busy} onclick="rqWaitMatch('${m.id}','${c}')">${c === pid ? 'Yes, it is this one' : 'Pick this one instead'}</button></div>`).join('');
+  return `<div style="margin-top:10px;padding:10px 12px;border:1.5px solid var(--blue-bright,#5AAAFF);border-radius:14px;background:rgba(90,170,255,.07);">
+    <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-bright,#5AAAFF);font-family:'IBM Plex Mono',monospace;">${escapeHtml(rqWaitPlantName(m.plant_id))} wrote</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#FFC876;margin:3px 0 6px;">"${escapeHtml(m.raw_text)}" · ${'$' + Number(m.detected_price).toFixed(4)}/lb · email ${rqWaitDay(m)}</div>
+    ${candBtns}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);"><span class="muted" style="font-size:12.5px;">Another product:</span>${BTPicker.html(key, picked ? rqWaitProductName(picked) : '')}
+      <button type="button" class="pkg-trigger-btn"${picked && !rqWaitBusy ? '' : ' disabled title="Pick the product it means first"'} onclick="rqWaitMatch('${m.id}', null)">Match →</button></div>
+  </div>`;
+}
+function rqWaitToggle(){ rqWaitOpen = !rqWaitOpen; rqWaitNote = ''; rqRenderWaiting(); }
+// redraws only the bar (never the whole screen): the product in front, if it is ONE
+function rqRenderWaiting(){
+  const el = document.getElementById('rq_request_view');
+  if (!el || rqActiveProductFilterIds.length !== 1) return;
+  const active = document.activeElement, keepFocus = active && el.contains(active) && active.classList && active.classList.contains('btp-in');
+  el.querySelectorAll(':scope > .rq-wait').forEach(n => n.remove());
+  const w = rqWaitingHtml(rqActiveProductFilterIds[0]); if (!w) return;
+  const first = el.querySelector(':scope > .rq-picked');
+  if (first) first.insertAdjacentHTML('afterend', w); else el.insertAdjacentHTML('afterbegin', w);
+  if (keepFocus){ const i = el.querySelector('.rq-wait .btp-in'); if (i) i.focus(); }
+}
+// the same two calls as Plants' Pending (resolvePlantPendingMatch): the price goes to the plant's brand, the line closes and the wording is learned
+async function rqWaitMatch(id, productId){
+  if (rqWaitBusy) return;
+  const m = rqWaiting.rows.find(x => x.id === id), pid = productId || rqWaitPicks[id];
+  if (!m || !pid || m.detected_price == null) return;
+  rqWaitBusy = true; rqRenderWaiting();
+  let applied = null;
+  try {
+    applied = await callApi('plant-products-apply-match', {
+      actor: currentActor(), plant_id: m.plant_id, product_id: pid,
+      raw_text: String(m.raw_text || '').trim().toLowerCase().replace(/\s+/g, ' '), price: m.detected_price,
+      price_currency_id: rqUsdCurrencyId, price_date: m.price_date ? String(m.price_date).slice(0, 10) : new Date(m.created_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }),
+      location_name: m.pickup_location || null, ship_region: m.pickup_location ? null : (m.ship_region || null), freight_included: m.freight_included === true,
+    });
+    await callApi('plant-pending-matches-update', { actor: currentActor(), id, product_id: pid });
+  } catch (e) { rqWaitBusy = false; rqRenderWaiting(); await btAlert(`Couldn't save this match: ${e.message}`); return; }
+  rqWaiting.rows = rqWaiting.rows.filter(x => x.id !== id); delete rqWaitPicks[id]; rqWaitBusy = false;
+  rqWaitNote = `${rqWaitPlantName(m.plant_id)} → ${rqWaitProductName(pid)} · ${'$' + Number(m.detected_price).toFixed(4)}/lb — matched, the system will remember it${applied && applied.kept_newer ? ' (a newer price was already on file; this one went to the history)' : ''}`;
+  try { await loadPendingPrices(); } catch (e) {}
+  rqSheetState.key = ''; rqRenderSweepTables();
+  setTimeout(() => { rqWaitNote = ''; rqRenderWaiting(); }, 8000);
 }
 
 // FIND PRODUCT WITH SEVERAL PRODUCTS WORKS LIKE ONE (owner 2026-10-27: "ese find product debe funcionar de la misma manera, mismo formato, confirm QT, enviar igual"; "todos los módulos deben estar en el mismo formato"):
