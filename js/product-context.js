@@ -88,6 +88,41 @@
       (all.length ? '<span class="pc-k">All titles in this email</span>' + all.map((x) => `<span class="pc-chip${x === tt.section ? ' pc-temp' : ''}">${esc(x)}</span>`).join('') : '');
   };
 
+  // TO COMPLETE THE FULL NAME (owner 2026-11-11, Amity: "tiene que haber toda la info para completar el full name en el match; si no tengo info suficiente no puedo hacer match"): the full name of a product is its cut,
+  // variation, temperature and packaging. For each of those the card lists EVERY answer the e-mail gives and where it comes from (the line, its title, the subject, an attached spec sheet) — what nobody said is "missing", two
+  // different answers are flagged, and the card says plainly when there is not enough to match. Display only: it never picks, fills in or guesses anything.
+  // ev: { titleRead, subjectRead, specs: [{ file, read: { cuts, variations, temp, pack } }] }.
+  const FN_PARTS = [['cut', 'Cut', 'cuts', true], ['variation', 'Variation', 'variations', true], ['temp', 'Temperature', 'temp', false], ['pack', 'Packaging', 'pack', false]];
+  function fullNameParts(line, ev) {
+    ev = ev || {};
+    const sources = [['line', line], ['title', ev.titleRead], ['subject', ev.subjectRead]].concat((ev.specs || []).map((s) => ['spec ' + (s.file || 'file'), s.read]));
+    const out = {};
+    FN_PARTS.forEach(([key, , field, multi]) => {
+      const seen = new Map();
+      sources.forEach(([src, r]) => {
+        if (!r) return;
+        (multi ? (r[field] || []) : (r[field] ? [r[field]] : [])).filter(Boolean).forEach((v) => { const k = norm(v); if (!seen.has(k)) seen.set(k, { value: v, from: [] }); seen.get(k).from.push(src); });
+      });
+      out[key] = [...seen.values()];
+    });
+    return out;
+  }
+  function fullNameBlock(line, ev) {
+    const parts = fullNameParts(line, ev);
+    const rows = FN_PARTS.map(([key, label, , multi]) => {
+      const vs = parts[key];
+      const cell = !vs.length ? (key === 'variation' ? '<span class="pc-m">none seen</span>' : '<span class="pc-bad">missing</span>')
+        : vs.map((x) => `<span class="pc-chip${!multi && vs.length > 1 ? ' pc-q' : ''}">${esc(x.value)}</span><span class="pc-m">${esc(x.from.join(' · '))}</span>`).join(' ');
+      return `<span class="pc-f">${label}</span><span>${cell}</span>`;
+    }).join('');
+    const missing = FN_PARTS.filter(([key]) => key !== 'variation' && !parts[key].length).map(([, label]) => label.toLowerCase());
+    const clash = FN_PARTS.filter(([, , , multi], i) => !multi && parts[FN_PARTS[i][0]].length > 1).map(([, label]) => label.toLowerCase());
+    const verdict = clash.length ? `<div class="pc-bad">Two different answers for ${clash.join(' and ')}: you decide which one is right.</div>`
+      : missing.length ? `<div class="pc-bad">Not enough to complete the full name: ${missing.join(', ')} missing. Ask the plant before you match.</div>`
+      : '<div class="pc-ok">Cut, temperature and packaging are all said.</div>';
+    return '<span class="pc-k">To complete the full name</span><div class="pc-cmp pc-fnl">' + rows + '</div>' + verdict;
+  }
+
   // THE CARD THAT DECIDES (owner 2026-11-07: "debe enfocar en el título, en las variaciones, en todo lo que me pueda decir cuál es; si es fresco debo saber si es combo o caja"): four questions — cut, temperature,
   // packaging, variation — each with the answer of THIS product and the evidence the e-mail gives: the title above the line, the line itself, the subject and (packaging) what this plant already sells.
   // ev: { title (string | null = not saved | '' = none | undefined = this screen has no titles), titleRead, subject, subjectRead, plant: {has, price, date} | null, sections, lines }.
@@ -115,6 +150,9 @@
         rows.filter(Boolean).map((r) => `<span class="pc-es">${r[0]}</span><span>${r[1]}</span>`).join('') + '</div></div>';
     };
     const tr = ev.titleRead || null, sr = ev.subjectRead || null;
+    const specs = ev.specs || [];
+    const specVals = (key) => [].concat(...specs.map((x) => vals(x.read && x.read[key])));
+    const spcell = (key) => (specs.length ? ['Attached spec', specVals(key).length ? `<span class="pc-chip pc-temp">${esc(specVals(key).join(', '))}</span>` : '<span class="pc-m">—</span>'] : null);
     const sub = (key) => (ev.subject == null ? null : (vals(sr && sr[key]).length ? `<span class="pc-chip pc-temp">${esc(vals(sr[key]).join(', '))}</span>` : '<span class="pc-m">—</span>'));
     const tcell = (key, label2) => { const c = titleCell(tr, key); return c == null ? null : ['Title', c]; };
     const scell = (key) => { const c = sub(key); return c == null ? null : ['Subject', c]; };
@@ -122,10 +160,10 @@
     const plantRow = ev.plant === undefined || ev.plant === null ? null
       : ['This plant sells', ev.plant.has ? `<span class="pc-ok">Already sells it</span>${ev.plant.price != null ? ' · $' + Number(ev.plant.price).toFixed(2) : ''}${ev.plant.date ? ' · ' + esc(String(ev.plant.date).slice(0, 10)) : ''}` : ev.plant.linked ? '<span class="pc-m">Linked, no price yet</span>' : '<span class="pc-warn">Has never had it</span>'];
     const html = `<div class="pc-t">${esc(label)}</div>` +
-      block('Cut', f.cut, st(f.cut, [line.cuts, tr && tr.cuts], false), [['The line', said(line.cuts)], tcell('cuts')]) +
-      block('Temperature', f.temp, st(f.temp, [line.temp, tr && tr.temp, sr && sr.temp], false), [tcell('temp'), ['The line', said(line.temp)], scell('temp')]) +
-      block('Packaging', f.pack, st(f.pack, [line.pack, tr && tr.pack, sr && sr.pack], false), [tcell('pack'), ['The line', said(line.pack)], scell('pack'), plantRow]) +
-      block('Variation', f.variation, st(f.variation, [line.variations, tr && tr.variations], true), [['The line', said(line.variations)], tcell('variations')]);
+      block('Cut', f.cut, st(f.cut, [line.cuts, tr && tr.cuts, specVals('cuts')], false), [['The line', said(line.cuts)], tcell('cuts'), spcell('cuts')]) +
+      block('Temperature', f.temp, st(f.temp, [line.temp, tr && tr.temp, sr && sr.temp, specVals('temp')], false), [tcell('temp'), ['The line', said(line.temp)], scell('temp'), spcell('temp')]) +
+      block('Packaging', f.pack, st(f.pack, [line.pack, tr && tr.pack, sr && sr.pack, specVals('pack')], false), [tcell('pack'), ['The line', said(line.pack)], scell('pack'), spcell('pack'), plantRow]) +
+      block('Variation', f.variation, st(f.variation, [line.variations, tr && tr.variations, specVals('variations')], true), [['The line', said(line.variations)], tcell('variations'), spcell('variations')]);
     const tt = ev.title === undefined ? '' : titlesBlock({ section: ev.title, sections: ev.sections });
     return html + tt + (ev.subject ? '<span class="pc-k">Subject</span>' + esc(ev.subject) : '') + emailBlock(ev.lines);
   }
@@ -140,10 +178,10 @@
   }
 
   // The card over the plant's product: what it wrote, how it was read ("?" for what it did not say), and the email's own reasons.
-  function plantTip(raw, line, lines, near, titles) {
+  function plantTip(raw, line, lines, near, titles, extra) {
     const read = [line.cuts.length ? line.cuts.join(', ') : 'cut ?', line.variations.length ? line.variations.join(', ') : 'no variation', line.temp || 'temp ?', line.pack || 'packaging ?'];
     return `<div class="pc-t">What the plant sent</div><span class="pc-k">The plant wrote</span>${esc(raw)}<span class="pc-k">Reads as</span>` +
-      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + emailBlock(lines) + titlesBlock(titles) + nearBlock(near);
+      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + (extra ? fullNameBlock(line, extra) : '') + emailBlock(lines) + titlesBlock(titles) + nearBlock(near);
   }
 
   const css = '.pc-hv{border-bottom:1px dotted rgba(255,255,255,.45);cursor:help;}' +
@@ -154,6 +192,7 @@
     '#bt-tip .pc-h,#bt-sheet .pc-h{font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.03em;}' +
     '#bt-tip .pc-f,#bt-tip .pc-m,#bt-sheet .pc-f,#bt-tip .pc-m{color:rgba(255,255,255,.55);}' +
     '#bt-tip .pc-bad,#bt-sheet .pc-bad{color:#FFC876;font-weight:600;}' +
+    '#bt-tip .pc-fnl,#bt-sheet .pc-fnl{grid-template-columns:92px minmax(0,1fr);}' +
     '#bt-tip .pc-nr,#bt-sheet .pc-nr{display:flex;justify-content:space-between;gap:10px;padding:3px 7px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.55);}' +
     '#bt-tip .pc-nr span:first-child,#bt-sheet .pc-nr span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
     '#bt-tip .pc-nr span:last-child,#bt-sheet .pc-nr span:last-child{flex-shrink:0;}' +
@@ -233,7 +272,7 @@
     doc.addEventListener('scroll', hide, true);
   }
 
-  const api = { wordRegex, readLine, productFields, mismatch, productTip, decisionTip, plantTip, attachTips, touch, css };
+  const api = { wordRegex, readLine, productFields, mismatch, productTip, decisionTip, plantTip, fullNameParts, fullNameBlock, attachTips, touch, css };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.BTProductContext = api;

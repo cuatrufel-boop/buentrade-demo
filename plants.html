@@ -2745,12 +2745,24 @@ function pendingTitles(m){
 const pickerLabel = (p) => p.full_name_en || p.name_en || p.name;
 // THE CARD THAT DECIDES (owner 2026-11-07, "hazlo así"): cut, temperature, packaging and variation of the product, each with the evidence — the title above the line, the line, the subject (never OUR own subject
 // of a reply) and what this plant already sells. The title and the subject are read with the same rules as a line (aliases, VAC = Box…). Display only.
+// What the SCANNED spec sheets attached to a line's e-mail say, read with the same rules as a line: cut and variations from the sheet's own title and notes (bone-in, seasoned…), temperature ONLY from the words printed about
+// storage, packaging from the printed pack words. A part the sheet does not print stays empty (never guessed from degrees or from the type of product). Display only.
+function pendingSpecReads(m){
+  const specs = m && m.email && Array.isArray(m.email.specs) ? m.email.specs : [];
+  return specs.filter((s) => s && s.fields).map((s) => {
+    const f = s.fields || {};
+    const named = pendingLineFields([f.title].concat(f.notes || []).filter(Boolean).join(' · '));
+    const temp = pendingLineFields(f.storage_temperature || '');
+    const pack = pendingLineFields([f.pack, f.title].filter(Boolean).join(' · '));
+    return { file: s.file_name || 'file', read: { cuts: named.cuts, variations: named.variations, temp: temp.temp, pack: pack.pack } };
+  });
+}
 function pendingEvidence(text, m){
   const t = pendingTitles(m);
   const subject = m && m.email && m.email.subject && !/^\s*(re|fw|fwd)\s*:/i.test(m.email.subject) ? m.email.subject : null;
   return {
     title: t ? t.section : undefined, titleRead: t && t.section ? pendingLineFields(t.section) : null, sections: t ? t.sections : [],
-    subject, subjectRead: subject ? pendingLineFields(subject) : null, lines: pendingContextLines(m),
+    subject, subjectRead: subject ? pendingLineFields(subject) : null, lines: pendingContextLines(m), specs: pendingSpecReads(m),
   };
 }
 function plantHistoryFor(p){
@@ -2766,7 +2778,7 @@ function decoratePendingTips(){
   document.querySelectorAll('#plantPendingMatchRows .pm-name').forEach((td, i) => {
     const m = plantPendingMatches[i]; if (!m) return;
     const near = (m.email && m.email.lines); // the lines around it in its e-mail
-    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m), near, pendingTitles(m));
+    td.dataset.tip = BTProductContext.plantTip(m.raw_text, pendingLineFields(m.raw_text), pendingContextLines(m), near, pendingTitles(m), typeof pendingEvidence === 'function' ? pendingEvidence(m.raw_text, m) : undefined);
     td.style.cursor = 'help'; // its plain title stays: the card sets it aside while the mouse is over the cell
   });
 }
