@@ -7149,14 +7149,15 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   // MANY BRANDS = ONE MESSAGE (owner 2026-11-09: "tenía más de 5 marcas y me tocó enviar uno por uno… que manden todas solo enviando una vez"; the bars picture approved from his own mock-up, "construyelo para pesos y border USD"): a customer's offer of one
   // product with TWO OR MORE brands is ONE message — ONE picture with the product's name, every brand highest price first with a bar and its price in HIS currency ($ USD/lb at the border, $ MXN/kg for a pesos customer), the cheapest in green, a
   // document mark beside a brand that has a spec sheet — ONE green button and ONE "Yes, sent" that confirms EVERY brand he lacked. The picture is the message: no text, no links (a picture cannot hold one). One brand stays the single message it always was.
-  if (sorted.length >= 2) {
+  if (sorted.length >= 1) { // ALWAYS the bars picture, even for ONE brand (owner 2026-11-10: "claro siempre así sea solo una" · "barra y link"): one brand = its bar and its own link (its card, when it has a spec or a photo)
     const rows = sorted.map((one) => { const offer = offersByPlantId.get(one.plant.id); const files = typeof rqFindProductFilesFor === 'function' ? (rqFindProductFilesFor(one.plant) || {}) : {};
       return { one, offer, spec: !!((offer && (offer.spec_url || offer.photo_url)) || files.spec_url || files.photo_url) }; });
     const offs = rows.filter(r => r.offer).map(r => ({ offer: r.offer, plantName: r.one.plant.name }));
     const extras = [];
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
-    return [{ extras, id: c.id, label: `${pairKey} — all brands`, pairKey, phone, body: '', // pairKey: the customer × product row of the one offer window
+    const only = sorted.length === 1 ? rows[0].offer : null; // ONE brand: the picture plus the link of its own card (WhatsApp draws the link's preview under the picture); several brands: the picture alone, as before
+    return [{ extras, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: only && only.short_code && (only.spec_url || only.photo_url) ? `${APP_ORIGIN}/p/${only.short_code}` : '', // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
       bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
