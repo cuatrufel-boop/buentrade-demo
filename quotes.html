@@ -7151,13 +7151,14 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   // document mark beside a brand that has a spec sheet — ONE green button and ONE "Yes, sent" that confirms EVERY brand he lacked. The picture is the message: no text, no links (a picture cannot hold one). One brand stays the single message it always was.
   if (sorted.length >= 1) { // ALWAYS the bars picture, even for ONE brand (owner 2026-11-10: "claro siempre así sea solo una" · "barra y link"): one brand = its bar and its own link (its card, when it has a spec or a photo)
     const rows = sorted.map((one) => { const offer = offersByPlantId.get(one.plant.id); const files = typeof rqFindProductFilesFor === 'function' ? (rqFindProductFilesFor(one.plant) || {}) : {};
-      return { one, offer, spec: !!((offer && (offer.spec_url || offer.photo_url)) || files.spec_url || files.photo_url) }; });
+      const url = (offer && (offer.spec_url || offer.photo_url)) || files.spec_url || files.photo_url || null; // the ficha itself, sent as a DOCUMENT beside the picture (owner 2026-11-10: "sin link, solo el doc al lado de la marca abre la ficha")
+      return { one, offer, spec: !!url, url }; });
     const offs = rows.filter(r => r.offer).map(r => ({ offer: r.offer, plantName: r.one.plant.name }));
     const extras = [];
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
-    const only = sorted.length === 1 ? rows[0].offer : null; // ONE brand: the picture plus the link of its own card (WhatsApp draws the link's preview under the picture); several brands: the picture alone, as before
-    return [{ extras, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: only && only.short_code && (only.spec_url || only.photo_url) ? `${APP_ORIGIN}/p/${only.short_code}` : '', // pairKey: the customer × product row of the one offer window
+    // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
+    return [{ extras, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.url).map(r => ({ brand: String(r.one.plant.name).trim(), url: r.url })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
       bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
@@ -7189,6 +7190,17 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 // 1200×72 (thin), downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
+// The ficha of a brand as a DOCUMENT to drop into the chat beside the picture (owner 2026-11-10): the file itself, named after the brand. Never makes the window wait; a ficha that cannot be read is simply not attached.
+const rqFichaCache = new Map();
+function rqFetchFicha(f){
+  if (!f || !f.url) return Promise.resolve(null);
+  if (!rqFichaCache.has(f.url)) {
+    const ext = ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(f.url) || [])[1] || 'pdf').toLowerCase();
+    const type = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[ext] || 'application/octet-stream';
+    rqFichaCache.set(f.url, fetch(f.url).then(r => r.ok ? r.arrayBuffer() : null).then(bytes => bytes ? { bytes, filename: `${String(f.brand).replace(/[^\w.-]+/g, '_')}_ficha.${ext}`, type } : null).catch(() => null));
+  }
+  return rqFichaCache.get(f.url);
+}
 function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
   items.filter(it => (it.thinImages && it.thinImages.length) || it.bars).forEach(it => {
@@ -7202,6 +7214,7 @@ function rqWaAttachThinImages(items){
       if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
       it.bannerUrl = rqThinUrls.get(key);
       it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
+      if (it.fichas && it.fichas.length) Promise.all(it.fichas.map(rqFetchFicha)).then(docs => { const got = docs.filter(Boolean); if (!got.length) return; it.downloadFiles = [it.downloadFiles[0], ...got]; const typing2 = document.activeElement && document.activeElement.tagName === 'TEXTAREA'; if (!typing2 && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal(); }); // the fichas as documents, after the picture
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
