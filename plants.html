@@ -744,6 +744,7 @@ auth.onAuthStateChanged(user => {
       </table>
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
         <button class="btn" id="matchAllBtn" onclick="matchAllConfirmedPendingMatches()">Apply All</button>
+        <button class="btn secondary" id="loadPendingEmailContextBtn" onclick="backfillPendingEmailContext()">Load missing email context</button>
         <span id="matchAllStatus" style="font-size:12px;color:var(--ink-soft);"></span>
       </div>
       <div id="plantPendingMatchesEmpty" class="empty" style="display:none;">Nothing waiting on a match for this plant.</div>
@@ -2626,6 +2627,44 @@ async function loadPlantPendingMatches(){
   renderPlantPendingMatches();
 }
 
+// Older messages were read before email context was retained. Fetch only messages attached to this plant's open Pending rows.
+async function backfillPendingEmailContext(){
+  const button = document.getElementById('loadPendingEmailContextBtn');
+  const status = document.getElementById('matchAllStatus');
+  const ids = [...new Set(plantPendingMatches.filter(m => !(m.email && m.email.context && m.email.context.body)).map(m => m.email && m.email.message_id).filter(Boolean))];
+  if (!ids.length){ status.textContent = 'Every linked email already has context.'; return; }
+  button.disabled = true; status.textContent = `Loading context for ${ids.length} email${ids.length === 1 ? '' : 's'}…`;
+  try {
+    let stored = 0;
+    for (let i = 0; i < ids.length; i += 40){
+      const result = await callApi('mail-attention', { action: 'store_email_context', actor: currentActor(), message_ids: ids.slice(i, i + 40) });
+      stored += Number(result.stored || 0);
+    }
+    await loadPlantPendingMatches();
+    status.textContent = `Loaded ${stored} email context${stored === 1 ? '' : 's'}; review each match manually.`;
+  } catch (e){ status.textContent = `Could not load email context: ${e.message}`; }
+  finally { button.disabled = false; }
+}
+
+// THE WORDS OF THE E-MAIL for the card over the plant's product (owner 2026-11-11, Amity: "no está trayendo info de contexto: cuerpo del correo, títulos, subject" · "enfócala en el contexto para el full name"):
+// the mail reader kept them when it read the e-mail (plant_email_context) and each Pending row brings them (m.email.context: body text, attachment names). Display only.
+// Full saved email text is shown as context; only the exact matched line feeds the checklist.
+function pendingBodyWindow(m){
+  const c = m && m.email && m.email.context;
+  if (!c || !c.body) return null;
+  const lines = String(c.body).split('\n');
+  const key = normalizeForMatch(String(m.raw_text || '').replace(/^\s*(fresh|frozen)\s*[—-]\s*/i, ''));
+  const idx = key ? lines.findIndex((l) => normalizeForMatch(l).includes(key)) : -1;
+  if (idx >= 0) return { text: String(c.body), line: lines[idx] };
+  return { text: String(c.body), line: null };
+}
+// The words that mark temperature, packaging and variations in the catalog, so the card can mark them in the e-mail's text.
+function pendingCueWords(){
+  const w = [];
+  [temperatures, packagings, variations].forEach((list) => (list || []).forEach((x) => [x.name_en, x.name].forEach((n) => { if (n) w.push(String(n)); })));
+  return w;
+}
+
 function renderPlantPendingMatches(){
   const badge = document.getElementById('plantPendingTabBadge');
   const count = plantPendingMatches.length;
@@ -2664,10 +2703,13 @@ function renderPlantPendingMatches(){
     const ageDays = pendingMatchAgeDays(m.created_at);
     const isStale = (ageDays || 0) > PENDING_MATCH_STALE_DAYS;
     const staleBadge = isStale ? ` <span style="font-size:10.5px;font-weight:700;color:#FF9C8A;background:transparent;border:1px solid rgba(196,67,46,.5);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">${ageDays}d old</span>` : '';
+    const candidateNames = tightIds.map(id => allCatalogProducts.find(p => p.id === id)).filter(Boolean).map(p => p.full_name_en || p.name_en || p.name);
+    const reasonLabels = { multiple_candidates: 'More than one BuenTrade product may match', candidates_conflict_with_line: 'Candidate products disagree with the plant’s wording', needs_review_cut_style: 'No exact BuenTrade product matches this cut style', no_catalog_candidate: 'No BuenTrade product candidate found' };
+    const explanation = m.reason_detail || reasonLabels[m.reason_code] || (candidateNames.length ? 'Product match needs trader confirmation' : 'No BuenTrade product candidate found');
     return `<tr>
-      <td class="pm-name" style="max-width:280px;"${m.reason_detail ? ` title="${escapeHtml(m.reason_detail)}"` : ''}>${escapeHtml(m.raw_text)}${staleBadge}${isDeclined ? ' <span style="font-size:10.5px;font-weight:700;color:#FFC876;background:transparent;border:1px solid rgba(255,200,118,.4);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">Does not produce</span>' : ''}</td>
-      <td class="num">${m.detected_price != null ? '$' + Number(m.detected_price).toFixed(4) : '—'}</td>
-      <td>${isUnread ? facilityTeachHtml : BTPicker.html(m.id, current ? (current.full_name_en || current.name_en || current.name) : '', current && typeof pickerTipFor === 'function' ? pickerTipFor(current, m.raw_text, m) : '')}</td>
+      <td class="pm-name" style="max-width:280px;">${escapeHtml(m.raw_text)}${staleBadge}${isDeclined ? ' <span style="font-size:10.5px;font-weight:700;color:#FFC876;background:transparent;border:1px solid rgba(255,200,118,.4);padding:2px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;">Does not produce</span>' : ''}<div class="pm-reason" style="font-size:11px;color:#FFC876;margin-top:4px;">${escapeHtml(explanation)}</div></td>
+      <td class="num">${m.detected_price != null ? '$' + Number(m.detected_price).toFixed(4) : (isDeclined ? 'No price · Off-Spec' : 'No price detected')}</td>
+      <td>${candidateNames.length ? `<div class="pm-candidates" style="font-size:12px;color:#DCE8F8;margin-bottom:5px;">${candidateNames.map(escapeHtml).join('<br>')}</div>` : `<div class="pm-candidates" style="font-size:12px;color:#FFC876;margin-bottom:5px;">No BuenTrade product candidate</div>`}${isUnread ? facilityTeachHtml : BTPicker.html(m.id, current ? (current.full_name_en || current.name_en || current.name) : '', current && typeof pickerTipFor === 'function' ? pickerTipFor(current, m.raw_text, m) : '')}</td>
       <td class="row-actions">
         ${(isUnread || needsPrice) ? '' : `<button class="btn${isDeclined ? ' danger' : ''}" onclick="resolvePlantPendingMatch('${m.id}')">${isDeclined ? 'Mark Off-Spec' : 'Match'}</button>`}
         ${(isUnread || needsPrice) ? `<button class="btn secondary" onclick="dismissPlantPendingMatch('${m.id}')">Dismiss</button>` : ''}
@@ -2754,15 +2796,24 @@ function pendingSpecReads(m){
     const named = pendingLineFields([f.title].concat(f.notes || []).filter(Boolean).join(' · '));
     const temp = pendingLineFields(f.storage_temperature || '');
     const pack = pendingLineFields([f.pack, f.title].filter(Boolean).join(' · '));
-    return { file: s.file_name || 'file', read: { cuts: named.cuts, variations: named.variations, temp: temp.temp, pack: pack.pack } };
+    return { file: s.file_name || 'file', summary: s.summary || '', read: { cuts: named.cuts, variations: named.variations, temp: temp.temp, pack: pack.pack } };
   });
 }
 function pendingEvidence(text, m){
   const t = pendingTitles(m);
-  const subject = m && m.email && m.email.subject && !/^\s*(re|fw|fwd)\s*:/i.test(m.email.subject) ? m.email.subject : null;
+  const bodyWin = typeof pendingBodyWindow === 'function' ? pendingBodyWindow(m) : null;
+  const subjectDisplay = m && m.email && (m.email.context && m.email.context.subject || m.email.subject) || null;
+  const subjectIsReply = /^\s*(re|fw|fwd)\s*:/i.test(subjectDisplay || '');
+  const subject = subjectIsReply ? null : subjectDisplay;
   return {
     title: t ? t.section : undefined, titleRead: t && t.section ? pendingLineFields(t.section) : null, sections: t ? t.sections : [],
-    subject, subjectRead: subject ? pendingLineFields(subject) : null, lines: pendingContextLines(m), specs: pendingSpecReads(m),
+    subject, subjectDisplay, subjectIsReply, fromEmail: m && m.email && m.email.context && m.email.context.from_email, receivedAt: m && m.email && m.email.context && m.email.context.received_at,
+    products: m && m.email && Array.isArray(m.email.products) ? m.email.products : [],
+    subjectRead: subject && !subjectIsReply ? pendingLineFields(subject) : null, lines: pendingContextLines(m), specs: pendingSpecReads(m),
+    // the e-mail's own words (body around the line, attachment names): null until mail-attention answers
+    body: bodyWin ? bodyWin.text : null, bodyRead: bodyWin ? pendingLineFields(bodyWin.line || bodyWin.text) : null, attachments: (m && m.email && m.email.context && Array.isArray(m.email.context.attachments) ? m.email.context.attachments : []),
+    bodyLoading: false, // the words come with the row: there is nothing to wait for
+    cueWords: (typeof pendingCueWords === 'function' ? pendingCueWords() : []), sectionTitle: t && t.section ? t.section : '',
   };
 }
 function plantHistoryFor(p){

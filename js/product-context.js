@@ -95,7 +95,7 @@
   const FN_PARTS = [['cut', 'Cut', 'cuts', true], ['variation', 'Variation', 'variations', true], ['temp', 'Temperature', 'temp', false], ['pack', 'Packaging', 'pack', false]];
   function fullNameParts(line, ev) {
     ev = ev || {};
-    const sources = [['line', line], ['title', ev.titleRead], ['subject', ev.subjectRead]].concat((ev.specs || []).map((s) => ['spec ' + (s.file || 'file'), s.read]));
+    const sources = [['line', line], ['title', ev.titleRead], ['subject', ev.subjectRead], ['email text', ev.bodyRead]].concat((ev.specs || []).map((s) => ['spec ' + (s.file || 'file'), s.read]));
     const out = {};
     FN_PARTS.forEach(([key, , field, multi]) => {
       const seen = new Map();
@@ -121,6 +121,36 @@
       : missing.length ? `<div class="pc-bad">Not enough to complete the full name: ${missing.join(', ')} missing. Ask the plant before you match.</div>`
       : '<div class="pc-ok">Cut, temperature and packaging are all said.</div>';
     return '<span class="pc-k">To complete the full name</span><div class="pc-cmp pc-fnl">' + rows + '</div>' + verdict;
+  }
+
+  // THE CARD OVER THE PLANT'S PRODUCT, FOCUSED ON THE FULL NAME (owner 2026-11-11, Amity: "cambia la ficha… esa info no es relevante… enfócala en el contexto para el full name: temperatura, empaque, variaciones, etc.").
+  // Only what helps to complete cut · variation · temperature · packaging: what the plant wrote, the checklist with every answer and its source, the subject, the e-mail's OWN words around the line (the cue words marked),
+  // the attached files and what their spec sheets say. No reasons, no price date, no list of other lines. Display only. ex: { subject, body (string | null), bodyLoading, attachments, specs: [{ file, summary, read }],
+  // titleRead, subjectRead, bodyRead, sectionTitle, cueWords }.
+  const CUE = '(?:fresh|frozen|chilled|fz|frz|boxed|boxes|box|bulk|combos?|cbo|vac|vacuum|bags?|poly|wrapped|iwp|bone[\\s-]?in|boneless|skin[\\s-]?(?:on|less)|skinless|seasoned|marinated|pumped|catch\\s*wt|net\\s*wt|\\d+(?:\\.\\d+)?\\s*(?:lbs?|#|oz|kg)|\\d+\\s*(?:pcs?|pieces|bags?|boxes))';
+  function cueHtml(text, extraWords) {
+    const words = (extraWords || []).map((w) => String(w || '').trim()).filter((w) => w.length > 2).map(escRe);
+    const re = new RegExp('(^|[^A-Za-z0-9])(' + CUE + (words.length ? '|' + words.join('|') : '') + ')(?![A-Za-z0-9])', 'gi'); // no look-behind: older phones do not have it
+    return esc(text).replace(re, '$1<mark class="pc-hl">$2</mark>');
+  }
+  function focusedTip(raw, line, ex) {
+    ex = ex || {};
+    const specs = ex.specs || [];
+    const files = (ex.attachments || []).slice();
+    specs.forEach((sp) => { if (sp.file && !files.includes(sp.file)) files.push(sp.file); });
+    const fileHtml = files.length ? files.map((n) => { const sp = specs.find((x) => x.file === n); return `<div class="pc-fl"><b>${esc(n)}</b>${sp && sp.summary ? ' — ' + esc(sp.summary) : ''}</div>`; }).join('') : '<span class="pc-m">none</span>';
+    const bodyHtml = ex.body ? `<div class="pc-body">${cueHtml(ex.body, ex.cueWords)}</div>` : ex.bodyLoading ? '<span class="pc-m">Loading the e-mail text…</span>' : '<span class="pc-m">The e-mail text is not available.</span>';
+    const visibleSubject = ex.subjectDisplay || ex.subject;
+    const sub = visibleSubject ? '<span class="pc-k">Exact email subject</span>' + cueHtml(visibleSubject, ex.cueWords) : '';
+    const title = ex.sectionTitle ? '<span class="pc-k">Title above this line</span>' + esc(ex.sectionTitle) : '';
+    const meta = [ex.fromEmail, ex.receivedAt].filter(Boolean).map(esc).join(' · ');
+    const metaHtml = meta ? `<div class="pc-m">${meta}</div>` : '';
+    const products = (ex.products || []).map((p) => p && p.raw_text ? `<div class="pc-fl">${esc(p.raw_text)}${p.section ? ` <span class="pc-m">· ${esc(p.section)}</span>` : ''}</div>` : '').join('');
+    const productsHtml = products ? '<span class="pc-k">All products detected in this email</span>' + products : '';
+    const titles = [...new Set((ex.sections || []).filter(Boolean))];
+    const titlesHtml = titles.length ? '<span class="pc-k">All section titles</span>' + titles.map((x) => `<div class="pc-fl">${esc(x)}</div>`).join('') : '';
+    return '<div class="pc-t">What the plant sent</div><span class="pc-k">The plant wrote</span>' + esc(raw) +
+      fullNameBlock(line, ex) + title + titlesHtml + sub + metaHtml + productsHtml + '<span class="pc-k">Full email body</span>' + bodyHtml + '<span class="pc-k">Attached files</span>' + fileHtml;
   }
 
   // THE CARD THAT DECIDES (owner 2026-11-07: "debe enfocar en el título, en las variaciones, en todo lo que me pueda decir cuál es; si es fresco debo saber si es combo o caja"): four questions — cut, temperature,
@@ -150,6 +180,8 @@
         rows.filter(Boolean).map((r) => `<span class="pc-es">${r[0]}</span><span>${r[1]}</span>`).join('') + '</div></div>';
     };
     const tr = ev.titleRead || null, sr = ev.subjectRead || null;
+    const br = ev.bodyRead || null;
+    const bcell = (key) => (br ? ['Email text', vals(br[key]).length ? `<span class="pc-chip pc-temp">${esc(vals(br[key]).join(', '))}</span>` : '<span class="pc-m">—</span>'] : null);
     const specs = ev.specs || [];
     const specVals = (key) => [].concat(...specs.map((x) => vals(x.read && x.read[key])));
     const spcell = (key) => (specs.length ? ['Attached spec', specVals(key).length ? `<span class="pc-chip pc-temp">${esc(specVals(key).join(', '))}</span>` : '<span class="pc-m">—</span>'] : null);
@@ -160,10 +192,10 @@
     const plantRow = ev.plant === undefined || ev.plant === null ? null
       : ['This plant sells', ev.plant.has ? `<span class="pc-ok">Already sells it</span>${ev.plant.price != null ? ' · $' + Number(ev.plant.price).toFixed(2) : ''}${ev.plant.date ? ' · ' + esc(String(ev.plant.date).slice(0, 10)) : ''}` : ev.plant.linked ? '<span class="pc-m">Linked, no price yet</span>' : '<span class="pc-warn">Has never had it</span>'];
     const html = `<div class="pc-t">${esc(label)}</div>` +
-      block('Cut', f.cut, st(f.cut, [line.cuts, tr && tr.cuts, specVals('cuts')], false), [['The line', said(line.cuts)], tcell('cuts'), spcell('cuts')]) +
-      block('Temperature', f.temp, st(f.temp, [line.temp, tr && tr.temp, sr && sr.temp, specVals('temp')], false), [tcell('temp'), ['The line', said(line.temp)], scell('temp'), spcell('temp')]) +
-      block('Packaging', f.pack, st(f.pack, [line.pack, tr && tr.pack, sr && sr.pack, specVals('pack')], false), [tcell('pack'), ['The line', said(line.pack)], scell('pack'), spcell('pack'), plantRow]) +
-      block('Variation', f.variation, st(f.variation, [line.variations, tr && tr.variations, specVals('variations')], true), [['The line', said(line.variations)], tcell('variations'), spcell('variations')]);
+      block('Cut', f.cut, st(f.cut, [line.cuts, tr && tr.cuts, specVals('cuts'), br && br.cuts], false), [['The line', said(line.cuts)], tcell('cuts'), bcell('cuts'), spcell('cuts')]) +
+      block('Temperature', f.temp, st(f.temp, [line.temp, tr && tr.temp, sr && sr.temp, specVals('temp'), br && br.temp], false), [tcell('temp'), ['The line', said(line.temp)], scell('temp'), bcell('temp'), spcell('temp')]) +
+      block('Packaging', f.pack, st(f.pack, [line.pack, tr && tr.pack, sr && sr.pack, specVals('pack'), br && br.pack], false), [tcell('pack'), ['The line', said(line.pack)], scell('pack'), bcell('pack'), spcell('pack'), plantRow]) +
+      block('Variation', f.variation, st(f.variation, [line.variations, tr && tr.variations, specVals('variations'), br && br.variations], true), [['The line', said(line.variations)], tcell('variations'), bcell('variations'), spcell('variations')]);
     const tt = ev.title === undefined ? '' : titlesBlock({ section: ev.title, sections: ev.sections });
     return html + tt + (ev.subject ? '<span class="pc-k">Subject</span>' + esc(ev.subject) : '') + emailBlock(ev.lines);
   }
@@ -179,13 +211,14 @@
 
   // The card over the plant's product: what it wrote, how it was read ("?" for what it did not say), and the email's own reasons.
   function plantTip(raw, line, lines, near, titles, extra) {
+    if (extra) return focusedTip(raw, line, extra);
     const read = [line.cuts.length ? line.cuts.join(', ') : 'cut ?', line.variations.length ? line.variations.join(', ') : 'no variation', line.temp || 'temp ?', line.pack || 'packaging ?'];
     return `<div class="pc-t">What the plant sent</div><span class="pc-k">The plant wrote</span>${esc(raw)}<span class="pc-k">Reads as</span>` +
-      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + (extra ? fullNameBlock(line, extra) : '') + emailBlock(lines) + titlesBlock(titles) + nearBlock(near);
+      read.map((x) => `<span class="pc-chip${/\?$/.test(x) ? ' pc-q' : ''}">${esc(x)}</span>`).join('') + emailBlock(lines) + titlesBlock(titles) + nearBlock(near);
   }
 
   const css = '.pc-hv{border-bottom:1px dotted rgba(255,255,255,.45);cursor:help;}' +
-    '#bt-tip{position:fixed;z-index:3000;display:none;pointer-events:none;width:min(400px,92vw);background:#0A2547;border:1.5px solid rgba(90,170,255,.55);border-radius:12px;padding:12px 14px;box-shadow:0 14px 34px rgba(4,12,26,.6);font-size:12.5px;line-height:1.5;color:#fff;text-align:left;font-weight:400;}' +
+    '#bt-tip{position:fixed;z-index:3000;display:none;pointer-events:auto;width:min(440px,92vw);max-height:78vh;overflow:auto;background:#0A2547;border:1.5px solid rgba(90,170,255,.55);border-radius:12px;padding:12px 14px;box-shadow:0 14px 34px rgba(4,12,26,.6);font-size:12.5px;line-height:1.5;color:#fff;text-align:left;font-weight:400;}' +
     '#bt-tip .pc-t,#bt-sheet .pc-t{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13.5px;margin-bottom:8px;}' +
     '#bt-tip .pc-k,#bt-sheet .pc-k{display:block;margin-top:9px;margin-bottom:2px;color:rgba(255,255,255,.55);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}' +
     '#bt-tip .pc-cmp,#bt-sheet .pc-cmp{display:grid;grid-template-columns:78px minmax(0,1fr) minmax(0,1fr);gap:4px 10px;font-size:12px;}' +
@@ -193,6 +226,9 @@
     '#bt-tip .pc-f,#bt-tip .pc-m,#bt-sheet .pc-f,#bt-tip .pc-m{color:rgba(255,255,255,.55);}' +
     '#bt-tip .pc-bad,#bt-sheet .pc-bad{color:#FFC876;font-weight:600;}' +
     '#bt-tip .pc-fnl,#bt-sheet .pc-fnl{grid-template-columns:92px minmax(0,1fr);}' +
+    '#bt-tip .pc-hl,#bt-sheet .pc-hl{background:rgba(255,200,118,.22);color:#FFE2B0;border-radius:3px;padding:0 2px;}' +
+    '#bt-tip .pc-body,#bt-sheet .pc-body{white-space:pre-wrap;font-size:11.5px;line-height:1.45;}' +
+    '#bt-tip .pc-fl,#bt-sheet .pc-fl{font-size:11.5px;margin-bottom:3px;}' +
     '#bt-tip .pc-nr,#bt-sheet .pc-nr{display:flex;justify-content:space-between;gap:10px;padding:3px 7px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.55);}' +
     '#bt-tip .pc-nr span:first-child,#bt-sheet .pc-nr span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
     '#bt-tip .pc-nr span:last-child,#bt-sheet .pc-nr span:last-child{flex-shrink:0;}' +
@@ -254,6 +290,7 @@
     };
     doc.addEventListener('mouseover', (e) => {
       if (touchMode()) return;
+      const tipNode = el(); if (tipNode && tipNode.contains && tipNode.contains(e.target)) return;
       const host = e.target && e.target.closest && e.target.closest('[data-tip]');
       if (!host || !host.dataset.tip) { if (on) hide(); return; }
       if (host === on) return;
@@ -268,11 +305,11 @@
       if (!host || !host.dataset.tip || (host.classList && (host.classList.contains('btp-opt') || host.classList.contains('btp-in')))) return;
       openSheet(host.dataset.tip, null);
     });
-    doc.addEventListener('mousedown', hide, true);
-    doc.addEventListener('scroll', hide, true);
+    doc.addEventListener('mousedown', (e) => { const t = el(); if (!t || !t.contains || !t.contains(e.target)) hide(); }, true);
+    doc.addEventListener('scroll', (e) => { const t = el(); if (!t || !t.contains || !t.contains(e.target)) hide(); }, true);
   }
 
-  const api = { wordRegex, readLine, productFields, mismatch, productTip, decisionTip, plantTip, fullNameParts, fullNameBlock, attachTips, touch, css };
+  const api = { wordRegex, readLine, productFields, mismatch, productTip, decisionTip, plantTip, focusedTip, cueHtml, fullNameParts, fullNameBlock, attachTips, touch, css };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.BTProductContext = api;

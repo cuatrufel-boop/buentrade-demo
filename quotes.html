@@ -7133,13 +7133,10 @@ function rqOfferEmailHtml(firstName, full, o){
 // WhatsApp line of ONE brand (owner 2026-10-24, chosen from the mock-ups): when the message is ONE brand and its link has a card (photo and/or spec), the card carries the brand and "Con docs" / "Sin docs",
 // so the text does not repeat the brand; with no link (no photo, no spec) the line is plain text with the brand and the docs at the end. With several brands every line keeps its brand
 // (WhatsApp unfurls only the first link) and says its docs, so no line is left without them.
-// ONE WhatsApp message PER BRAND, the highest price first (owner 2026-10-24: "una ficha pequeña por marca… de mayor a menor… aprobado"). WhatsApp draws the card of the first link of a message only, so a brand that has its
-// own card gets its own message; every message is the approved single-brand message. The greeting (and the signal line) go on the first message, the pending / credit notes on the last, the bold on the brand with the
-// cheapest price of the set. Each message confirms ONLY its own offer at "Yes, sent"; the customer's own bookkeeping (market bullets, after-send refresh) runs once, at the first confirmation.
+// CURRENT WhatsApp offer: one message and one bars picture per customer × product, every priced brand highest first. The picture contains no text or links. A brand sheet/photo travels as its own attachment.
+// One explicit "Yes, sent" confirms all drafts represented by that picture; the customer's bookkeeping runs once.
 function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent }){
-  // ONE WhatsApp message PER BRAND (owner 2026-10-24, option B: "dame la B"; "mas delgada" = the thin banner), highest price first: each brand is its own message — its line, its link and its thin banner — so WhatsApp draws every
-  // brand's card. No "Hola <name>," line (owner: "te dije que hola Manuel no"). The signal line (or the "Lista actualizada" title) sits on the FIRST message, the pending / credit notes on the LAST, the bold on the cheapest price of the set.
-  // Each message confirms ONLY its own offer at "Yes, sent"; the customer's own bookkeeping (market bullets, after-send refresh) runs once, at the first confirmation.
+  // One customer × product message. Every priced brand is in one bars picture, highest first, using the customer's currency; the single-brand case still uses that picture.
   const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = '';
   const sorted = full.slice().sort((a, b) => rqLinePrice(b.calc) - rqLinePrice(a.calc));
   const cheap = rqCheapestSet(sorted.map(({ calc }) => rqLinePrice(calc)));
@@ -7148,8 +7145,8 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
   let customerDone = false;
   // MANY BRANDS = ONE MESSAGE (owner 2026-11-09: "tenía más de 5 marcas y me tocó enviar uno por uno… que manden todas solo enviando una vez"; the bars picture approved from his own mock-up, "construyelo para pesos y border USD"): a customer's offer of one
   // product with TWO OR MORE brands is ONE message — ONE picture with the product's name, every brand highest price first with a bar and its price in HIS currency ($ USD/lb at the border, $ MXN/kg for a pesos customer), the cheapest in green, a
-  // document mark beside a brand that has a spec sheet — ONE green button and ONE "Yes, sent" that confirms EVERY brand he lacked. The picture is the message: no text, no links (a picture cannot hold one). One brand stays the single message it always was.
-  if (sorted.length >= 1) { // ALWAYS the bars picture, even for ONE brand (owner 2026-11-10: "claro siempre así sea solo una" · "barra y link"): one brand = its bar and its own link (its card, when it has a spec or a photo)
+  // A document mark identifies rows with a spec/photo; the files are attached next to the picture. One green button and one confirmation cover every draft represented.
+  if (sorted.length >= 1) { // Every non-empty offer uses the bars picture, including a single brand; the offer bubble has no link.
     const rows = sorted.map((one) => { const offer = offersByPlantId.get(one.plant.id); const files = typeof rqFindProductFilesFor === 'function' ? (rqFindProductFilesFor(one.plant) || {}) : {};
       const specU = (offer && offer.spec_url) || files.spec_url || null, photoU = (offer && offer.photo_url) || files.photo_url || null; // BOTH, when the brand has both (owner 2026-11-10: "si además de ficha hay fotos tiene que mostrar las dos")
       return { one, offer, spec: !!(specU || photoU), specU, photoU }; });
@@ -7209,23 +7206,27 @@ async function rqBuildFichaDocs(f){
   const mimeOf = (u) => ({ pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase()] || 'application/octet-stream');
   const extOf = (u) => ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase();
   const out = await PDFDocument.create(), bold = await out.embedFont(StandardFonts.HelveticaBold), reg = await out.embedFont(StandardFonts.Helvetica);
-  // THE APPROVED CARD (owner 2026-11-10: "aprobamos esto"): ONE thin row — the plant's logo on a rounded white patch, the brand, the doc mark and "Ficha técnica" — full navy, no "BuenTrade" line, no margin. WhatsApp rounds the preview itself.
-  const W = 612, H = 76, cover = out.addPage([W, H]);
+  // THE CARD, SIZED FOR THE PHONE (owner 2026-11-10 "aprobamos esto" — a thin row; owner 2026-11-11, with the new picture: "las fichas deben adaptarse a este nuevo tamaño"): WhatsApp shows the document's first page at the bubble's width, so a 612 × 76 row
+  // came out with 13-21 px letters. The same card, now 612 × 188: the plant's logo on a rounded white patch and, at the right, the doc mark + "Ficha técnica" at 28 pt on the first row; the brand's name under them at 40 pt (never under 30; a longer name is
+  // shortened with "…") — the same navy, the same rounded corners, the same words, and letters the size of the picture's. The photo and the ficha's pages after it are exactly what they were.
+  const W = 612, H = 188, M = 32, cover = out.addPage([W, H]);
   cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(217 / 255, 253 / 255, 211 / 255) }); // the page itself is the colour of WhatsApp's own bubble, so the card's ROUNDED corners show no white margin (a PDF page is always square)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
-  rr(0, H, W, H, 18, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
-  let lx = 26;
+  rr(0, H, W, H, 26, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
+  const rowMid = H - 24 - 34; // the middle of the first row (the logo patch is 68 high, 24 under the top)
   const logoImg = logoB && (isPng(logoB) ? await out.embedPng(logoB).catch(() => null) : isJpg(logoB) ? await out.embedJpg(logoB).catch(() => null) : null);
   if (logoImg) {
-    const bw = 104, bh = 48, sc = Math.min((bw - 12) / logoImg.width, (bh - 10) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(18, H - 14, bw, bh, 9, rgb(1, 1, 1)); // the white patch behind the logo, rounded
-    cover.drawImage(logoImg, { x: 18 + (bw - w) / 2, y: 14 + (bh - h) / 2, width: w, height: h });
-    lx = 18 + bw + 18;
+    const bw = 132, bh = 68, sc = Math.min((bw - 16) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(M, H - 24, bw, bh, 12, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    cover.drawImage(logoImg, { x: M + (bw - w) / 2, y: H - 24 - bh + (bh - h) / 2, width: w, height: h });
   }
-  cover.drawText(String(f.brand), { x: lx, y: H / 2 - 8, size: String(f.brand).length > 20 ? 19 : 24, font: bold, color: rgb(1, 1, 1) });
-  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 15);
-  cover.drawText(label, { x: W - 20 - lw, y: H / 2 - 5, size: 15, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
-  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: W - 20 - lw - 34, y: H / 2 + 16, scale: 1.2, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 1.7 }); // the doc mark
+  let brand = String(f.brand), bsz = 40;
+  while (bsz > 30 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) bsz -= 1;
+  while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) brand = brand.slice(0, -2).trim() + '…';
+  cover.drawText(brand, { x: M, y: 38, size: bsz, font: bold, color: rgb(1, 1, 1) });
+  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 28), lblX = logoImg ? W - M - lw : M + 46;
+  cover.drawText(label, { x: lblX, y: rowMid - 10, size: 28, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: lblX - 42, y: rowMid + 20, scale: 1.6, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 2.2 }); // the doc mark
   let pages = 0;
   if (photoB && (isPng(photoB) || isJpg(photoB))) {
     try {
@@ -7245,16 +7246,31 @@ function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
   items.filter(it => (it.thinImages && it.thinImages.length) || it.bars).forEach(it => {
     const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
+    if (it.fichas && it.fichas.length && !it.fichasP) {
+      it.fichasState = 'pending';
+      it.fichasP = Promise.all(it.fichas.map(rqWaFichaDocs)).then(lists => {
+        it.fichaFiles = lists.flat().filter(Boolean);
+        it.fichasMissing = lists.filter(files => !files || !files.length).length;
+        it.fichasState = it.fichasMissing ? 'incomplete' : 'ready';
+        if (it.downloadFiles && it.downloadFiles.length) it.downloadFiles = [it.downloadFiles[0], ...it.fichaFiles];
+        const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+        if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
+      }).catch(() => { it.fichasState = 'failed'; it.fichasMissing = it.fichas.length; });
+    }
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
     const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
-    if (!rqThinCache.has(key)) rqThinCache.set(key, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)); // offline or not published: no picture, the message goes as it is
+    if (!rqThinCache.has(key)) {
+      const request = fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+      rqThinCache.set(key, request);
+      request.then(bytes => { if (!bytes && rqThinCache.get(key) === request) rqThinCache.delete(key); }); // a failed fetch must not poison this brand's cache: the next offer retries the picture
+    }
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
       if (!bytes) return;
       if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
       it.bannerUrl = rqThinUrls.get(key);
-      it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }];
-      if (it.fichas && it.fichas.length) Promise.all(it.fichas.map(rqWaFichaDocs)).then(lists => { const got = lists.flat().filter(Boolean); if (!got.length) return; it.downloadFiles = [it.downloadFiles[0], ...got]; const typing2 = document.activeElement && document.activeElement.tagName === 'TEXTAREA'; if (!typing2 && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal(); }); // the fichas as documents, after the picture
+      if (bars) it.cardFull = true; // the bars picture is shown whole at ITS OWN shape (600 wide, as tall as its brands need): the bubble's 1200/288 band would squash it (owner 2026-11-11: the preview showed it stretched and blurry)
+      it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }, ...(it.fichaFiles || [])];
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
@@ -7981,7 +7997,7 @@ async function rqLogSentOffers(customers, channel){
 // dryRun (2026-09-26, Offer Sheets): only asks sent-offers-create for the customer's credit warning — nothing is logged.
 // The real log happens once the trader confirms the send (see sendOfferEmailToAll's onSent).
 // draft (owner 2026-10-22): a WhatsApp offer is minted for its product link when the review window opens, but it is NOT an Offer until the trader says "Yes, sent" (rqConfirmOffers) — until then it is hidden everywhere.
-async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, moreJobs){
+async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, moreJobs, attemptKey){
   const rows = [], spans = []; // moreJobs (owner 2026-10-24: "hazlo más rápido"): other customers' lines [{ withCalc, customers }] go in the SAME request; spans = where each job's rows start, to hand each customer his own answer back (perJob)
   for (const job of [{ withCalc, customers }, ...(moreJobs || [])]) { const { withCalc, customers } = job; spans.push(rows.length);
   withCalc.forEach(({ plant, calc }) => {
@@ -8004,7 +8020,7 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, 
       // (same plant, customer, product, channel) within the same minute reuses the same key, so
       // the API's idempotency check catches it and returns the existing offer instead of logging
       // it twice. A real re-send later (a different minute) always gets a fresh key.
-      const idempotencyKey = [plant.id, c.id, plant.rqProductId || loggedProductName, channel, new Date().toISOString().slice(0, 16)].join('|');
+      const idempotencyKey = [plant.id, c.id, plant.rqProductId || loggedProductName, channel, attemptKey || new Date().toISOString().slice(0, 16)].join('|');
       rows.push({
         actor: currentActor(),
         channel,
@@ -8054,7 +8070,7 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, 
     });
   });
   }
-  if (!rows.length) return { warnings: [], offers: [], perJob: spans.map(() => ({ warnings: [], offers: [] })) };
+  if (!rows.length) return { warnings: [], offers: [], failures: [], perJob: spans.map(() => ({ warnings: [], offers: [] })) };
   // sent_offers.create is single-row — no batch variant exists, so a multi-plant × multi-customer
   // send logs one call per row. Kept sequential (not Promise.all) so one failure is attributable
   // to a specific plant/customer pair in the console instead of an unordered Promise.all rejection.
@@ -8065,6 +8081,7 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, 
   // short_code) to build the WhatsApp product-card link — see sendOfferWhatsAppTo.
   const warnings = [];
   const offers = [];
+  const failures = [];
   const perJob = spans.map(() => ({ warnings: [], offers: [] }));
   const take = (result, i) => {
     const mine = perJob[spans.filter(st => st <= i).length - 1];
@@ -8080,14 +8097,20 @@ async function rqLogSentOffersRows(withCalc, customers, channel, dryRun, draft, 
   let batched = null;
   try { const r = await callApi('sent-offers-create', { rows: rows.map(bodyOf) }); if (r && r.batch && Array.isArray(r.results) && r.results.length === rows.length) batched = r.results; } catch (e) { console.error('Batch log failed, logging one by one:', e.message); }
   if (batched) {
-    batched.forEach((result, i) => { if (result.status < 400) take(result, i); else console.error('Failed to log sent offer:', result.error || result.message, rows[i]); });
-    return { warnings, offers, perJob };
+    batched.forEach((result, i) => {
+      if (result.status < 400) take(result, i);
+      else failures.push(`${rows[i].plant_id}/${rows[i].customer_id}: ${result.error || result.message || `HTTP ${result.status}`}`);
+    });
+    return { warnings, offers, perJob, failures };
   }
   for (const [i, row] of rows.entries()) {
-    try { take(await callApi('sent-offers-create', bodyOf(row)), i); }
-    catch (e) { console.error('Failed to log sent offer:', e.message, row); }
+    try {
+      const result = await callApi('sent-offers-create', bodyOf(row));
+      if (result && result.status >= 400) failures.push(`${row.plant_id}/${row.customer_id}: ${result.error || result.message || `HTTP ${result.status}`}`);
+      else take(result, i);
+    } catch (e) { failures.push(`${row.plant_id}/${row.customer_id}: ${e.message || e}`); }
   }
-  return { warnings, offers, perJob };
+  return { warnings, offers, perJob, failures };
 }
 
 // "Yes, sent": the drafts of this WhatsApp become real offers (Offers, Today, Quotes' "has it") — and only now. Nothing else records a WhatsApp offer.
@@ -8215,7 +8238,7 @@ function rqRenderEmailModal(){
     // same kind of real link as the fallback, instead of trying to pop one open in code.
     const envIco = RQ_EMAIL_ICON.replace(/width:13px;height:13px;/, '');
     const actionHtml = it.sent
-      ? ''
+      ? (it.recordError ? `<button type="button" class="btn secondary small" onclick="rqEmailModalRetryRecord(${i})" ${it.recordRetrying ? 'disabled' : ''}>${it.recordRetrying ? 'Saving record…' : 'Retry Offer record'}</button>` : '')
       : (it.gmailFallbackUrl
         ? `<a id="rq_email_action_${i}" class="pkg-trigger-btn" style="display:inline-flex;align-items:center;gap:5px;" href="${escapeHtml(it.gmailFallbackUrl)}" target="bt_gmail" rel="noopener" onclick="rqEmailModalOpenFallback(${i})">⚠ Open in Gmail →</a>`
         : (rqEmailModalIsOffer
@@ -8225,9 +8248,11 @@ function rqRenderEmailModal(){
     return `
     <div class="rq-msg-card${it.sent ? ' sent opened' : ''}">
       <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}
-        ${it.sent ? (it.autoSendFailed
-          ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">⚠ Opened in Gmail (auto-send failed)</span>`
-          : `<span class="rq-msg-done">✓ ${rqEmailModalIsOffer ? 'Sent' : 'Opened'}</span>`) : ''}
+        ${it.sent ? (it.recordError
+          ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);" title="${escapeHtml(it.recordError)}">⚠ Sent, offer record failed</span>`
+          : it.autoSendFailed
+            ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">⚠ Opened in Gmail (auto-send failed)</span>`
+            : `<span class="rq-msg-done">✓ ${rqEmailModalIsOffer ? 'Sent' : 'Opened'}</span>`) : ''}
       </div>
       <div class="rq-em-fields">
       <div class="rq-email-field"><label>To</label><input type="text" ${it.sent ? 'disabled' : ''} value="${escapeHtml(it.to)}" oninput="rqEmailModalItems[${i}].to=this.value" autocomplete="off" name="bt-to-${i}"></div>
@@ -8263,27 +8288,35 @@ async function rqEmailModalSendOne(i){
   const it = rqEmailModalItems[i];
   if (!it || it.sent || it.gmailFallbackUrl) return;
   if (!rqEmailModalIsOffer) return; // the plain-ask case is a real <a> now — nothing for JS to do
-  if (!String(it.subject || '').trim()){ rqShowNotice('Write a subject first.'); return; } // the send refuses an empty subject: say so here instead of dropping him into Gmail
+  if (!String(it.subject || '').trim()){ rqShowNotice('Write a subject first.'); return; }
   const ccList = (it.cc || '').split(',').map(s => s.trim()).filter(Boolean);
   try {
-    await sendEmailApiRaw(it.fromAlias, it.to, it.subject, it.body, it.html && (it.htmlText == null || it.htmlText === it.body) ? it.html : undefined, it.attachments, ccList.join(',')); // an html card is sent only while its text is untouched (an edit sends the edited text)
-    it.sent = true;
-    rqRenderEmailModal(); // the email is OUT: the card says "Sent" at once, never after the record call (2026-11-09: that call hung, the card looked unsent, Cervantes was sent the Monday summary twice)
-    if (it.onSent) await it.onSent();
+    await sendEmailApiRaw(it.fromAlias, it.to, it.subject, it.body, it.html && (it.htmlText == null || it.htmlText === it.body) ? it.html : undefined, it.attachments, ccList.join(','));
   } catch(e){
-    // Real bug fixed 2026-09-01: this used to call window.open() right here to fall back to
-    // Gmail — but this point in the code is deep inside an awaited catch block, and a plain,
-    // fully-blocked Chrome pop-up permission for this site kills that regardless of timing. Now
-    // it just surfaces a real link (see rqRenderEmailModal) for the trader to click themselves —
-    // guaranteed to work since it's their own direct click, not the page acting on their behalf.
+    // Only a failed delivery gets the Gmail fallback. A record failure after delivery must never resend the email.
     it.autoSendFailed = true;
-    // it.body itself stays clean (it's what the API attempt above just sent, and Resend already
-    // appends its own copy of this signature server-side) — only this manual fallback link, which
-    // never goes anywhere near the API, needs it added here.
     const ccJoined = ccList.join(',');
     it.gmailFallbackUrl = rqGmailComposeUrl(it.to, it.subject, it.body + RQ_EMAIL_SIGNATURE, ccJoined);
+    rqRenderEmailModal();
+    return;
+  }
+  it.sent = true;
+  it.autoSendFailed = false;
+  it.recordError = '';
+  rqRenderEmailModal();
+  if (it.onSent) {
+    try { await it.onSent(); }
+    catch(e){ it.recordError = String(e && e.message || e); rqShowNotice(`Email sent, but its Offer record failed: ${it.recordError}`); }
   }
   rqRenderEmailModal();
+}
+async function rqEmailModalRetryRecord(i){
+  const it = rqEmailModalItems[i];
+  if (!it || !it.sent || !it.recordError || it.recordRetrying || !it.onSent) return;
+  it.recordRetrying = true; rqRenderEmailModal();
+  try { await it.onSent(); it.recordError = ''; rqShowNotice('Offer record saved.'); }
+  catch(e){ it.recordError = String(e && e.message || e); rqShowNotice(`Email is sent; its Offer record still failed: ${it.recordError}`); }
+  finally { it.recordRetrying = false; rqRenderEmailModal(); }
 }
 // Fires when the trader actually clicks the real <a> — either the plain-ask link or the post-
 // failure Gmail fallback link. The anchor's own href+target already does the real navigation;
@@ -8361,13 +8394,14 @@ function rqRenderWaModal(){
     const tip = it.opened ? 'Reopen WhatsApp' : rqWaModalIsOffer ? 'Make an offer on WhatsApp' : 'Open WhatsApp';
     return `
     <div class="rq-msg-card${it.opened ? ' opened' : ''}">
-      <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.opened ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">I sent it</button>` : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
+      <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.recording ? '<span class="rq-msg-done">Saving record…</span>' : it.recordPending ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Sent — record pending</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">Retry record</button>` : it.opened ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">I sent it</button>` : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
       <div class="rq-wa-row">
         <div class="rq-wa-chat"><div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
-        <button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
+        <button type="button" class="wa-btn outline rq-wa-send" title="${it.fichasState === 'pending' ? 'Preparing specs and photos' : tip}" aria-label="${it.fichasState === 'pending' ? 'Preparing specs and photos' : tip}" ${it.fichasState === 'pending' ? 'disabled' : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
         ${rqWaModalIsOffer && rqWaCanShare(it) ? `<button type="button" class="btn rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}
       </div>
-      ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:6px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is also copied when you open WhatsApp: press Cmd+V in the chat (or drag the file)'}${rqWaModalIsOffer && rqWaCanShare(it) ? ' — or tap Share to send the picture and the text together' : ''}</div>` : ''}
+      ${it.fichasState === 'pending' ? '<div class="loc-hint" style="margin-top:6px;">Preparing specs and photos. WhatsApp will open when they are ready.</div>' : ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : ''}
+      ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:6px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is also copied when you open WhatsApp: press Cmd+V in the chat (or drag the file)'}${it.downloadFiles.length > 1 ? '<br><b>Specs/photos download separately; attach these documents in WhatsApp so the customer can open them.</b>' : ''}${rqWaModalIsOffer && rqWaCanShare(it) ? ' — or tap Share to send the picture and the text together' : ''}</div>` : ''}
     </div>`; }).join('');
   list.querySelectorAll('textarea').forEach(rqWaFit);
   rqOfferWindowSync(); // the one offer window (when open) shows these cards
@@ -8385,8 +8419,8 @@ async function rqWaPasteAgain(i){
 // A WhatsApp that was opened but never confirmed stays on the list; this lets the trader say "I sent it" by hand (owner 2026-10-22: the line stayed after sending) — the same record as "Yes, sent".
 async function rqWaMarkSent(i){
   const it = rqWaModalItems[i];
-  if (!it || it.recorded) return;
-  rqWaRecord(it); rqWaWatching.delete(it); it.recorded = true;
+  if (!it || it.recorded || it.recording) return;
+  rqWaRecord(it); rqWaWatching.delete(it);
   try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
   rqRenderWaModal();
 }
@@ -8424,9 +8458,11 @@ async function rqWaAutoPaste(it){
 // ON THE PHONE THE GREEN BUTTON SENDS THE PICTURE AND THE TEXT TOGETHER (owner 2026-10-28: "usd peso, con link o sin link, cel o pc, todas iguales"): a phone has no Mac paste, so a wa.me message went out as text only and WhatsApp
 // made the link's own preview card; there the green button does what Share does (picture + text as its caption), like the Mac's paste does on the PC. Where the picture cannot be shared it stays the wa.me message as before.
 const rqWaIsPhone = () => /iPhone|iPad|Android|Mobile/i.test((typeof navigator !== 'undefined' && navigator.userAgent) || '');
-function rqWaModalOpenOne(i){
+function rqWaModalOpenOne(i, allowMissingFichas){
   const it = rqWaModalItems[i];
   if (!it) return;
+  if (it.fichasState === 'pending') return;
+  if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) return;
   if (rqWaModalIsOffer && rqWaIsPhone() && rqWaCanShare(it)) { rqWaModalShareOne(i); return; }
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const firstTime = !it.opened;
@@ -8459,8 +8495,9 @@ function rqWaAsk(){
       rqWaWatching.delete(it);
       const who = String(it.label).split(' — ')[0];
       rqWaRecord(it);
-      if (await btConfirm(`Did you send the WhatsApp to ${who}?`, 'Yes, sent', 'Not sent')) {
-        it.recorded = true;
+      if (it.recordPending) {
+        try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
+      } else if (await btConfirm(`Did you send the WhatsApp to ${who}?`, 'Yes, sent', 'Not sent')) {
         try { await it.onOpened(); } catch (e) { rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}`); }
       }
       rqRenderWaModal();
@@ -8472,21 +8509,39 @@ function rqWaAsk(){
 // the asking waited for it for ever: no more "Did you send…", the window could not close, and the drafts stayed drafts (4 Nov: 13 cards, 1 recorded). Now the next question waits at most 20 s for the record; a record that fails — now or
 // later — puts the card back to "not recorded" and the trader is asked again (confirming twice is a no-op on the server).
 const RQ_WA_RECORD_WAIT_MS = 20000;
-function rqWaRecord(it){ // wraps the card's own record once: the callers keep calling it.onOpened() exactly as before
+function rqWaRecord(it){ // wraps the card's own record once: a timeout stays visibly pending, never silently recorded
   if (it.recordBound || typeof it.onOpened !== 'function') return;
   it.recordBound = true;
   const real = it.onOpened;
   it.onOpened = () => {
-    const rec = (async () => { await real.call(it); })();
-    rec.catch((e) => { it.recorded = false; rqWaWatching.add(it); rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}. You will be asked again.`); rqRenderWaModal(); });
-    return Promise.race([rec.catch(() => {}), new Promise((r) => setTimeout(r, RQ_WA_RECORD_WAIT_MS))]);
+    it.recorded = false; it.recording = true; it.recordPending = false;
+    let finished = false;
+    const rec = Promise.resolve().then(() => real.call(it));
+    const saved = rec.then(() => {
+      finished = true; it.recording = false; it.recordPending = false; it.recorded = true;
+      rqWaWatching.delete(it);
+      return true;
+    }, (e) => {
+      finished = true; it.recording = false; it.recordPending = false; it.recorded = false;
+      rqWaWatching.add(it); rqShowNotice(`Sent, but it couldn't be recorded: ${e.message}. You can retry the record.`); rqRenderWaModal();
+      return false;
+    });
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(false), RQ_WA_RECORD_WAIT_MS));
+    return Promise.race([saved, timeout]).then((ok) => {
+      if (!ok && !finished) {
+        it.recording = false; it.recorded = false; it.recordPending = true; rqWaWatching.add(it);
+        rqShowNotice('Sent, but its record is still pending. Retry the record before closing this window.'); rqRenderWaModal();
+      }
+      return ok;
+    });
   };
 }
 window.addEventListener('blur', () => { if (rqWaWatching.size) rqWaLeft = true; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (rqWaWatching.size) rqWaLeft = true; } else if (rqWaLeft) rqWaAsk(); });
 window.addEventListener('focus', () => { if (rqWaLeft && rqWaWatching.size) rqWaAsk(); });
 async function rqWaModalClose(){
-  if (rqWaWatching.size) await rqWaAsk(); // never close with a message nobody has answered for
+  if (rqWaWatching.size) await rqWaAsk();
+  if (rqWaWatching.size) { rqShowNotice('A WhatsApp offer record is still pending. Retry it before closing this window.'); return; }
   const overlay = document.getElementById('rq_wa_modal_overlay');
   overlay.style.display = 'none';
   overlay.classList.remove('rq-split-left', 'rq-split-right');
@@ -8699,15 +8754,21 @@ async function sendOfferEmailTo(customerId){
     // Real ask 2026-09-16: the credit-hold line needs to know overCreditLimit before the body is
     // built, so logging now always happens first (matches sendOfferWhatsAppTo's own order below) —
     // previously this logged only after send succeeded/failed, once each, never before building body.
-    const { warnings } = await rqLogSentOffersRows(full, [c], 'email');
+    const recordAttemptKey = `email-offer:${c.id}:${pid}:${Date.now()}`;
+    const { warnings, failures } = await rqLogSentOffersRows(full, [c], 'email', true, false, null, recordAttemptKey);
     warnings.forEach(w => rqShowNotice(w.message));
+    failures.forEach(e => rqShowNotice(`Could not check the offer before sending: ${e}`));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
     const body = buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine);
     const downloadFiles = pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean);
     cards.push({
       id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject, body, fromAlias: 'offers', attachments, downloadFiles,
       html: rqOfferEmailHtml(firstName, full, { signalLine, warnings }), htmlText: body, // the blue bars table when there are two or more brands (the plain text stays its text)
-      onSent: async () => { await rqConfirmBullets(c.id, 'email'); rqShowNotice(`Cotización enviada a ${cc.email}.`); },
+      onSent: async () => {
+        const logged = await rqLogSentOffersRows(full, [c], 'email', false, false, null, recordAttemptKey);
+        if (logged.failures && logged.failures.length) throw new Error(logged.failures.join('; '));
+        await rqConfirmBullets(c.id, 'email'); rqShowNotice(`Cotización enviada a ${cc.email}.`);
+      },
     });
   }
   if (!cards.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
@@ -8795,17 +8856,17 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       if (!full){ skipped.push({ c, pid, why: 'his pesos price is not confirmed in his QT' }); continue; }
       const lacks = rqOnlyWhatHeLacks(full, unsent); // never a price he already has (owner 2026-11-03: "sin repetir precios")
       if (!lacks.length){ skipped.push({ c, pid, why: rqSkippedReason(c, pid, sentByCustomer, 'email') }); continue; }
-      jobs.push({ c, cc, unsent, full, lacks, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]) }); // the email carries EVERY brand, highest → lowest, so he can compare; only `lacks` is recorded as sent (owner 2026-11-05)
+      jobs.push({ c, cc, unsent, full, lacks, isUpdate: rqCustomerHadProducts(sentByCustomer[c.id], [pid]), recordAttemptKey: `email-offer:${c.id}:${pid}:${Date.now()}` }); // the email carries EVERY brand, highest → lowest, so he can compare; only `lacks` is recorded as sent (owner 2026-11-05)
     }
     // every customer's credit check (a dry run: reads only), signal line and pesos PDFs are asked AT ONCE (owner 2026-10-24: "hazlo más rápido"); the messages keep the customers' order
-    const prepared = await Promise.all(jobs.map(async ({ c, full, lacks, isUpdate }) => {
+    const prepared = await Promise.all(jobs.map(async ({ c, full, lacks, isUpdate, recordAttemptKey }) => {
       const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
       // 2026-09-26: credit check only (dry run) — the offer itself is logged when the trader confirms the send (onSent below).
-      const [{ warnings }, signalLine] = await Promise.all([rqLogSentOffersRows(lacks, [c], 'email', true), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // the credit check and the signal line are both reads: asked together
+      const [{ warnings }, signalLine] = await Promise.all([rqLogSentOffersRows(lacks, [c], 'email', true, false, null, recordAttemptKey), isUpdate ? '' : rqFetchCustomerSignalLine(c.id, full)]); // the credit check and the signal line are both reads: asked together
       return { pesosFiles, warnings, signalLine };
     }));
     const filesByPlant = await filesP;
-    jobs.forEach(({ c, cc, unsent, full, lacks, isUpdate }, k) => {
+    jobs.forEach(({ c, cc, unsent, full, lacks, isUpdate, recordAttemptKey }, k) => {
       const { pesosFiles, warnings, signalLine } = prepared[k];
       warnings.forEach(w => rqShowNotice(w.message));
       const firstName = rqFirstName(cc.contact_name || c.trade_name);
@@ -8813,7 +8874,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       toSend.push({
         id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
-        body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, lacks, c,
+        body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, lacks, c, recordAttemptKey,
         attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
         downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
         html: rqOfferEmailHtml(firstName, full, { signalLine, warnings, isUpdate }), // the blue bars table when there are two or more brands (the plain text above stays its text)
@@ -8839,7 +8900,11 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
   rqOpenEmailModal(`Email offer — ${toSend.length} message${toSend.length > 1 ? 's' : ''} (one product each)`, toSend.map(it => ({
     id: it.id, label: it.label, to: it.to, subject: it.subject, body: it.body, fromAlias: 'offers', html: it.html, htmlText: it.html ? it.body : undefined,
     attachments: it.attachments, downloadFiles: it.downloadFiles,
-    onSent: async () => { await rqLogSentOffersRows(it.lacks, [it.c], 'email'); await rqConfirmBullets(it.id, 'email'); if (opts.onSent) opts.onSent(it.c); },
+    onSent: async () => {
+      const logged = await rqLogSentOffersRows(it.lacks, [it.c], 'email', false, false, null, it.recordAttemptKey);
+      if (logged.failures && logged.failures.length) throw new Error(logged.failures.join('; '));
+      await rqConfirmBullets(it.id, 'email'); if (opts.onSent) opts.onSent(it.c);
+    },
   })), true);
   rqSetModalNote('rq_email_modal_list', skipped);
 }
