@@ -4377,8 +4377,11 @@ async function rqBrandSend(channel, key, customerId){
   const one = rows.find(r => r.key === key);
   if (!one) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => r.key === key && r.kind === 'priced'), [], false)); return; }
   const owners = rqBrandRecipients(one.pid);
+  const requestedCustomers = customerId ? String(customerId).split(',').map(id => rqSheetState.customers.find(c => c.id === id)) : null;
+  const requestedCurrencyOk = !!(requestedCustomers && requestedCustomers.every(c => c && rqIsPesosCustomer(c)));
+  const requestedPricesReady = !!(requestedCurrencyOk && requestedCustomers.every(c => rqPesosConfirmation(one.plant.id, one.pid, c.id)));
   const customers = customerId
-    ? rqSheetState.customers.filter(c => String(customerId).split(',').includes(c.id)) // a pesos CITY line carries every customer of that city (ids joined by commas); one id is one customer, as before
+    ? (requestedPricesReady ? requestedCustomers : []) // a pesos CITY line carries only its named MXN customers after every recipient has the valid confirmation for this plant × product
     : owners.filter(c => !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
   // the other buyers of the product (owner 2026-11-03: "si entro solo a una planta no me da la opción de mandar a todos los clientes que compran el producto"): with a customer chosen at the start the line is his; the rest
   // who still lack this brand are offered here, one question, and join the send when the trader says yes
@@ -4387,7 +4390,7 @@ async function rqBrandSend(channel, key, customerId){
     customers.push(...otherBuyers);
     otherBuyers.forEach(c => rqReqExtra().add(c.id));
   }
-  if (!customers.length) { rqShowNotice(rqSendWhyNot(one, owners, owners.some(c => !rqIsPesosCustomer(c)))); return; }
+  if (!customers.length) { rqShowNotice(customerId ? (requestedCurrencyOk ? 'Confirm this pesos price in the customer\'s own QT first.' : 'This line is for MXN customers only. Choose the MXN customer line.') : rqSendWhyNot(one, owners, owners.some(c => !rqIsPesosCustomer(c)))); return; }
   const others = rows.filter(r => r.key !== key && r.pid === one.pid && customers.some(c => !r.sentTo.some(x => x.id === c.id) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))));
   const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
   rows = wantsAll ? [one, ...others] : [one];
