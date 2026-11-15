@@ -3389,7 +3389,9 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
           if (rate) freight = { label: '$' + Number(rate.rate).toLocaleString('en-US'), perLb: Number(rate.rate) / 40000, city: loc ? loc.location_name : '' };
         }
         const owners = rqSheetCustomersOwning(pid, ctx);
-        const sentTo = owners.filter(c => { const m = ctx.sentByCustomer[c.id] || {}; return rqSentCoversPrice(m[key], r.price_date, r.price_arrived_at, m[key + '#price'], r.current_price); });
+        // who HAS the price: the page's own reading of what went out, OR the server's (customer_has_price — which also counts the cost an offer really carried, e.g. a pesos offer whose page copy of the price was stale)
+        const serverHas = new Set(((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []);
+        const sentTo = owners.filter(c => { const m = ctx.sentByCustomer[c.id] || {}; return rqSentCoversPrice(m[key], r.price_date, r.price_arrived_at, m[key + '#price'], r.current_price) || serverHas.has(c.id); });
         const isNew = !!(base.answeredAt || (askedAt && r.price_date && String(r.price_date).slice(0, 10) >= String(askedAt).slice(0, 10) && !stale))
           || rqIsNewArrival(rqSheetArrival(sheet, r.plant_id), r);
         // A sale read in the background from the saved QT is only a proposal: it goes out once the trader has opened that QT and
@@ -3698,7 +3700,7 @@ function rqBrandListHtml(x){
   const ansFor = r => { const list = (typeof RQ_LIVE_NONPRICE_ANSWERS !== 'undefined' && RQ_LIVE_NONPRICE_ANSWERS) ? ansToRead.filter(a => a.plant_id === r.plant.id).slice(0, 3) : []; if (!list.length) return ''; // no pill for an answer that is not a price (owner 2026-11-04), here as in Live
     return `<span style="display:block;margin-top:4px;line-height:1.5;">${list.map(a => { const w = rqAnswerWords(a.excerpt), short = w.length > 80 ? w.slice(0, 79) + '…' : w;
       return `<span class="rq-sheet-pill new" style="margin:0 4px 3px 0;white-space:normal;text-align:left;" title="${escapeHtml(w)}">Answered ${escapeHtml(rqAgo(a.at))} — open the email</span>`; }).join('')}</span>`; };
-  const body = [];
+  const body = []; // every row; the old prices and the plants without a price carry data-other="1" and go to the folded "Other plants", the rest is what is left to SEND
   const recent = r => r.askedAt && (Date.now() - new Date(r.askedAt).getTime()) < RQ_REQUEST_COOLDOWN_DAYS * 86400000;
   const askIds = [...new Set(stale.concat(pending.filter(r => r.kind === 'possible')).filter(r => !recent(r)).map(r => r.plant.id))]; // the plants that have their own "Update" / "Ask for price" on the list
   const qq = rqBrandQ.trim().toLowerCase();
@@ -3738,20 +3740,35 @@ function rqBrandListHtml(x){
   });
   const offSpec = r => `<button type="button" class="qbucket-waiting-row-decline" title="Doesn't produce it — never asked again" onclick="rqSheetDecline('${r.plant.id}','${r.pid}')">✕ Off-Spec</button>`;
   // an old (expired) price is listed with its two ways out: ask the plant for an update, or send the old price anyway (then it is a normal line: its QT, its sale)
-  stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq)) && order.some(c => !r.sentTo.some(y => y.id === c.id))).forEach(r => body.push(`<tr class="rq-sheet-dim"><td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}${ansFor(r)}</td><td>${(() => { const who = order.filter(c => !r.sentTo.some(y => y.id === c.id)).map(c => escapeHtml(String(c.trade_name).trim())); return who.length ? `Only him${sub(who.join(' · '))}`.replace('Only him', who.length > 1 ? 'Only these' : 'Only him') : ''; })()}</td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
+  stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq)) && order.some(c => !r.sentTo.some(y => y.id === c.id))).forEach(r => body.push(`<tr class="rq-sheet-dim" data-other="1"><td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}${ansFor(r)}</td><td>${(() => { const who = order.filter(c => !r.sentTo.some(y => y.id === c.id)).map(c => escapeHtml(String(c.trade_name).trim())); return who.length ? `Only him${sub(who.join(' · '))}`.replace('Only him', who.length > 1 ? 'Only these' : 'Only him') : ''; })()}</td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
     <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask the plant for an updated price" onclick="rqSheetAsk(['${r.plant.id}'])">Update</button><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Send this old price too — its QT opens so you confirm your price first" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">Send old price</button></div></td></tr>`));
   pending.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => {
     const name = `<td style="min-width:170px;"${rowTip(r, true)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}${ansFor(r)}</td>`;
     const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask for price →</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
       : r.kind === 'waiting' ? `<span class="rq-sheet-pill wait">Waiting for price</span>${offSpec(r)}`
       : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
-    body.push(`<tr class="rq-sheet-dim">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
+    body.push(`<tr class="rq-sheet-dim" data-other="1">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
   });
   const aucRows = typeof rqAuctionRowsHtml === 'function' ? rqAuctionRowsHtml(pid) : ''; // an open plant auction of this product, on top (owner 2026-10-27)
   if (aucRows) body.unshift(aucRows);
   const lineCount = sorted.filter(r => r.calc && r.confirmed && !r.proposed).length;
-  const table = body.length ? rqTableSection(body.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace(/<th>/g, '<th style="font-size:12.5px;color:rgba(255,255,255,.88);letter-spacing:.07em;padding:12px 10px 10px;">').replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>')
-    : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>';
+  // OPTION A (owner 2026-11-14, from the mockup: "la A, pero siempre que se mande uno nuevo… actualizar la tabla"): the table holds ONLY what is left to send; what already went out ("Already sent") and the old prices / plants without a price ("Other plants") are folded under it.
+  // A send carries every confirmed brand highest → lowest with its fichas (rqBrandSend) and the table is redrawn: what was sent leaves it.
+  const mainRows = body.filter(h => !/data-other="1"/.test(h)), other = body.filter(h => /data-other="1"/.test(h));
+  const mkTable = rows => rqTableSection(rows.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace(/<th>/g, '<th style="font-size:12.5px;color:rgba(255,255,255,.88);letter-spacing:.07em;padding:12px 10px 10px;">').replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>');
+  const foldHead = 'cursor:pointer;font:700 12px \'IBM Plex Mono\',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.6);padding:14px 4px;';
+  const sentLines = [];
+  try { // the fold is a convenience: whatever happens to it, the list above is exactly what it was
+    sendRows.filter(r => !r.stale).forEach(r => {
+      const who = order.filter(c => r.sentTo.some(y => y.id === c.id)).map(c => { const d = ((rqSheetState.sentByCustomer[c.id] || {})[r.plant.id + '|' + r.pid]) || ''; return escapeHtml(String(c.trade_name).trim()) + (d ? ` <span class="muted">(${escapeHtml(rqFmtDate(String(d).slice(0, 10)))})</span>` : ''); });
+      if (who.length) sentLines.push({ n: who.length, html: `<tr class="rq-sheet-dim"><td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b></td><td colspan="4" style="text-align:left;">${who.join(' · ')}</td></tr>` });
+    });
+  } catch (e) { sentLines.length = 0; }
+  const sentN = sentLines.reduce((t, l) => t + l.n, 0);
+  const sentFold = sentLines.length ? `<details class="rq-fold-sent" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}">Already sent · ${sentN}</summary><table style="width:100%;border-collapse:collapse;"><tbody>${sentLines.map(l => l.html).join('')}</tbody></table></details>` : '';
+  const otherFold = other.length ? `<details class="rq-fold-other" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}">Other plants · ${other.length}</summary>${mkTable(other)}</details>` : '';
+  const table = mainRows.length ? mkTable(mainRows)
+    : ((sentFold || otherFold) ? '<div class="rq-req-empty">Nothing left to send.</div>' : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>');
   return `<div class="rq-req rq-glass">
     <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div></div></div>
     <div class="card qbucket">
@@ -3764,7 +3781,7 @@ function rqBrandListHtml(x){
       <span class="muted" style="font-size:12.5px;">${readyLines} ready</span>
       <div class="rq-req2-btns" style="margin:0;"><button type="button" class="rq-customer-bulk-btn whatsapp" ${canSend && (emailOk || waOk) ? '' : 'disabled'} title="Send every ready customer — WhatsApp, email or both in one window; you see each message first" onclick="rqRequestSend('both')">${waIco}${mailIco} All</button></div>
     </div></div>
-    ${table}
+    ${table}${sentFold}${otherFold}
     ${hints}${addHtml}
     </div>
   </div>`;
