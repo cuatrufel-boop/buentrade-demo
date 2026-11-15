@@ -686,6 +686,120 @@
   .rq-req2-row.ready .rq-req2-meta span b,.rq-req2-row.confirm .rq-req2-meta span b{font-size:14px;}
   .rq-req2-row.waiting,.rq-req2-row.idle{padding:8px 0;gap:12px;} .rq-req2-row.waiting .rq-req2-info b,.rq-req2-row.idle .rq-req2-info b{font-size:12.5px;font-weight:500;} .rq-req2-row.waiting .rq-req2-meta,.rq-req2-row.idle .rq-req2-meta{margin-top:1px;}
   html body .rq-req2-row.waiting .pkg-trigger-btn,html body .rq-req2-row.idle .pkg-trigger-btn,html body .rq-req2-listhead .pkg-trigger-btn{min-height:30px;padding:4px 14px;font-size:12px;}
+  /* the bulk buttons of the product list (Update N / Ask N) and the green All are ONE size (owner 2026-11-14: "el botón de remind plants y el verde de all debe ser del mismo tamaño") */
+  html body .rq-hdr-actions .pkg-trigger-btn,html body .rq-hdr-actions .rq-customer-bulk-btn,html body .rq-fold-bulk .pkg-trigger-btn{min-width:130px;min-height:32px;padding:0 14px;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;}
+  /* PRODUCT PAGE, OPTION 1 (owner 2026-11-14: "1", from mockup 9): the rows are drawn as cards by state — Ready to send (green), Needs your price (amber), Waiting on plants (folds) */
+  html body .rq-sec{font:700 11.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:10px;margin:12px 0 6px;}
+  html body .rq-sec .n{color:#fff;}
+  html body .rq-sec .rq-sec-dot{width:8px;height:8px;border-radius:50%;background:#FFC876;display:inline-block;}
+  html body .rq-sec.g{color:#3FCB7E;}html body .rq-sec.g .rq-sec-dot{background:#3FCB7E;}
+  html body .rq-sec.a{color:#FFC876;}
+  html body .rq-sec.bl .rq-sec-dot{background:#5AAAFF;}
+  html body .rq-cards table,html body .rq-cards tbody{display:block;width:100%;border:none;background:none;min-width:0;}
+  html body .rq-cards tr{display:grid;grid-template-columns:1.2fr 1.5fr .9fr .9fr auto;gap:12px;align-items:center;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.045);padding:7px 14px;margin:0 0 6px;opacity:1;}
+  html body .rq-cards tr[data-sec="ready"]{border-color:rgba(63,203,126,.5);background:rgba(63,203,126,.05);}
+  html body .rq-cards tr[data-sec="need"]{border-color:rgba(255,200,118,.45);background:rgba(255,200,118,.04);}
+  html body .rq-cards td{display:block;border:none;padding:0;min-width:0 !important;text-align:left;background:none;}
+  html body .rq-cards tr.rq-sheet-dim td{opacity:1;}
+  /* THE SEND WINDOW, COCKPIT — as in the approved mockup 10, option 1 (owner 2026-11-15: "construye el 1, ojo con dañar lo que ya hicimos"; "eso no se parece a esto aprobado"): customers on the left, the WhatsApp phone with its messages in the middle, the suggestions
+     in their own column on the right, a progress ring in the title, a segmented WhatsApp / Email / Both, the big green button under each message. VIEW ONLY — the messages, banners, links, fichas, Cmd+V paste and "sent" records are exactly as before. */
+  html body .rq-offer-body{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);flex:1 1 auto;min-height:0;overflow:hidden;}
+  html body .rq-offer-body.has-rail{grid-template-columns:230px minmax(0,1fr);}
+  html body .rq-offer-body.has-side{grid-template-columns:minmax(0,1fr) 340px;}
+  html body .rq-offer-body.has-rail.has-side{grid-template-columns:230px minmax(0,1fr) 340px;}
+  html body .rq-offer-main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;}
+  html body .rq-offer-main > #rq_offer_modal_list{flex:1 1 auto;min-height:0;overflow-y:auto;}
+  html body .rq-offer-main > #rq_offer_cmp_head,html body .rq-offer-main > #rq_offer_cmp_foot,html body .rq-offer-main > #rq_offer_modal_notes{flex:none;}
+  html body .rq-offer-rail{border-right:1px solid rgba(255,255,255,.12);padding:14px 12px 12px 14px;display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0;}
+  html body .rq-offer-rail[style*="display:none"],html body .rq-offer-side[style*="display:none"]{display:none !important;}
+  html body .rq-offer-side{border-left:1px solid rgba(255,255,255,.12);padding:14px 16px;display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0;}
+  html body .rq-rail-t,html body .rq-side-t{font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);padding:2px 6px 8px;}
+  html body .rq-rail-c{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-areas:"a n" "a s";column-gap:10px;row-gap:3px;align-items:center;text-align:left;padding:9px 10px;border-radius:14px;border:1px solid transparent;background:transparent;color:#fff;cursor:pointer;font:inherit;width:100%;}
+  html body .rq-rail-c:hover{background:rgba(255,255,255,.05);}
+  html body .rq-rail-c.on{background:rgba(90,170,255,.12);border-color:rgba(90,170,255,.5);}
+  html body .rq-rail-av{grid-area:a;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 12px 'Space Grotesk',sans-serif;background:linear-gradient(135deg,#2D6FD8,#5AAAFF);color:#fff;flex:none;}
+  html body .rq-rail-c:nth-of-type(2n) .rq-rail-av{background:linear-gradient(135deg,#7B4FD6,#B08CFF);}
+  html body .rq-rail-n{grid-area:n;font-weight:600;font-size:13px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;}
+  html body .rq-rail-st{grid-area:s;display:flex;gap:5px;flex-wrap:wrap;}
+  html body .rq-rail-p{font:700 10px 'IBM Plex Mono',monospace;border-radius:20px;padding:2px 8px;border:1px solid rgba(255,200,118,.5);color:#FFC876;white-space:nowrap;}
+  html body .rq-rail-p.ok{color:#3FCB7E;border-color:rgba(63,203,126,.6);background:rgba(63,203,126,.1);}
+  html body .rq-rail-k{margin-top:auto;padding:10px 6px 2px;font-size:12px;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:6px;}
+  html body .rq-kbd{font:600 10.5px 'IBM Plex Mono',monospace;border:1px solid rgba(255,255,255,.13);border-bottom-width:2px;border-radius:6px;padding:2px 6px;color:rgba(255,255,255,.6);background:rgba(255,255,255,.04);}
+  html body .rq-offer-ring{--p:0;position:relative;width:42px;height:42px;border-radius:50%;margin-left:14px;align-items:center;justify-content:center;background:conic-gradient(#3FCB7E calc(var(--p) * 1%),rgba(255,255,255,.14) 0);flex:none;}
+  html body .rq-offer-ring::before{content:attr(data-t);position:absolute;inset:4px;border-radius:50%;background:#0D1B34;display:flex;align-items:center;justify-content:center;font:700 10.5px 'IBM Plex Mono',monospace;color:#fff;}
+  html body .rq-offer-sub{margin-left:14px;font-size:13px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  html body .rq-wa-titlebar{display:flex;align-items:center;min-width:0;}
+  /* the head: the name and the product are already in the phone and the title, the stepper is the rail → only the segmented control, centred */
+  html body .rq-offer-body.has-rail .rq-cmp-who,html body .rq-offer-body.has-rail .rq-cmp-sub,html body .rq-offer-body.has-rail .rq-cmp-step{display:none;}
+  html body .rq-cmp-top{justify-content:center;padding:14px 22px 10px;}
+  html body .rq-cmp-seg{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:3px;gap:2px;}
+  html body .rq-cmp-seg .chip{border:0;background:transparent;border-radius:11px;padding:8px 18px;box-shadow:none;}
+  html body .rq-cmp-seg .chip.on{color:#fff;background:linear-gradient(180deg,rgba(90,170,255,.35),rgba(90,170,255,.16));box-shadow:0 0 0 1px rgba(90,170,255,.6),0 6px 18px rgba(90,170,255,.18);}
+  /* the phone: a header (who), a dark chat with the messages */
+  html body #rq_offer_modal_list .rq-offer-row{justify-items:center;}
+  html body #rq_offer_modal_list .rq-offer-row > div.rq-phone{width:100%;max-width:470px;border-radius:30px;border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,#0F1C2E,#0A131F);padding:12px 12px 4px;box-shadow:0 24px 60px rgba(0,0,0,.4);}
+  html body #rq_offer_modal_list .rq-phone > .rq-cmp-lab{display:none;}
+  html body #rq_offer_modal_list .rq-phone-top{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px;}
+  html body #rq_offer_modal_list .rq-phone-top .rq-rail-av{grid-area:auto;}
+  html body #rq_offer_modal_list .rq-phone-top > div{font-size:11.5px;color:rgba(255,255,255,.6);} html body #rq_offer_modal_list .rq-phone-top b{font-size:14px;color:#fff;}
+  html body #rq_offer_modal_list .rq-cmp-msg{grid-template-columns:minmax(0,1fr);gap:10px;border:0;border-radius:18px;background:#0B141A;background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:14px 14px;padding:12px;align-items:start;margin-bottom:10px;}
+  html body #rq_offer_modal_list .rq-cmp-msg .rq-wa-bubble{background:#005C4B;border-radius:14px 14px 14px 4px;padding:5px;box-shadow:none;max-width:100%;}
+  html body #rq_offer_modal_list .rq-cmp-msg .rq-wa-bubble textarea{color:#E9EDEF;}
+  html body #rq_offer_modal_list .rq-cmp-act{align-items:stretch;} html body #rq_offer_modal_list .rq-cmp-btns{width:100%;}
+  html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send{width:100%;height:52px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg,#52E08F,#2FBF70) !important;color:#05240F !important;border:0 !important;box-shadow:0 10px 28px rgba(63,203,126,.35),inset 0 1px 0 rgba(255,255,255,.4);}
+  html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send svg{width:22px;height:22px;flex:none;}
+  html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send::after{content:'Copy banner · open WhatsApp';font:700 15px 'Inter',sans-serif;}
+  html body #rq_offer_modal_list .rq-cmp-msg.opened .rq-cmp-btns .rq-wa-send::after{content:'Reopen WhatsApp';}
+  html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send{background:rgba(63,203,126,.14) !important;color:#3FCB7E !important;box-shadow:inset 0 0 0 1.5px rgba(63,203,126,.6);}
+  html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send::after{content:'Sent ✓';}
+  html body .rq-offer-side .rq-cmp-sg{border:1px dashed rgba(255,255,255,.28);border-radius:16px;padding:13px 15px;background:rgba(255,255,255,.03);}
+  html body #rq_offer_modal_list,html body .rq-offer-side,html body .rq-offer-rail{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent;}
+  html body .rq-foot-r{margin-left:14px;font-size:12px;color:rgba(255,255,255,.55);white-space:nowrap;}
+  html body .rq-cmp-foot{display:flex;align-items:center;gap:14px;} html body .rq-cmp-foot .rq-cmp-prog{flex:1;}
+  @media (max-width:980px){html body .rq-offer-body.has-rail,html body .rq-offer-body.has-side,html body .rq-offer-body.has-rail.has-side{grid-template-columns:minmax(0,1fr);grid-template-rows:none;overflow:auto;}html body .rq-offer-rail{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid rgba(255,255,255,.12);flex:none;}html body .rq-rail-t,html body .rq-rail-k{display:none;}html body .rq-rail-c{width:auto;flex:none;}html body .rq-offer-side{border-left:0;border-top:1px solid rgba(255,255,255,.12);}}
+  /* THE PRODUCT HEADER, ONE SYMMETRIC ROW (owner 2026-11-15: "mejora la imagen, aquí está muy abajo la tabla… deja el nombre del producto arriba y solo Asked by… el cliente que la pidió… no está simétrico"): back on the left, the product name in the middle,
+     who asked on the right, the table right under it. Outside the focus screen the row is just the who-asked picker as before (the label text stays "Who asked for it?" for the screen readers and the checks; the focus screen draws it as "Asked by"). */
+  .rq-focus-title{display:none;}
+  html body.rq-focus .rq-focus-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:0 0 8px;min-height:40px;}
+  html body.rq-focus .rq-focus-head .rq-focus-back{grid-column:1;grid-row:1;justify-self:start;padding:0;}
+  html body.rq-focus .rq-focus-title{display:block;grid-column:2;grid-row:1;text-align:center;font:700 18px/1.2 'Inter',sans-serif;max-width:min(62vw,720px);}
+  html body.rq-focus .rq-focus-head #rq_request_asked{grid-column:3;grid-row:1;justify-self:end;}
+  html body.rq-focus .rq-focus-head #rq_request_asked > div{padding:0 !important;border-top:none !important;}
+  html body.rq-focus .rq-focus-head #rq_request_asked > div > div{justify-content:flex-end !important;flex-wrap:nowrap !important;gap:6px !important;}
+  html body.rq-focus .rq-focus-head #rq_request_asked.open{grid-column:1 / -1;grid-row:2;justify-self:center;}
+  html body.rq-focus .rq-focus-head #rq_request_asked.open > div > div{flex-wrap:wrap;justify-content:center;}
+  html body.rq-focus #rq_request_asked > div > div > b{font-size:0 !important;line-height:0 !important;margin:0 !important;}
+  html body.rq-focus #rq_request_asked > div > div > b::before{content:'Asked by';font-size:13px !important;line-height:normal;font-weight:700;opacity:.8;margin-right:4px;}
+  html body.rq-focus #rq_request_view .rq-req2-head{display:none;}
+  @media (max-width:860px){html body.rq-focus .rq-focus-head{grid-template-columns:auto 1fr;}html body.rq-focus .rq-focus-title{grid-column:1 / -1;grid-row:2;max-width:100%;}html body.rq-focus .rq-focus-head #rq_request_asked{grid-column:2;grid-row:1;}html body.rq-focus .rq-focus-head #rq_request_asked > div > div{flex-wrap:wrap;}}
+  html body .rq-cards:not(.plants) td:nth-child(2),html body .rq-cards:not(.plants) td:nth-child(3),html body .rq-cards:not(.plants) td:nth-child(4){text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:38px;}
+  html body .rq-cards:not(.plants) td:nth-child(3):before,html body .rq-cards:not(.plants) td:nth-child(4):before{display:block;font:500 10.5px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px;}
+  html body .rq-cards:not(.plants) td:nth-child(3):before{content:'Cost';}
+  html body .rq-cards:not(.plants) td:nth-child(4):before{content:'Sale';}
+  html body .rq-cards:not(.plants) td:nth-child(2):before{content:'Client';display:block;font:500 10.5px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px;}
+  html body .rq-cards .rq-has{color:rgba(255,255,255,.42);white-space:nowrap;}
+  html body .rq-cards button.rq-old-send.rq-customer-bulk-btn{color:#FFC876 !important;background:rgba(255,200,118,.1) !important;border-color:rgba(255,200,118,.6) !important;font-weight:600;}
+  html body .rq-cards button.rq-old-send.rq-customer-bulk-btn:hover:not(:disabled){background:rgba(255,200,118,.2) !important;}
+  /* the plants without a price: a compact grid that fills the width (3-4 per row), one line of name + one of status, small buttons — a long list does not run down the page (owner 2026-11-15: "organizarla que no quede tan larga para abajo") */
+  html body .rq-cards.plants tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:8px;}
+  html body .rq-cards.plants tr{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 5px 4px 10px;border-radius:12px;margin:0;min-width:0;box-sizing:border-box;overflow:hidden;}
+  html body .rq-cards.plants td:nth-child(n+2):nth-child(-n+4){display:none;}
+  html body .rq-cards.plants td:first-child{flex:1 1 auto;min-width:0;}
+  html body .rq-cards.plants td:first-child b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;}
+  html body .rq-cards.plants td:first-child .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  html body .rq-cards.plants td:last-child{flex:none;}
+  html body .rq-cards.plants .rq-sheet-actions{gap:5px;flex-wrap:nowrap;justify-content:flex-end;}
+  html body .rq-cards.plants .pkg-trigger-btn,html body .rq-cards.plants .qbucket-waiting-row-decline{min-height:24px;padding:2px 8px;font-size:11.5px;white-space:nowrap;}
+  html body .rq-cards:not(.plants) .pkg-trigger-btn{min-height:28px;padding:3px 12px;font-size:12.5px;}
+  html body details.rq-fold-sent,html body details.rq-fold-other{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03);margin:6px 0 0;}
+  html body details.rq-fold-sent>summary,html body details.rq-fold-other>summary{cursor:pointer;list-style:none;padding:7px 14px;font:700 11.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  html body details.rq-fold-sent>summary::-webkit-details-marker,html body details.rq-fold-other>summary::-webkit-details-marker{display:none;}
+  html body details.rq-fold-sent>summary:before,html body details.rq-fold-other>summary:before{content:'▸';color:#5AAAFF;}
+  html body details.rq-fold-sent[open]>summary:before,html body details.rq-fold-other[open]>summary:before{content:'▾';}
+  html body details.rq-fold-other>summary .rq-fold-bulk{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;text-transform:none;letter-spacing:0;}
+  html body details.rq-fold-other>.rq-cards{padding:0 12px 4px;}
+  html body details.rq-fold-sent>table{width:calc(100% - 28px);margin:0 14px 8px;}
+  @media (max-width:860px){html body .rq-cards:not(.plants) tr{grid-template-columns:1fr;}html body .rq-cards:not(.plants) td:nth-child(2),html body .rq-cards:not(.plants) td:nth-child(3),html body .rq-cards:not(.plants) td:nth-child(4){text-align:left;align-items:flex-start;min-height:0;}}
   .rq-req2-chips{gap:6px;} .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"]{flex:1 0 100%;display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 12px;font-size:12.5px;white-space:normal;text-align:left;overflow-wrap:anywhere;}
   .rq-req2-chips > .chip[onclick^="rqToggleReqCustomer"] small{margin-left:auto;white-space:nowrap;opacity:.85 !important;font-size:11px;}
   .rq-req2-chips > .chip:not([onclick^="rqToggleReqCustomer"]){background:transparent;border-style:dashed;color:rgba(255,255,255,.7);}
@@ -1484,12 +1598,15 @@ auth.onAuthStateChanged(user => {
     <!-- Offer Sheet (approved 2026-09-26): shown instead of the four sections below while products are picked in Find
          Product — see rqRenderSheet. Same stat-card / table / button components as the rest of this page. -->
     <div id="rq_sheet_section" class="rq-glass" style="display:none;padding-top:12px;">
+      <div class="rq-focus-head">
       <div class="rq-focus-back"><button type="button" class="bt-icon-btn rq-back" onclick="rqClearProductFilter()" title="Back to Quotes" aria-label="Back to Quotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></button></div>
+      <div id="rq_focus_title" class="rq-focus-title"></div>
+      <!-- Who asked for it? (user 2026-10-12: "no me deja escoger para quien"): the picker lives HERE, where the trader works — it used to exist only inside the Find Product window that closes after picking the product -->
+      <div id="rq_request_asked"></div>
+      </div>
       <!-- Messaging (2026-09-27): "did this search come from a message?" — asked right here, no extra step. -->
       <div id="rq_msg_origin"></div>
       <!-- The request, in three steps (user 2026-10-10): what to send now, what already went out, what is still coming. -->
-      <!-- Who asked for it? (user 2026-10-12: "no me deja escoger para quien"): the picker lives HERE, where the trader works — it used to exist only inside the Find Product window that closes after picking the product -->
-      <div id="rq_request_asked"></div>
       <div id="rq_request_view"></div>
       <details id="rq_sheet_details" class="rq-sheet-details"><summary>Full table, brands and Outbox</summary>
       <div class="stats-row" id="rq_sheet_pipeline" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;"></div>
@@ -1601,7 +1718,7 @@ auth.onAuthStateChanged(user => {
 <div id="rq_offer_modal_overlay" class="rq-modal-overlay" style="display:none;">
   <div class="rq-modal-box" style="width:min(1240px,96vw);max-width:none;">
     <div class="rq-modal-header">
-      <div class="rq-wa-titlebar"><h3 id="rq_offer_modal_title">Offer</h3></div>
+      <div class="rq-wa-titlebar"><h3 id="rq_offer_modal_title">Offer</h3><span id="rq_offer_sub" class="rq-offer-sub"></span><span id="rq_offer_ring" class="rq-offer-ring" style="display:none;"></span></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
         <button type="button" class="chip on" id="rq_offer_ch_wa" onclick="rqOfferToggle('wa')" title="Show / hide the WhatsApp messages">WhatsApp</button>
         <button type="button" class="chip on" id="rq_offer_ch_em" onclick="rqOfferToggle('em')" title="Show / hide the emails">Email</button>
@@ -1609,10 +1726,16 @@ auth.onAuthStateChanged(user => {
         <button type="button" class="tt-overlay-close" onclick="rqOfferWindowClose()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
     </div>
+    <div class="rq-offer-body">
+    <div id="rq_offer_rail" class="rq-offer-rail" style="display:none;"></div>
+    <div class="rq-offer-main">
     <div id="rq_offer_modal_notes" class="loc-hint" style="margin:0 0 12px;padding:0 22px;line-height:1.5;display:none;"></div>
     <div id="rq_offer_cmp_head"></div>
     <div id="rq_offer_modal_list" class="rq-modal-list"></div>
     <div id="rq_offer_cmp_foot"></div>
+    </div>
+    <div id="rq_offer_side" class="rq-offer-side" style="display:none;"></div>
+    </div>
   </div>
 </div>
 
@@ -3691,6 +3814,8 @@ function rqBrandListHtml(x){
   const { pid, sheet, sendRows, stale, pending, order, marked, isPes, mailIco, waIco, askN, remindN, addHtml, hints, selN, canSend, emailOk, waOk, noEmail, noWa } = x;
   const money = n => '$' + Number(n).toFixed(4) + '/lb';
   const sub = t => `<span class="muted" style="display:block;font-size:11px;">${t}</span>`;
+  // EVERY brand of a product lists the SAME customers — all who buy it (owner 2026-11-15: "el mismo producto siempre va a los mismos clientes… no puede salir unos sí otros no"); the ones who already have THIS brand's price are marked ✓ and are not sent it again
+  const nameHas = (c, r, tag = '') => r.sentTo.some(y => y.id === c.id) ? `<span class="rq-has" title="Already has this brand's price — it is not sent again">${escapeHtml(String(c.trade_name).trim())}${tag} ✓</span>` : escapeHtml(String(c.trade_name).trim());
   // where this plant × product stands (rqRowStatusLine) and the plant's last list: ONLY on hover (owner 2026-10-31: "deja explícita solo la fecha en que la enviaron; si hay más info, solo si me paro encima") — the row looks as it always did
   const rowTip = (r, withList) => (typeof rqRowStatusLine === 'function' ? ` title="${escapeHtml(rqRowStatusLine(r) + (withList && typeof rqPlantListText === 'function' ? ' · ' + rqPlantListText(r.plant.id) : ''))}"` : '');
   // ONE send button per line (owner 2026-10-22): both logos; it opens the one offer window where each customer has his WhatsApp and his email (one or both)
@@ -3717,12 +3842,16 @@ function rqBrandListHtml(x){
     const when = r.stale ? `old price from ${rqFmtDate(r.priceDate)}` : arr && arr.arrived_at ? rqFmtArrival(arr.arrived_at) : `price from ${rqFmtDate(r.priceDate)}`;
     const brand = `<td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${fresh ? ' <span class="rq-sheet-pill new">NEW</span>' : ''}${sub(when)}</td>`;
     const planTag = open => `<span class="pkg-tag price${r.stale ? ' exp' : ''}${fresh && !ready ? ' pkg-tag-blink' : ''}" style="cursor:pointer;" title="Open its QT" onclick="${open}">${money(r.price)}</span>`;
-    const lines = [];
+    const lines = [], lineReady = []; // lineReady: this line has its sale price confirmed in the QT (the card goes to "Ready to send"), else "Needs your price"
     if (usdT.length || !pesT.length){
       const open = `rqConfirmPriceClick(null,'${pid}','${r.plant.id}')`;
-      lines.push(`<td title="${escapeHtml(usdT.map(c => String(c.trade_name).trim()).join(', '))}">Border Clients${sub('USD · ' + usdT.map(c => escapeHtml(String(c.trade_name).trim())).join(' · '))}</td><td class="num">${planTag(open)}</td>
+      const usdAll = order.filter(c => !isPes(c)), pesHave = order.filter(c => isPes(c) && r.sentTo.some(y => y.id === c.id)), usdN = usdAll.length + pesHave.length, usdHave = usdAll.filter(c => !lacks(c)).length + pesHave.length;
+      const usdWho = (typeof RQ_CLIENT_NAMES === 'undefined' || RQ_CLIENT_NAMES) ? 'USD · ' + usdAll.map(c => nameHas(c, r)).concat(pesHave.map(c => nameHas(c, r, ' (pesos)'))).join(' · ')
+        : `USD · ${usdN} customer${usdN === 1 ? '' : 's'}${usdHave ? ` · ${usdHave} already ${usdHave === 1 ? 'has' : 'have'} it ✓` : ''}`;
+      lines.push(`<td title="${escapeHtml(usdAll.concat(pesHave).map(c => String(c.trade_name).trim() + (r.sentTo.some(y => y.id === c.id) ? ' ✓' : '')).join(', '))}">Border Clients${sub(usdWho)}</td><td class="num">${planTag(open)}</td>
         <td>${ready ? `<span class="num" style="cursor:pointer;" title="Open its QT again" onclick="${open}">${money(r.calc.salePerLb)}</span>` : '<span class="muted">—</span>'}</td>
         <td>${sendBtns(ready, ready && usdT.some(c => rqCanEmail(c, [pid])), ready && usdT.some(c => rqCanWhatsApp(c, [pid])), ch => `rqBrandSend('${ch}','${r.key}')`, 'this offer')}</td>`);
+      lineReady.push(ready);
     }
     // the pesos customers of the SAME city are ONE line (owner 2026-11-09: "si los precios de US frontera están juntos, por qué los de la misma ciudad están aparte… confirmarlo dos veces"): one Mexican freight tariff = one price, confirmed once in
     // the QT of any of them and valid for all (rqPesosConfirmation); a city with one customer is exactly the line it always was
@@ -3733,22 +3862,25 @@ function rqBrandListHtml(x){
       lines.push(`<td${many ? ` title="${names.join(', ')}"` : ''}>${many ? escapeHtml(rqPesosCityName(c)) + sub('pesos · ' + names.join(' · ')) : escapeHtml(String(c.trade_name).trim()) + sub(escapeHtml(c.usual_destination || 'pesos'))}</td><td class="num">${planTag(open)}</td>
         <td>${conf ? `<span class="num" style="cursor:pointer;" title="Open his QT again" onclick="${open}">MX$ ${Number(conf.calc.pesosQt.perKg).toFixed(2)}/kg</span>` : '<span class="muted">—</span>'}</td>
         <td>${sendBtns(!!conf, !!conf && g.some(x => rqCanEmail(x, [pid])), !!conf && g.some(x => rqCanWhatsApp(x, [pid])), ch => many ? `rqBrandSend('${ch}','${r.key}','${ids}')` : `rqBrandSend('${ch}','${r.key}','${c.id}')`, many ? 'these offers' : 'his offer')}</td>`);
+      lineReady.push(!!conf);
     });
-    const shownLines = lines.filter(l => (rqBrandCur === 'all' || (rqBrandCur === 'usd') === /Border Clients/.test(l)) && (!qq || (r.plant.name + ' ' + l.replace(/<[^>]*>/g, ' ')).toLowerCase().includes(qq)));
+    const shownIdx = lines.map((l, i) => i).filter(i => (rqBrandCur === 'all' || (rqBrandCur === 'usd') === /Border Clients/.test(lines[i])) && (!qq || (r.plant.name + ' ' + lines[i].replace(/<[^>]*>/g, ' ')).toLowerCase().includes(qq)));
+    const shownLines = shownIdx.map(i => lines[i]);
     const brandCell = brand.replace(/<\/td>$/, `${ansFor(r)}</td>`); // the plant's answers under its name (the brand cell above keeps its approved shape)
-    shownLines.forEach((l, i) => body.push(`<tr class="${fresh && !ready ? 'rq-sheet-new' : ''}">${i ? '<td></td>' : brandCell}${l}</tr>`));
+    const brandAgain = `<td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b>${sub(when)}</td>`; // every card names its brand (the first one carries the NEW pill and the plant's answers)
+    shownLines.forEach((l, i) => body.push(`<tr class="${fresh && !ready ? 'rq-sheet-new' : ''}" data-sec="${lineReady[shownIdx[i]] ? 'ready' : 'need'}">${i ? brandAgain : brandCell}${l}</tr>`));
     readyLines += shownLines.filter(l => !/disabled/.test(l)).length;
   });
   const offSpec = r => `<button type="button" class="qbucket-waiting-row-decline" title="Doesn't produce it — never asked again" onclick="rqSheetDecline('${r.plant.id}','${r.pid}')">✕ Off-Spec</button>`;
   // an old (expired) price is listed with its two ways out: ask the plant for an update, or send the old price anyway (then it is a normal line: its QT, its sale)
-  stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq)) && order.some(c => !r.sentTo.some(y => y.id === c.id))).forEach(r => body.push(`<tr class="rq-sheet-dim" data-other="1"><td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}${ansFor(r)}</td><td>${(() => { const who = order.filter(c => !r.sentTo.some(y => y.id === c.id)).map(c => escapeHtml(String(c.trade_name).trim())); return who.length ? `Only him${sub(who.join(' · '))}`.replace('Only him', who.length > 1 ? 'Only these' : 'Only him') : ''; })()}</td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
-    <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask the plant for an updated price" onclick="rqSheetAsk(['${r.plant.id}'])">Update</button><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Send this old price too — its QT opens so you confirm your price first" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">Send old price</button></div></td></tr>`));
+  stale.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq)) && order.some(c => !r.sentTo.some(y => y.id === c.id))).forEach(r => body.push(`<tr class="rq-sheet-dim" data-other="1" data-kind="old"><td style="min-width:170px;"${rowTip(r)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(`old price from ${rqFmtDate(r.priceDate)}`)}${ansFor(r)}</td><td title="${escapeHtml(order.map(c => String(c.trade_name).trim() + (r.sentTo.some(y => y.id === c.id) ? ' ✓' : '')).join(', '))}">${(() => { const who = order.map(c => nameHas(c, r)), have = order.filter(c => r.sentTo.some(y => y.id === c.id)).length; return who.length ? `${who.length} customer${who.length > 1 ? 's' : ''}${sub((typeof RQ_CLIENT_NAMES === 'undefined' || RQ_CLIENT_NAMES) ? who.join(' · ') : (have ? `${have} already ${have === 1 ? 'has' : 'have'} it ✓` : ''))}` : ''; })()}</td><td class="num"><span class="pkg-tag price exp" style="cursor:pointer;" title="Open its QT to confirm this old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${money(r.price)}</span></td><td class="muted">—</td>
+    <td><div class="rq-sheet-actions" style="justify-content:center;"><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask the plant for an updated price" onclick="rqSheetAsk(['${r.plant.id}'])">Update</button><button type="button" class="rq-customer-bulk-btn whatsapp rq-old-send" style="padding:7px 12px;" title="Send old price — its QT opens so you confirm your price first, then it goes with the new ones" aria-label="Send old price" onclick="rqBrandUseOld('${r.key}','${pid}','${r.plant.id}')">${waIco}${mailIco} Old</button></div></td></tr>`));
   pending.filter(r => rqBrandCur === 'all' && (!qq || r.plant.name.toLowerCase().includes(qq))).forEach(r => {
     const name = `<td style="min-width:170px;"${rowTip(r, true)}><b>${escapeHtml(r.plant.name.trim())}</b>${sub(r.kind === 'na' ? `N/A since ${rqFmtDate(r.naSince)}` : r.kind === 'possible' ? 'Not asked yet' : r.kind === 'waiting' ? `Asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}` : `Asked, no reply in ${r.hours}h`)}${ansFor(r)}</td>`;
-    const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask for price →</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
+    const act = r.kind === 'possible' ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'])">Ask</button>${offSpec(r)}` : r.kind === 'na' ? `<span class="rq-sheet-pill off">N/A</span><button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAskLoad('${r.plant.id}','${r.pid}')">Ask for a load →</button>${offSpec(r)}`
       : r.kind === 'waiting' ? `<span class="rq-sheet-pill wait">Waiting for price</span>${offSpec(r)}`
-      : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>${offSpec(r)}`;
-    body.push(`<tr class="rq-sheet-dim" data-other="1">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
+      : `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(['${r.plant.id}'], true)">Update</button>${offSpec(r)}`;
+    body.push(`<tr class="rq-sheet-dim" data-other="1" data-kind="${['possible', 'na', 'waiting'].includes(r.kind) ? r.kind : 'noreply'}">${name}<td></td><td class="muted">—</td><td class="muted">—</td><td><div class="rq-sheet-actions" style="justify-content:center;">${act}</div></td></tr>`);
   });
   const aucRows = typeof rqAuctionRowsHtml === 'function' ? rqAuctionRowsHtml(pid) : ''; // an open plant auction of this product, on top (owner 2026-10-27)
   if (aucRows) body.unshift(aucRows);
@@ -3766,12 +3898,26 @@ function rqBrandListHtml(x){
     });
   } catch (e) { sentLines.length = 0; }
   const sentN = sentLines.reduce((t, l) => t + l.n, 0);
-  const sentFold = sentLines.length ? `<details class="rq-fold-sent"${typeof rqFoldOpen !== 'undefined' && rqFoldOpen.sent ? ' open' : ''} ontoggle="if (typeof rqFoldOpen !== 'undefined') rqFoldOpen.sent = this.open" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}">Already sent · ${sentN}</summary><table style="width:100%;border-collapse:collapse;"><tbody>${sentLines.map(l => l.html).join('')}</tbody></table></details>` : '';
+  const sentFold = sentLines.length ? `<details class="rq-fold-sent"${typeof rqFoldOpen !== 'undefined' && rqFoldOpen.sent ? ' open' : ''} ontoggle="if (typeof rqFoldOpen !== 'undefined') rqFoldOpen.sent = this.open"><summary>Already sent · ${sentN}</summary><table style="width:100%;border-collapse:collapse;"><tbody>${sentLines.map(l => l.html).join('')}</tbody></table></details>` : '';
   // the bulk "Remind N plants" / "Ask N" live ONCE, in the header of the plants they act on (owner 2026-11-14: "botones repetidos arriba abajo de remind"); each plant keeps its own button below. Without that fold (a USD / Pesos filter) they stay in the top bar.
-  const bulkBtns = (remindN > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindN} plants →</button>` : '')
+  const bulkBtns = (remindN > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Update ${remindN} plants</button>` : '')
     + (askIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask every plant on this list that has an old price or was never asked — one message per plant, you see it first" onclick="rqSheetAsk(${JSON.stringify(askIds).replace(/"/g, '&quot;')})">Ask ${askIds.length}</button>` : '');
-  const otherFold = other.length ? `<details class="rq-fold-other"${typeof rqFoldOpen !== 'undefined' && rqFoldOpen.other ? ' open' : ''} ontoggle="if (typeof rqFoldOpen !== 'undefined') rqFoldOpen.other = this.open" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>Other plants · ${other.length}</span><span class="rq-fold-bulk" style="display:flex;gap:8px;flex-wrap:wrap;text-transform:none;letter-spacing:0;">${bulkBtns}</span></summary>${mkTable(other, !mainRows.length)}</details>` : '';
-  const table = mainRows.length ? mkTable(mainRows)
+  // OPTION 1 (owner 2026-11-14, picked from mockup 9: "1"): CARDS BY STATE. "Ready to send" (the price is confirmed in the QT; an open auction line goes first), "Needs your price" (a new price waiting for his QT), then "Waiting on plants" in folds by what each plant needs
+  // (Update: old price / no answer · Ask: never asked), and "Already sent" under them. The same rows, buttons and functions as the table had — only the layout changed (rows are drawn as cards by CSS).
+  const cardsOf = (rows, cls = '') => `<div class="rq-cards ${cls}"><table><tbody>${rows.join('')}</tbody></table></div>`;
+  const nOf = rows => (rows.join('').match(/<tr[ >]/g) || []).length;
+  const secHtml = (cls, t, rows) => rows.length ? `<div class="rq-sec ${cls}"><span class="rq-sec-dot"></span>${t} <span class="n">· ${nOf(rows)}</span></div>${cardsOf(rows, cls)}` : '';
+  const aucOnly = mainRows.filter(h => !/data-sec=/.test(h)), readyRows = mainRows.filter(h => /data-sec="ready"/.test(h)), needRows = mainRows.filter(h => /data-sec="need"/.test(h)); // an open auction line is first, then what is ready to send, then what still needs his QT (the order of the approved mockup)
+  const askCall = (ids, remind) => `rqSheetAsk(${JSON.stringify(ids).replace(/"/g, '&quot;')}${remind ? ', true' : ''})`;
+  const bulkBtn = (n, label, call, title) => n > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;"${title ? ` title="${title}"` : ''} onclick="${call}">${label} ${n} plants</button>` : ''; // one button for the whole group, only when it is more than one plant (a single plant has its own)
+  const staleIds = [...new Set(stale.filter(r => !recent(r)).map(r => r.plant.id))], possibleIds = [...new Set(pending.filter(r => r.kind === 'possible' && !recent(r)).map(r => r.plant.id))];
+  const grp = { old: ['Old price', bulkBtn(staleIds.length, 'Update', askCall(staleIds), 'Ask every plant with an old price for an update — one message per plant, you see it first')],
+    noreply: ['Asked, no reply', bulkBtn(remindN, 'Update', askCall(x.remindIds, true), 'Ask again every plant that did not answer — one message per plant, you see it first')], waiting: ['Waiting for price', ''],
+    possible: ['Never asked', bulkBtn(possibleIds.length, 'Ask', askCall(possibleIds), 'Ask every plant that was never asked — one message per plant, you see it first')], na: ['N/A', ''] };
+  const foldOpen = k => typeof rqFoldOpen !== 'undefined' && (k === 'old' ? rqFoldOpen.old !== false : !!rqFoldOpen[k]); // the old prices open by default; a fold the trader opened or closed stays so after a redraw
+  const waitFolds = Object.keys(grp).map(k => { const rows = other.filter(h => h.includes(`data-kind="${k}"`)); return rows.length ? `<details class="rq-fold-other" data-kind="${k}"${foldOpen(k) ? ' open' : ''} ontoggle="if (typeof rqFoldOpen !== 'undefined') rqFoldOpen.${k} = this.open"><summary><span>${grp[k][0]} · ${nOf(rows)}</span><span class="rq-fold-bulk">${grp[k][1]}</span></summary>${cardsOf(rows, k === 'old' ? 'old' : 'plants ' + k)}</details>` : ''; }).join('');
+  const otherFold = other.length ? `<div class="rq-sec bl"><span class="rq-sec-dot"></span>Waiting on plants <span class="n">· ${other.length}</span></div>${waitFolds}` : ''; // without it (a USD / Pesos filter) the bulk buttons stay in the top bar
+  const table = mainRows.length ? (aucOnly.length ? cardsOf(aucOnly, 'auc') : '') + secHtml('g', 'Ready to send', readyRows) + secHtml('a', 'Needs your price', needRows)
     : ((sentFold || otherFold) ? '<div class="rq-req-empty">Nothing left to send.</div>' : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>');
   return `<div class="rq-req rq-glass">
     <div class="rq-req2-head"><div><div class="rq-req-title">${escapeHtml(rqProductName(pid))}</div></div></div>
@@ -3779,10 +3925,10 @@ function rqBrandListHtml(x){
     <div class="rq-req2-listhead" style="flex-wrap:wrap;gap:10px;border-bottom:none;">
       <input id="rq_brand_q" type="text" placeholder="Search" value="${escapeHtml(rqBrandQ)}" oninput="rqBrandSearch(this.value)" onblur="rqBrandQFocus = false" style="max-width:240px;padding:8px 14px;border-radius:12px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:#fff;font-size:13px;">
       <div style="display:flex;gap:6px;">${[['all', 'All'], ['usd', 'USD'], ['pesos', 'Pesos']].map(([k, l]) => `<button type="button" class="chip${rqBrandCur === k ? ' on' : ''}" onclick="rqBrandSetCur('${k}')">${l}</button>`).join('')}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-left:auto;">
+      <div class="rq-hdr-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-left:auto;">
       ${otherFold ? '' : bulkBtns}
-      <span class="muted" style="font-size:12.5px;">${readyLines} ready</span>
-      <div class="rq-req2-btns" style="margin:0;"><button type="button" class="rq-customer-bulk-btn whatsapp" ${canSend && (emailOk || waOk) ? '' : 'disabled'} title="Send every ready customer — WhatsApp, email or both in one window; you see each message first" onclick="rqRequestSend('both')">${waIco}${mailIco} All</button></div>
+      <span class="muted" style="font-size:12.5px;">${[readyLines ? `${readyLines} ready` : '', needRows.length ? `${nOf(needRows)} needs your price` : '', other.length ? `${other.length} waiting on plants` : ''].filter(Boolean).join(' · ')}</span>
+      ${readyLines > 0 ? `<div class="rq-req2-btns" style="margin:0;"><button type="button" class="rq-customer-bulk-btn whatsapp" ${canSend && (emailOk || waOk) ? '' : 'disabled'} title="Send every ready customer — WhatsApp, email or both in one window; you see each message first" onclick="rqRequestSend('both')">${waIco}${mailIco} All</button></div>` : ''}
     </div></div>
     ${table}${sentFold}${otherFold}
     ${hints}${addHtml}
@@ -3854,7 +4000,7 @@ function rqRenderRequestView(rows){
   });
   pending.filter(r => r.kind !== 'na').forEach(r => {
     if (r.kind === 'waiting') items.push({ o: 2, html: row('waiting', r, meta(`asked ${r.hours < 1 ? 'just now' : r.hours + 'h ago'}, no answer yet`), pill('wait', 'Waiting')) });
-    else if (r.kind === 'noreply') items.push({ o: 3, html: row('waiting', r, meta(`asked, no reply in ${r.hours}h`), `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'], true)">Remind →</button>`) });
+    else if (r.kind === 'noreply') items.push({ o: 3, html: row('waiting', r, meta(`asked, no reply in ${r.hours}h`), `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'], true)">Update</button>`) });
     else items.push({ o: 5, html: row('idle', r, meta('possible plant · not asked yet'), `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'])">Ask price →</button>`) });
   });
   stale.filter(r => !sentRows.some(s => s.plant.id === r.plant.id)).forEach(r => items.push({ o: 4, html: row('idle', r, meta(`old price from ${rqFmtDate(r.priceDate)} · $${r.price.toFixed(2)}/lb`), `<div style="display:flex;gap:8px;align-items:center;"><button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(['${r.plant.id}'])">Ask update →</button><button type="button" class="pkg-trigger-btn" title="Send this expired price anyway — you confirm your price in the QT first" onclick="rqToggleReqOld('${r.key}')">Send old price</button></div>`) }));
@@ -3892,6 +4038,7 @@ function rqRenderRequestView(rows){
   const canSendHim = c => { const mine = hisRows(c); return mine.length > 0 && mine.some(r => !r.sentTo.some(x => x.id === c.id)); };
   const markedCs = order.filter(c => rqReqSel.ids.has(c.id));
   const sendable = markedCs.filter(canSendHim);
+  const waitingCs = markedCs.filter(c => !sendable.includes(c) && hisRows(c).length === 0); // WAITING = nothing confirmed for him yet (a USD price / his own pesos QT); a customer who already has every ready price is not waiting (owner 2026-11-15: IDE Foods and Real Foods already had Gold Creek's price and the hint said they "stay waiting")
   rqReqReadyIds = sendable.map(c => c.id);
   const canSend = sendable.length > 0;
   // each channel says up front whether the marked customers can receive it (no more pressing Email to be told he has none)
@@ -3940,7 +4087,7 @@ function rqRenderRequestView(rows){
       ${steps}</div>
     <div class="rq-req2-body">
       <div class="rq-req2-plants">
-        <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindIds.length} plants →</button>` : ''}${askNeedsTop ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
+        <div class="rq-req2-listhead"><span class="rq-req2-lbl">Plants · ${items.length}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${remindIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk(${JSON.stringify(remindIds).replace(/"/g, '&quot;')}, true)">Update ${remindIds.length} plants</button>` : ''}${askNeedsTop ? `<button type="button" class="pkg-trigger-btn" onclick="rqSheetAsk()">Ask ${askN} plant${askN === 1 ? '' : 's'} for price →</button>` : ''}</div></div>
         ${items.length ? items.map(i => { const g = grpOf(i.o), h = g !== lastGrp ? `<div class="rq-req2-grp ${g.toLowerCase().replace(/[^a-z]+/g, '-')}">${g}</div>` : ''; lastGrp = g; return h + i.html; }).join('') : '<div class="rq-req-empty">No plant carries this product yet.</div>'}
       </div>
       <aside class="rq-req2-send${canSend ? ' can' : ''}${fromToday ? ' focus' : ''}">
@@ -3952,13 +4099,13 @@ function rqRenderRequestView(rows){
           <button type="button" class="rq-customer-bulk-btn whatsapp" style="flex:1;justify-content:center;" ${canSend && waOk ? '' : 'disabled'} title="${waOk ? 'WhatsApp — you see the preview first' : 'No WhatsApp on file: ' + noWa.map(c => escapeHtml(String(c.trade_name).trim())).join(', ')}" onclick="rqRequestSend('whatsapp')">${waIco} WhatsApp</button>
         </div>
         ${canSend && (noEmail.length || noWa.length) ? `<div class="rq-req2-hint">${noEmail.length ? `No email on file: ${noEmail.map(nm).join(', ')} — they get it by WhatsApp.` : ''}${noEmail.length && noWa.length ? ' ' : ''}${noWa.length ? `No WhatsApp on file: ${noWa.map(nm).join(', ')} — they get it by email.` : ''}</div>` : ''}
-        ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT (his row, above).' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
+        ${resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : ''}${canSend && waitingCs.length ? `<div class="rq-req2-hint">${waitingCs.map(nm).join(', ')} stay${waitingCs.length === 1 ? 's' : ''} waiting — ${waitingCs.some(isPes) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : ''}${canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT (his row, above).' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`}
       </aside>
     </div></div>`;
   // The brand list is the working view of ONE product (owner 2026-10-22). The plants + Send panel view built above stays in the code: RQ_BRAND_LIST = false brings it back as it was.
   const hintsHtml = (canSend && (noEmail.length || noWa.length) ? `<div class="rq-req2-hint">${noEmail.length ? `No email on file: ${noEmail.map(nm).join(', ')} — they get it by WhatsApp.` : ''}${noEmail.length && noWa.length ? ' ' : ''}${noWa.length ? `No WhatsApp on file: ${noWa.map(nm).join(', ')} — they get it by email.` : ''}</div>` : '')
     + (resendCs.length && canSend ? `<div class="rq-req2-hint">${resendCs.map(nm).join(', ')} already ${resendCs.length === 1 ? 'has' : 'have'} it — it will go again. You see the message before it goes.</div>` : '')
-    + (canSend && markedCs.length > sendable.length ? `<div class="rq-req2-hint">${markedCs.filter(c => !sendable.includes(c)).map(nm).join(', ')} stay${markedCs.length - sendable.length === 1 ? 's' : ''} waiting — ${markedCs.some(c => !sendable.includes(c) && isPes(c)) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : '')
+    + (canSend && waitingCs.length ? `<div class="rq-req2-hint">${waitingCs.map(nm).join(', ')} stay${waitingCs.length === 1 ? 's' : ''} waiting — ${waitingCs.some(isPes) ? 'a pesos customer needs his price confirmed in his own QT' : 'confirm the USD price'}. The green ones go now.</div>` : '')
     + (canSend ? '' : `<div class="rq-req2-hint rq-hint-guide">${everyoneHasIt ? 'Everyone who buys it already has it. Tap the names to send it again.' : readyN && selN && markedCs.some(isPes) && !sendable.length ? 'Confirm each pesos customer in his own QT.' : readyN ? 'Pick at least one customer.' : confirmN ? 'Confirm a price in its QT to send it.' : 'Nothing priced and waiting to go out.'}</div>`);
   // the other customers who buy this product, one tap each (owner 2026-10-28: "no están saliendo los clientes que compran el producto, ni me da opción de mandar a más clientes"): with a customer chosen at the start the list
   // is his; every other buyer stays right here to add — one by one or all together — and the list then includes him.
@@ -3972,6 +4119,7 @@ function rqRenderRequestView(rows){
       ${rqAllCustomersCache ? (hits.length ? hits.map(c => `<button type="button" class="chip" onclick="rqReqAddCustomer('${c.id}')">${nm(c)}</button>`).join('') : '<span class="muted" style="font-size:12px;">No other customer matches.</span>') : '<span class="muted" style="font-size:12px;">Loading…</span>'}
     </div>`; })() : '');
   rqSetMsgOriginHtml(el, RQ_BRAND_LIST ? rqBrandListHtml({ pid, sheet, sendRows, stale, pending: pending.concat(priced.filter(r => r.na).map(r => ({ ...r, kind: 'na' }))), order, marked: rqReqSel.ids, isPes, mailIco, waIco, askN: askNeedsTop ? askN : 0, remindN: remindIds.length, remindIds, addHtml, hints: hintsHtml, selN, canSend, emailOk, waOk, noEmail, noWa }) : html);
+  { const ft = document.getElementById('rq_focus_title'); if (ft) ft.textContent = rqProductName(pid); } // the product name sits in the header row of the focus screen (back · name · who asked)
   if (RQ_BRAND_LIST){ el.querySelectorAll(':scope > .rq-picked').forEach(n => n.remove()); if (rqPickedPids.length > 1) el.insertAdjacentHTML('afterbegin', rqPickedChipsHtml()); } // the picked products, above the one in front (the list itself is only rewritten when it changed)
   if (RQ_BRAND_LIST){ rqRenderWaiting(); rqLoadWaiting(); } // the prices waiting for a match for THIS product (owner 2026-11-10), under the chips; the bar is drawn on its own, so the list above is not rewritten
   if (RQ_BRAND_LIST && rqBrandQFocus){ const i = document.getElementById('rq_brand_q'); if (i && document.activeElement !== i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
@@ -4345,7 +4493,7 @@ async function rqSheetAsk(plantIds, remind){
     if (plant.email) emailItems.push({ id: plant.id, label: `${plant.name} — ${know}`, to: plant.email, cc: rqPlantCc(plant), subject, body, fromAlias: 'purchasing', onSent: doneOnce });
     if (phone) waItems.push({ id: plant.id, label: `${plant.name} — ${know}`, phone, body: body + RQ_EMAIL_SIGNATURE, onOpened: doneOnce }); // also when it has an email: both channels
   });
-  rqOpenChannels(`${remind ? 'Remind' : 'Ask for prices'} — ${emailItems.length} plant${emailItems.length === 1 ? '' : 's'}`, emailItems, `Ask for prices — WhatsApp (${waItems.length})`, waItems, 'Ask for Price');
+  rqOpenChannels(`${remind ? 'Update' : 'Ask for prices'} — ${emailItems.length} plant${emailItems.length === 1 ? '' : 's'}`, emailItems, `Ask for prices — WhatsApp (${waItems.length})`, waItems, 'Ask for Price');
 }
 
 // Doesn't produce = the existing permanent "Off-Spec" decline (never asked again). A possible plant has no row yet, so
@@ -4393,6 +4541,7 @@ function rqSendWhyNot(row, owners, sent){
 }
 // A row's own button sends THIS brand alone; the top "All" (rqRequestSend) sends every confirmed brand together, highest → lowest with fichas (owner 2026-11-14: "poder mandar un precio individualmente o mandarlo a todos… el botón de individual solo deja mandar con otro precio")
 const RQ_BRAND_SEND_ALONE = true;
+const RQ_CLIENT_NAMES = false; // the Client cell of a card says HOW MANY customers (and how many already have that price), not who (owner 2026-11-15: "no necesita el texto enumerando los clientes"); the names are on hover. true brings the names back
 async function rqBrandSend(channel, key, customerId){
   const alone = typeof RQ_BRAND_SEND_ALONE !== 'undefined' && RQ_BRAND_SEND_ALONE;
   const pids = rqActiveProductFilterIds.slice();
@@ -4598,6 +4747,14 @@ function rqRenderLiveQuotes(){
 function rqArrivalLive(a, link){
   return !!(a && link && !link.declined_at && !rqIsNa(link) && link.current_price != null && (rqPriceAgeDays(link.price_date) || 0) <= RQ_PRICE_STALE_DAYS);
 }
+// A new price STAYS in Live until it becomes an Offer — its age does not take it out (owner 2026-11-14: "salen cuando se vuelven offer únicamente"; 2026-11-15: "no hay nada en live… se borraron, no puedo ver lo que hizo"): at midnight the three unsent
+// prices of Nov 12 (Gold Creek, Little Horse Creek, Pilgrim's: 0 offers sent) passed the 2-day mark and vanished from Live. RQ_LIVE_KEEP_UNSENT = false brings the old cut-off back. The price keeps its age on the row ("NEW PRICE · 3 d ago")
+// and its "Old price" fold on the product page, where Update / Send old price are the way out.
+const RQ_LIVE_KEEP_UNSENT = true;
+function rqArrivalPending(a, link){
+  const keep = typeof RQ_LIVE_KEEP_UNSENT !== 'undefined' && RQ_LIVE_KEEP_UNSENT;
+  return !!(a && link && !link.declined_at && !rqIsNa(link) && link.current_price != null && (keep || (rqPriceAgeDays(link.price_date) || 0) <= RQ_PRICE_STALE_DAYS));
+}
 function rqFmtArrivalParts(ts){
   if (!ts) return { day: '', time: '' };
   const d = new Date(ts), tz = 'America/New_York';
@@ -4631,7 +4788,7 @@ function rqLiveEntries(){
     const waitingPlants = (s.plants || []).filter(x => x.asked_at).filter(x => rqLiveQuotePlantState(s, x, rqAllPlantProductRows).state === 'waiting').length;
     const brands = (s.arrivals || [])
       .map(a => ({ a, link: rqAllPlantProductRows.find(r => r.plant_id === a.plant_id && r.product_id === s.product_id) }))
-      .filter(x => rqArrivalLive(x.a, x.link));
+      .filter(x => (typeof rqArrivalPending === 'function' ? rqArrivalPending : rqArrivalLive)(x.a, x.link));
     ids.forEach(cid => {
       const fresh = brands.filter(x => !(x.a.sent_customer_ids || []).includes(cid));
       const has = (s.sent || []).filter(x => x.customer_id === cid).sort((x, y) => String(y.sent_at).localeCompare(String(x.sent_at)));
@@ -4659,7 +4816,7 @@ function rqLivePackages(entries){
     const byPlant = new Map(askedStates.map(x => [x.plant_id, x]));
     (g.s.arrivals || []).forEach(a => {
       const link = rqAllPlantProductRows.find(r => r.plant_id === a.plant_id && r.product_id === g.s.product_id);
-      if (rqArrivalLive(a, link) && !(byPlant.get(a.plant_id) || {}).link) byPlant.set(a.plant_id, { x: { plant_id: a.plant_id }, plant_id: a.plant_id, state: 'priced', link });
+      if ((typeof rqArrivalPending === 'function' ? rqArrivalPending : rqArrivalLive)(a, link) && !(byPlant.get(a.plant_id) || {}).link) byPlant.set(a.plant_id, { x: { plant_id: a.plant_id }, plant_id: a.plant_id, state: 'priced', link });
     });
     const plants = [...byPlant.values()];
     const toSendAll = g.list.filter(e => e.fresh.length), asked = g.list.filter(e => e.asked);
@@ -8757,6 +8914,7 @@ function rqOfferWindowRender(){
     const total = rqWaModalItems.length + rqEmailModalItems.length, done = rqWaModalItems.filter(it => it.recorded).length + rqEmailModalItems.filter(it => it.sent).length;
     cmpFoot.className = 'rq-cmp-foot'; cmpFoot.innerHTML = total ? `<div class="rq-cmp-prog"><i style="width:${Math.round(done / total * 100)}%"></i></div><span>${done} of ${total} sent</span>` : '';
   }
+  if (typeof rqOfferCockpit === 'function') rqOfferCockpit(rows); // the customers on the left and the progress ring (view only)
   document.getElementById('rq_offer_modal_title').textContent = 'Send offer';
   document.getElementById('rq_offer_ch_wa').classList.toggle('on', rqOfferCh.wa); document.getElementById('rq_offer_ch_em').classList.toggle('on', rqOfferCh.em);
   document.getElementById('rq_offer_ch_wa').style.display = rqWaModalItems.length ? '' : 'none'; document.getElementById('rq_offer_ch_em').style.display = rqEmailModalItems.length ? '' : 'none';
@@ -8770,6 +8928,59 @@ function rqOfferWindowRender(){
 }
 function rqOfferSetCh(v){ rqOfferCh = v === 'wa' ? { wa: true, em: false } : v === 'em' ? { wa: false, em: true } : { wa: true, em: true }; rqOfferWindowRender(); } // WhatsApp / Email / Both: one channel is always shown
 function rqOfferStep(d){ const n = document.querySelectorAll('#rq_offer_modal_list .rq-offer-row').length; if (n < 2) return; rqOfferCur = (rqOfferCur + d + n) % n; rqOfferWindowRender(); }
+// THE COCKPIT (owner 2026-11-15, option 1 of mockup 10: "construye el 1, ojo con dañar lo que ya hicimos"): every customer of the send on the left with what has gone out to him (WhatsApp 1/2, Mail ✓), one tap to jump to him, and a progress ring in the title.
+// VIEW ONLY: it reads the same rows the window already draws (rqWaModalItems / rqEmailModalItems states); the messages, banners, links, fichas, Cmd+V paste, "I sent it" and every record are decided where they always were.
+function rqOfferGo(k){ rqOfferCur = k; rqOfferWindowRender(); }
+function rqOfferCockpit(rows){
+  try {
+    const vis = rows.filter(r => (rqOfferCh.wa && r.wa.length) || (rqOfferCh.em && r.em));
+    const cur = vis[rqOfferCur], who = cur ? String(cur.key).split(' — ')[0] : '', prod = cur ? String(cur.key).split(' — ').slice(1).join(' — ') : '';
+    const initials = (w) => String(w).split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || '·';
+    const body = document.querySelector('.rq-offer-body'), rail = document.getElementById('rq_offer_rail'), side = document.getElementById('rq_offer_side');
+    if (rail){
+      rail.style.display = vis.length > 1 ? '' : 'none';
+      rail.innerHTML = `<div class="rq-rail-t">Customers · ${vis.length}</div>` + vis.map((r, k) => {
+        const w = String(r.key).split(' — ')[0], waDone = r.wa.filter(x => x.it.recorded).length, emDone = !!(r.em && r.em.it.sent);
+        return `<button type="button" class="rq-rail-c${k === rqOfferCur ? ' on' : ''}" onclick="rqOfferGo(${k})" title="${escapeHtml(String(r.key))}"><span class="rq-rail-av">${escapeHtml(initials(w))}</span><span class="rq-rail-n">${escapeHtml(w)}</span><span class="rq-rail-st">`
+          + (r.wa.length ? `<span class="rq-rail-p${waDone === r.wa.length ? ' ok' : ''}">WA ${waDone}/${r.wa.length}</span>` : '') + (r.em ? `<span class="rq-rail-p${emDone ? ' ok' : ''}">Mail ${emDone ? '✓' : '·'}</span>` : '') + `</span></button>`;
+      }).join('') + '<div class="rq-rail-k"><span class="rq-kbd">↑</span><span class="rq-kbd">↓</span> customer</div>';
+    }
+    const ring = document.getElementById('rq_offer_ring'), total = rqWaModalItems.length + rqEmailModalItems.length, done = rqWaModalItems.filter(it => it.recorded).length + rqEmailModalItems.filter(it => it.sent).length;
+    if (ring && typeof ring.setAttribute === 'function'){ ring.style.display = total ? 'inline-flex' : 'none'; ring.style.setProperty('--p', total ? Math.round(done / total * 100) : 0); ring.setAttribute('data-t', `${done}/${total}`); ring.title = `${done} of ${total} sent`; }
+    const sub = document.getElementById('rq_offer_sub'); if (sub) sub.textContent = prod ? prod + ' · most expensive first' : '';
+    // the customer on screen: a phone header over his WhatsApp messages, and every suggestion in the column on the right (the same Copy buttons, moved — nothing is rebuilt)
+    const list = document.getElementById('rq_offer_modal_list'), rowEl = list && list.children ? list.children[rqOfferCur] : null;
+    let nSugg = 0;
+    if (rowEl && typeof rowEl.querySelector === 'function'){
+      const firstMsg = rowEl.querySelector('.rq-cmp-msg'), waCol = firstMsg ? firstMsg.parentElement : null;
+      if (waCol && !waCol.querySelector('.rq-phone-top')){
+        const top = document.createElement('div'); top.className = 'rq-phone-top';
+        top.innerHTML = `<span class="rq-rail-av">${escapeHtml(initials(who))}</span><div><b>${escapeHtml(who)}</b><div>WhatsApp · one message per brand, most expensive first</div></div>`;
+        waCol.insertBefore(top, waCol.firstChild); waCol.classList.add('rq-phone');
+      }
+      const sgs = [...rowEl.querySelectorAll('.rq-cmp-suggs .rq-cmp-sg')];
+      nSugg = sgs.length;
+      if (side){
+        side.textContent = '';
+        if (sgs.length){
+          const t = document.createElement('div'); t.className = 'rq-side-t'; t.textContent = 'Suggestions · beside the message'; side.appendChild(t);
+          sgs.forEach(n => side.appendChild(n));
+          rowEl.querySelectorAll('.rq-cmp-msg.has-sugg').forEach(m => m.classList.remove('has-sugg'));
+          rowEl.querySelectorAll('.rq-cmp-suggs').forEach(n => n.remove());
+        }
+        side.style.display = sgs.length ? '' : 'none';
+      }
+    } else if (side){ side.style.display = 'none'; }
+    if (body && body.classList){ body.classList.toggle('has-rail', !!rail && rail.style.display !== 'none'); body.classList.toggle('has-side', nSugg > 0); }
+    const foot = document.getElementById('rq_offer_cmp_foot');
+    if (foot && typeof foot.insertAdjacentHTML === 'function' && foot.innerHTML) foot.insertAdjacentHTML('beforeend', `<span class="rq-foot-r">WhatsApp ${rqWaModalItems.filter(it => it.recorded).length}/${rqWaModalItems.length} · Email ${rqEmailModalItems.filter(it => it.sent).length}/${rqEmailModalItems.length}</span>`);
+  } catch (e) { /* the cockpit is only a view: the window works the same without it */ }
+}
+document.addEventListener('keydown', e => { // ↑ ↓ jump between the customers of the send (never while typing in a message)
+  if (!rqOfferWinOpen || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+  const t = e.target; if (t && t.closest && t.closest('input, textarea, select, [contenteditable]')) return;
+  e.preventDefault(); rqOfferStep(e.key === 'ArrowDown' ? 1 : -1);
+});
 function rqOfferToggle(k){
   const other = k === 'wa' ? 'em' : 'wa';
   if (rqOfferCh[k] && !rqOfferCh[other]) return; // one channel is always shown
