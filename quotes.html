@@ -3779,11 +3779,17 @@ function rqReqAddCustomer(id){
   const pid = rqActiveProductFilterIds[0], c = (rqAllCustomersCache || []).find(x => x.id === id);
   if (!c || !pid) return;
   if (!rqSheetState.customers.some(x => x.id === id)) rqSheetState.customers = rqSheetState.customers.concat(c);
-  rqSheetState.linksByCustomer[id] = new Set([pid]); // for this send only: he shows up with the buyers; nothing is saved
+  rqSheetState.linksByCustomer[id] = new Set([pid]); // for this send only (the screen): he shows up with the buyers — and the product is also assigned to him for good, just below (owner 2026-11-15: "el sistema debe asignar el producto al cliente")
   if (rqReqSel.ids) rqReqSel.ids.add(id);
   rqReqExtra().add(id);
   rqReqAddOpen = false; rqReqAddQ = '';
   rqRenderSheet();
+  rqAssignProductToCustomer(id, pid);
+}
+// A customer picked for a product IS ASSIGNED that product (customer_products, idempotent): from now on he is one of its buyers, on every screen (owner 2026-11-15). Marking him as "asked" already does it on the server; this covers "+ Add customer".
+async function rqAssignProductToCustomer(customerId, pid){
+  try { await callApi('customer-products-add', { actor: currentActor(), customer_id: customerId, product_id: pid }); }
+  catch (e) { if (typeof rqShowNotice === 'function') rqShowNotice("Couldn't assign the product to this customer: " + (e && e.message || e)); }
 }
 function rqToggleReqCustomer(id){
   if (!rqReqSel.ids) return;
