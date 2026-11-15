@@ -7438,9 +7438,12 @@ async function rqBuildFichaDocs(f){
   if (specB && isPdf(specB)) {
     try { const sd = await PDFDocument.load(specB), cp = await out.copyPages(sd, sd.getPageIndices()); cp.forEach(pg => out.addPage(pg)); pages += cp.length; } catch (e) { /* the ficha could not be merged: the rest still goes */ }
   }
-  if (pages) docs.push({ bytes: await out.save(), filename: base + '.pdf', type: 'application/pdf' });
-  if (specB && !isPdf(specB)) docs.push({ bytes: specB, filename: base + '.' + extOf(f.spec_url), type: mimeOf(f.spec_url) }); // Word and the like: as it is
-  if (photoB && !(isPng(photoB) || isJpg(photoB))) docs.push({ bytes: photoB, filename: base + '_foto.' + extOf(f.photo_url), type: mimeOf(f.photo_url) });
+  // THE PLANT'S CARD ALWAYS GOES (owner 2026-11-15: "eso no tiene logo… de la planta"): a ficha that cannot be merged (a Word spec, a photo that is not PNG / JPG) goes as it is BESIDE the card — before, a Word spec with no photo (Gold Creek) went alone, without the logo card.
+  const raw = [];
+  if (specB && !isPdf(specB)) raw.push({ bytes: specB, filename: base + '.' + extOf(f.spec_url), type: mimeOf(f.spec_url) }); // Word and the like: as it is
+  if (photoB && !(isPng(photoB) || isJpg(photoB))) raw.push({ bytes: photoB, filename: base + '_foto.' + extOf(f.photo_url), type: mimeOf(f.photo_url) });
+  if (pages || raw.length) docs.push({ bytes: await out.save(), filename: base + '.pdf', type: 'application/pdf' });
+  docs.push(...raw);
   return docs;
 }
 function rqWaAttachThinImages(items){
