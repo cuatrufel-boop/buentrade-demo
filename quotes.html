@@ -9081,7 +9081,7 @@ function rqOfferCockpit(rows){
       const firstMsg = rowEl.querySelector('.rq-cmp-msg'), waCol = firstMsg ? firstMsg.parentElement : null;
       if (waCol && !waCol.querySelector('.rq-phone-top')){
         const top = document.createElement('div'); top.className = 'rq-phone-top';
-        top.innerHTML = `<span class="rq-rail-av">${escapeHtml(initials(who))}</span><div><b>${escapeHtml(who)}</b><div>WhatsApp · one message per brand, most expensive first</div>${rdRow(cur) && rdRow(cur).line ? `<div class="rq-rd-line">${escapeHtml(rdRow(cur).line)}</div>` : ''}</div>`;
+        top.innerHTML = `<span class="rq-rail-av">${escapeHtml(initials(who))}</span><div><b>${escapeHtml(who)}</b><div>WhatsApp · one message per brand, most expensive first</div></div>`; // no radar text here (owner 2026-11-15: "ahí ni lo voy a leer"): the radar is the small tag in the list, the whole line on hover, and the facts INSIDE the messages
         waCol.insertBefore(top, waCol.firstChild); waCol.classList.add('rq-phone');
       }
       const sgs = [...rowEl.querySelectorAll('.rq-cmp-suggs .rq-cmp-sg')];
