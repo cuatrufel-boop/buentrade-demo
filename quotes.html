@@ -760,6 +760,8 @@
   html body .rq-rail-why{grid-area:s;font-size:11px;line-height:1.35;color:rgba(255,255,255,.55);}
   html body .rq-rail-qt{margin-left:4px;font:600 11px 'Inter',sans-serif;color:#5AAAFF;background:rgba(90,170,255,.08);border:1px solid rgba(90,170,255,.45);border-radius:8px;padding:2px 8px;cursor:pointer;}
   html body .rq-offer-side .rq-cmp-sg-send{color:#05240F;background:linear-gradient(180deg,#52E08F,#2FBF70);border:0;font-weight:700;margin-left:6px;}
+  html body .rq-offer-side textarea.rq-cmp-sg-x{display:block;width:100%;box-sizing:border-box;margin:0 0 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:12px;color:#E9EDEF;font:400 13.5px/1.5 'Inter',sans-serif;padding:9px 11px;resize:vertical;min-height:72px;}
+  html body .rq-offer-side textarea.rq-cmp-sg-edit:focus{outline:2px solid rgba(90,170,255,.6);outline-offset:1px;}
   html body .rq-foot-r{margin-left:14px;font-size:12px;color:rgba(255,255,255,.55);white-space:nowrap;}
   html body .rq-cmp-foot{display:flex;align-items:center;gap:14px;} html body .rq-cmp-foot .rq-cmp-prog{flex:1;}
   @media (max-width:980px){html body .rq-offer-body.has-rail,html body .rq-offer-body.has-side,html body .rq-offer-body.has-rail.has-side{grid-template-columns:minmax(0,1fr);grid-template-rows:none;overflow:auto;}html body .rq-offer-rail{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid rgba(255,255,255,.12);flex:none;}html body .rq-rail-t,html body .rq-rail-k{display:none;}html body .rq-rail-c{width:auto;flex:none;}html body .rq-offer-side{border-left:0;border-top:1px solid rgba(255,255,255,.12);}}
@@ -8698,6 +8700,7 @@ const rqWaIsPhone = () => /iPhone|iPad|Android|Mobile/i.test((typeof navigator !
 function rqWaModalOpenOne(i, allowMissingFichas){
   const it = rqWaModalItems[i];
   if (!it) return;
+  if (typeof rqCmpIntroPending === 'function' && rqCmpIntroPending(it) && typeof rqShowNotice === 'function') { rqShowNotice('The intro message is waiting in WhatsApp. Send it first and tap "I sent it" (or "Not now"): the offer goes as its own message after it.'); return; }
   if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice('Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
   if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) { if (typeof rqShowNotice === 'function') rqShowNotice(`${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Press "Open anyway without all fichas" to send the picture without them, or close and open the offer again.`);
     if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
@@ -8811,7 +8814,7 @@ function rqComposerWaHtml(it, i){
   const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
     : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button><button type="button" class="chip" onclick="rqWaPasteAgain(${i})">Paste banner again</button>` : '';
   const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.pasteError ? '<b>not pasted: ' + escapeHtml(it.pasteError) + '</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
-  const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button>${typeof rqCmpSuggBtn === 'function' ? rqCmpSuggBtn(it, x, i, k) : ''}</div>`).join('');
+  const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div>${typeof rqCmpSuggText === 'function' ? `<textarea class="rq-cmp-sg-x rq-cmp-sg-edit" rows="3" oninput="rqCmpEditSugg(${i},${k},this)">${escapeHtml(rqCmpSuggText(it, x))}</textarea>` : `<div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div>`}<button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button>${typeof rqCmpSuggBtn === 'function' ? rqCmpSuggBtn(it, x, i, k) : ''}</div>`).join('');
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
     <div class="rq-cmp-act">
@@ -8860,16 +8863,28 @@ function rqCmpAllSuggs(it){
 // THE SUGGESTIONS CAN BE SENT, BEFORE THE QUOTE (owner 2026-11-15: "el sistema debe dejarme enviar estos mensajes antes del quote; están para copiar, no para mandar"): next to Copy, "Send on WhatsApp" opens that customer's chat with the text ready (no price, no banner);
 // when he is back, "I sent it" records it where every message is recorded (the Messaging log, idempotent per customer × text × channel — the same way as a plant auction message). Nothing goes out by itself.
 const rqCmpSugState = {}; // `${customer}|${text}` → 'opened' | 'sent'
+const rqCmpSugEdit = {};  // `${customer}|${label}|${original text}` → what the trader typed instead (a suggestion is editable before it is copied or sent — owner 2026-11-15)
+function rqCmpSuggText(it, x){ const e = rqCmpSugEdit[it.id + '|' + x.label + '|' + x.text]; return e != null ? e : x.text; }
+function rqCmpEditSugg(i, k, el){ const it = rqWaModalItems[i], x = it ? rqCmpAllSuggs(it)[k] : null; if (!it || !x) return; rqCmpSugEdit[it.id + '|' + x.label + '|' + x.text] = el.value; if (typeof rqWaFit === 'function') rqWaFit(el); }
+// THE INTRO GOES AS ITS OWN MESSAGE (owner 2026-11-15: "no debe enviar en el mensaje"): WhatsApp keeps what is waiting in its box (the pasted banner, the specs) and a second wa.me text lands in the SAME box — the intro would travel inside the offer, and the offer's own text would be lost.
+// So the two never wait in the chat together: while an intro is opened and not yet sent, the offer button waits; while the offer is opened and not sent, the intro waits. "I sent it" (or "Not now") frees the other.
+function rqCmpIntroPending(it){ return Object.keys(rqCmpSugState).some(key => key.startsWith(it.id + '|') && rqCmpSugState[key] === 'opened'); }
+function rqCmpOfferPending(it){ return (typeof rqWaModalItems !== 'undefined' ? rqWaModalItems : []).some(m => m.id === it.id && m.opened && !m.recorded); }
+function rqCmpSkipSugg(i, k){ const it = rqWaModalItems[i], x = it ? rqCmpAllSuggs(it)[k] : null; if (!it || !x) return; delete rqCmpSugState[it.id + '|' + x.text]; rqOfferWindowRender(); }
 function rqCmpSuggBtn(it, x, i, k){
   const st = rqCmpSugState[it.id + '|' + x.text];
   if (!it.phone) return '';
   return st === 'sent' ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
-    : `<button type="button" class="chip rq-cmp-sg-send" onclick="rqCmpSendSugg(${i},${k})" title="${st === 'opened' ? 'Tell the system you sent it' : 'Open WhatsApp with this text — send it before the offer'}">${st === 'opened' ? 'I sent it' : 'Send on WhatsApp'}</button>`;
+    : `<button type="button" class="chip rq-cmp-sg-send" onclick="rqCmpSendSugg(${i},${k})" title="${st === 'opened' ? 'Tell the system you sent it' : 'Open WhatsApp with this text (edit it first if you want) — it goes as its own message, before the offer'}">${st === 'opened' ? 'I sent it' : 'Send on WhatsApp'}</button>${st === 'opened' ? `<button type="button" class="chip" onclick="rqCmpSkipSugg(${i},${k})" title="Leave it for now">Not now</button>` : ''}`;
 }
 async function rqCmpSendSugg(i, k){
-  const it = rqWaModalItems[i], x = it ? rqCmpAllSuggs(it)[k] : null; if (!it || !x || !it.phone) return;
-  const key = it.id + '|' + x.text;
-  if (rqCmpSugState[key] !== 'opened'){ window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(x.text), '_blank'); rqCmpSugState[key] = 'opened'; rqOfferWindowRender(); return; }
+  const it = rqWaModalItems[i], x0 = it ? rqCmpAllSuggs(it)[k] : null; if (!it || !x0 || !it.phone) return;
+  const x = { ...x0, text: rqCmpSuggText(it, x0) }, key = it.id + '|' + x0.text; // what he typed, not the original
+  if (!String(x.text).trim()) { if (typeof rqShowNotice === 'function') rqShowNotice('The message is empty.'); return; }
+  if (rqCmpSugState[key] !== 'opened'){
+    if (rqCmpOfferPending(it)) { if (typeof rqShowNotice === 'function') rqShowNotice('The offer is already waiting in WhatsApp. Send it first (or tap "I sent it"): this message must go on its own, before the offer, not inside it.'); return; }
+    window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(x.text), '_blank'); rqCmpSugState[key] = 'opened'; rqOfferWindowRender(); return;
+  }
   const pid = (it.personal && it.personal.pid) || (rqActiveProductFilterIds || [])[0] || null, prod = String(it.label || '').split(' — ')[1] || '';
   try {
     await callApi('messaging', { action: 'send', actor: currentActor(), customer_id: it.id, reason_key: `compose:${qmToday()}:before-quote-${pid || 'x'}`, angle: 'offer', product_id: pid, message: x.text, draft: null,
@@ -8894,7 +8909,8 @@ async function rqCmpLoadMessaging(){ // read-only, once per page, never holds th
 }
 // copies a suggestion (the opening line, the title, the notes) to paste into the chat if wanted
 function rqCmpCopy(i, k, btn){
-  const x = rqWaModalItems[i] ? rqCmpAllSuggs(rqWaModalItems[i])[k] : null; if (!x) return;
+  const x0 = rqWaModalItems[i] ? rqCmpAllSuggs(rqWaModalItems[i])[k] : null; if (!x0) return;
+  const x = typeof rqCmpSuggText === 'function' ? { ...x0, text: rqCmpSuggText(rqWaModalItems[i], x0) } : x0; // what he typed
   const done = () => { if (btn){ btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); } };
   try { navigator.clipboard.writeText(x.text).then(done, () => rqShowNotice('Could not copy — select the text and copy it')); } catch (e) { rqShowNotice('Could not copy — select the text and copy it'); }
 }
@@ -9024,6 +9040,7 @@ function rqOfferCockpit(rows){
         if (sgs.length){
           const t = document.createElement('div'); t.className = 'rq-side-t'; t.textContent = 'Suggestions · beside the message'; side.appendChild(t);
           sgs.forEach(n => side.appendChild(n));
+          if (typeof rqWaFit === 'function' && side.querySelectorAll) side.querySelectorAll('textarea').forEach(rqWaFit);
           rowEl.querySelectorAll('.rq-cmp-msg.has-sugg').forEach(m => m.classList.remove('has-sugg'));
           rowEl.querySelectorAll('.rq-cmp-suggs').forEach(n => n.remove());
         }
