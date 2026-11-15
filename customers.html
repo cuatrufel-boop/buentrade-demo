@@ -214,6 +214,7 @@
   .rd-val .rd-go{background:none;border:none;padding:0;font:inherit;color:var(--blue);cursor:pointer;text-align:left;}
   .rd-val .rd-go:hover{text-decoration:underline;}
   .rd-missing{color:var(--amber);}
+  .xr-chip.rd-zero{opacity:.5;}
   .rd-told{display:block;}
   @media (max-width:760px){ .rd-row{flex-direction:column;gap:2px;} .rd-label{flex:none;} }
   .xr-strip{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px;}
@@ -1639,18 +1640,15 @@ function rdDraw(){
   const rows = d.rows || [], P = d.profile || {}, told = (P.told || []).filter(t => t.topic === 'business'), likes = (P.told || []).filter(t => t.topic === 'preference');
   const place = [P.city, P.state, P.country].filter(Boolean).join(', ');
   const line = (label, html) => `<div class="rd-row"><div class="rd-label">${label}</div><div class="rd-val">${html}</div></div>`;
-  const group = (label, key, rs, empty) => line(label, rs.length ? `<button type="button" class="rd-go" data-rd-go="${key}" onclick="rdGo('${key}')"><b>${rs.length}</b> product${rs.length === 1 ? '' : 's'}</button> · ${rdNames(rs)}` : `<span class="muted">${empty}</span>`);
+  // CLEAN (owner 2026-11-15: "no lo llenes de texto feo, hazlo limpio"): each group is ONE small button with its count — the product names are on hover, the whole list one tap away in the X-ray
+  const group = (label, key, rs, empty) => `<button type="button" class="xr-chip${rs.length ? '' : ' rd-zero'}" data-rd-go="${key}" onclick="rdGo('${key}')" title="${escapeHtml(rs.length ? rs.slice(0, 8).map(r => r.product_name).join(' · ') + (rs.length > 8 ? ' · +' + (rs.length - 8) + ' more' : '') : empty)}">${label} <b>${rs.length}</b></button>`;
   const buys = rows.filter(r => r.section === 'buys'), asked = rows.filter(r => r.asked > 0), elsewhere = rows.filter(r => r.not_from_us), never = rows.filter(r => r.never_offered), waiting = rows.filter(r => r.waiting);
   const feed = (what, where, tab) => `<span class="rd-missing">${what}</span> <button type="button" class="rd-go" onclick="${tab ? `setCustomerTab('${tab}')` : ''}">${where}</button>`;
   el.innerHTML = `<div class="profile-heading" style="margin-bottom:6px;">Radar</div>
     ${line('Who he is', `${P.business_type ? escapeHtml(P.business_type) : feed('Type of business not set', 'set it in Details', 'details')}${place ? ' · ' + escapeHtml(place) : ''}`)}
     ${line('What he does', told.length ? told.map(t => `<span class="rd-told">${escapeHtml(t.text)}</span>`).join('') : feed('Not known yet: does he process, maquila, resell?', 'write it in About the client and the system reads it', 'about'))}
     ${likes.length ? line('What he prefers', likes.map(t => `<span class="rd-told">${escapeHtml(t.text)}</span>`).join('')) : ''}
-    ${group('Buys from us', 'buys', buys, 'Nothing bought from us yet')}
-    ${group('Asks us for', 'asked', asked, 'He has not asked for a product yet')}
-    ${group('Buys it, not from us', 'not_from_us', elsewhere, 'No product of his is bought elsewhere that we know of')}
-    ${group('Never offered', 'never_offered', never, 'Everything of his has been offered')}
-    ${waiting.length ? group('Waiting for his answer', 'waiting', waiting, '') : ''}`;
+    <div class="xr-strip" style="margin:10px 0 2px;">${group('Buys from us', 'buys', buys, 'Nothing bought from us yet')}${group('Asks us for', 'asked', asked, 'He has not asked for a product yet')}${group('Buys it, not from us', 'not_from_us', elsewhere, 'No product of his is bought elsewhere that we know of')}${group('Never offered', 'never_offered', never, 'Everything of his has been offered')}${waiting.length ? group('Waiting for his answer', 'waiting', waiting, '') : ''}</div>`;
 }
 async function renderCustomerRadar(id){
   const el = document.getElementById('custRadar'); if (!el) return;
