@@ -8877,8 +8877,36 @@ async function rqCmpLoadFacts(){
   } catch (e) { /* no personal line: the window works exactly the same, with the opening it always had */ }
   rqOfferFactsLoading = false;
 }
+// THE MESSAGE BUILT FROM WHAT WE KNOW OF HIM (owner 2026-11-15: "queremos mandar mensajes relevantes a clientes para obtener bids: cosas y detalles específicos de compra, que el cliente se dé cuenta que conocemos su negocio por dentro"; "muéstrame"): the opening for each customer
+// names a real detail of HIS history — when he bought this product (and how many orders), a question he asked, what else he bought from us, a product he asked for and nothing went out after, or that he moves this product — read by the same reader as his profile (messaging → customer_radar → facts).
+// Nothing is invented: a fact that is not on record is not mentioned, and with none the old opening stays. The wording is a PROPOSAL for the owner to approve; the trader can edit it before it is copied or sent (it is only a suggestion, nothing goes out by itself).
+const RQ_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'], RQ_MES3 = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+function rqRadarWhen(day, period){
+  let m = /^(\d{4})-(\d{2})/.exec(String(day || '')); if (m) return `en ${RQ_MESES[Number(m[2]) - 1]} de ${m[1]}`;
+  m = /^([A-Z][a-z]{2})(\d{4})$/.exec(String(period || '').split(',')[0].trim()); return m && RQ_MES3[m[1]] != null ? `en ${RQ_MESES[RQ_MES3[m[1]]]} de ${m[2]}` : '';
+}
+function rqRadarDay(d){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? `el ${Number(m[3])} de ${RQ_MESES[Number(m[2]) - 1]}` : ''; }
+function rqRadarText(F, spec, brands, newBrands){
+  if (!F || !spec || !brands || !brands.length) return '';
+  const nb = new Set(newBrands || []), list = brands.map(b => nb.has(b) ? `${b} (marca nueva)` : b);
+  const have = list.length === 1 ? `me llegó ${list[0]}` : `me llegaron ${list.join(', ')}`, T = F.this || {}, n = k => k > 1 ? ` (${k} pedidos)` : '';
+  const when = rqRadarWhen(T.bought, T.period); if (T.orders > 0 && when) return `Hola, ${when} me compraste ${spec}${n(T.orders)}; ${have}. ¿Lo volvemos a trabajar?`;
+  const ask = rqRadarDay(T.asked); if (ask) return `Hola, ${ask} me preguntaste por ${spec}; ${have}. ¿Lo vemos?`;
+  const b = (F.bought || []).find(x => rqRadarWhen(x.when, x.period)); if (b) return `Hola, ${rqRadarWhen(b.when, b.period)} me compraste ${b.es}${n(b.orders)}; ahora ${have} de ${spec}. ¿Lo vemos?`;
+  const a = (F.asked || []).find(x => rqRadarDay(x.day)); if (a) return `Hola, ${rqRadarDay(a.day)} me preguntaste por ${a.es}; mientras tanto ${have} de ${spec}. ¿Lo vemos?`;
+  if (T.not_from_us) return `Hola, sé que mueves ${spec}${F.city ? ' en ' + F.city : ''}; ${have}. ¿Lo trabajamos?`;
+  return '';
+}
+function rqRadarSuggestion(it){
+  const ctx = it && it.personal; if (!ctx || !ctx.pid) return null;
+  const e = rqRadarOf(it.id, ctx.pid), F = e && e.facts; if (!F) return null;
+  const text = rqRadarText(F, ctx.spec, ctx.brands, rqOfferFacts && rqOfferFacts.newBrands ? rqOfferFacts.newBrands[ctx.pid] : null);
+  return text ? { label: 'For him', text } : null;
+}
 function rqPersonalSuggestion(it){
-  const ctx = it && it.personal; if (!ctx || !rqOfferFacts) return null;
+  const ctx = it && it.personal; if (!ctx) return null;
+  const radar = typeof rqRadarSuggestion === 'function' ? rqRadarSuggestion(it) : null; if (radar) return radar; // what we know of HIM first; the generic personal opening when there is nothing specific
+  if (!rqOfferFacts) return null;
   const text = rqPersonalText(rqOfferFacts[ctx.pid + '|' + it.id], ctx.spec, ctx.brands, rqOfferFacts.newBrands[ctx.pid]);
   return text ? { label: 'For him', text } : null;
 }
