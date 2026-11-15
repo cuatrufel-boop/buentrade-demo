@@ -757,6 +757,7 @@
   html body .rq-rail-t2{margin-top:10px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);}
   html body .rq-rail-c.off{cursor:default;opacity:.8;} html body .rq-rail-c.off:hover{background:transparent;}
   html body .rq-rail-c.off .rq-rail-av{background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);}
+  html body .rq-rail-p.rd{color:rgba(255,255,255,.72);border-color:rgba(255,255,255,.28);} html body .rq-rail-p.rd.ask{color:#8EC5FF;border-color:rgba(90,170,255,.55);} html body .rq-rd-line{margin-top:3px;font-size:11px;line-height:1.35;color:rgba(255,255,255,.62);}
   html body .rq-rail-why{grid-area:s;font-size:11px;line-height:1.35;color:rgba(255,255,255,.55);}
   html body .rq-rail-qt{margin-left:4px;font:600 11px 'Inter',sans-serif;color:#5AAAFF;background:rgba(90,170,255,.08);border:1px solid rgba(90,170,255,.45);border-radius:8px;padding:2px 8px;cursor:pointer;}
   html body .rq-offer-side .rq-cmp-sg-send{color:#05240F;background:linear-gradient(180deg,#52E08F,#2FBF70);border:0;font-weight:700;margin-left:6px;}
@@ -7364,7 +7365,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
-    return [{ extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || null })), // pairKey: the customer × product row of the one offer window
+    return [{ extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
       bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
@@ -7383,7 +7384,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     if (i === 0) { if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(one.plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine }); }
     if (i === sorted.length - 1 && outro) extras.push({ label: 'Note', text: outro });
     const item = { extras,
-      id: c.id, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
+      id: c.id, rdPid: pid, label: `${pairKey} — ${one.plant.name.trim()}`, pairKey, phone, body, // pairKey: the customer × product row of the one offer window, where his email sits beside ALL his messages
       sentOffers: offer ? [{ offer, plantName: one.plant.name }] : [],
       thinImages: offer ? [{ brand: one.plant.name, docs: one.plant.rqDocsOn === true, price: rqLinePrice(one.calc), cur: one.calc.mxn ? 'mxn' : 'usd' }] : [], // EVERY brand gets its thin banner attached (rqWaAttachThinImages); the link only when it has a photo / spec
       onOpened: async () => { await rqConfirmOffers(offer ? [offer] : []); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } },
@@ -8920,6 +8921,30 @@ async function rqCmpSendSugg(i, k){
 }
 const RQ_CMP_KIND = { cycle: 'His cycle', ask_volume: 'His volume', personal: 'He told us', market: 'Market' };
 let rqCmpMsgMap = null, rqCmpMsgLoading = false;
+// THE RADAR IN THE SEND WINDOW (owner 2026-11-15: "cuando voy al producto en Quotes y empiezo a compartir, ahí viene el mensaje poderoso… Quotes debe mostrar qué clientes y con qué razón"): for every customer of the send (and the ones left out), the SAME reading as his profile and Today —
+// ONE short tag (Asked · Bought Mar 2025 · Never offered) and the whole line (where he is, what kind of business, what he bought, asked and was offered). View only: read once when the window opens, never holds it up; without it the window is exactly as before.
+let rqRadarMap = null, rqRadarKey = '', rqRadarLoading = false;
+function rqRadarOf(cid, pid){ return rqRadarMap && rqRadarMap[cid + '|' + pid] || null; }
+function rqRadarForRow(r){
+  const it = (r && r.wa && r.wa[0] && r.wa[0].it) || (r && r.em && r.em.it) || null; if (!it) return null;
+  const pid = it.rdPid || (it.personal && it.personal.pid) || (typeof rqActiveProductFilterIds !== 'undefined' && rqActiveProductFilterIds.length === 1 ? rqActiveProductFilterIds[0] : null);
+  return pid ? rqRadarOf(it.id, pid) : null;
+}
+async function rqRadarLoad(){
+  if (rqRadarLoading) return;
+  try {
+    const items = (rqWaModalItems || []).concat(rqEmailModalItems || []);
+    const pids = [...new Set(items.map(it => it && (it.rdPid || (it.personal && it.personal.pid))).filter(Boolean).concat(typeof rqActiveProductFilterIds !== 'undefined' ? rqActiveProductFilterIds : []))];
+    const cids = [...new Set(items.map(it => it && it.id).filter(Boolean).concat(typeof rqSheetCustomersOwning === 'function' ? pids.flatMap(pid => rqSheetCustomersOwning(pid).map(c => c.id)) : []))];
+    const key = cids.join(',') + '|' + pids.join(',');
+    if (!cids.length || !pids.length || key === rqRadarKey) return;
+    rqRadarLoading = true;
+    const d = await callApi('messaging', { action: 'customer_radar', customer_ids: cids, product_ids: pids });
+    rqRadarMap = d.radar || {}; rqRadarKey = key;
+    rqRadarLoading = false;
+    if (rqOfferWinOpen) rqOfferWindowRender();
+  } catch (e) { rqRadarLoading = false; /* the window works exactly the same without the radar */ }
+}
 function rqCmpMsgFor(customerId){ return rqCmpMsgMap && rqCmpMsgMap[customerId] || []; }
 async function rqCmpLoadMessaging(){ // read-only, once per page, never holds the window up
   if (rqCmpMsgMap || rqCmpMsgLoading) return;
@@ -9023,7 +9048,7 @@ function rqOfferOutsiders(rows){
         else if (!rqCanWhatsApp(c, [pid]) && !rqCanEmail(c, [pid])) why = 'No WhatsApp or email on file';
         else if (!ready.length) why = 'No price confirmed yet';
         else why = 'Not in this send';
-        out.push({ name, why, pes, qt });
+        out.push({ name, why, pes, qt, cid: c.id, pid });
       });
     });
     return out;
@@ -9036,14 +9061,15 @@ function rqOfferCockpit(rows){
     const cur = vis[rqOfferCur], who = cur ? String(cur.key).split(' — ')[0] : '', prod = cur ? String(cur.key).split(' — ').slice(1).join(' — ') : '';
     const initials = (w) => String(w).split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || '·';
     const body = document.querySelector('.rq-offer-body'), rail = document.getElementById('rq_offer_rail'), side = document.getElementById('rq_offer_side');
+    const rdRow = (r) => (typeof rqRadarForRow === 'function' ? rqRadarForRow(r) : null); // the radar of that customer for this product (view only; nothing without it)
     if (rail){
       const outs = typeof rqOfferOutsiders === 'function' ? rqOfferOutsiders(rows) : [];
       rail.style.display = vis.length > 1 || outs.length ? '' : 'none';
       rail.innerHTML = `<div class="rq-rail-t">Customers · ${vis.length + outs.length}</div>` + vis.map((r, k) => {
         const w = String(r.key).split(' — ')[0], waDone = r.wa.filter(x => x.it.recorded).length, emDone = !!(r.em && r.em.it.sent);
-        return `<button type="button" class="rq-rail-c${k === rqOfferCur ? ' on' : ''}" onclick="rqOfferGo(${k})" title="${escapeHtml(String(r.key))}"><span class="rq-rail-av">${escapeHtml(initials(w))}</span><span class="rq-rail-n">${escapeHtml(w)}</span><span class="rq-rail-st">`
-          + (r.wa.length ? `<span class="rq-rail-p${waDone === r.wa.length ? ' ok' : ''}">WA ${waDone}/${r.wa.length}</span>` : '') + (r.em ? `<span class="rq-rail-p${emDone ? ' ok' : ''}">Mail ${emDone ? '✓' : '·'}</span>` : '') + `</span></button>`;
-      }).join('') + (outs.length ? `<div class="rq-rail-t rq-rail-t2">Not in this send · ${outs.length}</div>` + outs.map(o => `<div class="rq-rail-c off" title="${escapeHtml(o.name + ' — ' + o.why)}"><span class="rq-rail-av">${escapeHtml(initials(o.name))}</span><span class="rq-rail-n">${escapeHtml(o.name)}${o.pes ? ' <span class="rq-rail-p">MXN</span>' : ''}</span><span class="rq-rail-why">${escapeHtml(o.why)}${o.qt ? ` <button type="button" class="rq-rail-qt" onclick="rqOfferGoPesos('${o.qt.pid}','${o.qt.plant}','${o.qt.cid}')">Open his QT</button>` : ''}</span></div>`).join('') : '') + '<div class="rq-rail-k"><span class="rq-kbd">↑</span><span class="rq-kbd">↓</span> customer</div>';
+        return `<button type="button" class="rq-rail-c${k === rqOfferCur ? ' on' : ''}" onclick="rqOfferGo(${k})" title="${escapeHtml(String(r.key) + (rdRow(r) && rdRow(r).line ? ' — ' + rdRow(r).line : ''))}"><span class="rq-rail-av">${escapeHtml(initials(w))}</span><span class="rq-rail-n">${escapeHtml(w)}</span><span class="rq-rail-st">`
+          + (r.wa.length ? `<span class="rq-rail-p${waDone === r.wa.length ? ' ok' : ''}">WA ${waDone}/${r.wa.length}</span>` : '') + (r.em ? `<span class="rq-rail-p${emDone ? ' ok' : ''}">Mail ${emDone ? '✓' : '·'}</span>` : '') + (rdRow(r) && rdRow(r).tag ? `<span class="rq-rail-p rd${rdRow(r).tag === 'Asked' ? ' ask' : ''}">${escapeHtml(rdRow(r).tag)}</span>` : '') + `</span></button>`;
+      }).join('') + (outs.length ? `<div class="rq-rail-t rq-rail-t2">Not in this send · ${outs.length}</div>` + outs.map(o => `<div class="rq-rail-c off" title="${escapeHtml(o.name + ' — ' + o.why)}"><span class="rq-rail-av">${escapeHtml(initials(o.name))}</span><span class="rq-rail-n">${escapeHtml(o.name)}${o.pes ? ' <span class="rq-rail-p">MXN</span>' : ''}${typeof rqRadarOf === 'function' && o.cid && rqRadarOf(o.cid, o.pid) && rqRadarOf(o.cid, o.pid).tag ? ` <span class="rq-rail-p rd${rqRadarOf(o.cid, o.pid).tag === 'Asked' ? ' ask' : ''}">${escapeHtml(rqRadarOf(o.cid, o.pid).tag)}</span>` : ''}</span><span class="rq-rail-why">${escapeHtml(o.why)}${o.qt ? ` <button type="button" class="rq-rail-qt" onclick="rqOfferGoPesos('${o.qt.pid}','${o.qt.plant}','${o.qt.cid}')">Open his QT</button>` : ''}</span></div>`).join('') : '') + '<div class="rq-rail-k"><span class="rq-kbd">↑</span><span class="rq-kbd">↓</span> customer</div>';
     }
     const ring = document.getElementById('rq_offer_ring'), total = rqWaModalItems.length + rqEmailModalItems.length, done = rqWaModalItems.filter(it => it.recorded).length + rqEmailModalItems.filter(it => it.sent).length;
     if (ring && typeof ring.setAttribute === 'function'){ ring.style.display = total ? 'inline-flex' : 'none'; ring.style.setProperty('--p', total ? Math.round(done / total * 100) : 0); ring.setAttribute('data-t', `${done}/${total}`); ring.title = `${done} of ${total} sent`; }
@@ -9055,7 +9081,7 @@ function rqOfferCockpit(rows){
       const firstMsg = rowEl.querySelector('.rq-cmp-msg'), waCol = firstMsg ? firstMsg.parentElement : null;
       if (waCol && !waCol.querySelector('.rq-phone-top')){
         const top = document.createElement('div'); top.className = 'rq-phone-top';
-        top.innerHTML = `<span class="rq-rail-av">${escapeHtml(initials(who))}</span><div><b>${escapeHtml(who)}</b><div>WhatsApp · one message per brand, most expensive first</div></div>`;
+        top.innerHTML = `<span class="rq-rail-av">${escapeHtml(initials(who))}</span><div><b>${escapeHtml(who)}</b><div>WhatsApp · one message per brand, most expensive first</div>${rdRow(cur) && rdRow(cur).line ? `<div class="rq-rd-line">${escapeHtml(rdRow(cur).line)}</div>` : ''}</div>`;
         waCol.insertBefore(top, waCol.firstChild); waCol.classList.add('rq-phone');
       }
       const sgs = [...rowEl.querySelectorAll('.rq-cmp-suggs .rq-cmp-sg')];
@@ -9091,6 +9117,7 @@ function rqOfferWindowShow(){
   const any = rqEmailModalItems.length || rqWaModalItems.length;
   if (!any){ rqOfferWindowEnd(); return false; }
   for (const id of ['rq_email_modal_overlay', 'rq_wa_modal_overlay']){ const o = document.getElementById(id); o.style.display = 'none'; o.classList.add('rq-merged'); } // the two review windows never show beside the one offer window, whatever ran before (owner 2026-10-22 screenshot: the WhatsApp window sat behind an empty offer window)
+  if (typeof rqRadarLoad === 'function') rqRadarLoad(); // the radar tag and line of each customer (read-only, in the background)
   rqCmpLoadFacts(); // the facts of each customer for his personal line (read-only, in the background)
   rqCmpLoadMessaging();
   rqOfferCh = rqWaModalItems.length ? { wa: true, em: false } : { wa: false, em: true }; // opens on WhatsApp alone (owner 2026-10-25: "pon solo whatsapp por default"); Email / Both are one tap away; a send with no WhatsApp opens on Email
@@ -9178,7 +9205,7 @@ async function sendOfferEmailTo(customerId){
     const body = buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine);
     const downloadFiles = pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean);
     cards.push({
-      id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject, body, fromAlias: 'offers', attachments, downloadFiles,
+      id: c.id, rdPid: pid, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject, body, fromAlias: 'offers', attachments, downloadFiles,
       html: rqOfferEmailHtml(firstName, full, { signalLine, warnings }), htmlText: body, // the blue bars table when there are two or more brands (the plain text stays its text)
       onSent: async () => {
         const logged = await rqLogSentOffersRows(full, [c], 'email', false, false, null, recordAttemptKey);
@@ -9289,7 +9316,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       toSend.push({
-        id: c.id, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
+        id: c.id, rdPid: pid, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
         body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, lacks, c, recordAttemptKey,
         attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
         downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
