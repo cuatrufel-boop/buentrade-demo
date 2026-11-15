@@ -754,6 +754,12 @@
   html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send::after{content:'Sent ✓';}
   html body .rq-offer-side .rq-cmp-sg{border:1px dashed rgba(255,255,255,.28);border-radius:16px;padding:13px 15px;background:rgba(255,255,255,.03);}
   html body #rq_offer_modal_list,html body .rq-offer-side,html body .rq-offer-rail{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent;}
+  html body .rq-rail-t2{margin-top:10px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);}
+  html body .rq-rail-c.off{cursor:default;opacity:.8;} html body .rq-rail-c.off:hover{background:transparent;}
+  html body .rq-rail-c.off .rq-rail-av{background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);}
+  html body .rq-rail-why{grid-area:s;font-size:11px;line-height:1.35;color:rgba(255,255,255,.55);}
+  html body .rq-rail-qt{margin-left:4px;font:600 11px 'Inter',sans-serif;color:#5AAAFF;background:rgba(90,170,255,.08);border:1px solid rgba(90,170,255,.45);border-radius:8px;padding:2px 8px;cursor:pointer;}
+  html body .rq-offer-side .rq-cmp-sg-send{color:#05240F;background:linear-gradient(180deg,#52E08F,#2FBF70);border:0;font-weight:700;margin-left:6px;}
   html body .rq-foot-r{margin-left:14px;font-size:12px;color:rgba(255,255,255,.55);white-space:nowrap;}
   html body .rq-cmp-foot{display:flex;align-items:center;gap:14px;} html body .rq-cmp-foot .rq-cmp-prog{flex:1;}
   @media (max-width:980px){html body .rq-offer-body.has-rail,html body .rq-offer-body.has-side,html body .rq-offer-body.has-rail.has-side{grid-template-columns:minmax(0,1fr);grid-template-rows:none;overflow:auto;}html body .rq-offer-rail{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid rgba(255,255,255,.12);flex:none;}html body .rq-rail-t,html body .rq-rail-k{display:none;}html body .rq-rail-c{width:auto;flex:none;}html body .rq-offer-side{border-left:0;border-top:1px solid rgba(255,255,255,.12);}}
@@ -8798,7 +8804,7 @@ function rqComposerWaHtml(it, i){
   const status = it.recorded ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
     : it.opened ? `<span class="rq-sheet-pill wait">Opened — not confirmed</span><button type="button" class="chip" onclick="rqWaMarkSent(${i})">I sent it</button><button type="button" class="chip" onclick="rqWaPasteAgain(${i})">Paste banner again</button>` : '';
   const hint = it.downloadFiles && it.downloadFiles.length ? `<div class="rq-cmp-hint">📎 ${it.pasteState === 'pasted' ? '<b>banner pasted in the chat: check it and press Enter</b>' : it.pasteError ? '<b>not pasted: ' + escapeHtml(it.pasteError) + '</b>' : it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is copied when you open WhatsApp: press Cmd+V in the chat'}</div>` : '';
-  const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button></div>`).join('');
+  const sugg = rqCmpAllSuggs(it).map((x, k) => `<div class="rq-cmp-sg"><div class="rq-cmp-sg-t">Suggestion · ${escapeHtml(x.label)}</div><div class="rq-cmp-sg-x">${escapeHtml(x.text)}</div><button type="button" class="chip" onclick="rqCmpCopy(${i},${k},this)">Copy</button>${typeof rqCmpSuggBtn === 'function' ? rqCmpSuggBtn(it, x, i, k) : ''}</div>`).join('');
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
     <div class="rq-cmp-act">
@@ -8843,6 +8849,27 @@ function rqPersonalSuggestion(it){
 function rqCmpAllSuggs(it){
   const mine = typeof rqPersonalSuggestion === 'function' ? rqPersonalSuggestion(it) : null; // his own line replaces the generic opening (the same for every customer)
   return (mine ? [mine] : []).concat(mine ? (it.extras || []).filter(x => x.label !== 'Opening') : (it.extras || []), it.msgOptions || []);
+}
+// THE SUGGESTIONS CAN BE SENT, BEFORE THE QUOTE (owner 2026-11-15: "el sistema debe dejarme enviar estos mensajes antes del quote; están para copiar, no para mandar"): next to Copy, "Send on WhatsApp" opens that customer's chat with the text ready (no price, no banner);
+// when he is back, "I sent it" records it where every message is recorded (the Messaging log, idempotent per customer × text × channel — the same way as a plant auction message). Nothing goes out by itself.
+const rqCmpSugState = {}; // `${customer}|${text}` → 'opened' | 'sent'
+function rqCmpSuggBtn(it, x, i, k){
+  const st = rqCmpSugState[it.id + '|' + x.text];
+  if (!it.phone) return '';
+  return st === 'sent' ? '<span class="rq-sheet-pill ok">✓ Sent</span>'
+    : `<button type="button" class="chip rq-cmp-sg-send" onclick="rqCmpSendSugg(${i},${k})" title="${st === 'opened' ? 'Tell the system you sent it' : 'Open WhatsApp with this text — send it before the offer'}">${st === 'opened' ? 'I sent it' : 'Send on WhatsApp'}</button>`;
+}
+async function rqCmpSendSugg(i, k){
+  const it = rqWaModalItems[i], x = it ? rqCmpAllSuggs(it)[k] : null; if (!it || !x || !it.phone) return;
+  const key = it.id + '|' + x.text;
+  if (rqCmpSugState[key] !== 'opened'){ window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(x.text), '_blank'); rqCmpSugState[key] = 'opened'; rqOfferWindowRender(); return; }
+  const pid = (it.personal && it.personal.pid) || (rqActiveProductFilterIds || [])[0] || null, prod = String(it.label || '').split(' — ')[1] || '';
+  try {
+    await callApi('messaging', { action: 'send', actor: currentActor(), customer_id: it.id, reason_key: `compose:${qmToday()}:before-quote-${pid || 'x'}`, angle: 'offer', product_id: pid, message: x.text, draft: null,
+      reason_why: `Before the quote${prod ? ' — ' + prod : ''}`, channel: 'whatsapp', idempotency_key: `messaging|${it.id}|before-quote:${pid || 'x'}:${x.text.length}:${x.text.slice(0, 24)}|whatsapp` });
+    rqCmpSugState[key] = 'sent';
+  } catch (e) { if (typeof rqShowNotice === 'function') rqShowNotice("Couldn't record it: " + (e && e.message || e)); }
+  rqOfferWindowRender();
 }
 const RQ_CMP_KIND = { cycle: 'His cycle', ask_volume: 'His volume', personal: 'He told us', market: 'Market' };
 let rqCmpMsgMap = null, rqCmpMsgLoading = false;
@@ -8931,6 +8958,30 @@ function rqOfferStep(d){ const n = document.querySelectorAll('#rq_offer_modal_li
 // THE COCKPIT (owner 2026-11-15, option 1 of mockup 10: "construye el 1, ojo con dañar lo que ya hicimos"): every customer of the send on the left with what has gone out to him (WhatsApp 1/2, Mail ✓), one tap to jump to him, and a progress ring in the title.
 // VIEW ONLY: it reads the same rows the window already draws (rqWaModalItems / rqEmailModalItems states); the messages, banners, links, fichas, Cmd+V paste, "I sent it" and every record are decided where they always were.
 function rqOfferGo(k){ rqOfferCur = k; rqOfferWindowRender(); }
+// EVERY CUSTOMER WHO BUYS THE PRODUCT IS ON THE LIST OF THE LAST STEP (owner 2026-11-15: "son 5 y solo saca 2… en el paso final de compartir debe sacar TODOS los clientes que lo compran, incluyendo usd y pesos"): the ones with a message in this send come first; the others
+// (already have the price, a pesos customer whose own QT is not confirmed, no WhatsApp / email on file, nothing confirmed yet) are listed under them WITH THE REASON — never silently left out. The send itself is unchanged: it goes only to who has a message here.
+function rqOfferOutsiders(rows){
+  try {
+    const pids = (typeof rqActiveProductFilterIds !== 'undefined' ? rqActiveProductFilterIds : []).slice(); if (!pids.length) return [];
+    const inSend = new Set(rows.map(r => String(r.key).split(' — ')[0].trim().toLowerCase())), out = [], seen = new Set();
+    pids.forEach(pid => {
+      const ready = rqSheetRows().filter(r => r.pid === pid && r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && !r.na && (!r.stale || (typeof rqReqOld !== 'undefined' && rqReqOld.has(r.key))));
+      rqSheetCustomersOwning(pid).forEach(c => {
+        const name = String(c.trade_name).trim(); if (inSend.has(name.toLowerCase()) || seen.has(c.id)) return; seen.add(c.id);
+        const pes = rqIsPesosCustomer(c), noPesos = pes && ready.find(r => !rqPesosConfirmation(r.plant.id, pid, c.id));
+        let why, qt = null;
+        if (noPesos){ why = 'Pesos — confirm his price in his own QT'; qt = { pid, plant: noPesos.plant.id, cid: c.id }; }
+        else if (ready.length && ready.every(r => r.sentTo.some(x => x.id === c.id))) why = rqSkippedReason(c, pid, (rqSheetState || {}).sentByCustomer || {}, '').replace(/^already has these prices/, 'Already has this price');
+        else if (!rqCanWhatsApp(c, [pid]) && !rqCanEmail(c, [pid])) why = 'No WhatsApp or email on file';
+        else if (!ready.length) why = 'No price confirmed yet';
+        else why = 'Not in this send';
+        out.push({ name, why, pes, qt });
+      });
+    });
+    return out;
+  } catch (e) { return []; }
+}
+function rqOfferGoPesos(pid, plantId, cid){ rqOfferWindowClose().then(() => { if (!rqOfferWinOpen && typeof rqBrandOpenPesos === 'function') rqBrandOpenPesos(pid, plantId, cid); }); } // his own QT, like the USD ones
 function rqOfferCockpit(rows){
   try {
     const vis = rows.filter(r => (rqOfferCh.wa && r.wa.length) || (rqOfferCh.em && r.em));
@@ -8938,12 +8989,13 @@ function rqOfferCockpit(rows){
     const initials = (w) => String(w).split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || '·';
     const body = document.querySelector('.rq-offer-body'), rail = document.getElementById('rq_offer_rail'), side = document.getElementById('rq_offer_side');
     if (rail){
-      rail.style.display = vis.length > 1 ? '' : 'none';
-      rail.innerHTML = `<div class="rq-rail-t">Customers · ${vis.length}</div>` + vis.map((r, k) => {
+      const outs = typeof rqOfferOutsiders === 'function' ? rqOfferOutsiders(rows) : [];
+      rail.style.display = vis.length > 1 || outs.length ? '' : 'none';
+      rail.innerHTML = `<div class="rq-rail-t">Customers · ${vis.length + outs.length}</div>` + vis.map((r, k) => {
         const w = String(r.key).split(' — ')[0], waDone = r.wa.filter(x => x.it.recorded).length, emDone = !!(r.em && r.em.it.sent);
         return `<button type="button" class="rq-rail-c${k === rqOfferCur ? ' on' : ''}" onclick="rqOfferGo(${k})" title="${escapeHtml(String(r.key))}"><span class="rq-rail-av">${escapeHtml(initials(w))}</span><span class="rq-rail-n">${escapeHtml(w)}</span><span class="rq-rail-st">`
           + (r.wa.length ? `<span class="rq-rail-p${waDone === r.wa.length ? ' ok' : ''}">WA ${waDone}/${r.wa.length}</span>` : '') + (r.em ? `<span class="rq-rail-p${emDone ? ' ok' : ''}">Mail ${emDone ? '✓' : '·'}</span>` : '') + `</span></button>`;
-      }).join('') + '<div class="rq-rail-k"><span class="rq-kbd">↑</span><span class="rq-kbd">↓</span> customer</div>';
+      }).join('') + (outs.length ? `<div class="rq-rail-t rq-rail-t2">Not in this send · ${outs.length}</div>` + outs.map(o => `<div class="rq-rail-c off" title="${escapeHtml(o.name + ' — ' + o.why)}"><span class="rq-rail-av">${escapeHtml(initials(o.name))}</span><span class="rq-rail-n">${escapeHtml(o.name)}${o.pes ? ' <span class="rq-rail-p">MXN</span>' : ''}</span><span class="rq-rail-why">${escapeHtml(o.why)}${o.qt ? ` <button type="button" class="rq-rail-qt" onclick="rqOfferGoPesos('${o.qt.pid}','${o.qt.plant}','${o.qt.cid}')">Open his QT</button>` : ''}</span></div>`).join('') : '') + '<div class="rq-rail-k"><span class="rq-kbd">↑</span><span class="rq-kbd">↓</span> customer</div>';
     }
     const ring = document.getElementById('rq_offer_ring'), total = rqWaModalItems.length + rqEmailModalItems.length, done = rqWaModalItems.filter(it => it.recorded).length + rqEmailModalItems.filter(it => it.sent).length;
     if (ring && typeof ring.setAttribute === 'function'){ ring.style.display = total ? 'inline-flex' : 'none'; ring.style.setProperty('--p', total ? Math.round(done / total * 100) : 0); ring.setAttribute('data-t', `${done}/${total}`); ring.title = `${done} of ${total} sent`; }
