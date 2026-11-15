@@ -4548,14 +4548,14 @@ function rqSendWhyNot(row, owners, sent){
   return sent ? 'Everyone who buys it already has this brand. To send it again, use the customer\'s own line.' : 'Only pesos customers buy it: send from each customer\'s own pesos line.';
 }
 // A row's own button sends THIS brand alone; the top "All" (rqRequestSend) sends every confirmed brand together, highest → lowest with fichas (owner 2026-11-14: "poder mandar un precio individualmente o mandarlo a todos… el botón de individual solo deja mandar con otro precio")
-const RQ_BRAND_SEND_ALONE = true;
+const RQ_BRAND_SEND_ALONE = true; // a row's own button sends THAT brand alone — except a NEW price (fresh, not stale): it always goes as the updated list, every confirmed brand highest → lowest (owner 2026-11-15: "siempre que llegue un precio nuevo debe actualizar y mandar de mayor a menor")
 const RQ_CLIENT_NAMES = false; // the Client cell of a card says HOW MANY customers (and how many already have that price), not who (owner 2026-11-15: "no necesita el texto enumerando los clientes"); the names are on hover. true brings the names back
 async function rqBrandSend(channel, key, customerId){
-  const alone = typeof RQ_BRAND_SEND_ALONE !== 'undefined' && RQ_BRAND_SEND_ALONE;
   const pids = rqActiveProductFilterIds.slice();
   let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
   const one = rows.find(r => r.key === key);
   if (!one) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => r.key === key && r.kind === 'priced'), [], false)); return; }
+  const alone = typeof RQ_BRAND_SEND_ALONE !== 'undefined' && RQ_BRAND_SEND_ALONE && !!one.stale; // only an old price used on purpose goes alone; a new price carries the updated list
   const owners = rqBrandRecipients(one.pid);
   const requestedCustomers = customerId ? String(customerId).split(',').map(id => rqSheetState.customers.find(c => c.id === id)) : null;
   const requestedCurrencyOk = !!(requestedCustomers && requestedCustomers.every(c => c && rqIsPesosCustomer(c)));
