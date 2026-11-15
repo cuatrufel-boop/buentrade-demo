@@ -1578,8 +1578,9 @@ function xrTimes(n){ return n === 1 ? 'once' : n + ' times'; }
 function xrLines(r){
   const L = [], money = v => '$' + Number(v).toFixed(2) + '/lb';
   if (r.section === 'buys') {
-    L.push(`Last bought ${xrDay(r.last_bought)} · ${r.days_since_bought} day${r.days_since_bought === 1 ? '' : 's'} ago · ${r.orders} order${r.orders === 1 ? '' : 's'}${r.bought_amount ? ' · $' + Math.round(r.bought_amount).toLocaleString('en-US') : ''}${r.cadence_days ? ' · he buys it every ' + r.cadence_days + ' days' : ''}`);
-    if (r.not_bought_again) L.push(`Offered ${xrTimes(r.offers_since_bought)} since, last on ${xrDay(r.last_offer_day)}${r.last_offer_price != null ? ' at ' + money(r.last_offer_price) : ''}: he did not buy again`);
+    L.push(`${r.last_bought ? 'Last bought ' + xrDay(r.last_bought) + ' · ' + r.days_since_bought + ' day' + (r.days_since_bought === 1 ? '' : 's') + ' ago' : 'Bought ' + (r.bought_period ? 'in ' + r.bought_period : '(date not known)')} · ${r.orders} order${r.orders === 1 ? '' : 's'}${r.bought_amount ? ' · $' + Math.round(r.bought_amount).toLocaleString('en-US') : ''}${r.cadence_days ? ' · he buys it every ' + r.cadence_days + ' days' : ''}`);
+    if (!r.last_bought) L.push(r.offers_sent ? `Offered ${xrTimes(r.offers_sent)} in the system, last on ${xrDay(r.last_offer_day)}: his purchase has no exact day, so it is not compared` : 'Never offered in the system');
+    else if (r.not_bought_again) L.push(`Offered ${xrTimes(r.offers_since_bought)} since, last on ${xrDay(r.last_offer_day)}${r.last_offer_price != null ? ' at ' + money(r.last_offer_price) : ''}: he did not buy again`);
     else L.push('No offer of it has gone out since he bought it');
   }
   if (r.asked > 0) L.push(`Asked for it ${xrTimes(r.asked)}, last on ${xrDay(r.last_asked_day)}${r.offers_sent ? ' · last offered ' + xrDay(r.last_offer_day) : ' · never offered'}`);
