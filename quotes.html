@@ -748,7 +748,7 @@
   html body #rq_offer_modal_list .rq-cmp-act{align-items:stretch;} html body #rq_offer_modal_list .rq-cmp-btns{width:100%;}
   html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send{width:100%;height:52px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg,#52E08F,#2FBF70) !important;color:#05240F !important;border:0 !important;box-shadow:0 10px 28px rgba(63,203,126,.35),inset 0 1px 0 rgba(255,255,255,.4);}
   html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send svg{width:22px;height:22px;flex:none;}
-  html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send::after{content:'Copy banner · open WhatsApp';font:700 15px 'Inter',sans-serif;}
+  html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send::after{content:'Open WhatsApp';font:700 15px 'Inter',sans-serif;}
   html body #rq_offer_modal_list .rq-cmp-msg.opened .rq-cmp-btns .rq-wa-send::after{content:'Reopen WhatsApp';}
   html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send{background:rgba(63,203,126,.14) !important;color:#3FCB7E !important;box-shadow:inset 0 0 0 1.5px rgba(63,203,126,.6);}
   html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send::after{content:'Sent ✓';}
@@ -8680,10 +8680,17 @@ function rqWaFichasButton(it, i){
 }
 async function rqWaAutoPaste(it){
   try { const r = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j = await r.json(); it.pasteState = j && j.ok ? 'pasted' : 'manual'; it.pasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : ''; } catch (e) { it.pasteState = 'manual'; it.pasteError = String(e.message || e); } // the error is shown on the card, not hidden
+  // ONE AUTOMATIC SECOND TRY (owner 2026-11-15: "el sistema debe subir las fichas cuando lee que ese producto las tiene como siempre… no poner más pasos"): the Mac paste fails when WhatsApp is not in front at that moment (the log showed one such failure among
+  // successful runs); instead of leaving the button to the trader, the system tries once more by itself after a pause. The button stays as the last way out.
+  if (it.pasteState === 'manual' && !it.pasteRetried) {
+    it.pasteRetried = true; await new Promise((r) => setTimeout(r, 2500));
+    try { const r2 = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j2 = await r2.json(); if (j2 && j2.ok) { it.pasteState = 'pasted'; it.pasteError = ''; } } catch (e) { /* the first answer stays */ }
+  }
   rqRenderWaModal();
   // THE SPECS AND PHOTOS GO WITH THE PICTURE BY THEMSELVES (owner 2026-11-13: "el sistema debe mandar siempre que encuentre spec y foto"): once the picture is pasted, the brands' ficha files are pasted right after it — no second button to remember.
   // Never Enter; a failure shows on the card (and the button stays to try again).
   if (it.pasteState === 'pasted' && it.downloadFiles && it.downloadFiles.length > 1 && !it.fichasPasteState) { await new Promise((r) => setTimeout(r, 1500)); const i = rqWaModalItems.indexOf(it); if (i >= 0) await rqWaPasteFichas(i); }
+  { const i3 = rqWaModalItems.indexOf(it); if (i3 >= 0 && it.fichasPasteState === 'failed' && !it.fichasRetried) { it.fichasRetried = true; await new Promise((r) => setTimeout(r, 2500)); await rqWaPasteFichas(i3); } } // the same second try for the specs and photos
 }
 // ON THE PHONE THE GREEN BUTTON SENDS THE PICTURE AND THE TEXT TOGETHER (owner 2026-10-28: "usd peso, con link o sin link, cel o pc, todas iguales"): a phone has no Mac paste, so a wa.me message went out as text only and WhatsApp
 // made the link's own preview card; there the green button does what Share does (picture + text as its caption), like the Mac's paste does on the PC. Where the picture cannot be shared it stays the wa.me message as before.
