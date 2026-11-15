@@ -3682,6 +3682,7 @@ async function rqRequestSend(channel){
 // per brand a USD line (one price for any customer) and one line per marked pesos customer (his own price, his own QT). The plant price IS the button of the QT (it opens it, also after confirming);
 // the sale price appears outside only once confirmed in that QT; Email / WhatsApp turn on with it. Every plant is listed with its one way forward: a new price (its QT), an old price (ask update / send old price), a plant waiting or never asked (remind / ask for price), N/A (ask for a load).
 // What was already sent to the marked customers is not listed (it is in Offers); replies to our asks come back through Live quotes. Every action is an existing function — nothing is sent or written by this view itself.
+let rqFoldOpen = { other: false, sent: false }; // which fold of the list the trader opened: a redraw (a Remind, a send) must not close it
 let rqBrandCur = 'all', rqBrandQ = '', rqBrandQFocus = false; // the list's own filters (view only): All / USD / Pesos and a search by brand or customer
 function rqBrandSetCur(c){ rqBrandCur = c; rqRenderSheet(); }
 function rqBrandSearch(v){ rqBrandQ = v; rqBrandQFocus = true; rqRenderSheet(); }
@@ -3755,7 +3756,7 @@ function rqBrandListHtml(x){
   // OPTION A (owner 2026-11-14, from the mockup: "la A, pero siempre que se mande uno nuevo… actualizar la tabla"): the table holds ONLY what is left to send; what already went out ("Already sent") and the old prices / plants without a price ("Other plants") are folded under it.
   // A send carries every confirmed brand highest → lowest with its fichas (rqBrandSend) and the table is redrawn: what was sent leaves it.
   const mainRows = body.filter(h => !/data-other="1"/.test(h)), other = body.filter(h => /data-other="1"/.test(h));
-  const mkTable = rows => rqTableSection(rows.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace(/<th>/g, '<th style="font-size:12.5px;color:rgba(255,255,255,.88);letter-spacing:.07em;padding:12px 10px 10px;">').replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>');
+  const mkTable = (rows, head = true) => rqTableSection(rows.join(''), ['Brand', 'For', 'Plant price', 'Sale', 'Send']).replace(/<th>/g, '<th style="font-size:12.5px;color:rgba(255,255,255,.88);letter-spacing:.07em;padding:12px 10px 10px;">').replace('<table>', '<table style="table-layout:fixed;min-width:860px;">').replace('<thead>', '<colgroup><col style="width:25%"><col style="width:17%"><col style="width:15%"><col style="width:15%"><col style="width:28%"></colgroup><thead>').replace(/<thead>[\s\S]*?<\/thead>/, m => head ? m : ''); // under the main table the folded one has no second header
   const foldHead = 'cursor:pointer;font:700 12px \'IBM Plex Mono\',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.6);padding:14px 4px;';
   const sentLines = [];
   try { // the fold is a convenience: whatever happens to it, the list above is exactly what it was
@@ -3765,8 +3766,11 @@ function rqBrandListHtml(x){
     });
   } catch (e) { sentLines.length = 0; }
   const sentN = sentLines.reduce((t, l) => t + l.n, 0);
-  const sentFold = sentLines.length ? `<details class="rq-fold-sent" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}">Already sent · ${sentN}</summary><table style="width:100%;border-collapse:collapse;"><tbody>${sentLines.map(l => l.html).join('')}</tbody></table></details>` : '';
-  const otherFold = other.length ? `<details class="rq-fold-other" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}">Other plants · ${other.length}</summary>${mkTable(other)}</details>` : '';
+  const sentFold = sentLines.length ? `<details class="rq-fold-sent"${typeof rqFoldOpen !== 'undefined' && rqFoldOpen.sent ? ' open' : ''} ontoggle="if (typeof rqFoldOpen !== 'undefined') rqFoldOpen.sent = this.open" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}">Already sent · ${sentN}</summary><table style="width:100%;border-collapse:collapse;"><tbody>${sentLines.map(l => l.html).join('')}</tbody></table></details>` : '';
+  // the bulk "Remind N plants" / "Ask N" live ONCE, in the header of the plants they act on (owner 2026-11-14: "botones repetidos arriba abajo de remind"); each plant keeps its own button below. Without that fold (a USD / Pesos filter) they stay in the top bar.
+  const bulkBtns = (remindN > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindN} plants →</button>` : '')
+    + (askIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask every plant on this list that has an old price or was never asked — one message per plant, you see it first" onclick="rqSheetAsk(${JSON.stringify(askIds).replace(/"/g, '&quot;')})">Ask ${askIds.length}</button>` : '');
+  const otherFold = other.length ? `<details class="rq-fold-other"${typeof rqFoldOpen !== 'undefined' && rqFoldOpen.other ? ' open' : ''} ontoggle="if (typeof rqFoldOpen !== 'undefined') rqFoldOpen.other = this.open" style="margin:6px 0 0;border-top:1px solid rgba(255,255,255,.1);"><summary style="${foldHead}display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>Other plants · ${other.length}</span><span class="rq-fold-bulk" style="display:flex;gap:8px;flex-wrap:wrap;text-transform:none;letter-spacing:0;">${bulkBtns}</span></summary>${mkTable(other, !mainRows.length)}</details>` : '';
   const table = mainRows.length ? mkTable(mainRows)
     : ((sentFold || otherFold) ? '<div class="rq-req-empty">Nothing left to send.</div>' : '<div class="rq-req-empty">Nothing waiting here — what was sent is in Offers, and no plant is waiting for a price.</div>');
   return `<div class="rq-req rq-glass">
@@ -3776,8 +3780,7 @@ function rqBrandListHtml(x){
       <input id="rq_brand_q" type="text" placeholder="Search" value="${escapeHtml(rqBrandQ)}" oninput="rqBrandSearch(this.value)" onblur="rqBrandQFocus = false" style="max-width:240px;padding:8px 14px;border-radius:12px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:#fff;font-size:13px;">
       <div style="display:flex;gap:6px;">${[['all', 'All'], ['usd', 'USD'], ['pesos', 'Pesos']].map(([k, l]) => `<button type="button" class="chip${rqBrandCur === k ? ' on' : ''}" onclick="rqBrandSetCur('${k}')">${l}</button>`).join('')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-left:auto;">
-      ${remindN > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" onclick="rqSheetAsk(${JSON.stringify(x.remindIds).replace(/"/g, '&quot;')}, true)">Remind ${remindN} plants →</button>` : ''}
-      ${askIds.length > 1 ? `<button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Ask every plant on this list that has an old price or was never asked — one message per plant, you see it first" onclick="rqSheetAsk(${JSON.stringify(askIds).replace(/"/g, '&quot;')})">Ask ${askIds.length}</button>` : ''}
+      ${otherFold ? '' : bulkBtns}
       <span class="muted" style="font-size:12.5px;">${readyLines} ready</span>
       <div class="rq-req2-btns" style="margin:0;"><button type="button" class="rq-customer-bulk-btn whatsapp" ${canSend && (emailOk || waOk) ? '' : 'disabled'} title="Send every ready customer — WhatsApp, email or both in one window; you see each message first" onclick="rqRequestSend('both')">${waIco}${mailIco} All</button></div>
     </div></div>
@@ -4388,7 +4391,10 @@ function rqSendWhyNot(row, owners, sent){
   if (!owners.length) return 'No customer buys this product yet.';
   return sent ? 'Everyone who buys it already has this brand. To send it again, use the customer\'s own line.' : 'Only pesos customers buy it: send from each customer\'s own pesos line.';
 }
+// A row's own button sends THIS brand alone; the top "All" (rqRequestSend) sends every confirmed brand together, highest → lowest with fichas (owner 2026-11-14: "poder mandar un precio individualmente o mandarlo a todos… el botón de individual solo deja mandar con otro precio")
+const RQ_BRAND_SEND_ALONE = true;
 async function rqBrandSend(channel, key, customerId){
+  const alone = typeof RQ_BRAND_SEND_ALONE !== 'undefined' && RQ_BRAND_SEND_ALONE;
   const pids = rqActiveProductFilterIds.slice();
   let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
   const one = rows.find(r => r.key === key);
@@ -4409,10 +4415,11 @@ async function rqBrandSend(channel, key, customerId){
   }
   if (!customers.length) { rqShowNotice(customerId ? (requestedCurrencyOk ? 'Confirm this pesos price in the customer\'s own QT first.' : 'This line is for MXN customers only. Choose the MXN customer line.') : rqSendWhyNot(one, owners, owners.some(c => !rqIsPesosCustomer(c)))); return; }
   const others = rows.filter(r => r.key !== key && r.pid === one.pid && customers.some(c => !r.sentTo.some(x => x.id === c.id) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))));
-  const wantsAll = others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
+  const wantsAll = !alone && others.length && await rqConfirm(`${others.map(r => r.plant.name.trim()).join(', ')} ${others.length > 1 ? 'are' : 'is'} also confirmed. Send them together in one list?`);
   rows = wantsAll ? [one, ...others] : [one];
   // the brands every customer already has still go in the message so he can compare, highest → lowest (owner 2026-11-05: "el cliente tiene que poder comparar"); they are never recorded as sent again — unless the trader said no to a list
   if (wantsAll || !others.length) rows = rows.concat(rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && !r.stale && r.pid === one.pid && !rows.some(x => x.key === r.key)));
+  if (alone) rows = [one]; // this brand only: the other confirmed brands go with the top "All"
   await rqSendReadyRows(channel, rows, customers, rqSheetState.linksByCustomer, pids);
 }
 
