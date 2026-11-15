@@ -7447,8 +7447,8 @@ async function rqBuildFichaDocs(f){
   }
   // THE PLANT'S CARD ALWAYS GOES (owner 2026-11-15: "eso no tiene logo… de la planta"): a ficha that cannot be merged (a Word spec, a photo that is not PNG / JPG) goes as it is BESIDE the card — before, a Word spec with no photo (Gold Creek) went alone, without the logo card.
   const raw = [];
-  if (specB && !isPdf(specB)) raw.push({ bytes: specB, filename: base + '.' + extOf(f.spec_url), type: mimeOf(f.spec_url) }); // Word and the like: as it is
-  if (photoB && !(isPng(photoB) || isJpg(photoB))) raw.push({ bytes: photoB, filename: base + '_foto.' + extOf(f.photo_url), type: mimeOf(f.photo_url) });
+  if (specB && !isPdf(specB)) raw.push({ bytes: new Uint8Array(specB), filename: base + '.' + extOf(f.spec_url), type: mimeOf(f.spec_url) }); // Word and the like: as it is
+  if (photoB && !(isPng(photoB) || isJpg(photoB))) raw.push({ bytes: new Uint8Array(photoB), filename: base + '_foto.' + extOf(f.photo_url), type: mimeOf(f.photo_url) });
   if (pages || raw.length) docs.push({ bytes: await out.save(), filename: base + '.pdf', type: 'application/pdf' });
   docs.push(...raw);
   return docs;
@@ -7631,8 +7631,11 @@ async function rqBuildCombinedPdf(plant, calc){
 }
 
 function rqBytesToBase64(bytes){
+  // A Word spec / photo comes from fetch().arrayBuffer(): an ArrayBuffer has NO .length, so the loop below read ZERO bytes and the file went to WhatsApp EMPTY (found on a real send 2026-11-15: "Gold Creek Foods.docx", 0 bytes,
+  // pasted beside the card; WhatsApp dropped the banner). Always read it as bytes.
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || 0);
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  for (let i = 0; i < u8.length; i++) binary += String.fromCharCode(u8[i]);
   return btoa(binary);
 }
 
@@ -8681,6 +8684,8 @@ async function rqWaPasteFichas(i){
   it.fichasPasteState = 'working'; it.fichasPasteError = ''; rqRenderWaModal();
   try {
     const files = docs.map((f) => ({ name: f.filename, b64: rqBytesToBase64(f.bytes) }));
+    const empty = files.find((x) => !x.b64); // never paste an EMPTY file: WhatsApp drops the whole attachment list (the banner included) — said out loud instead
+    if (empty) { it.fichasPasteState = 'failed'; it.fichasPasteError = 'the file ' + empty.name + ' came out empty: not pasted'; rqRenderWaModal(); return; }
     const r = await fetch('/__local/wa-paste-files', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) });
     const j = await r.json();
     it.fichasPasteState = j && j.ok ? 'pasted' : 'failed'; it.fichasPasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : '';
