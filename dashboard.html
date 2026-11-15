@@ -183,7 +183,9 @@
     .tdr-t td{padding:9px 4px;}
     .tdr[data-u="pending"] .tdr-urgent tr:not([data-kind="pending"]),.tdr[data-u="answer"] .tdr-urgent tr:not([data-kind="answer"]),.tdr[data-u="best"] .tdr-urgent tr:not([data-kind="best"]){display:none;}
   }
-  .tdr-go{text-decoration:none !important;} .tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
+  .tdc{display:block !important;height:auto !important;} .tdc .tdr-urgent{grid-column:1/-1;order:0;display:flex;flex-direction:column;} .tdc .tdr-scroll{max-height:none;overflow:visible;} .tdc .tdr-urgent{overflow:visible !important;height:auto !important;} /* the list is as tall as its content: the page scrolls, never a small box inside it (owner 2026-11-14: "por qué esta tabla tan chiquita, alárgala para abajo para no tener que scrollear") */ .tdc-ask{color:#FFC876 !important;} .tdc-px{text-align:right !important;white-space:nowrap;} .tdc-px b{font:700 15px 'IBM Plex Mono',monospace;display:block;}
+  .tdo-p{padding:12px 0 6px;border-top:1px solid rgba(255,255,255,.1);} .tdo-p:first-child{border-top:none;} .tdo-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline;} .tdo-h .name-link{font-size:15.5px;font-weight:700;} .tdo-n{font:600 11px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);white-space:nowrap;} .tdo-pl{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;} .tdo-chip{font:600 12px 'IBM Plex Mono',monospace;border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:2px 10px;color:rgba(255,255,255,.85);} .tdo-chip b{color:#fff;} .tdo-r{color:rgba(255,255,255,.7);} .tdo-r.g{color:#3FCB7E;} .tdo-r.a{color:#FFC876;} .tdo-r.n{color:#8EC5FF;} .tdo-chip.old{opacity:.6;border-style:dashed;} .tdo-age{font-style:normal;font-weight:500;color:rgba(255,255,255,.55);} .tdo-dim{opacity:.55;} .tdo-cs{display:flex;flex-wrap:wrap;gap:6px 14px;padding:8px 0 4px;} .tdo-c{font-size:13.5px;font-weight:600;color:var(--blue);text-decoration:none;} .tdo-c:hover{text-decoration:underline;} .tdo-c.tdo-dim{opacity:.5;} .tdo-new{font:700 9.5px 'IBM Plex Mono',monospace;font-style:normal;letter-spacing:.06em;color:#8EC5FF;border:1px solid rgba(142,197,255,.6);border-radius:20px;padding:0 6px;margin-left:4px;}
+  .tdr-go{text-decoration:none !important;}.tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
   .tdg{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035);overflow:hidden;}
   .tdg.tdg-new{border-color:rgba(63,203,126,.5);box-shadow:inset 3px 0 0 #3FCB7E;}
@@ -512,6 +514,12 @@ const todayKey = i => i.group + '|' + i.title;
 // no customer yet), OPTIONAL on the left (new prices and prices up to date that have not been sent). Under it only money and bids that need an action (collect, pay, credit, bid) stay, folded ("Money and bids").
 // TODAY_LIST = false brings the old board back as it was.
 const TODAY_LIST = true;
+// TODAY_CLEAN (owner 2026-11-14: "tiene que ser un dashboard limpio que me diga: ofrécele a tal cliente tal producto, que está más bajo que su último precio… llegó un precio de un producto que este cliente pidió… hace rato que no le ofreces"; "quita eso viejo, no sirve"):
+// Today is ONE clean list, a line per customer × product, each with the ONE reason the engine found. The old two-column guide (Urgent, Best prices, Optional, Ask the plants, Pending) is off the screen and stays in the code behind this switch — TODAY_CLEAN = false brings it back as it was.
+const TODAY_CLEAN = !/[?&]today=old(&|$)/.test(location.search); // ?today=old shows the old guide: the real-click check keeps proving it (scripts/flows-check.js)
+// TODAY_OFFERS (owner 2026-11-14: "tienes una lista de productos que los clientes compran y la lista de pricing que llega de las plantas: cruza esa información y en Today ponme lo que debo ofrecer… dame combinaciones para Quotes"; "quita lo que hay"):
+// Today shows what the plants priced, crossed with who buys each product — the product, every brand with its price and city, and each customer to offer it to with what the system knows of him and that product. TODAY_OFFERS = false: the clean list of TODAY_CLEAN.
+const TODAY_OFFERS = !/[?&]today=old(&|$)/.test(location.search);
 // OFF by the owner's word (2026-10-27): Urgent is exactly what he defined (a customer asked / a plant we asked answered with a price). The answers are kept; Today does not read them, and does not wait for them.
 const TODAY_ANSWERS = false;
 let dashLive = [], dashUnplaced = [], dashPending = [], dashPendingRows = [], todayOtherOpen = false; // dashPendingRows: every open Pending line (the strip counts the plants waiting; Urgent only lists the ones that answer what we asked)
@@ -542,6 +550,58 @@ async function loadTodayLive(){
   try { dashLive = ((await callApi('sent-offers-search', { offer_sheet: { action: 'list' } })).sheets || []).filter(s => !s.auto); } catch (e) { /* without it the urgent card just stays empty */ } finally { liveReady(); }
   if (TODAY_ANSWERS){ try { dashUnplaced = (await callApi('sent-offers-search', { offer_sheet: { action: 'answers' } })).unplaced || []; } catch (e) { dashUnplaced = []; } }
   await pendingP; }
+// THE OFFER-TODAY LIST, CLEAN (owner 2026-11-14: "por qué lo llenaste de texto que no te he pedido, hazlo limpio"): a block per product that has a plant price on file — its name and every brand with its price and pickup city (an older price dimmed) — and under it,
+// in a dropdown to look at, the names of the customers who buy it (the ones who already have the price dimmed). Nothing else: the reasons and the personal message of each customer are written in the send window, where the numbers are put in the QT.
+// Every name opens Quotes on that product (with that customer); the price is set in the QT, never here. In order of importance: the most demanded first. Pure: the list in, HTML out.
+function todayOfferHtml(offer, all){
+  const esc = escapeHtml, money = n => '$' + Number(n).toFixed(2);
+  const chip = x => `<span class="tdo-chip${x.old ? ' old' : ''}"><b>${money(x.price)}</b> ${esc(x.plant)}${x.city ? ' · ' + esc(x.city) : ''}</span>`;
+  const block = p => `<div class="tdo-p"><div class="tdo-h"><a class="name-link" href="quotes.html?products=${esc(p.product_id)}">${esc(p.product)}</a></div>`
+    + `<div class="tdo-pl">${p.plants.map(chip).join('')}</div>`
+    + `<details class="tdr-who"><summary>${p.to_offer || p.customers.length} customer${(p.to_offer || p.customers.length) === 1 ? '' : 's'}</summary><div class="tdo-cs">${p.customers.map(c => `<a class="tdo-c${c.to_offer ? '' : ' tdo-dim'}" href="quotes.html?products=${esc(p.product_id)}&amp;customer=${esc(c.customer_id)}">${esc(c.name)}</a>`).join('')}</div></details></div>`;
+  // IN ORDER OF IMPORTANCE (owner 2026-11-14: "pon los más demandados arriba, en orden de importancia"): the products with customers still to offer first, and among them the MOST DEMANDED first — the most customers to offer, then the most who buy it —
+  // then the products whose buyers already have the price, then the ones with only older prices; the newest arrival and the name only break ties.
+  const rank = p => (p.to_offer || 0) > 0 ? 0 : (p.plants || []).some(x => !x.old) ? 1 : 2;
+  const ordered = (offer || []).slice().sort((a, b) => rank(a) - rank(b) || (b.to_offer || 0) - (a.to_offer || 0) || b.customers.length - a.customers.length || String(b.arrived_at).localeCompare(String(a.arrived_at)) || String(a.product).localeCompare(String(b.product)));
+  // Include every no-fresh-price product already returned by Today, including the API's held remainder.
+  // Recently requested products stay visible as waiting and are never presented as a repeat request.
+  const askByProduct = new Map();
+  const addAsk = (x, waiting = false) => {
+    if (!x || !x.product) return;
+    const key = String(x.product_id || x.product), existing = askByProduct.get(key), row = existing || { product: x.product, href: x.href || 'quotes.html', customers: new Set(), waiting };
+    row.waiting = existing ? row.waiting && waiting : waiting;
+    (Array.isArray(x.reasons) ? x.reasons : []).forEach(n => { if (n) row.customers.add(String(n)); });
+    if (x.customer) row.customers.add(String(x.customer));
+    askByProduct.set(key, row);
+  };
+  (all || []).forEach(i => {
+    if (i.group === 'ask' && !(i.options || []).length) addAsk({ product: i.product, href: i.href, customer: i.lead && i.lead.name });
+    if (i.group === 'gap') {
+      if (i.product) addAsk({ product: i.product, href: i.href, customer: i.lead && i.lead.name });
+      (i.held || []).forEach(x => addAsk(x, /already asked|asked in the last|waiting for the answer/i.test(String(x.why || ''))));
+    }
+  });
+  const asks = [...askByProduct.values()].sort((a,b) => Number(a.waiting)-Number(b.waiting) || b.customers.size-a.customers.size || a.product.localeCompare(b.product));
+  const askHtml = asks.length ? `<div class="tdr-card tdr-askcard"><h3 class="tdr-h">Ask the plants · ${asks.length} products</h3><div class="tdr-hint">Products customers buy without a fresh plant price</div><div class="tdr-scroll"><table class="tdr-t"><tbody>${asks.map(x => `<tr><td class="tdr-name"><a class="name-link" href="${esc(x.href)}">${esc(x.product)}</a><span class="tdr-sub">${x.waiting ? 'Already requested · waiting for plants' : 'No fresh price · open Quotes to request'}</span>${x.customers.size ? `<span class="tdr-sub">${[...x.customers].map(esc).join(', ')}</span>` : ''}</td></tr>`).join('')}</tbody></table></div></div>` : '';
+  return `<div class="tdr tdc"><div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Offer today</h3>${(offer || []).length ? `<div class="tdr-scroll">${ordered.map(block).join('')}</div>` : '<div class="empty">Nothing to offer right now.</div>'}</div>${askHtml}</div>`;
+}
+// THE CLEAN TODAY: "Offer <product> to <customer>" — one line each, the ONE reason first (what he asked for, then what is cheaper than his last price, then the rest of the engine's strongest reasons), the best price with its plant and city on the right.
+// Only what a trader can send: a customer who asked (with the price here) and every customer × product the engine found with a fresh price. No Pending, no plant lists, no counters. Every line opens Quotes on that product with that customer. Pure: the Today items in, HTML out.
+function todayCleanHtml(all){
+  const esc = escapeHtml, money = n => '$' + Number(n).toFixed(2);
+  const bestOf = (opts) => (opts || []).find(o => o && o.cheapest) || (opts || []).filter(o => o && Number.isFinite(Number(o.price))).sort((a, b) => Number(a.price) - Number(b.price))[0] || null;
+  const pidOf = href => (/products=([0-9a-f-]{36})/.exec(String(href || '')) || [])[1] || '';
+  const cityOf = (pid, plant) => { const b = (typeof dashBest !== 'undefined' && dashBest ? dashBest : []).find(x => x.product_id === pid && String(x.plant || '').trim() === String(plant || '').trim()); return b && b.city ? b.city : ''; };
+  const ORDER = { asked: 0, beats_last: 1, plant_drop: 2, similar: 3, never_offered: 4 };
+  const lines = (all || []).filter(i => (i.group === 'ask' || i.group === 'sell') && i.product && i.lead && i.lead.name && (i.options || []).length).map(i => {
+    const asked = i.group === 'ask', hook = asked ? { key: 'asked', label: 'Asked for it' } : (i.hook || ((i.reasons || []).find(r => r.key !== 'below_avg' && r.key !== 'no_answer') || (i.reasons || [])[0]) || null);
+    const reason = asked ? (i.lead.reason ? 'Asked for it · ' + String(i.lead.reason).replace(/^Asked\s*/i, '') : 'Asked for it') : (hook ? hook.label : String(i.lead.reason || ''));
+    const best = bestOf(i.options), pid = pidOf(i.href);
+    return { asked, customer: i.lead.name, product: i.product, href: i.href, reason, key: hook ? hook.key : 'none', best, city: best ? cityOf(pid, best.plant) : '', pot: Number(i.potential_usd) || 0 };
+  }).sort((a, b) => (ORDER[a.key] ?? 9) - (ORDER[b.key] ?? 9) || b.pot - a.pot || a.customer.localeCompare(b.customer));
+  const row = l => `<tr><td class="tdr-name"><a class="name-link" href="${esc(l.href)}">${esc(l.customer)}</a><span class="tdr-sub">${esc(l.product)}</span><span class="tdr-why${l.asked ? ' tdc-ask' : ''}">${esc(l.reason)}</span></td><td class="tdc-px">${l.best ? `<b>${money(l.best.price)}</b><span class="tdr-sub">${esc(String(l.best.plant || '').trim())}${l.city ? ' · ' + esc(l.city) : ''}</span>` : ''}</td></tr>`;
+  return `<div class="tdr tdc"><div class="tdr-card tdr-urgent"><h3 class="tdr-h u">Offer today</h3>${lines.length ? `<span class="tdr-n">${lines.length}</span>` : ''}<div class="tdr-hint">A customer, a product and why — the ones who asked first</div>${lines.length ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${lines.map(row).join('')}</tbody></table></div>` : '<div class="empty">Nothing to offer right now.</div>'}</div></div>`;
+}
 function todayListHtml(all){
   // URGENT = real work only (owner 2026-10-26: "urgent solo cuando un cliente pidió o una planta que preguntamos respondió"): (1) a plant WE asked for that product answered after we asked and that price has gone to no customer; (2) a customer asked, the price is here and nothing went to him.
   // A routine price list of a product with an open live quote is NOT urgent: it is an ordinary match, listed in Optional.
@@ -653,7 +713,7 @@ function todayListHtml(all){
   const sentN = bestShown.filter(b => Number(b.sent_today) > 0).length, potential = bestShown.reduce((t, b) => t + (Number(b.potential_usd) || 0), 0);
   const pendPlants = new Set((typeof dashPendingRows !== 'undefined' && dashPendingRows ? dashPendingRows : []).filter(r => !r.resolved_at && r.detected_price != null && !['auction', 'declined', 'unread'].includes(r.signal_type)).map(r => r.plant_id)).size;
   const agendaHtml = bestShown.length ? `<div class="tdr-agenda"><span><b>${bestShown.length}</b> to send${potential ? ` · ≈ $${Math.round(potential).toLocaleString('en-US')} per load` : ''}</span><span class="tdr-prog"><i style="width:${Math.round(100 * sentN / bestShown.length)}%"></i></span><span>${sentN} of ${bestShown.length} sent today</span>${pendPlants ? `<span class="tdr-pchip" title="They keep notifying in the bell">${pendPlants} plant${pendPlants === 1 ? '' : 's'} wait${pendPlants === 1 ? 's' : ''} for your match in Pending</span>` : ''}</div><div class="tdr-keys"><kbd>J</kbd><kbd>K</kbd> move · <kbd>Enter</kbd> open in Quotes · <kbd>S</kbd> later</div>` : '';
-  const bprows = bestShown.map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it${b.send_n ? ` · ${b.send_n} with a margin` : ''} · the note</summary>${focusHtml(b)}<ul class="tdr-ul">${todayVerdictRows(b)}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
+  const bprows = bestShown.map(b => `<tr><td class="tdr-name"><a class="name-link" href="${escapeHtml(b.href)}">${escapeHtml(b.product)}</a>${b.new ? ' <b class="tdr-new">New</b>' : ''}<span class="tdr-sub">${escapeHtml(b.plant.trim())}${b.city ? ' · ' + escapeHtml(b.city) : ''} $${Number(b.price).toFixed(2)} · ${escapeHtml(b.reason)}</span><details class="tdr-who"><summary>${b.customer_count} customer${b.customer_count === 1 ? '' : 's'} buy it${b.send_n ? ` · ${b.send_n} with a margin` : ''} · the note</summary>${focusHtml(b)}<ul class="tdr-ul">${todayVerdictRows(b)}</ul><span class="tdr-sub">“${escapeHtml(b.note_es)}”</span></details></td></tr>`).join('');
   const bestCard = `<div class="tdr-card tdr-askcard tdr-best"><h3 class="tdr-h">Best prices today — most relevant first</h3><div class="tdr-hint">The lowest price at the border across all the plants, with the customers who buy it</div>${agendaHtml}${bprows ? `<div class="tdr-scroll"><table class="tdr-t"><tbody>${bprows}</tbody></table></div>` : '<div class="empty">No fresh prices right now.</div>'}</div>`;
   // TWO COLUMNS WITH TABS (owner 2026-11-06, option 3 of the five drawn): LEFT = Urgent, with a tab per kind of line (All · Pending · Answers · Best price); RIGHT = one box at a time (Best prices · Optional · Ask the plants) picked by the tabs with their counts.
   // No buttons: the product (or plant) name is the link. Each column scrolls inside itself so both fit one screen. The chosen tabs live in TDR_UI so a reload of the list keeps them; on a phone every box stays stacked as before.
@@ -676,7 +736,7 @@ async function loadToday(){
   if (!dashToday) wrap.innerHTML = '<div class="empty">Loading today…</div>'; // a refresh keeps the list on screen
   const prev = dashToday ? dashToday.slice() : null;
   let items = [];
-  try { const best = callApi('dashboard-summary', { view: 'best_prices', actor: currentActor() }).then(r => r.best_prices || []).catch(() => []); items = (await Promise.all([callApi('dashboard-summary', { view: 'today', actor: currentActor() }), loadTodayLive()]))[0].today || []; dashBest = await best; }
+  try { const offer = callApi('dashboard-summary', { view: 'offer_today', actor: currentActor() }).then(r => (r && Array.isArray(r.offer_today)) ? r.offer_today : null).catch(() => null); const best = callApi('dashboard-summary', { view: 'best_prices', actor: currentActor() }).then(r => r.best_prices || []).catch(() => []); items = (await Promise.all([callApi('dashboard-summary', { view: 'today', actor: currentActor() }), loadTodayLive()]))[0].today || []; dashBest = await best; dashOffer = await offer; }
   catch (e) { wrap.innerHTML = `<div class="empty">Could not load today: ${escapeHtml(e.message)}</div>`; return; }
   dashToday = items;
   const gone = prev ? prev.filter(p => !items.some(n => todayKey(n) === todayKey(p))) : [];
@@ -777,7 +837,8 @@ function renderToday(gone = []){
     // the products customers buy that no plant has priced are their own block inside "Do today" (they are asks to the plants, not offers to send)
     const blocks = pr === 2 ? [[label, items.filter(i => i.prio === pr && i.group !== 'gap')], ['Needs a price', items.filter(i => i.prio === pr && i.group === 'gap')]] : [[label, items.filter(i => i.prio === pr)]];
     return blocks.map(([lb, part]) => part.length ? secRow(lb, lvl, part.length, part) + sectionBody(part) : '').join(''); }).join('')}</div>`;
-  wrap.innerHTML = TODAY_LIST ? todayListHtml(all) + (items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Money and bids · ${items.length}</summary>${boardHtml}</details>` : '') : boardHtml;
+  const todayMoneyFold = items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Money and bids · ${items.length}</summary>${boardHtml}</details>` : ''; // money to collect / pay stays one fold away
+  wrap.innerHTML = TODAY_OFFERS && Array.isArray(dashOffer) ? todayOfferHtml(dashOffer, all) + todayMoneyFold : TODAY_CLEAN ? todayCleanHtml(all) + todayMoneyFold : TODAY_LIST ? todayListHtml(all) + (items.length ? `<details class="td-other"${todayOtherOpen ? ' open' : ''} ontoggle="todayOtherOpen = this.open"><summary>Money and bids · ${items.length}</summary>${boardHtml}</details>` : '') : boardHtml;
   fitTdr();
 }
 
@@ -791,6 +852,7 @@ function renderToday(gone = []){
 // ---------- CEO / CFO ----------
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const bar = (pct, color) => `<div style="height:8px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:10px;overflow:hidden;"><div style="height:100%;width:${Math.min(100, pct)}%;background:${color};border-radius:99px;"></div></div>`;
+let dashOffer = null; // the plants' fresh prices crossed with who buys each product (dashboard-summary offer_today): what Today shows
 let dashBest = []; // the best price of each product across ALL plants, most relevant first (dashboard-summary best_prices)
 let TDR_UI = { u: 'all', r: 'best' }; // Today's tabs: which kind of Urgent line shows (all · pending · answer · best) and which box shows on the right (best · opt · ask) — kept here so a reload of the list keeps them
 // The two columns fill the rest of the screen (owner 2026-11-06: both columns in the same view, no long page scroll); each one scrolls inside itself. A phone keeps the old stacked boxes.

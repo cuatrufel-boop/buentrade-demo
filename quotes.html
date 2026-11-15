@@ -4473,6 +4473,7 @@ async function rqLoadLiveQuotes(){
 // OFF by the owner's word (2026-10-27: "por qué saca en live una marca sola y lo llenaste de notas"): the answers are STILL kept (plant_answers) but Live quotes shows none of this until he decides how he wants to see them.
 // Live shows the plants' PRICE answers (price, N/A) — never a pill about an answer that is not a price (counter-offer, reply to a bid, "not read", free text): owner 2026-11-04 "no quiero ese texto en Live". Their words stay kept (plant_answers) and open from the email.
 const RQ_LIVE_NONPRICE_ANSWERS = false;
+const RQ_LIVE_SHOW_WAITING = false; // Live holds only what is left to SEND (a price arrived); the rows "Waiting for price" are off (owner 2026-11-14)
 let RQ_LIVE_ANSWERS = true; // every plant's answer shows under its Live quote (owner 2026-11-02: "debe mostrar todas las respuestas en Live")
 let rqLiveUnplaced = [];
 function rqLiveUnplacedToRead(){ if (!RQ_LIVE_ANSWERS || !RQ_LIVE_NONPRICE_ANSWERS) return []; return rqLiveUnplaced.filter(a => ['no_price', 'counter', 'bid_reply', 'unread'].includes(a.kind) && Date.now() - new Date(a.at).getTime() < 2 * 86400000); }
@@ -4637,13 +4638,18 @@ function rqLivePackages(entries){
       if (rqArrivalLive(a, link) && !(byPlant.get(a.plant_id) || {}).link) byPlant.set(a.plant_id, { x: { plant_id: a.plant_id }, plant_id: a.plant_id, state: 'priced', link });
     });
     const plants = [...byPlant.values()];
-    const toSend = g.list.filter(e => e.fresh.length), asked = g.list.filter(e => e.asked);
+    const toSendAll = g.list.filter(e => e.fresh.length), asked = g.list.filter(e => e.asked);
+    // WHAT STAYS IN LIVE (owner 2026-11-14: "en live solo los que esperan respuesta y salen cuando se vuelven offer únicamente"; "lo que se manda a cliente pasa de ser quote a ser offer"): a new price stays to send ONLY while it answers something asked —
+    // a customer who asked still lacks it, or it is the answer of a plant we asked that nobody has got. A routine price nobody asked for (it belongs to Today), or one whose asking customer already has it (it is an Offer now), is not "to send" here.
+    const answersAsk = toSendAll.some(e => e.fresh.some(f => !(f.a.sent_customer_ids || []).length && (g.s.plants || []).some(x => x.plant_id === f.a.plant_id && x.asked_at && new Date(f.a.arrived_at) >= new Date(x.asked_at))));
+    const toSend = (toSendAll.some(e => e.asked) || answersAsk) ? toSendAll : [];
     const newest = toSend.flatMap(e => e.fresh.map(f => String(f.a.arrived_at))).sort().pop() || '';
     const askedAt = asked.map(e => e.askedAt).filter(Boolean).sort()[0] || ''; // the oldest ask: the longest a customer has waited
     const sentTo = new Set(g.list.filter(e => e.has.length).map(e => e.cid));
     // Live quotes holds ONLY what waits for a price (user 2026-10-14: "en live quotes solo deben quedar productos en espera de precio… lo que se manda va a offers"): a plant asked that has not answered,
     // or a customer who asked and no plant has priced it yet. A package with neither (it was only opened by a send) is an Offer already and does not appear here.
-    const stage = toSend.length ? 'send' : (plants.some(x => x.state === 'waiting') || (asked.length && !plants.length)) ? 'wait' : sentTo.size ? 'out' : 'idle';
+    // LIVE = WHAT IS LEFT TO SEND (owner 2026-11-14: "no me hace sentido Live… en la mente del trader Live es lo que le falta por mandar"): a product still waiting for a plant's price has nothing to send, so it is not a Live row (RQ_LIVE_SHOW_WAITING = false; true brings the waiting rows back as they were).
+    const stage = toSend.length ? 'send' : ((typeof RQ_LIVE_SHOW_WAITING === 'undefined' || RQ_LIVE_SHOW_WAITING) && (plants.some(x => x.state === 'waiting') || (asked.length && !plants.length))) ? 'wait' : sentTo.size ? 'out' : 'idle';
     return { s: g.s, list: g.list, plants, answered: plants.filter(x => x.state !== 'waiting').length, priced: plants.filter(x => x.state === 'priced').length, toSend, asked, newest, askedAt, sentTo, stage };
   }).sort((a, b) => rank[a.stage] - rank[b.stage] // ORDER OF ARRIVAL (owner 2026-10-28: "en live deben salir en orden de llegada"): what has a new price first, the newest arrival on top — whether or not a customer asked (a new price that arrived 10 h ago was under the waiting ones)
     || (a.stage === 'send' ? (b.toSend.some(e => e.asked) - a.toSend.some(e => e.asked)) : 0) // a customer ASKED for it and a plant answered: that is the first thing to work (owner 2026-11-03: "si un cliente me pidió un producto y tengo una respuesta esa es mi prioridad"); then the order of arrival
@@ -4692,12 +4698,16 @@ function rqLiveAnswersHtml(p){
   const pill = (cls, text, title) => `<span class="rq-sheet-pill ${cls}" style="margin:0 4px 3px 0;white-space:normal;text-align:left;"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(text)}</span>`;
   const nm = id => { const pl = (typeof rqAllPlants !== 'undefined' ? rqAllPlants : []).find(x => x.id === id); return pl ? String(pl.name).trim() : ''; };
   const out = [], shown = new Set();
+  // LIVE = WHAT IS LEFT TO SEND (owner 2026-11-14: "esto es una mezcla de todo, ahí no está lo que falta… ahí solo debe estar lo que le falta al trader por mandar"): with the switch off the row shows ONLY the brands with a price to send — no N/A, no "does not make it", no "no answer yet", no answers without a price.
+  const onlyToSend = typeof RQ_LIVE_SHOW_WAITING !== 'undefined' && !RQ_LIVE_SHOW_WAITING;
   (p.plants || []).forEach(x => {
     const n = nm(x.plant_id) || ((p.s.answers || []).find(a => a.plant_id === x.plant_id) || {}).plant_name || 'A plant';
     if (x.state === 'priced' && x.link && x.link.current_price != null) { out.push(pill('ok', `${n} $${Number(x.link.current_price).toFixed(2)}`)); shown.add(x.plant_id); }
+    else if (onlyToSend) return;
     else if (x.state === 'na') { out.push(pill('off', `${n}: N/A`)); shown.add(x.plant_id); }
     else if (x.state === 'offspec') { out.push(pill('off', `${n}: does not make it`)); shown.add(x.plant_id); }
   });
+  if (onlyToSend) return out.length ? `<span style="display:block;margin-top:3px;line-height:1.55;">${out.join('')}</span>` : '';
   const answeredBy = {}; // up to THREE answers per plant (a negotiation is several emails: "1.34", "1.34 firm price", the order), newest first
   (p.s.answers || []).filter(a => !shown.has(a.plant_id) && a.kind !== 'price' && a.kind !== 'na').filter(a => (answeredBy[a.plant_id] = (answeredBy[a.plant_id] || 0) + 1) <= 3).forEach(a => {
     const w = rqAnswerWords(a.excerpt), short = w.length > 90 ? w.slice(0, 89) + '…' : w;
@@ -4738,7 +4748,8 @@ function rqLiveSentLine(p, all){
 function rqLiveRowHtml(p){
   const pid = p.s.product_id, nm = e => escapeHtml(rqLiveCustomerName(e.cid) || '…');
   const sending = p.stage === 'send';
-  const group = sending ? p.toSend : p.asked;
+  const askersToSend = p.toSend.filter(e => e.asked); // the row is for the customers who ASKED (owner 2026-11-14), not for every buyer who lacks the price
+  const group = sending ? (askersToSend.length ? askersToSend : p.toSend) : p.asked;
   const lead = group.filter(e => e.asked)[0] || group[0] || p.asked[0] || null;
   const others = group.filter(e => e !== lead);
   const custCell = lead
@@ -7158,7 +7169,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
-    return [{ extras, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || null })), // pairKey: the customer × product row of the one offer window
+    return [{ extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
       bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
@@ -7196,40 +7207,38 @@ const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same p
 const rqFichaCache = new Map();
 function rqWaFichaDocs(f){
   const key = [f.brand, f.spec_url, f.photo_url, f.logo_url].join('|');
-  if (!rqFichaCache.has(key)) rqFichaCache.set(key, rqBuildFichaDocs(f).catch(() => []));
+  if (!rqFichaCache.has(key)) { const request = rqBuildFichaDocs(f).catch(() => []); rqFichaCache.set(key, request); request.then(list => { if (!list.length && rqFichaCache.get(key) === request) rqFichaCache.delete(key); }); } // a failed ficha is never remembered: the next try asks again
   return rqFichaCache.get(key);
 }
 async function rqBuildFichaDocs(f){
   const { PDFDocument, rgb, StandardFonts } = PDFLib;
-  const get = async (u) => { if (!u) return null; try { const r = await fetch(u); return r.ok ? await r.arrayBuffer() : null; } catch (e) { return null; } };
+  // A file that exists but does not answer is asked again (3 tries); a spec or a photo that still does not come makes the WHOLE ficha fail — never a ficha quietly built without its spec (owner 2026-11-13: "si el producto tiene spec grabada o foto debe siempre compartirla"). The logo is only decoration: it may stay out.
+  const get = async (u) => { if (!u) return null; for (let k = 0; k < 3; k++) { try { const r = await fetch(u); if (r.ok) return await r.arrayBuffer(); } catch (e) { /* ask again */ } if (k < 2) await new Promise((x) => setTimeout(x, 400)); } return null; };
   const [specB, photoB, logoB] = await Promise.all([get(f.spec_url), get(f.photo_url), get(f.logo_url)]);
+  if ((f.spec_url && !specB) || (f.photo_url && !photoB)) throw new Error('the spec or the photo of ' + f.brand + ' did not download');
   const magic = (b) => b ? Array.from(new Uint8Array(b.slice(0, 4))) : [];
   const isPdf = (b) => magic(b).join() === '37,80,68,70', isPng = (b) => magic(b).join() === '137,80,78,71', isJpg = (b) => magic(b)[0] === 255 && magic(b)[1] === 216;
   const base = String(f.brand).replace(/[^\w .-]+/g, '').trim(), docs = []; // the file is named just like the brand ("Tyson Foods.pdf"): the shortest text WhatsApp can show under a document
   const mimeOf = (u) => ({ pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase()] || 'application/octet-stream');
   const extOf = (u) => ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase();
   const out = await PDFDocument.create(), bold = await out.embedFont(StandardFonts.HelveticaBold), reg = await out.embedFont(StandardFonts.Helvetica);
-  // THE CARD, SIZED FOR THE PHONE (owner 2026-11-10 "aprobamos esto" — a thin row; owner 2026-11-11, with the new picture: "las fichas deben adaptarse a este nuevo tamaño"): WhatsApp shows the document's first page at the bubble's width, so a 612 × 76 row
-  // came out with 13-21 px letters. The same card, now 612 × 188: the plant's logo on a rounded white patch and, at the right, the doc mark + "Ficha técnica" at 28 pt on the first row; the brand's name under them at 40 pt (never under 30; a longer name is
-  // shortened with "…") — the same navy, the same rounded corners, the same words, and letters the size of the picture's. The photo and the ficha's pages after it are exactly what they were.
-  const W = 612, H = 188, M = 32, cover = out.addPage([W, H]);
+  // THE APPROVED CARD (owner 2026-11-10: "aprobamos esto"): ONE thin row — the plant's logo on a rounded white patch, the brand, the doc mark and "Ficha técnica" — full navy, no "BuenTrade" line, no margin. WhatsApp rounds the preview itself.
+  const W = 612, H = 76, cover = out.addPage([W, H]);
   cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(217 / 255, 253 / 255, 211 / 255) }); // the page itself is the colour of WhatsApp's own bubble, so the card's ROUNDED corners show no white margin (a PDF page is always square)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
-  rr(0, H, W, H, 26, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
-  const rowMid = H - 24 - 34; // the middle of the first row (the logo patch is 68 high, 24 under the top)
+  rr(0, H, W, H, 18, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
+  let lx = 26;
   const logoImg = logoB && (isPng(logoB) ? await out.embedPng(logoB).catch(() => null) : isJpg(logoB) ? await out.embedJpg(logoB).catch(() => null) : null);
   if (logoImg) {
-    const bw = 132, bh = 68, sc = Math.min((bw - 16) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(M, H - 24, bw, bh, 12, rgb(1, 1, 1)); // the white patch behind the logo, rounded
-    cover.drawImage(logoImg, { x: M + (bw - w) / 2, y: H - 24 - bh + (bh - h) / 2, width: w, height: h });
+    const bw = 104, bh = 48, sc = Math.min((bw - 12) / logoImg.width, (bh - 10) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(18, H - 14, bw, bh, 9, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    cover.drawImage(logoImg, { x: 18 + (bw - w) / 2, y: 14 + (bh - h) / 2, width: w, height: h });
+    lx = 18 + bw + 18;
   }
-  let brand = String(f.brand), bsz = 40;
-  while (bsz > 30 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) bsz -= 1;
-  while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) brand = brand.slice(0, -2).trim() + '…';
-  cover.drawText(brand, { x: M, y: 38, size: bsz, font: bold, color: rgb(1, 1, 1) });
-  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 28), lblX = logoImg ? W - M - lw : M + 46;
-  cover.drawText(label, { x: lblX, y: rowMid - 10, size: 28, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
-  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: lblX - 42, y: rowMid + 20, scale: 1.6, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 2.2 }); // the doc mark
+  cover.drawText(String(f.brand), { x: lx, y: H / 2 - 8, size: String(f.brand).length > 20 ? 19 : 24, font: bold, color: rgb(1, 1, 1) });
+  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 15);
+  cover.drawText(label, { x: W - 20 - lw, y: H / 2 - 5, size: 15, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: W - 20 - lw - 34, y: H / 2 + 16, scale: 1.2, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 1.7 }); // the doc mark
   let pages = 0;
   if (photoB && (isPng(photoB) || isJpg(photoB))) {
     try {
@@ -7259,6 +7268,8 @@ function rqWaAttachThinImages(items){
         const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
         if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
       }).catch(() => { it.fichasState = 'failed'; it.fichasMissing = it.fichas.length; });
+      // never waits forever (owner 2026-11-13: "no está mandando nada"): a file that does not answer in 30 s is a missing ficha, said out loud with its way out
+      setTimeout(() => { if (it.fichasState === 'pending') { it.fichasState = 'incomplete'; it.fichasMissing = it.fichas.length; if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); } }, 30000);
     }
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
     const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
@@ -8404,6 +8415,7 @@ function rqRenderWaModal(){
         ${rqWaModalIsOffer && rqWaCanShare(it) ? `<button type="button" class="btn rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}
       </div>
       ${it.fichasState === 'pending' ? '<div class="loc-hint" style="margin-top:6px;">Preparing specs and photos. WhatsApp will open when they are ready.</div>' : ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : ''}
+      ${typeof rqWaFichasButton === 'function' ? rqWaFichasButton(it, i) : ''}
       ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:6px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is also copied when you open WhatsApp: press Cmd+V in the chat (or drag the file)'}${it.downloadFiles.length > 1 ? '<br><b>Specs/photos download separately; attach these documents in WhatsApp so the customer can open them.</b>' : ''}${rqWaModalIsOffer && rqWaCanShare(it) ? ' — or tap Share to send the picture and the text together' : ''}</div>` : ''}
     </div>`; }).join('');
   list.querySelectorAll('textarea').forEach(rqWaFit);
@@ -8454,9 +8466,37 @@ function rqWaCopyBanner(it){
   try { return navigator.clipboard.write([new ClipboardItem({ [f && f.type || 'image/png']: blob })]).then(() => true, () => false); } catch (e) { return Promise.resolve(false); /* the download is still there */ }
 }
 // On the trader's own Mac (the local server) the banner is pasted into the WhatsApp chat for him — Cmd+V only, never Enter. Anywhere else (the published site) there is no such address: it answers "manual" and the card says to paste.
+// THE SPECS AND PHOTOS INTO THE CHAT (owner 2026-11-13: "no están saliendo… ¿dónde la están compartiendo? en ningún lado"): the picture is pasted for him, but the brand's ficha (a PDF: card, photo, spec) only downloaded. This button puts the ficha files
+// on the clipboard AS FILES and the local server pastes them into WhatsApp (Cmd+V, never Enter) right under the picture: the customer finds what "Toca para ver las fichas" promises. Only on this Mac (the local server); elsewhere it says to drag the files.
+async function rqWaPasteFichas(i){
+  const it = rqWaModalItems[i];
+  const docs = it && it.downloadFiles ? it.downloadFiles.slice(1) : [];
+  if (!it || !docs.length) return;
+  it.fichasPasteState = 'working'; it.fichasPasteError = ''; rqRenderWaModal();
+  try {
+    const files = docs.map((f) => ({ name: f.filename, b64: rqBytesToBase64(f.bytes) }));
+    const r = await fetch('/__local/wa-paste-files', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) });
+    const j = await r.json();
+    it.fichasPasteState = j && j.ok ? 'pasted' : 'failed'; it.fichasPasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : '';
+  } catch (e) { it.fichasPasteState = 'failed'; it.fichasPasteError = 'this address cannot paste: drag the downloaded files into the chat'; }
+  rqRenderWaModal();
+}
+function rqWaFichasProblem(it, i){ // the same amber warning and the same way out the review window shows, for the composer's card
+  if (!it) return '';
+  if (it.fichasState === 'pending') return '<div class="loc-hint" style="margin-top:6px;">Preparing specs and photos. WhatsApp will open when they are ready.</div>';
+  return ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : '';
+}
+function rqWaFichasButton(it, i){
+  if (!it || !it.downloadFiles || it.downloadFiles.length < 2) return '';
+  const n = it.downloadFiles.length - 1, st = it.fichasPasteState;
+  return `<div class="loc-hint" style="margin-top:6px;"><button type="button" class="chip" ${st === 'working' ? 'disabled' : ''} onclick="rqWaPasteFichas(${i})">${st === 'working' ? 'Pasting…' : 'Paste specs and photos (' + n + ')'}</button> ${st === 'pasted' ? '<b>pasted in the chat: check it and press Enter</b>' : st === 'failed' ? '<b>not pasted: ' + escapeHtml(it.fichasPasteError || '') + '</b>' : 'send the picture first, then paste these'}</div>`;
+}
 async function rqWaAutoPaste(it){
   try { const r = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j = await r.json(); it.pasteState = j && j.ok ? 'pasted' : 'manual'; it.pasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : ''; } catch (e) { it.pasteState = 'manual'; it.pasteError = String(e.message || e); } // the error is shown on the card, not hidden
   rqRenderWaModal();
+  // THE SPECS AND PHOTOS GO WITH THE PICTURE BY THEMSELVES (owner 2026-11-13: "el sistema debe mandar siempre que encuentre spec y foto"): once the picture is pasted, the brands' ficha files are pasted right after it — no second button to remember.
+  // Never Enter; a failure shows on the card (and the button stays to try again).
+  if (it.pasteState === 'pasted' && it.downloadFiles && it.downloadFiles.length > 1 && !it.fichasPasteState) { await new Promise((r) => setTimeout(r, 1500)); const i = rqWaModalItems.indexOf(it); if (i >= 0) await rqWaPasteFichas(i); }
 }
 // ON THE PHONE THE GREEN BUTTON SENDS THE PICTURE AND THE TEXT TOGETHER (owner 2026-10-28: "usd peso, con link o sin link, cel o pc, todas iguales"): a phone has no Mac paste, so a wa.me message went out as text only and WhatsApp
 // made the link's own preview card; there the green button does what Share does (picture + text as its caption), like the Mac's paste does on the PC. Where the picture cannot be shared it stays the wa.me message as before.
@@ -8464,8 +8504,9 @@ const rqWaIsPhone = () => /iPhone|iPad|Android|Mobile/i.test((typeof navigator !
 function rqWaModalOpenOne(i, allowMissingFichas){
   const it = rqWaModalItems[i];
   if (!it) return;
-  if (it.fichasState === 'pending') return;
-  if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) return;
+  if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice('Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
+  if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) { if (typeof rqShowNotice === 'function') rqShowNotice(`${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Press "Open anyway without all fichas" to send the picture without them, or close and open the offer again.`);
+    if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
   if (rqWaModalIsOffer && rqWaIsPhone() && rqWaCanShare(it)) { rqWaModalShareOne(i); return; }
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const firstTime = !it.opened;
@@ -8582,11 +8623,46 @@ function rqComposerWaHtml(it, i){
     <div class="rq-cmp-act">
       <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
       ${status ? `<div class="rq-cmp-status">${status}</div>` : ''}
-    </div>${sugg ? `<div class="rq-cmp-suggs">${sugg}</div>` : ''}${hint}</div>`;
+    </div>${sugg ? `<div class="rq-cmp-suggs">${sugg}</div>` : ''}${hint}${typeof rqWaFichasProblem === 'function' ? rqWaFichasProblem(it, i) : ''}${typeof rqWaFichasButton === 'function' ? rqWaFichasButton(it, i) : ''}</div>`;
 }
 // What sits beside a WhatsApp message as suggestions (owner 2026-10-25: prices, banners and links go by themselves; everything relevant to the customer is a suggestion to copy): the opening line / title / notes of the offer (it.extras)
 // and what Messaging has ready for THIS customer (it.msgOptions: his cycle, his notes, a Market Flash line — the messages Messaging already wrote, each from a real fact).
-function rqCmpAllSuggs(it){ return (it.extras || []).concat(it.msgOptions || []); }
+// THE MESSAGE OF EACH CUSTOMER (owner 2026-11-14: "cuando pongo números y quedo en enviar, ahí sí el sistema debe personalizar el mensaje de cada cliente"; "nunca hemos trabajado pasta de pollo, tengo esta marca, si te interesa avísame"; "dile hace cuánto no compra, cómo está con ese producto";
+// "me llegó esta trompa marca Wholestone, nunca la hemos trabajado, avísame si te interesa"). A SUGGESTION beside the message (never sent by itself, the trader edits it): built only from what the system knows of THIS customer and THIS product
+// (dashboard-summary offer_today: his purchases, our offers, whether he asked) — no price, no number of his own, no invented fact. The wording is a proposal; the generic opening stays when there is nothing personal to say.
+const RQ_PERSONAL_WHEN = n => { n = Math.max(1, Math.round(Number(n) || 1)); return n < 60 ? `${n} día${n === 1 ? '' : 's'}` : n < 730 ? `${Math.round(n / 30)} meses` : `${Math.round(n / 365)} años`; };
+function rqPersonalText(f, spec, brands, newBrands){
+  if (!f || !spec || !brands || !brands.length) return '';
+  const nb = new Set(newBrands || []), list = brands.map(b => nb.has(b) ? `${b} (marca nueva)` : b);
+  const have = list.length === 1 ? `me llegó ${list[0]}` : `me llegaron ${list.join(', ')}`;
+  if (f.never_worked) return `Hola, nunca hemos trabajado ${spec} contigo y ${have}. Si te interesa avísame y lo vemos.`;
+  if (f.asked_days != null) return `Hola, hace ${RQ_PERSONAL_WHEN(f.asked_days)} me preguntaste por ${spec}; ${have}. ¿Lo vemos?`;
+  if (f.days_since_bought != null) return `Hola, hace ${RQ_PERSONAL_WHEN(f.days_since_bought)} que no me compras ${spec}; ${have}. ¿Cómo estás con ese producto?`;
+  if (f.days_since_offered != null) return `Hola, hace ${RQ_PERSONAL_WHEN(f.days_since_offered)} te ofrecí ${spec}; ${have}. ¿Cómo estás con ese producto?`;
+  return '';
+}
+let rqOfferFacts = null, rqOfferFactsLoading = false; // { 'productId|customerId': facts, newBrands: { productId: [plant names] } } — read-only, once per page
+async function rqCmpLoadFacts(){
+  if (rqOfferFacts || rqOfferFactsLoading) return;
+  rqOfferFactsLoading = true;
+  try {
+    const d = await callApi('dashboard-summary', { view: 'offer_today', actor: currentActor() });
+    const m = { newBrands: {} };
+    (d.offer_today || []).forEach(p => { m.newBrands[p.product_id] = (p.plants || []).filter(x => x.new_brand).map(x => String(x.plant).trim()); (p.customers || []).forEach(c => { if (c.facts) m[p.product_id + '|' + c.customer_id] = c.facts; }); });
+    rqOfferFacts = m;
+    if (rqOfferWinOpen) rqOfferWindowRender();
+  } catch (e) { /* no personal line: the window works exactly the same, with the opening it always had */ }
+  rqOfferFactsLoading = false;
+}
+function rqPersonalSuggestion(it){
+  const ctx = it && it.personal; if (!ctx || !rqOfferFacts) return null;
+  const text = rqPersonalText(rqOfferFacts[ctx.pid + '|' + it.id], ctx.spec, ctx.brands, rqOfferFacts.newBrands[ctx.pid]);
+  return text ? { label: 'For him', text } : null;
+}
+function rqCmpAllSuggs(it){
+  const mine = typeof rqPersonalSuggestion === 'function' ? rqPersonalSuggestion(it) : null; // his own line replaces the generic opening (the same for every customer)
+  return (mine ? [mine] : []).concat(mine ? (it.extras || []).filter(x => x.label !== 'Opening') : (it.extras || []), it.msgOptions || []);
+}
 const RQ_CMP_KIND = { cycle: 'His cycle', ask_volume: 'His volume', personal: 'He told us', market: 'Market' };
 let rqCmpMsgMap = null, rqCmpMsgLoading = false;
 function rqCmpMsgFor(customerId){ return rqCmpMsgMap && rqCmpMsgMap[customerId] || []; }
@@ -8679,6 +8755,7 @@ function rqOfferWindowShow(){
   const any = rqEmailModalItems.length || rqWaModalItems.length;
   if (!any){ rqOfferWindowEnd(); return false; }
   for (const id of ['rq_email_modal_overlay', 'rq_wa_modal_overlay']){ const o = document.getElementById(id); o.style.display = 'none'; o.classList.add('rq-merged'); } // the two review windows never show beside the one offer window, whatever ran before (owner 2026-10-22 screenshot: the WhatsApp window sat behind an empty offer window)
+  rqCmpLoadFacts(); // the facts of each customer for his personal line (read-only, in the background)
   rqCmpLoadMessaging();
   rqOfferCh = rqWaModalItems.length ? { wa: true, em: false } : { wa: false, em: true }; // opens on WhatsApp alone (owner 2026-10-25: "pon solo whatsapp por default"); Email / Both are one tap away; a send with no WhatsApp opens on Email
   rqOfferWindowSync();

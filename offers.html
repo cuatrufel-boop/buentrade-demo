@@ -1699,6 +1699,13 @@ function collectEmails(entity){
   return [...new Set(raw.map(e => (e || '').trim()).filter(Boolean))];
 }
 
+// A CUSTOMER'S E-MAILS (owner 2026-11-13, order BT-2026-1002: "no tenía email donde mandarlo… y sí estaban los dos emails"): the main columns of the customer AND the e-mail of each of his contacts (a customer whose
+// main e-mail column is empty but whose contact has one was told "no email on file"). Customers only — a plant's, a carrier's and an agency's e-mails are collected as before.
+function collectCustomerEmails(customer){
+  if (!customer) return [];
+  return [...new Set([...collectEmails(customer), ...((customer.contacts || []).map(k => String((k && k.email) || '').trim()).filter(Boolean))])];
+}
+
 async function buildPODoc(orderNumber){
   let result;
   try { result = await bcComposeDocument('orders-compose-po', orderNumber); }
@@ -1900,7 +1907,7 @@ async function exportSO(orderNumber){
 async function shareSO(orderNumber){
   let built;
   try { built = await buildSODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
-  const emails = collectEmails(built.customer);
+  const emails = collectCustomerEmails(built.customer);
   if (!emails.length){ await btAlert('This customer has no email on file.'); return; }
   const filename = `SO-BT-${btNum(orderNumber)}.pdf`;
   let url;
@@ -1960,7 +1967,7 @@ async function shareFO(orderNumber){
     // We deliver (the carrier is ours): the customs agency's data (address, contact, phone…) goes to the carrier — js/customs-block.js, owner 2026-11-04.
     const body = BTCustomsBlock.appendCustoms(`Please find the Freight Order FO-BT-${btNum(orderNumber)} attached.\n\n`
       + `Pick-up: ${b.fo.origin || '—'}\n`
-      + `Delivery: ${b.fo.destination || '—'}\n`
+      + `Delivery: ${(BTCustomsBlock.agencyOfFO(b.composed) || {}).name || b.fo.destination || '—'}\n` // when the customs agency block follows it carries the address, contact and e-mail: the line does not repeat them (owner 2026-11-13)
       + `Agreed Rate: $${(b.composed.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, BTCustomsBlock.agencyOfFO(b.composed));
     try {
       await sendEmailApi('logistics', emails, subject, body, [pdfAttachment(b.doc, b.filename)], null);

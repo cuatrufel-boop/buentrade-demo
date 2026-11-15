@@ -42,7 +42,7 @@ function bcRenderInvoice(inv, orderNumber, signature){
   doc.autoTable({
     startY: Math.max(yLeft, yRight) + 8,
     head: [['Item Description', pesos ? 'Qty KG' : 'Qty LBS', pesos ? 'MXN / KG' : 'USD / LBS', 'Amount']],
-    body: [[li.description || '', Number(li.weight || 0).toLocaleString('en-US'), (pesos ? 'MX$' : '$') + Number(li.price || 0).toFixed(pesos ? 2 : 4), money(li.total)]],
+    body: [[(li.description || '') + (li.brand ? '\nBrand: ' + li.brand : ''), Number(li.weight || 0).toLocaleString('en-US'), (pesos ? 'MX$' : '$') + Number(li.price || 0).toFixed(pesos ? 2 : 4), money(li.total)]],
     theme: 'grid',
     headStyles: { fillColor: [30, 106, 219], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
     styles: { fontSize: 10.5, cellPadding: { top: 9, bottom: 9, left: 7, right: 7 } },

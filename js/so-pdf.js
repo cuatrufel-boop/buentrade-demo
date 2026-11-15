@@ -36,7 +36,7 @@ function bcRenderSO(s, orderNumber){
     startY: Math.max(yLeft, yRight) + 22,
     head: [['Item Description', li.unit === 'kg' ? 'Qty KG' : 'Qty LBS', li.unit === 'kg' ? 'MXN / KG' : 'USD / LBS', 'Amount', 'DEL Date', 'Sales Rep']], // a customer invoiced in pesos: kilos and MX$
     body: [[
-      li.description || '',
+      (li.description || '') + (li.brand ? '\nBrand: ' + li.brand : ''), // the brand the customer bought (owner 2026-11-13)
       (li.weight || 0).toLocaleString('en-US'),
       (li.unit === 'kg' ? 'MX$' : '$') + (li.price || 0).toFixed(li.unit === 'kg' ? 2 : 4),
       (li.unit === 'kg' ? 'MX$' : '$') + (li.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),

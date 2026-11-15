@@ -25,7 +25,13 @@
     });
     return out;
   }
-  window.btBellLogic = { unseenCount: unseenCount, kindCounts: kindCounts, ago: ago, esc: esc, KINDS: KINDS, itemKey: itemKey, isUnread: isUnread, isHidden: isHidden, groupByDay: groupByDay };
+  // What needs an ACTION (a price a customer asked for, an answer to a bid) is its own group on top, blinking; everything else keeps its day groups (owner 2026-11-14: "se llenaron de mucha data y no se sabe cuál es la verdaderamente relevante")
+  function needsActionFirst(list, now){
+    var imp = list.filter(function(i){ return i.important; }), rest = list.filter(function(i){ return !i.important; });
+    var out = imp.length ? [{ label: 'Needs action', items: imp.slice().sort(function(a, b){ return String(b.at).localeCompare(String(a.at)); }) }] : [];
+    return out.concat(groupByDay(rest, now));
+  }
+  window.btBellLogic = { unseenCount: unseenCount, kindCounts: kindCounts, ago: ago, esc: esc, KINDS: KINDS, itemKey: itemKey, isUnread: isUnread, isHidden: isHidden, groupByDay: groupByDay, needsActionFirst: needsActionFirst };
   if (!document || !document.getElementById) return;
 
   var chip = document.getElementById('userChip');
@@ -67,7 +73,8 @@
     + '.btb-e{padding:36px 20px 40px;text-align:center;color:#8ea4cc}.btb-e svg{display:block;margin:0 auto 10px;color:#2fbf71}.btb-e b{display:block;color:#fff;font-size:14px;margin-bottom:2px}'
     + '@media (hover:none){.btb-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.btb-i:hover .btb-w,.btb-i.sel .btb-w{display:block}.btb-act{display:inline-flex}.btb-ib{width:34px;height:34px}.btb-i{padding-block:8px}}' // a phone has no hover: the time and the ✓ / ✕ are always there, finger-sized
     + '@media (max-width:480px){.btb-p{width:calc(100vw - 20px)}.btb-chips{margin-top:8px}}'
-    + '@media (prefers-reduced-motion:reduce){.btb-p.open,.btb-ring{animation:none}}';
+    + '@keyframes btbBlink{0%,100%{opacity:1}50%{opacity:.4}}.btb-actag{margin-left:8px;font:700 10.5px "IBM Plex Mono",monospace;letter-spacing:.06em;color:#FFC876;border:1px solid rgba(255,200,118,.7);border-radius:20px;padding:1px 8px;animation:btbBlink 1.6s ease-in-out infinite}'
+    + '@media (prefers-reduced-motion:reduce){.btb-p.open,.btb-ring,.btb-actag{animation:none}}';
   document.head.appendChild(css);
   var bell = document.createElement('button');
   bell.type = 'button'; bell.className = 'btb'; bell.setAttribute('aria-label', 'Notifications'); bell.setAttribute('aria-haspopup', 'dialog');
@@ -99,12 +106,12 @@
       + '<div class="btb-chips">' + chips + '</div></div>';
     var body = '';
     if (!list.length) body = '<div class="btb-e">' + svg('<circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/>', 28) + '<b>' + (tab === 'unread' ? 'You’re all caught up' : 'Nothing here yet') + '</b>' + (tab === 'unread' ? 'New prices, answers and matches will show up here.' : 'What arrives will be listed here.') + '</div>';
-    else groupByDay(list).forEach(function(g){
+    else needsActionFirst(list).forEach(function(g){
       body += '<div class="btb-gl">' + g.label + '</div>';
       g.items.forEach(function(i){
         var K = KINDS[i.kind] || KINDS.price, un = isUnread(i, st), idx = shown.push(i) - 1;
         body += '<div class="btb-i' + (un ? ' unread' : '') + (idx === sel ? ' sel' : '') + '" role="button" tabindex="0" data-idx="' + idx + '" data-h="' + esc(i.href) + '" title="' + esc(i.action) + '" style="--c:' + K.color + '"><span class="btb-dot"></span><span class="btb-ico">' + svg(ICON[i.kind] || ICON.price) + '</span>'
-          + '<div class="btb-b"><div class="btb-t">' + esc(i.title) + '</div><div class="btb-s">' + esc(i.sub) + '</div></div>'
+          + '<div class="btb-b"><div class="btb-t">' + esc(i.title) + (i.important ? '<span class="btb-actag">ACTION</span>' : '') + '</div><div class="btb-s">' + esc(i.sub) + '</div></div>'
           + '<div class="btb-side"><span class="btb-w">' + esc(ago(i.at)) + '</span><span class="btb-act">' + (un ? '<button type="button" class="btb-ib" data-read="' + idx + '" title="Mark as read" aria-label="Mark as read">' + svg('<path d="M20 6L9 17l-5-5"/>') + '</button>' : '') + '<button type="button" class="btb-ib" data-dismiss="' + idx + '" title="Dismiss" aria-label="Dismiss">' + svg('<path d="M18 6L6 18M6 6l12 12"/>') + '</button></span></div></div>';
       });
     });
