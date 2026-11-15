@@ -206,6 +206,32 @@
   .about-insight > span:nth-child(2){flex:1;min-width:0;}
   .about-insight > .btn{padding:5px 12px;font-size:12px;}
   .about-insight-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;}
+  /* THE CLIENT'S X-RAY tab (owner 2026-11-15): a strip of counts that filter, then what he buys, asked for, was offered and was never offered */
+  #custTab_xray{font-size:13px;}
+  .rd-row{display:flex;align-items:baseline;gap:16px;padding:9px 2px;border-top:1px solid var(--line);font-size:13px;}
+  .rd-label{flex:0 0 200px;margin:0;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--ink-soft);text-transform:uppercase;}
+  .rd-val{flex:1;min-width:0;}
+  .rd-val .rd-go{background:none;border:none;padding:0;font:inherit;color:var(--blue);cursor:pointer;text-align:left;}
+  .rd-val .rd-go:hover{text-decoration:underline;}
+  .rd-missing{color:var(--amber);}
+  .rd-told{display:block;}
+  @media (max-width:760px){ .rd-row{flex-direction:column;gap:2px;} .rd-label{flex:none;} }
+  .xr-strip{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px;}
+  .xr-chip{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
+  .xr-chip b{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);}
+  .xr-chip.on{border-color:var(--blue-bright);color:var(--blue-bright);}
+  .xr-chip.on b{color:var(--blue-bright);}
+  .xr-sec{margin:0 0 18px;}
+  .xr-sec > summary,.xr-sec > .profile-heading{list-style:none;cursor:default;}
+  .xr-sec > summary{cursor:pointer;}
+  .xr-sec > summary::-webkit-details-marker{display:none;}
+  .xr-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:9px 2px;border-top:1px solid var(--line);}
+  .xr-name{font-weight:600;color:var(--blue);flex:0 1 46%;min-width:0;}
+  .xr-facts{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+  .xr-line{color:var(--ink-soft);font-size:12.5px;}
+  .xr-tags{display:flex;flex-wrap:wrap;gap:6px;}
+  .xr-tags .payment-badge{font-size:10.5px;}
+  @media (max-width:760px){ .xr-row{flex-direction:column;gap:4px;} .xr-name{flex:none;} }
   .row-actions{display:flex;gap:6px;}
   .name-link{color:var(--blue);font-weight:600;text-decoration:none;cursor:pointer;}
   .name-link:hover{text-decoration:underline;}
@@ -497,9 +523,13 @@ auth.onAuthStateChanged(user => {
          Pay & Receive), the detail in the Credit tab -->
     <div id="custCreditCards" style="margin-top:18px;"></div>
 
+    <!-- THE RADAR (owner 2026-11-15: "un radar encima del perfil del cliente… dónde está ubicado, qué hacen, si son carnicerías, si maquilan, qué hacen con el producto, qué productos nos compran, nos piden, cuáles no nos compran a nosotros pero sí compran"): who he is and what we know of his buying, always above the tabs -->
+    <div id="custRadar" style="margin-top:18px;"></div>
+
     <div class="tab-row">
       <button type="button" class="tab-btn" id="custTabBtn_credit" onclick="setCustomerTab('credit')">Credit</button>
       <button type="button" class="tab-btn active" id="custTabBtn_products" onclick="setCustomerTab('products')">Products</button>
+      <button type="button" class="tab-btn" id="custTabBtn_xray" onclick="setCustomerTab('xray')">X-ray</button>
       <button type="button" class="tab-btn" id="custTabBtn_about" onclick="setCustomerTab('about')">About the client</button>
       <button type="button" class="tab-btn" id="custTabBtn_details" onclick="setCustomerTab('details')">Details</button>
       <button type="button" class="tab-btn" id="custTabBtn_history" onclick="setCustomerTab('history')">History</button>
@@ -530,6 +560,7 @@ auth.onAuthStateChanged(user => {
     <!-- ABOUT THE CLIENT (2026-09-29): the ONE place to write what we know about the client — every note is
          dated and Messaging reads them to write messages that catch their attention ("debemos conocer al
          cliente a fondo… IMPORTANTE"). What they buy and how often stays in the Products tab. -->
+    <div id="custTab_xray" style="display:none;"><div id="custXray"></div></div>
     <div id="custTab_about" style="display:none;"><div id="custAbout"></div></div>
     <div id="custTab_details" style="display:none;">
       <div class="section-title" style="margin-top:0;">Identity</div>
@@ -1314,7 +1345,7 @@ async function removeCustomerProduct(linkId){
   renderCustomerProducts();
 }
 
-const CUST_TABS = ['credit', 'products', 'about', 'details', 'history'];
+const CUST_TABS = ['credit', 'products', 'xray', 'about', 'details', 'history'];
 function setCustomerTab(tab){
   CUST_TABS.forEach(t => {
     document.getElementById('custTab_' + t).style.display = (t === tab) ? 'block' : 'none';
@@ -1322,6 +1353,7 @@ function setCustomerTab(tab){
   });
   if (tab === 'history') renderCustomerHistory();
   if (tab === 'about') renderCustomerAbout();
+  if (tab === 'xray') renderCustomerXray();
 }
 
 // Real ask 2026-09-14: "yo necesito es que se guarde el pdf" — the real PDF already lands in the
@@ -1530,6 +1562,103 @@ async function deleteCustomerNote(noteId){
   renderCustomerAbout();
 }
 
+// THE CLIENT'S X-RAY (owner 2026-11-15: "el sistema debe tener una radiografía del cliente detallada: qué ha comprado, qué no ha vuelto a comprar, qué ha pedido, qué podría comprar, qué se le ha ofertado, TODO"). Read-only: the server reads his real
+// history (messaging → customer_radiograph) and says what each product means; this only draws it. Nothing is invented: every line is a date or a count from his own history.
+let xrayData = null, xrayFilter = 'all';
+const XR_FILTERS = [
+  ['all', 'All products', r => true], ['buys', 'Buys from us', r => r.section === 'buys'], ['asked', 'Asked for it', r => r.asked > 0], ['not_from_us', 'Buys it, not from us', r => r.not_from_us], ['not_bought_again', 'Not bought again', r => r.not_bought_again], ['not_offered_since', 'Not offered since he bought', r => r.not_offered_since],
+  ['asked_not_offered', 'Asked, not offered since', r => r.asked_not_offered], ['offered', 'Offered, no purchase', r => r.section === 'offered'], ['never_offered', 'Never offered', r => r.never_offered], ['waiting', 'Waiting for his answer', r => r.waiting],
+];
+const XR_SECTIONS = [
+  ['buys', 'What he buys', 'He bought it: when, and what happened with it since.'], ['asked', 'What he asked for', 'He asked for it and no offer of it went out after that.'],
+  ['offered', 'What we offered him', 'We offered it and he has not bought it.'], ['never', 'What was never offered', 'Nothing of it was ever sent to him.'],
+];
+function xrDay(d){ return d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : ''; }
+function xrTimes(n){ return n === 1 ? 'once' : n + ' times'; }
+function xrLines(r){
+  const L = [], money = v => '$' + Number(v).toFixed(2) + '/lb';
+  if (r.section === 'buys') {
+    L.push(`Last bought ${xrDay(r.last_bought)} · ${r.days_since_bought} day${r.days_since_bought === 1 ? '' : 's'} ago · ${r.orders} order${r.orders === 1 ? '' : 's'}${r.bought_amount ? ' · $' + Math.round(r.bought_amount).toLocaleString('en-US') : ''}${r.cadence_days ? ' · he buys it every ' + r.cadence_days + ' days' : ''}`);
+    if (r.not_bought_again) L.push(`Offered ${xrTimes(r.offers_since_bought)} since, last on ${xrDay(r.last_offer_day)}${r.last_offer_price != null ? ' at ' + money(r.last_offer_price) : ''}: he did not buy again`);
+    else L.push('No offer of it has gone out since he bought it');
+  }
+  if (r.asked > 0) L.push(`Asked for it ${xrTimes(r.asked)}, last on ${xrDay(r.last_asked_day)}${r.offers_sent ? ' · last offered ' + xrDay(r.last_offer_day) : ' · never offered'}`);
+  if (r.section === 'offered' || (r.section !== 'buys' && r.section !== 'asked' && r.offers_sent)) L.push(`Offered ${xrTimes(r.offers_sent)} · first ${xrDay(r.first_offer_day)} · last ${xrDay(r.last_offer_day)}${r.last_offer_price != null ? ' at ' + money(r.last_offer_price) : ''}${r.last_offer_plant ? ' (' + r.last_offer_plant + ')' : ''}`);
+  if (r.bids) L.push(`${r.bids} bid${r.bids === 1 ? '' : 's'}${r.last_bid_price != null ? ', last ' + money(r.last_bid_price) : ''}${r.last_bid_at ? ' on ' + xrDay(r.last_bid_at) : ''}`);
+  if (r.section === 'never') L.push(r.assigned ? 'Assigned to him, nothing of it was ever sent' : 'Never sent to him');
+  return L;
+}
+function xrTags(r){
+  const T = [];
+  if (r.waiting) T.push(['due-soon', `${r.offers_open} offer${r.offers_open === 1 ? '' : 's'} waiting for his answer`]);
+  if (r.opportunity) T.push(['active', 'A fresh price is waiting for him']);
+  if (r.offers_lost) T.push(['neutral', `${r.offers_lost} lost`]);
+  return T;
+}
+function xrRowHtml(r){
+  const tags = xrTags(r);
+  return `<div class="xr-row" data-xr-product="${escapeHtml(r.product_id)}"><div class="xr-name">${escapeHtml(r.product_name)}</div><div class="xr-facts">${xrLines(r).map(l => `<div class="xr-line">${escapeHtml(l)}</div>`).join('')}${tags.length ? `<div class="xr-tags">${tags.map(t => `<span class="payment-badge ${t[0]}">${escapeHtml(t[1])}</span>`).join('')}</div>` : ''}</div></div>`;
+}
+function xrDraw(){
+  const el = document.getElementById('custXray'); if (!el || !xrayData) return;
+  const rows = xrayData.rows || [], sm = xrayData.summary || {}, flt = XR_FILTERS.find(f => f[0] === xrayFilter) || XR_FILTERS[0];
+  const count = f => rows.filter(f[2]).length;
+  const strip = `<div class="xr-strip">${XR_FILTERS.map(f => `<button type="button" class="xr-chip${f[0] === xrayFilter ? ' on' : ''}" data-xr-filter="${f[0]}" onclick="xrSetFilter('${f[0]}')">${escapeHtml(f[1])} <b>${count(f)}</b></button>`).join('')}</div>`;
+  const shown = rows.filter(flt[2]);
+  const secs = XR_SECTIONS.map(([k, title, hint]) => {
+    const rs = shown.filter(r => r.section === k); if (!rs.length) return '';
+    const body = `<div class="muted" style="font-size:11.5px;margin-bottom:4px;">${escapeHtml(hint)}</div>${rs.map(xrRowHtml).join('')}`;
+    return k === 'never' && xrayFilter === 'all' && rs.length > 8
+      ? `<details class="xr-sec" data-xr-sec="${k}"><summary class="profile-heading">${escapeHtml(title)} · ${rs.length} <span class="muted">(show)</span></summary>${body}</details>`
+      : `<div class="xr-sec" data-xr-sec="${k}"><div class="profile-heading">${escapeHtml(title)} · ${rs.length}</div>${body}</div>`;
+  }).join('');
+  el.innerHTML = rows.length ? strip + (secs || '<div class="empty" style="padding:14px;">Nothing here.</div>') : '<div class="empty" style="padding:14px;">Nothing in his history yet: no product assigned, offered, asked for or bought.</div>';
+}
+function xrSetFilter(f){ xrayFilter = f; xrDraw(); }
+async function xrLoad(id){
+  const d = await callApi('messaging', { action: 'customer_radiograph', customer_id: id });
+  if (viewingCustomerId !== id) return null;
+  if (!xrayData || xrayData.customerId !== id) xrayFilter = 'all';
+  xrayData = { customerId: id, ...d };
+  return xrayData;
+}
+async function renderCustomerXray(){
+  const el = document.getElementById('custXray'), id = viewingCustomerId; if (!el || !id) return;
+  if (!xrayData || xrayData.customerId !== id) el.innerHTML = '<div class="empty">Reading his history…</div>';
+  try { if (!(await xrLoad(id))) return; } catch (e) { el.innerHTML = `<div class="empty">Couldn't read his history: ${escapeHtml(e.message)}</div>`; return; }
+  xrDraw();
+}
+// THE RADAR above the tabs (owner 2026-11-15: "este radar es la clave del éxito, el detalle de conocer a cada cliente… lo que no tengamos lo vamos alimentando con el tiempo"): who he is, what he told us about his business, what he buys from us,
+// asks us for, buys but not from us, and what was never offered. What is missing is said as missing (with where to feed it), never filled in. Each line opens the X-ray on that group.
+function rdNames(rs, n){ n = n || 3; return rs.slice(0, n).map(r => escapeHtml(r.product_name)).join(' · ') + (rs.length > n ? ` · +${rs.length - n} more` : ''); }
+function rdGo(filter){ xrayFilter = filter; setCustomerTab('xray'); }
+function rdDraw(){
+  const el = document.getElementById('custRadar'); if (!el) return;
+  const d = xrayData; if (!d || d.customerId !== viewingCustomerId) return;
+  const rows = d.rows || [], P = d.profile || {}, told = (P.told || []).filter(t => t.topic === 'business'), likes = (P.told || []).filter(t => t.topic === 'preference');
+  const place = [P.city, P.state, P.country].filter(Boolean).join(', ');
+  const line = (label, html) => `<div class="rd-row"><div class="rd-label">${label}</div><div class="rd-val">${html}</div></div>`;
+  const group = (label, key, rs, empty) => line(label, rs.length ? `<button type="button" class="rd-go" data-rd-go="${key}" onclick="rdGo('${key}')"><b>${rs.length}</b> product${rs.length === 1 ? '' : 's'}</button> · ${rdNames(rs)}` : `<span class="muted">${empty}</span>`);
+  const buys = rows.filter(r => r.section === 'buys'), asked = rows.filter(r => r.asked > 0), elsewhere = rows.filter(r => r.not_from_us), never = rows.filter(r => r.never_offered), waiting = rows.filter(r => r.waiting);
+  const feed = (what, where, tab) => `<span class="rd-missing">${what}</span> <button type="button" class="rd-go" onclick="${tab ? `setCustomerTab('${tab}')` : ''}">${where}</button>`;
+  el.innerHTML = `<div class="profile-heading" style="margin-bottom:6px;">Radar</div>
+    ${line('Who he is', `${P.business_type ? escapeHtml(P.business_type) : feed('Type of business not set', 'set it in Details', 'details')}${place ? ' · ' + escapeHtml(place) : ''}`)}
+    ${line('What he does', told.length ? told.map(t => `<span class="rd-told">${escapeHtml(t.text)}</span>`).join('') : feed('Not known yet: does he process, maquila, resell?', 'write it in About the client and the system reads it', 'about'))}
+    ${likes.length ? line('What he prefers', likes.map(t => `<span class="rd-told">${escapeHtml(t.text)}</span>`).join('')) : ''}
+    ${group('Buys from us', 'buys', buys, 'Nothing bought from us yet')}
+    ${group('Asks us for', 'asked', asked, 'He has not asked for a product yet')}
+    ${group('Buys it, not from us', 'not_from_us', elsewhere, 'No product of his is bought elsewhere that we know of')}
+    ${group('Never offered', 'never_offered', never, 'Everything of his has been offered')}
+    ${waiting.length ? group('Waiting for his answer', 'waiting', waiting, '') : ''}`;
+}
+async function renderCustomerRadar(id){
+  const el = document.getElementById('custRadar'); if (!el) return;
+  if (!xrayData || xrayData.customerId !== id) el.innerHTML = '';
+  try { if (!(await xrLoad(id))) return; } catch (e) { el.innerHTML = ''; return; }
+  rdDraw();
+  if (document.getElementById('custTabBtn_xray').classList.contains('active')) xrDraw();
+}
+
 function countryName(countryId){
   const match = countries.find(c => c.id === countryId);
   return match ? match.name_en : null;
@@ -1653,6 +1782,7 @@ function viewCustomer(id){
   document.getElementById('viewTitle').textContent = c.trade_name || '';
   renderCustomerLogo(c);
   renderCustomerCredit(id);
+  renderCustomerRadar(id);
   document.getElementById('v_legal_name').textContent = c.legal_name || '—';
   const stateName = c.state || (allStates.find(s => s.id === c.state_id) || {}).name_en || null;
   document.getElementById('v_location').textContent = [c.city, stateName, countryName(c.country_id)].filter(Boolean).join(', ') || '—';
