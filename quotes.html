@@ -750,6 +750,7 @@
   html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send svg{width:22px;height:22px;flex:none;}
   html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send::after{content:'Open WhatsApp';font:700 15px 'Inter',sans-serif;}
   html body #rq_offer_modal_list .rq-cmp-msg.opened .rq-cmp-btns .rq-wa-send::after{content:'Reopen WhatsApp';}
+  html body #rq_offer_modal_list .rq-cmp-btns .rq-wa-send[data-all]::after,html body #rq_offer_modal_list .rq-cmp-msg.opened .rq-cmp-btns .rq-wa-send[data-all]::after{content:'Send all ' attr(data-all) ' messages';}
   html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send{background:rgba(63,203,126,.14) !important;color:#3FCB7E !important;box-shadow:inset 0 0 0 1.5px rgba(63,203,126,.6);}
   html body #rq_offer_modal_list .rq-cmp-msg.sent .rq-cmp-btns .rq-wa-send::after{content:'Sent ✓';}
   html body .rq-offer-side .rq-cmp-sg{border:1px dashed rgba(255,255,255,.28);border-radius:16px;padding:13px 15px;background:rgba(255,255,255,.03);}
@@ -7372,15 +7373,13 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
     // THE FICHA LINK CHIPS (owner 2026-11-15): a brand with a spec / photo AND its own link (the short code of its offer) goes as its own thin card with that link; the brands without a link keep their document (the PDF), as before.
     const linkOf = (r) => (typeof RQ_FICHA_LINK_CHIPS !== 'undefined' && RQ_FICHA_LINK_CHIPS && (r.specU || r.photoU) ? rqWaFichaLink(r.offer) : null);
-    // ONE MESSAGE (owner 2026-11-16: "precios y fichas en el mismo mensaje… y links separados por cada marca con su link"): the card of every linked brand is drawn INSIDE the prices picture (logo, brand, doc mark, "Ficha técnica" / "Foto" / "Ficha técnica + Foto"), and the text of that same message is one block per brand — the brand and ITS OWN link.
-    const linked = rows.filter(r => linkOf(r));
-    const linkText = linked.map(r => `${String(r.one.plant.name).trim()}\n${linkOf(r)}`).join('\n\n'); // "marca link marca link" (owner 2026-11-16, on his phone: "mountaire link, sanderson link, no todos los links juntos"): each brand's name and ITS OWN link, in the order of the cards, in the one message
-    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: linkText, fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })), // pairKey: the customer × product row of the one offer window
+    // THE FICHAS ARE OUTSIDE THE PICTURE, ONE PER BRAND (owner 2026-11-16, last word: "la ficha y el link tienen que ir fuera de la foto una para cada marca"; his mock-up "1 · Delgada + link chiquito"): the prices picture goes ALONE, and every linked brand has ITS OWN card message — the card (logo, brand, doc mark, "Ficha técnica" / "Foto" / "Ficha técnica + Foto") with ITS OWN link as the text.
+    const chipItems = rows.filter(r => linkOf(r)).map(r => ({ extras: [], id: c.id, rdPid: pid, label: `${pairKey} — ${String(r.one.plant.name).trim()} · ficha`, pairKey, phone, body: linkOf(r), chip: { brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null, kind: r.specU && r.photoU ? 'fp' : r.photoU ? 'p' : 'f' }, sentOffers: [], thinImages: [], fichas: [], onOpened: async () => {} }));
+    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
-      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })),
-        cards: linked.map(r => ({ brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null, kind: r.specU && r.photoU ? 'fp' : r.photoU ? 'p' : 'f' })) },
+      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } };
-    return [bannerItem];
+    return [bannerItem, ...chipItems];
   }
   return sorted.map((one, i) => {
     // THE MESSAGE IS THE PRICE (owner 2026-10-25: "quita los mensajes fuera del precio, déjalo a un lado como sugerencia para poder hacer copy paste"): the product, the price and its link — nothing else goes in the bubble. The opening line / the "Lista actualizada" title
@@ -7411,6 +7410,7 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 // EACH FICHA IS A THIN CARD WITH ITS OWN LINK, ALL IN THE SAME SEND (owner 2026-11-15: "delgadas con bordes redondos, casi nada de texto, cada una con su link", option 1 + icon 10, "logos nítidos"; "un solo envío adjunta todo con fichas… por qué inventas mandarlo aparte"): a brand with a spec / photo
 // and its own short link (`/p/…`, which opens the spec / photo) gets its thin card — the plant's logo, the brand, the open badge, a picture drawn at 1600 px so it stays sharp — attached to the offer's message exactly like the documents were: pasted by itself right after the bars picture, ONE Enter. The links
 // (one line per brand) are the message's text. The bars picture is untouched. A brand with no link (a price he already holds mints no offer) keeps the document it always had. ONE named switch: false = every ficha as a PDF again.
+// OWNER 2026-11-16, LAST WORD: "tiene que ser un link por cada marca porque cada empresa tiene su spec… Seaboard tiene spec pero Wholestone no, pues solo muestra el link de Seaboard" → the prices picture ALONE, and ONLY the brands that have a spec and/or a photo (and their own link) get their card — the thin card with the plant's logo, the brand, the doc mark and "Ficha técnica" — as its own message with ITS OWN link. A brand with no spec or photo has no card and no link.
 const RQ_FICHA_LINK_CHIPS = true;
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 // THE FICHA OF A BRAND AS ONE SMALL, CLEAN BUENTRADE DOCUMENT beside the picture (owner 2026-11-10: "es este pero con colores de buentrade, así chiquito, limpio" · option 1 "logo en cada tarjeta de ficha" · "si además de ficha hay fotos tiene que mostrar las dos"):
@@ -8848,6 +8848,42 @@ async function rqWaAutoPaste(it){
   if (it.pasteState === 'pasted' && it.downloadFiles && it.downloadFiles.length > 1 && !it.fichasPasteState) { await new Promise((r) => setTimeout(r, 1500)); const i = rqWaModalItems.indexOf(it); if (i >= 0) await rqWaPasteFichas(i); }
   for (let n = 1; n <= 2; n++) { const i3 = rqWaModalItems.indexOf(it); if (i3 < 0 || it.fichasPasteState !== 'failed') break; await new Promise((r) => setTimeout(r, n === 1 ? 2500 : 4000)); await rqWaPasteFichas(i3); } // the same two more tries for the specs and photos
 }
+// ONE CLICK, EVERY BUBBLE (owner 2026-11-16, last word: "burbuja por ficha", and "sí" to "¿autorizas que el sistema presione Enter solo para mandar todas las burbujas con un clic?"): the green button of an offer that has ficha-card messages
+// (a card with ITS OWN link per brand) sends the prices picture and then every card one after the other. For each message: copy → open the chat → paste (the same steps as a single click) → press Enter on the Mac, which the local
+// server does ONLY when WhatsApp is the front app (a separate address, wa-enter). It asks once before it starts, and it STOPS at the first thing that does not go as expected (a picture not ready, a paste that failed, WhatsApp not in front): nothing
+// else is sent and every message keeps its own green button. The tab is reserved inside the click (a browser blocks one opened later) and reused for every message.
+let rqWaChainBusy = false, rqWaChainTarget = null;
+function rqWaChainItems(it){ return it && it.bars && typeof rqWaModalItems !== 'undefined' ? rqWaModalItems.filter(x => x.chip && x.pairKey === it.pairKey) : []; }
+async function rqWaSendChain(i){
+  if (rqWaChainBusy) return; // a second click while it runs (or while it asks) does nothing
+  const first = rqWaModalItems[i], seq = first ? [first, ...rqWaChainItems(first)] : [];
+  if (seq.length < 2) return;
+  if (seq.some(x => x.pictureState === 'pending' || x.fichasState === 'pending')) { rqShowNotice('Preparing the prices and the ficha cards. Wait until everything is ready.'); return; }
+  if (seq.some(x => x.pictureState === 'failed' || ['incomplete', 'failed'].includes(x.fichasState) || !(x.downloadFiles && x.downloadFiles.length))) { rqShowNotice('Something could not be prepared. Reopen the offer to try again. Nothing was sent.'); return; }
+  rqWaChainBusy = true;
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  let done = 0, why = '', target = null;
+  try {
+    target = window.open('about:blank', '_blank'); // reserved inside the click: a browser blocks a tab opened later
+    if (!target) { rqShowNotice('Allow this page to open WhatsApp, then try again.'); return; }
+    const who = String(first.pairKey || '').split(' — ')[0];
+    if (!(await rqConfirm(`Send ${seq.length} messages to ${who} now? The system pastes each one in WhatsApp and presses Enter by itself, one after the other. Do not touch the keyboard until it finishes.`))) { try { target.close(); } catch (e) { /* already closed */ } return; }
+    for (const x of seq) {
+      const idx = rqWaModalItems.indexOf(x);
+      if (idx < 0) { why = 'the window changed'; break; }
+      x.pasteState = ''; x.pasteError = '';
+      rqWaChainTarget = target; rqWaModalOpenOne(idx, false);
+      for (let n = 0; n < 400 && x.pasteState !== 'pasted'; n++) await wait(100); // up to 40 s: the chat opens, the picture is pasted (with its own two retries)
+      if (x.pasteState !== 'pasted') { why = (x.pasteError || 'the picture was not pasted in WhatsApp'); break; }
+      await wait(2500); // the chat shows the picture with its text as the caption
+      let e; try { const r = await fetch('/__local/wa-enter', { method: 'POST', headers: { 'X-BT-Local': '1' } }); e = await r.json(); } catch (err) { e = { ok: false, error: 'no answer from this Mac' }; }
+      if (!e || !e.ok) { why = 'Enter was not pressed (' + ((e && e.error) || 'no answer') + ')'; break; }
+      done++; await wait(3500); // WhatsApp sends it before the next one comes
+    }
+  } finally { rqWaChainBusy = false; rqWaChainTarget = null; }
+  rqShowNotice(done === seq.length ? `Sent ${done} of ${seq.length} messages. Confirm them when WhatsApp asks.` : `Stopped after ${done} of ${seq.length}: ${why}. Nothing else was sent; each message keeps its own green button.`);
+  if (typeof rqRenderWaModal === 'function') rqRenderWaModal();
+}
 // ON THE PHONE THE GREEN BUTTON SENDS THE PICTURE AND THE TEXT TOGETHER (owner 2026-10-28: "usd peso, con link o sin link, cel o pc, todas iguales"): a phone has no Mac paste, so a wa.me message went out as text only and WhatsApp
 // made the link's own preview card; there the green button does what Share does (picture + text as its caption), like the Mac's paste does on the PC. Where the picture cannot be shared it stays the wa.me message as before.
 const rqWaIsPhone = () => /iPhone|iPad|Android|Mobile/i.test((typeof navigator !== 'undefined' && navigator.userAgent) || '');
@@ -8855,6 +8891,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   const it = rqWaModalItems[i];
   if (!it) return;
   if (typeof rqBuildStale !== 'undefined' && rqBuildStale) { rqShowNotice('This page is older than the code on this Mac: reloading it. Open the offer again.'); setTimeout(() => location.reload(), 900); return; } // never a chat opened from old code
+  if (!(typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget) && typeof rqWaChainItems === 'function' && rqWaChainItems(it).length) { rqWaSendChain(i); return; } // the prices message of an offer with ficha cards: ONE click sends every bubble (owner 2026-11-16)
   if (it.pictureState === 'pending' || it.pictureState === 'failed') { if (typeof rqShowNotice === 'function') rqShowNotice(it.pictureState === 'pending' ? 'Preparing the prices and fichas. Wait until the picture is ready.' : 'The prices and fichas picture could not be prepared. Reopen the offer to retry.'); return; }
   if (typeof rqCmpIntroPending === 'function' && rqCmpIntroPending(it) && typeof rqShowNotice === 'function') { rqShowNotice('The intro message is waiting in WhatsApp. Send it first and tap "I sent it" (or "Not now"): the offer goes as its own message after it.'); return; }
   if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice(it.chip ? 'Preparing the ficha card — WhatsApp opens when it is ready.' : 'Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
@@ -8869,7 +8906,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   // banner in the bubble and the text of the box becomes its caption — the approved design, one bubble. Never blocks: no clipboard support = the download above is still there.
   // EVERY message gets its picture copied and pasted (owner 2026-10-25: "todos con banner"), the Monday summary's blue card too; only the Share button is for customer offers (owner 2026-10-26)
   const copied = rqWaCopyBanner(it);
-  const target = window.open('about:blank', '_blank'); // reserve the tab during this click; navigate only after the complete image copied
+  const target = (typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget) || window.open('about:blank', '_blank'); // reserve the tab during this click (the chain uses the one it reserved); navigate only after the complete image copied
   if (!target) { rqShowNotice('Allow this page to open WhatsApp, then try again.'); return; }
   copied.then(ok => {
     it.bannerState = ok ? 'copied' : 'failed';
@@ -8985,7 +9022,7 @@ function rqComposerWaHtml(it, i){
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
     <div class="rq-cmp-act">
-      <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" ${it.pictureState === 'pending' || it.fichasState === 'pending' ? 'disabled' : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
+      <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" ${it.pictureState === 'pending' || it.fichasState === 'pending' ? 'disabled' : ''}${typeof rqWaChainItems === 'function' && rqWaChainItems(it).length ? ` data-all="${rqWaChainItems(it).length + 1}"` : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
       ${status ? `<div class="rq-cmp-status">${status}</div>` : ''}
     </div>${sugg ? `<div class="rq-cmp-suggs">${sugg}</div>` : ''}${hint}${typeof rqWaFichasProblem === 'function' ? rqWaFichasProblem(it, i) : ''}${typeof rqWaFichasButton === 'function' ? rqWaFichasButton(it, i) : ''}</div>`;
 }
