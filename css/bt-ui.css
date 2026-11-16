@@ -107,6 +107,10 @@ html body .btn.secondary.qt-hot { animation: none; }
   --bt-green: #0F8A5F; --bt-green-bd: #0F8A5F; --bt-green-bg: #fff; --bt-green-hover: rgba(15, 138, 95, .1);
   --bt-red: #C4432E; --bt-red-bd: #C4432E; --bt-red-bg: #fff; --bt-red-hover: rgba(196, 67, 46, .1);
 }
+@media (max-width: 480px) {
+  html body #authGate { padding: 16px; box-sizing: border-box; }
+  html body #authGate .auth-box { width: min(100%, 380px); box-sizing: border-box; }
+}
 /* a primary action on a light surface is a solid fill (blue; green for "Mark won"); the secondary one stays outlined */
 html body :is(.auth-box, .confirm-box, .doc-preview-box, .docs-menu, .toast, .rq-modal-box) .btn:not(.secondary):not(.danger):not(.small):not(.win):not(.green):not(.qt-hot) {
   --b-fg: #fff; --b-bd: #1E6ADB; --b-bg: #1E6ADB; --b-hover: #1858B8;

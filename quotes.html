@@ -7347,6 +7347,9 @@ function rqOfferEmailHtml(firstName, full, o){
 // One explicit "Yes, sent" confirms all drafts represented by that picture; the customer's bookkeeping runs once.
 // The brand's own short link (the one that opens its spec / photo): only an offer that was minted has one.
 function rqWaFichaLink(offer){ return offer && offer.short_code ? APP_ORIGIN + '/p/' + offer.short_code : null; } // the same constant and path as rqWaLine's link
+// ONE NAMED SWITCH (owner 2026-11-16: "busca del jueves hacia atrás donde se subían bien las fichas"): false = the way it worked until Monday 2026-11-09 midday — ONE message PER BRAND, each with its own picture (BuenTrade · Con docs · brand · price) and its own
+// link under it, the link opens the foto / ficha técnica and WhatsApp draws its card; true = the bars picture of all the brands in one message.
+const RQ_BARS_ONE_MESSAGE = true;
 function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent }){
   // One customer × product message. Every priced brand is in one bars picture, highest first, using the customer's currency; the single-brand case still uses that picture.
   const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = '';
@@ -7370,9 +7373,10 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     // THE FICHA CARDS (owner 2026-11-15): a brand with a spec / photo AND its own link (the short code of its offer) has its thin card attached to THIS message (a ficha of kind `linkCard`) and its link in the text; the brands without a link keep their document (the PDF), as before.
     const linkOf = (r) => (typeof RQ_FICHA_LINK_CHIPS !== 'undefined' && RQ_FICHA_LINK_CHIPS && (r.specU || r.photoU) ? rqWaFichaLink(r.offer) : null);
     const cardLines = rows.filter(r => linkOf(r)).map(r => `${String(r.one.plant.name).trim()} ${linkOf(r)}`).join('\n');
-    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: cardLines, fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null, linkCard: !!linkOf(r) })), // pairKey: the customer × product row of the one offer window
+    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: cardLines, fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null, linkCard: false })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
-      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
+      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })),
+        cards: rows.filter(r => linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })) }, // ONE MESSAGE (owner 2026-11-16: "debe ser un solo mensaje"): the linked cards are drawn INSIDE this picture; their links are the text
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } };
     return [bannerItem];
   }
@@ -7441,10 +7445,13 @@ async function rqBuildFichaDocs(f){
   const extOf = (u) => ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'pdf').toLowerCase();
   const out = await PDFDocument.create(), bold = await out.embedFont(StandardFonts.HelveticaBold), reg = await out.embedFont(StandardFonts.Helvetica);
   // THE APPROVED CARD (owner 2026-11-10: "aprobamos esto"): ONE thin row — the plant's logo on a rounded white patch, the brand, the doc mark and "Ficha técnica" — full navy, no "BuenTrade" line, no margin. WhatsApp rounds the preview itself.
-  const W = 612, H = 76, cover = out.addPage([W, H]);
+  // THE CARD, SIZED FOR THE PHONE — as it was on Thursday 2026-11-12, when the fichas arrived well (owner 2026-11-11: "las fichas deben adaptarse a este nuevo tamaño"; 2026-11-16: "el jueves mandaba las fichas bien"): WhatsApp shows the document's first page at the bubble's width, so the 612 × 76 row that came back after Thursday was zoomed and cropped
+  // (only "Foods", blurred). The card is 612 × 188 again: the plant's logo on a rounded white patch, at the right the doc mark + "Ficha técnica" at 28 pt, the brand's name under them at 40 pt (never under 30; a longer name is shortened with "…").
+  // The preview box of WhatsApp's document bubble is ~2.5 : 1 on the Mac (measured on the owner's own chat 2026-11-16: the 612 × 188 card, 3.26 : 1, still came out with its sides cut — "rd Foods" / "Ficha téc…"); WhatsApp shows the CENTER of the page in a ~2.4 : 1 window, so the page is 612 × 260 (2.35 : 1) with the same card centered in it: the whole card shows.
+  const W = 612, H = 260, M = 32, DY = 36, cover = out.addPage([W, H]);
   cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(217 / 255, 253 / 255, 211 / 255) }); // the page itself is the colour of WhatsApp's own bubble, so the card's ROUNDED corners show no white margin (a PDF page is always square)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
-  rr(0, H, W, H, 18, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
+  rr(0, H, W, H, 26, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
   let lx = 26;
   let logoImg = null;
   try {
@@ -7470,16 +7477,19 @@ async function rqBuildFichaDocs(f){
     }
   } catch (e) { throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha: ' + String(e && e.message || e)); }
   if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
+  const rowMid = H - DY - 24 - 34; // the middle of the first row (the logo patch is 68 high, 24 under the card's content)
   if (logoImg) {
-    const bw = 104, bh = 48, sc = Math.min((bw - 12) / logoImg.width, (bh - 10) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(18, H - 14, bw, bh, 9, rgb(1, 1, 1)); // the white patch behind the logo, rounded
-    cover.drawImage(logoImg, { x: 18 + (bw - w) / 2, y: 14 + (bh - h) / 2, width: w, height: h });
-    lx = 18 + bw + 18;
+    const bw = 132, bh = 68, sc = Math.min((bw - 16) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(M, H - DY - 24, bw, bh, 12, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    cover.drawImage(logoImg, { x: M + (bw - w) / 2, y: H - DY - 24 - bh + (bh - h) / 2, width: w, height: h });
   }
-  cover.drawText(String(f.brand), { x: lx, y: H / 2 - 8, size: String(f.brand).length > 20 ? 19 : 24, font: bold, color: rgb(1, 1, 1) });
-  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 15);
-  cover.drawText(label, { x: W - 20 - lw, y: H / 2 - 5, size: 15, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
-  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: W - 20 - lw - 34, y: H / 2 + 16, scale: 1.2, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 1.7 }); // the doc mark
+  let brand = String(f.brand), bsz = 40;
+  while (bsz > 30 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) bsz -= 1;
+  while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) brand = brand.slice(0, -2).trim() + '…';
+  cover.drawText(brand, { x: M, y: 38 + DY, size: bsz, font: bold, color: rgb(1, 1, 1) });
+  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 28), lblX = logoImg ? W - M - lw : M + 46;
+  cover.drawText(label, { x: lblX, y: rowMid - 10, size: 28, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
+  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: lblX - 42, y: rowMid + 20, scale: 1.6, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 2.2 }); // the doc mark
   let pages = 0;
   if (photoB && (isPng(photoB) || isJpg(photoB))) {
     try {
@@ -7498,10 +7508,44 @@ async function rqBuildFichaDocs(f){
   docs.push(...raw);
   return docs;
 }
+function rqWaAttachChips(items){
+  if (typeof rqThinCache === 'undefined') return;
+  items.filter(it => it.chip).forEach(it => {
+    it.fichasState = 'pending'; it.fichasMissing = 0; it.fichasError = '';
+    const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN, key = 'chip|' + it.chip.brand + '|' + (it.chip.logo_url || '');
+    const url = `${base}/.netlify/functions/product-card-banner?ficha=${encodeURIComponent(it.chip.brand)}&logo=${encodeURIComponent(it.chip.logo_url || '')}&k=o`;
+    if (!rqThinCache.has(key)) {
+      const request = fetch(url).then(async r => { if (!r.ok) return null; const b = await r.arrayBuffer(); const u = new Uint8Array(b || 0); return u.length >= 24 && u[0] === 137 && u[1] === 80 && u[2] === 78 && u[3] === 71 && u[4] === 13 && u[5] === 10 && u[6] === 26 && u[7] === 10 ? b : null; }).catch(() => null);
+      rqThinCache.set(key, request);
+      request.then(bytes => { if (!bytes && rqThinCache.get(key) === request) rqThinCache.delete(key); });
+    }
+    const pending = rqThinCache.get(key), token = {};
+    it.fichaChipRequest = token; it.thinBytesP = pending;
+    setTimeout(() => {
+      if (it.fichaChipRequest !== token || it.fichasState !== 'pending') return;
+      it.fichaChipRequest = null; if (rqThinCache.get(key) === pending) rqThinCache.delete(key);
+      it.fichasState = 'failed'; it.fichasMissing = 1; it.fichasError = 'Plant ficha card timed out. Review before sending.';
+      const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+      if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
+    }, 30000);
+    pending.then(bytes => {
+      if (it.fichaChipRequest !== token) return;
+      it.fichaChipRequest = null;
+      if (!bytes) { it.fichasState = 'failed'; it.fichasMissing = 1; it.fichasError = 'Plant ficha card could not be prepared. Review before sending.'; const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA'; if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
+      if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
+      it.bannerUrl = rqThinUrls.get(key);
+      it.downloadFiles = [{ bytes, filename: `${it.chip.brand.replace(/[^\w.-]+/g, '_')}_ficha.png`, type: 'image/png' }];
+      it.fichasState = 'ready'; it.fichasMissing = 0; it.fichasError = '';
+      const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+      if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
+    });
+  });
+}
 function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
   items.filter(it => (it.thinImages && it.thinImages.length) || it.bars).forEach(it => {
-    const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
+    const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') + '|' + (bars.cards || []).map(c => c.brand + '~' + (c.logo_url || '')).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
+    if (bars && bars.cards && bars.cards.length) it.pictureState = 'pending';
     if (it.fichas && it.fichas.length && !it.fichasP) {
       const requestToken = {};
       it.fichasRequest = requestToken;
@@ -7520,7 +7564,7 @@ function rqWaAttachThinImages(items){
       setTimeout(() => { if (it.fichasRequest === requestToken && it.fichasState === 'pending') { it.fichasRequest = null; it.fichasState = 'incomplete'; it.fichasMissing = it.fichas.length; it.fichas.forEach(f => rqFichaCache.delete(rqWaFichaCacheKey(f))); if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); } }, 30000);
     }
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}&v=3${bars.cards && bars.cards.length ? `&f=${encodeURIComponent(bars.cards.map(c => `${c.brand}~${c.logo_url || ''}`).join('|'))}` : ''}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) {
       const request = fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
       rqThinCache.set(key, request);
@@ -7528,11 +7572,12 @@ function rqWaAttachThinImages(items){
     }
     it.thinBytesP = rqThinCache.get(key); // the click on the green button can come before the picture has landed: the clipboard takes this promise (rqWaCopyBanner)
     rqThinCache.get(key).then(bytes => {
-      if (!bytes) return;
+      if (!bytes) { it.pictureState = 'failed'; if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
       if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
       it.bannerUrl = rqThinUrls.get(key);
       if (bars) it.cardFull = true; // the bars picture is shown whole at ITS OWN shape (600 wide, as tall as its brands need): the bubble's 1200/288 band would squash it (owner 2026-11-11: the preview showed it stretched and blurry)
       it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }, ...(it.fichaFiles || [])];
+      it.pictureState = 'ready';
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
@@ -8714,6 +8759,7 @@ function rqWaCanShare(it){
 async function rqWaModalShareOne(i){
   const it = rqWaModalItems[i];
   if (!it) return;
+  if (it.pictureState === 'pending' || it.pictureState === 'failed') { if (typeof rqShowNotice === 'function') rqShowNotice(it.pictureState === 'pending' ? 'Preparing the prices and fichas. Wait until the picture is ready.' : 'The prices and fichas picture could not be prepared. Reopen the offer to retry.'); return; }
   if (it.fichasState === 'pending' || ['incomplete', 'failed'].includes(it.fichasState)) { rqShowNotice(it.chip ? 'The ficha card is not ready. The complete message cannot be shared yet.' : 'The specs and photos are not ready. The complete quote cannot be shared yet.'); return; }
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const files = rqWaShareFiles(it);
@@ -8806,6 +8852,8 @@ const rqWaIsPhone = () => /iPhone|iPad|Android|Mobile/i.test((typeof navigator !
 function rqWaModalOpenOne(i, allowMissingFichas){
   const it = rqWaModalItems[i];
   if (!it) return;
+  if (typeof rqBuildStale !== 'undefined' && rqBuildStale) { rqShowNotice('This page is older than the code on this Mac: reloading it. Open the offer again.'); setTimeout(() => location.reload(), 900); return; } // never a chat opened from old code
+  if (it.pictureState === 'pending' || it.pictureState === 'failed') { if (typeof rqShowNotice === 'function') rqShowNotice(it.pictureState === 'pending' ? 'Preparing the prices and fichas. Wait until the picture is ready.' : 'The prices and fichas picture could not be prepared. Reopen the offer to retry.'); return; }
   if (typeof rqCmpIntroPending === 'function' && rqCmpIntroPending(it) && typeof rqShowNotice === 'function') { rqShowNotice('The intro message is waiting in WhatsApp. Send it first and tap "I sent it" (or "Not now"): the offer goes as its own message after it.'); return; }
   if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice(it.chip ? 'Preparing the ficha card — WhatsApp opens when it is ready.' : 'Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
   if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) { if (typeof rqShowNotice === 'function') rqShowNotice(`${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Press "Open anyway without all fichas" to send the picture without them, or close and open the offer again.`);
@@ -8819,11 +8867,21 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   // banner in the bubble and the text of the box becomes its caption — the approved design, one bubble. Never blocks: no clipboard support = the download above is still there.
   // EVERY message gets its picture copied and pasted (owner 2026-10-25: "todos con banner"), the Monday summary's blue card too; only the Share button is for customer offers (owner 2026-10-26)
   const copied = rqWaCopyBanner(it);
-  copied.then(ok => { it.bannerState = ok ? 'copied' : 'failed'; rqRenderWaModal(); if (ok) rqWaAutoPaste(it); }); // the card says it: "copied — paste with Cmd+V" or "NOT copied — the file downloaded"; EVERY message gets its banner pasted, with or without a link (owner 2026-10-25: banner on top, then the text with its price and its link)
-  window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body), '_blank');
-  it.opened = true;
-  if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; } // NOT recorded yet: WhatsApp never says whether the message went out, so the trader says so when he is back
-  rqRenderWaModal();
+  const target = window.open('about:blank', '_blank'); // reserve the tab during this click; navigate only after the complete image copied
+  if (!target) { rqShowNotice('Allow this page to open WhatsApp, then try again.'); return; }
+  copied.then(ok => {
+    it.bannerState = ok ? 'copied' : 'failed';
+    if (!ok || target.closed) {
+      if (!target.closed) target.close();
+      rqShowNotice('The complete picture could not be copied. WhatsApp was not opened. Try again.');
+      rqRenderWaModal(); return;
+    }
+    target.location.href = 'https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body);
+    it.opened = true;
+    if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; }
+    rqRenderWaModal();
+    if (ok) rqWaAutoPaste(it);
+  });
 }
 // A WhatsApp is recorded (offer registered, price request logged, customer marked as told) only after the trader confirms he sent it (user 2026-10-12: "las cosas se
 // mandan una vez y el sistema debe saberlo"; no WhatsApp API, so the one reliable signal is asking once, right when he comes back to this tab or closes the window).
@@ -8925,7 +8983,7 @@ function rqComposerWaHtml(it, i){
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
     <div class="rq-cmp-act">
-      <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
+      <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" ${it.pictureState === 'pending' || it.fichasState === 'pending' ? 'disabled' : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
       ${status ? `<div class="rq-cmp-status">${status}</div>` : ''}
     </div>${sugg ? `<div class="rq-cmp-suggs">${sugg}</div>` : ''}${hint}${typeof rqWaFichasProblem === 'function' ? rqWaFichasProblem(it, i) : ''}${typeof rqWaFichasButton === 'function' ? rqWaFichasButton(it, i) : ''}</div>`;
 }
@@ -9348,7 +9406,8 @@ async function sendOfferWhatsAppTo(customerId){
     // the row — so this now logs BEFORE opening the modal, same order sendOfferEmailTo already uses
     // (see that function's own comment on why logging first is the reliable order), confirmed with
     // the user as an acceptable change from the old "only log once WhatsApp is actually opened."
-    const { warnings, offers } = await rqLogSentOffersRows(full, [c], 'whatsapp', false, true); // drafts: they become offers at "Yes, sent"
+    const { warnings, offers, failures } = await rqLogSentOffersRows(full, [c], 'whatsapp', false, true); // drafts: they become offers at "Yes, sent"
+    if (failures && failures.length) { rqShowNotice('Could not prepare the complete offer: ' + failures.join('; ')); return; }
     warnings.forEach(w => rqShowNotice(w.message));
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
@@ -9497,6 +9556,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       rqLogSentOffersRows(jobs[0].lacks, [jobs[0].c], 'whatsapp', false, true, jobs.slice(1).map(j => ({ withCalc: j.lacks, customers: [j.c] }))), // drafts of what he LACKS: they become offers at "Yes, sent"
       Promise.all(jobs.map(j => j.isUpdate ? '' : rqFetchCustomerSignalLine(j.c.id, j.full))),
     ]);
+    if (logged.failures && logged.failures.length) { rqShowNotice('Could not prepare the complete offer: ' + logged.failures.join('; ')); return; }
     jobs.forEach(({ pid, c, cc, full, unsent, isUpdate }, k) => {
       const { warnings, offers } = logged.perJob[k];
       warnings.forEach(w => rqShowNotice(w.message));
@@ -9654,6 +9714,30 @@ function rqShowNotice(message, actionLabel, actionFn){
 }
 function rqCloseNotice(){
   document.getElementById('rq_notice_overlay').style.display = 'none';
+}
+// A TAB NEVER SENDS WITH OLD CODE (owner 2026-11-16: he tested twice on a tab that was open before the fix and saw the old PDF cards and the old tall picture in his real chat — "desastroso"; the machine must know, he must not have to remember to reload):
+// every 20 s (and when he comes back to the tab) the page asks for its OWN address (HEAD, never cached) and compares the file's tag with the one it loaded with. A different tag = this tab runs old code: a tab nobody is looking at reloads itself, one in use says so with a Reload button,
+// and the green WhatsApp button refuses to open a chat from old code (it reloads the page instead). Not under automation (the real-screen checks), and a page with no tag at all simply has no guard.
+let rqBuildId = null, rqBuildStale = false, rqBuildNoticed = false;
+async function rqBuildProbe(){
+  try {
+    const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
+    const id = [r.headers.get('etag'), r.headers.get('last-modified')].join('|');
+    if (id === '|') return rqBuildStale;
+    if (rqBuildId === null) rqBuildId = id;
+    else if (id !== rqBuildId) rqBuildStale = true;
+  } catch (e) { /* offline or blocked: nothing to say */ }
+  if (rqBuildStale && !rqBuildNoticed) {
+    rqBuildNoticed = true;
+    if (document.hidden) location.reload();
+    else rqShowNotice('This page is older than the code on this Mac. Reload it before sending anything.', 'Reload', () => location.reload());
+  }
+  return rqBuildStale;
+}
+if (typeof navigator === 'undefined' || !navigator.webdriver) {
+  rqBuildProbe();
+  setInterval(rqBuildProbe, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) rqBuildProbe(); });
 }
 
 // Real replacement 2026-09-01, explicit ask: window.confirm() is a bare browser system dialog —
