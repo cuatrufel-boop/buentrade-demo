@@ -8773,6 +8773,7 @@ async function rqWaModalShareOne(i){
   rqRenderWaModal();
 }
 function rqWaCopyBanner(it){
+  if (typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget) return rqWaServerCopy(it); // in the one-click chain THIS MAC copies the picture: the page cannot once WhatsApp has the front
   const f = it.downloadFiles && it.downloadFiles[0];
   if ((!f && !it.thinBytesP) || typeof ClipboardItem === 'undefined' || !navigator.clipboard || !navigator.clipboard.write) return Promise.resolve(false); // answers true/false so the card can SAY whether the picture is on the clipboard
   // Called inside the click. If the picture has not landed yet the clipboard is handed the PROMISE of it (Chrome waits for it, the click's permission stays valid) — before, a quick click copied nothing.
@@ -8853,6 +8854,13 @@ async function rqWaAutoPaste(it){
 // server does ONLY when WhatsApp is the front app (a separate address, wa-enter). It asks once before it starts, and it STOPS at the first thing that does not go as expected (a picture not ready, a paste that failed, WhatsApp not in front): nothing
 // else is sent and every message keeps its own green button. The tab is reserved inside the click (a browser blocks one opened later) and reused for every message.
 let rqWaChainBusy = false, rqWaChainTarget = null;
+async function rqWaServerCopy(it){
+  try {
+    const f = it && it.downloadFiles && it.downloadFiles[0]; if (!f || !f.bytes) return false;
+    const r = await fetch('/__local/wa-copy-image', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ b64: rqBytesToBase64(f.bytes) }) });
+    const j = await r.json(); if (!(j && j.ok)) it.pasteError = (j && j.error) || 'this Mac could not copy the picture'; return !!(j && j.ok);
+  } catch (e) { it.pasteError = 'no answer from this Mac'; return false; }
+}
 // the ficha-card messages have NO button of their own while the prices message sends them all (owner 2026-11-16: "ahora pusiste un botón por marca, te dije un solo mensaje"); after a stopped chain they get theirs back
 function rqWaChainHidesButton(it){ return !!(it && it.chip && !it.chainFree && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.some(x => x.bars && x.pairKey === it.pairKey)); }
 function rqWaChainItems(it){ return it && it.bars && typeof rqWaModalItems !== 'undefined' ? rqWaModalItems.filter(x => x.chip && x.pairKey === it.pairKey) : []; }
@@ -8866,10 +8874,10 @@ async function rqWaSendChain(i){
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
   let done = 0, why = '', target = null;
   try {
-    target = window.open('about:blank', '_blank'); // reserved inside the click: a browser blocks a tab opened later
-    if (!target) { rqShowNotice('Allow this page to open WhatsApp, then try again.'); return; }
     const who = String(first.pairKey || '').split(' — ')[0];
-    if (!(await rqConfirm(`Send ${seq.length} messages to ${who} now? The system pastes each one in WhatsApp and presses Enter by itself, one after the other. Do not touch the keyboard until it finishes.`))) { try { target.close(); } catch (e) { /* already closed */ } return; }
+    if (!(await rqConfirm(`Send ${seq.length} messages to ${who} now? The system pastes each one in WhatsApp and presses Enter by itself, one after the other. Do not touch the keyboard until it finishes.`))) return;
+    target = window.open('about:blank', '_blank'); // opened right after his OK (that click is the fresh gesture a browser wants); every message reuses this one tab
+    if (!target) { rqShowNotice('Allow this page to open WhatsApp, then try again.'); return; }
     for (const x of seq) {
       const idx = rqWaModalItems.indexOf(x);
       if (idx < 0) { why = 'the window changed'; break; }
