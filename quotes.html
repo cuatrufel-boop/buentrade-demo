@@ -7605,29 +7605,36 @@ async function rqBuildCombinedPdf(plant, calc){
   });
 
   const files = rqFindProductFilesFor(plant);
+  // EVERY FORMAT A PLANT SENDS (owner 2026-11-15: "en word porque vienen en todos los formatos"; "en email tampoco comparte… debe mandar fichas con specs y fotos"): what goes INTO the PDF is a PNG / JPG photo and a PDF spec; whatever cannot be merged (a Word or Excel spec, a webp photo, a PDF that will
+  // not open) is never dropped quietly — it travels AS IT IS beside the PDF (`extras`, attached by the email send), exactly as the WhatsApp ficha already does. Before, a Word spec went nowhere and the email carried only the cover.
+  const extras = [], baseName = String(plant.name || 'Brand').replace(/[^a-z0-9]+/gi, '-');
+  const extOf2 = (u) => ((/\.([a-z0-9]{2,5})(?:\?|$)/i.exec(u || '') || [])[1] || 'bin').toLowerCase();
+  const mimeOf2 = (u) => ({ pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[extOf2(u)] || 'application/octet-stream');
   if (files.photo_url){
+    let bytes = null;
     try {
-      const bytes = await (await fetch(files.photo_url)).arrayBuffer();
+      bytes = await (await fetch(files.photo_url)).arrayBuffer();
       const img = /\.png(\?|$)/i.test(files.photo_url) ? await out.embedPng(bytes) : await out.embedJpg(bytes);
       const page = out.addPage([612, 792]);
       const maxW = 532, maxH = 700;
       const scale = Math.min(maxW / img.width, maxH / img.height, 1);
       const w = img.width * scale, h = img.height * scale;
       page.drawImage(img, { x: (612 - w) / 2, y: (792 - h) / 2, width: w, height: h });
-    } catch(e){ /* photo failed to embed — cover page still ships on its own */ }
+    } catch(e){ /* photo failed to embed — cover page still ships on its own */ if (bytes && bytes.byteLength) extras.push({ bytes: new Uint8Array(bytes), filename: baseName + '-foto.' + extOf2(files.photo_url), type: mimeOf2(files.photo_url) }); }
   }
   if (files.spec_url){
+    let specBytes = null;
     try {
-      const specBytes = await (await fetch(files.spec_url)).arrayBuffer();
+      specBytes = await (await fetch(files.spec_url)).arrayBuffer();
       const specDoc = await PDFDocument.load(specBytes);
       const copied = await out.copyPages(specDoc, specDoc.getPageIndices());
       copied.forEach(p => out.addPage(p));
-    } catch(e){ /* spec sheet failed to merge — everything else still ships */ }
+    } catch(e){ /* spec sheet failed to merge — everything else still ships */ if (specBytes && specBytes.byteLength) extras.push({ bytes: new Uint8Array(specBytes), filename: baseName + '-spec.' + extOf2(files.spec_url), type: mimeOf2(files.spec_url) }); }
   }
 
   const bytes = await out.save();
   const filename = `${plant.name.replace(/[^a-z0-9]+/gi, '-')}-${(specEs || 'oferta').replace(/[^a-z0-9]+/gi, '-')}.pdf`;
-  return { bytes, filename };
+  return { bytes, filename, extras };
 }
 
 function rqBytesToBase64(bytes){
@@ -7657,6 +7664,7 @@ async function rqPrepareOfferFilesByPlant(filterProductIds, filterPlantIds){
       byPlant[plant.id] = {
         attachment: { filename: built.filename, content: rqBytesToBase64(built.bytes) },
         downloadFile: built,
+        extra: (built.extras || []).map(e => ({ filename: e.filename, content: rqBytesToBase64(e.bytes) })).filter(e => e.content), // what could not go into the PDF (Word spec…) goes as it is, never empty
       };
     } catch(e){ /* one plant's PDF failing to build shouldn't block the rest of the offer */ }
   }));
@@ -9224,7 +9232,7 @@ async function sendOfferEmailTo(customerId){
     if (!full) return;
     const filesByPlant = await rqPrepareOfferFilesByPlant([pid]);
     const pesosFiles = full.some(({ calc }) => calc.mxn) ? await rqPesosFiles(full) : null;
-    const attachments = pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean);
+    const attachments = pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean).concat(full.flatMap(({ plant }) => (filesByPlant[plant.id] && filesByPlant[plant.id].extra) || []));
     const subjectSpecs = [...new Set(full.map(({ plant }) => rqSpecEsForPlant(plant)).filter(Boolean))];
     const subject = `Cotización — ${subjectSpecs.join(' / ')}`;
     // Real ask 2026-09-16: the credit-hold line needs to know overCreditLimit before the body is
@@ -9351,7 +9359,7 @@ async function sendOfferEmailToAll(filterProductIds, filterPlantIds, opts){
       toSend.push({
         id: c.id, rdPid: pid, label: `${c.trade_name} — ${rqProductName(pid)}`, to: cc.email, subject: `${isUpdate ? 'Lista actualizada' : 'Cotización'} — ${subjectSpecs.join(' / ')}`,
         body: isUpdate ? buildCustomerUpdateText(firstName, full, newKeys) : buildCustomerOfferText(firstName, full, warnings.length ? warnings : false, signalLine), full, lacks, c, recordAttemptKey,
-        attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean),
+        attachments: pesosFiles ? pesosFiles.attachments : full.map(({ plant }) => filesByPlant[plant.id]?.attachment).filter(Boolean).concat(full.flatMap(({ plant }) => (filesByPlant[plant.id] && filesByPlant[plant.id].extra) || [])),
         downloadFiles: pesosFiles ? pesosFiles.downloadFiles : full.map(({ plant }) => filesByPlant[plant.id]?.downloadFile).filter(Boolean),
         html: rqOfferEmailHtml(firstName, full, { signalLine, warnings, isUpdate }), // the blue bars table when there are two or more brands (the plain text above stays its text)
       });

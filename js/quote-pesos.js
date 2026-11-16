@@ -123,6 +123,7 @@ async function rqPesosFiles(full){
       const built = await rqBuildCombinedPdf(plant, calc);
       attachments.push({ filename: built.filename, content: rqBytesToBase64(built.bytes) });
       downloadFiles.push(built);
+      (built.extras || []).forEach(e => { const content = rqBytesToBase64(e.bytes); if (content) attachments.push({ filename: e.filename, content }); }); // a Word spec / webp photo that cannot go into the PDF travels as it is (owner 2026-11-15: "vienen en todos los formatos")
     } catch (e) { /* one plant's PDF failing never blocks the offer */ }
   }
   return { attachments, downloadFiles };
