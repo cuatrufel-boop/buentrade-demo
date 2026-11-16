@@ -7345,6 +7345,8 @@ function rqOfferEmailHtml(firstName, full, o){
 // (WhatsApp unfurls only the first link) and says its docs, so no line is left without them.
 // CURRENT WhatsApp offer: one message and one bars picture per customer × product, every priced brand highest first. The picture contains no text or links. A brand sheet/photo travels as its own attachment.
 // One explicit "Yes, sent" confirms all drafts represented by that picture; the customer's bookkeeping runs once.
+// The brand's own short link (the one that opens its spec / photo): only an offer that was minted has one.
+function rqWaFichaLink(offer){ return offer && offer.short_code ? APP_ORIGIN + '/p/' + offer.short_code : null; } // the same constant and path as rqWaLine's link
 function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate, newKeys, onSent }){
   // One customer × product message. Every priced brand is in one bars picture, highest first, using the customer's currency; the single-brand case still uses that picture.
   const phone = (cc.whatsapp || cc.phone || '').replace(/\D/g, ''), firstName = '';
@@ -7365,10 +7367,14 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
-    return [{ extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => r.specU || r.photoU).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || null })), // pairKey: the customer × product row of the one offer window
+    // THE FICHA LINK CHIPS (owner 2026-11-15): a brand with a spec / photo AND its own link (the short code of its offer) goes as its own thin card with that link; the brands without a link keep their document (the PDF), as before.
+    const linkOf = (r) => (typeof RQ_FICHA_LINK_CHIPS !== 'undefined' && RQ_FICHA_LINK_CHIPS && (r.specU || r.photoU) ? rqWaFichaLink(r.offer) : null);
+    const chipItems = rows.filter(r => linkOf(r)).map(r => ({ extras: [], id: c.id, rdPid: pid, label: `${pairKey} — ${String(r.one.plant.name).trim()} · ficha`, pairKey, phone, body: linkOf(r), chip: { brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null }, sentOffers: [], thinImages: [], fichas: [], onOpened: async () => {} }));
+    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
       bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
-      onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } }];
+      onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } };
+    return [bannerItem, ...chipItems];
   }
   return sorted.map((one, i) => {
     // THE MESSAGE IS THE PRICE (owner 2026-10-25: "quita los mensajes fuera del precio, déjalo a un lado como sugerencia para poder hacer copy paste"): the product, the price and its link — nothing else goes in the bubble. The opening line / the "Lista actualizada" title
@@ -7396,6 +7402,10 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
 // The thin blue banner of a brand with a card (owner 2026-10-24, option 4: "imagen delgada adjunta, y el link se queda"): it is the SAME picture the link's preview draws (brand, Con docs / Sin docs, BuenTrade),
 // 1200×72 (thin), downloaded on the first open like every other WhatsApp file so the trader drops it into the chat; the text keeps its line and its link.
 // NEVER makes the window wait (owner 2026-10-24: "se demora demasiado en abrir"): the picture is asked in the background, once per brand × docs (a cache shared by all customers), and the card shows its 📎 when it lands.
+// EACH FICHA IS A THIN CARD WITH ITS OWN LINK (owner 2026-11-15, after the PDF's preview was cropped by WhatsApp and showed "PDF": "delgadas con bordes redondos, casi nada de texto, cada una con su link", option 1 + icon 10, "y logos nítidos"): a brand with a spec / photo and a link goes in the chat as ITS OWN
+// message — the thin card with the plant's logo (a picture, drawn at 1600 px so it stays sharp) and, as its caption, that brand's short link (`/p/…`, which opens the spec / photo). The offer's bars picture is untouched. A brand with no link (a price he already holds mints no offer) keeps the document it always had.
+// ONE named switch: false = every ficha as a PDF again.
+const RQ_FICHA_LINK_CHIPS = true;
 const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same picture as a local address, so the card can SHOW the banner it will send
 // THE FICHA OF A BRAND AS ONE SMALL, CLEAN BUENTRADE DOCUMENT beside the picture (owner 2026-11-10: "es este pero con colores de buentrade, así chiquito, limpio" · option 1 "logo en cada tarjeta de ficha" · "si además de ficha hay fotos tiene que mostrar las dos"):
 // ONE PDF per brand named Brand_ficha.pdf. Its FIRST page is a wide, short BuenTrade card (navy, the plant's logo on white, the brand, "Ficha técnica"/"Ficha técnica + Foto") — the page WhatsApp draws as the document's preview, so it
@@ -7408,10 +7418,12 @@ function rqWaFichaDocs(f){
 }
 async function rqBuildFichaDocs(f){
   const { PDFDocument, rgb, StandardFonts } = PDFLib;
-  // A file that exists but does not answer is asked again (3 tries); a spec or a photo that still does not come makes the WHOLE ficha fail — never a ficha quietly built without its spec (owner 2026-11-13: "si el producto tiene spec grabada o foto debe siempre compartirla"). The logo is only decoration: it may stay out.
+  // A file that exists but does not answer is asked again (3 tries); a logo, spec or photo that still does not come makes the WHOLE ficha fail.
+  if (!f.logo_url) throw new Error('No plant logo is saved for ' + f.brand);
   const get = async (u) => { if (!u) return null; for (let k = 0; k < 3; k++) { try { const r = await fetch(u); if (r.ok) return await r.arrayBuffer(); } catch (e) { /* ask again */ } if (k < 2) await new Promise((x) => setTimeout(x, 400)); } return null; };
   const [specB, photoB, logoB] = await Promise.all([get(f.spec_url), get(f.photo_url), get(f.logo_url)]);
   if ((f.spec_url && !specB) || (f.photo_url && !photoB)) throw new Error('the spec or the photo of ' + f.brand + ' did not download');
+  if (!logoB) throw new Error('the plant logo of ' + f.brand + ' did not download');
   const magic = (b) => b ? Array.from(new Uint8Array(b.slice(0, 4))) : [];
   const isPdf = (b) => magic(b).join() === '37,80,68,70', isPng = (b) => magic(b).join() === '137,80,78,71', isJpg = (b) => magic(b)[0] === 255 && magic(b)[1] === 216;
   const base = String(f.brand).replace(/[^\w .-]+/g, '').trim(), docs = []; // the file is named just like the brand ("Tyson Foods.pdf"): the shortest text WhatsApp can show under a document
@@ -7424,7 +7436,30 @@ async function rqBuildFichaDocs(f){
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
   rr(0, H, W, H, 18, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
   let lx = 26;
-  const logoImg = logoB && (isPng(logoB) ? await out.embedPng(logoB).catch(() => null) : isJpg(logoB) ? await out.embedJpg(logoB).catch(() => null) : null);
+  let logoImg = null;
+  try {
+    if (isPng(logoB)) logoImg = await out.embedPng(logoB);
+    else if (isJpg(logoB)) logoImg = await out.embedJpg(logoB);
+    else {
+      // Plant logos accept image/* (including WebP and SVG); rasterize them for pdf-lib.
+      const blob = new Blob([logoB], { type: mimeOf(f.logo_url) });
+      let image;
+      try { image = await createImageBitmap(blob); }
+      catch {
+        const src = URL.createObjectURL(blob), fallback = new Image();
+        try { fallback.src = src; await fallback.decode(); image = fallback; }
+        finally { URL.revokeObjectURL(src); }
+      }
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+      const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('could not rasterize the plant logo');
+      ctx.drawImage(image, 0, 0);
+      if (image.close) image.close();
+      const png = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!png) throw new Error('could not convert the plant logo to PNG');
+      logoImg = await out.embedPng(await png.arrayBuffer());
+    }
+  } catch (e) { throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha: ' + String(e && e.message || e)); }
+  if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
   if (logoImg) {
     const bw = 104, bh = 48, sc = Math.min((bw - 12) / logoImg.width, (bh - 10) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
     rr(18, H - 14, bw, bh, 9, rgb(1, 1, 1)); // the white patch behind the logo, rounded
@@ -7484,6 +7519,40 @@ function rqWaAttachThinImages(items){
       it.bannerUrl = rqThinUrls.get(key);
       if (bars) it.cardFull = true; // the bars picture is shown whole at ITS OWN shape (600 wide, as tall as its brands need): the bubble's 1200/288 band would squash it (owner 2026-11-11: the preview showed it stretched and blurry)
       it.downloadFiles = [{ bytes, filename: `${(bars ? [{ brand: bars.title }] : list).map(b => b.brand.replace(/[^\w.-]+/g, '_')).join('+').slice(0, 80)}.png`, type: 'image/png' }, ...(it.fichaFiles || [])];
+      const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+      if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
+    });
+  });
+}
+// The picture of a ficha link chip: asked in the background like every banner (cached by brand × logo), never holds the window up; it is what the clipboard pastes and what the card shows.
+function rqWaAttachChips(items){
+  if (typeof rqThinCache === 'undefined') return;
+  items.filter(it => it.chip).forEach(it => {
+    it.fichasState = 'pending'; it.fichasMissing = 0; it.fichasError = '';
+    const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN, key = 'chip|' + it.chip.brand + '|' + (it.chip.logo_url || '');
+    const url = `${base}/.netlify/functions/product-card-banner?ficha=${encodeURIComponent(it.chip.brand)}&logo=${encodeURIComponent(it.chip.logo_url || '')}&k=o`;
+    if (!rqThinCache.has(key)) {
+      const request = fetch(url).then(async r => { if (!r.ok) return null; const b = await r.arrayBuffer(); const u = new Uint8Array(b || 0); return u.length >= 24 && u[0] === 137 && u[1] === 80 && u[2] === 78 && u[3] === 71 && u[4] === 13 && u[5] === 10 && u[6] === 26 && u[7] === 10 ? b : null; }).catch(() => null);
+      rqThinCache.set(key, request);
+      request.then(bytes => { if (!bytes && rqThinCache.get(key) === request) rqThinCache.delete(key); });
+    }
+    const pending = rqThinCache.get(key), token = {};
+    it.fichaChipRequest = token; it.thinBytesP = pending;
+    setTimeout(() => {
+      if (it.fichaChipRequest !== token || it.fichasState !== 'pending') return;
+      it.fichaChipRequest = null; if (rqThinCache.get(key) === pending) rqThinCache.delete(key);
+      it.fichasState = 'failed'; it.fichasMissing = 1; it.fichasError = 'Plant ficha card timed out. Review before sending.';
+      const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
+      if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
+    }, 30000);
+    pending.then(bytes => {
+      if (it.fichaChipRequest !== token) return;
+      it.fichaChipRequest = null;
+      if (!bytes) { it.fichasState = 'failed'; it.fichasMissing = 1; it.fichasError = 'Plant ficha card could not be prepared. Review before sending.'; const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA'; if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
+      if (!rqThinUrls.has(key)) rqThinUrls.set(key, URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
+      it.bannerUrl = rqThinUrls.get(key);
+      it.downloadFiles = [{ bytes, filename: `${it.chip.brand.replace(/[^\w.-]+/g, '_')}_ficha.png`, type: 'image/png' }];
+      it.fichasState = 'ready'; it.fichasMissing = 0; it.fichasError = '';
       const typing = document.activeElement && document.activeElement.tagName === 'TEXTAREA';
       if (!typing && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it) && typeof rqRenderWaModal === 'function') rqRenderWaModal();
     });
@@ -8621,10 +8690,10 @@ function rqRenderWaModal(){
       <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.recording ? '<span class="rq-msg-done">Saving record…</span>' : it.recordPending ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Sent — record pending</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">Retry record</button>` : it.opened ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">I sent it</button>` : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
       <div class="rq-wa-row">
         <div class="rq-wa-chat"><div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
-        <button type="button" class="wa-btn outline rq-wa-send" title="${it.fichasState === 'pending' ? 'Preparing specs and photos' : tip}" aria-label="${it.fichasState === 'pending' ? 'Preparing specs and photos' : tip}" ${it.fichasState === 'pending' ? 'disabled' : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
+        <button type="button" class="wa-btn outline rq-wa-send" title="${it.fichasState === 'pending' ? (it.chip ? 'Preparing ficha card' : 'Preparing specs and photos') : tip}" aria-label="${it.fichasState === 'pending' ? (it.chip ? 'Preparing ficha card' : 'Preparing specs and photos') : tip}" ${it.fichasState === 'pending' ? 'disabled' : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
         ${rqWaModalIsOffer && rqWaCanShare(it) ? `<button type="button" class="btn rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}
       </div>
-      ${it.fichasState === 'pending' ? '<div class="loc-hint" style="margin-top:6px;">Preparing specs and photos. WhatsApp will open when they are ready.</div>' : ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : ''}
+      ${it.fichasState === 'pending' ? `<div class="loc-hint" style="margin-top:6px;">${it.chip ? 'Preparing the plant ficha card.' : 'Preparing specs and photos. WhatsApp will open when they are ready.'}</div>` : ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasError ? escapeHtml(it.fichasError) : `${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.`}</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : ''}
       ${typeof rqWaFichasButton === 'function' ? rqWaFichasButton(it, i) : ''}
       ${it.downloadFiles && it.downloadFiles.length ? `<div class="loc-hint" style="margin-top:6px;">📎 ${it.downloadFiles.length} file${it.downloadFiles.length > 1 ? 's' : ''} will download automatically — ${it.bannerState === 'copied' ? '<b>picture copied: press Cmd+V in the chat</b>' : it.bannerState === 'failed' ? '<b>picture NOT copied: drag the downloaded file into the chat</b>' : 'the picture is also copied when you open WhatsApp: press Cmd+V in the chat (or drag the file)'}${it.downloadFiles.length > 1 ? '<br><b>Specs/photos download separately; attach these documents in WhatsApp so the customer can open them.</b>' : ''}${rqWaModalIsOffer && rqWaCanShare(it) ? ' — or tap Share to send the picture and the text together' : ''}</div>` : ''}
     </div>`; }).join('');
@@ -8665,7 +8734,7 @@ function rqWaCanShare(it){
 async function rqWaModalShareOne(i){
   const it = rqWaModalItems[i];
   if (!it) return;
-  if (it.fichasState === 'pending' || ['incomplete', 'failed'].includes(it.fichasState)) { rqShowNotice('The specs and photos are not ready. The complete quote cannot be shared yet.'); return; }
+  if (it.fichasState === 'pending' || ['incomplete', 'failed'].includes(it.fichasState)) { rqShowNotice(it.chip ? 'The ficha card is not ready. The complete message cannot be shared yet.' : 'The specs and photos are not ready. The complete quote cannot be shared yet.'); return; }
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
   const files = rqWaShareFiles(it);
   if (!files.length || !rqWaCanShare(it)) { rqShowNotice('This browser cannot share the complete quote with its specs and photos.'); return; }
@@ -8702,8 +8771,8 @@ async function rqWaPasteFichas(i){
 }
 function rqWaFichasProblem(it, i){ // the same amber warning and the same way out the review window shows, for the composer's card
   if (!it) return '';
-  if (it.fichasState === 'pending') return '<div class="loc-hint" style="margin-top:6px;">Preparing specs and photos. WhatsApp will open when they are ready.</div>';
-  return ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : '';
+  if (it.fichasState === 'pending') return `<div class="loc-hint" style="margin-top:6px;">${it.chip ? 'Preparing the plant ficha card.' : 'Preparing specs and photos. WhatsApp will open when they are ready.'}</div>`;
+  return ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasError ? escapeHtml(it.fichasError) : `${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.`}</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : '';
 }
 function rqWaPasteErrText(err){ const e = String(err || ''); return /osascript|Command failed|timed out|System Events/i.test(e) ? 'WhatsApp was not in front at that moment' : e; }
 function rqWaFichasButton(it, i){
@@ -8739,7 +8808,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   const it = rqWaModalItems[i];
   if (!it) return;
   if (typeof rqCmpIntroPending === 'function' && rqCmpIntroPending(it) && typeof rqShowNotice === 'function') { rqShowNotice('The intro message is waiting in WhatsApp. Send it first and tap "I sent it" (or "Not now"): the offer goes as its own message after it.'); return; }
-  if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice('Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
+  if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice(it.chip ? 'Preparing the ficha card — WhatsApp opens when it is ready.' : 'Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
   if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) { if (typeof rqShowNotice === 'function') rqShowNotice(`${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Press "Open anyway without all fichas" to send the picture without them, or close and open the offer again.`);
     if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
   if (rqWaModalIsOffer && rqWaIsPhone() && rqWaCanShare(it)) { rqWaModalShareOne(i); return; }
@@ -9285,7 +9354,7 @@ async function sendOfferWhatsAppTo(customerId){
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
     const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate: false, newKeys: new Set() }); // one message per brand, highest price first
-    rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+    if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
   }
   if (!items.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
   rqOpenWaModal(`WhatsApp offer — ${c.trade_name}`, items, true);
@@ -9435,7 +9504,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine: signals[k], isUpdate, newKeys, onSent: opts.onSent }); // one message per brand, highest price first
-      rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+      if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
     });
   }
   if (!items.length){
