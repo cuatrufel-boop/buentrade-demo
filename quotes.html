@@ -8920,7 +8920,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   if (rqWaModalIsOffer && rqWaIsPhone() && rqWaCanShare(it)) { rqWaModalShareOne(i); return; }
   if (rqWaModalIsOffer && rqWaIsPhone() && ((it.downloadFiles || []).length > 1 || (it.fichas || []).length)) { if (typeof rqShowNotice === 'function') rqShowNotice('This browser cannot share the complete quote with its specs and photos.'); return; }
   if (rqLockPrices(it)) { rqRenderWaModal(); return; } // the price in the box is the QT's, whatever was typed: put back, press again
-  const firstTime = !it.opened;
+  const firstTime = !it.opened && !(typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget); // in the one-click chain NOTHING is downloaded to the PC first: every picture goes straight to WhatsApp (owner 2026-11-16: "está bajando al pc antes de mandar en vez de mandar todo de una vez al whatsapp")
   if (firstTime) (it.downloadFiles || []).forEach(f => rqDownloadBytes(f.bytes, f.filename, f.type));
   // The banner is also COPIED, right here in the click (its bytes are already in memory, so the browser still counts this as the trader's own click — the old copy failed because it fetched first): in the chat, Cmd+V puts the
   // banner in the bubble and the text of the box becomes its caption — the approved design, one bubble. Never blocks: no clipboard support = the download above is still there.
