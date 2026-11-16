@@ -8876,14 +8876,23 @@ async function rqWaSendChain(i){
   try {
     const who = String(first.pairKey || '').split(' — ')[0];
     if (!(await rqConfirm(`Send ${seq.length} messages to ${who} now? The system pastes each one in WhatsApp and presses Enter by itself, one after the other. Do not touch the keyboard until it finishes.`))) return;
-    target = window.open('about:blank', '_blank'); // opened right after his OK (that click is the fresh gesture a browser wants); every message reuses this one tab
-    if (!target) { rqShowNotice('Allow this page to open WhatsApp, then try again.'); return; }
+    // NO browser tab: the chain's "tab" is a stand-in whose address makes THIS MAC open the chat (`/__local/wa-open`); a real tab was gone after the first message (his real try, 2026-11-16) and the next chat never opened
+    const opens = [];
+    target = { closed: false, close() {}, location: { set href(u) {
+      const m = /^https:\/\/wa\.me\/(\d+)\?text=([\s\S]*)$/.exec(String(u)); let text = ''; try { text = m ? decodeURIComponent(m[2]) : ''; } catch (e) { /* a text that cannot be read opens nothing */ }
+      opens.push(m ? fetch('/__local/wa-open', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: m[1], text }) }).then(r => r.json()).catch(() => ({ ok: false, error: 'no answer from this Mac' })) : Promise.resolve({ ok: false, error: 'the WhatsApp address was not valid' }));
+    } } };
     for (const x of seq) {
       const idx = rqWaModalItems.indexOf(x);
       if (idx < 0) { why = 'the window changed'; break; }
       x.pasteState = ''; x.pasteError = '';
+      const before = opens.length;
       rqWaChainTarget = target; rqWaModalOpenOne(idx, false);
-      for (let n = 0; n < 400 && x.pasteState !== 'pasted'; n++) await wait(100); // up to 40 s: the chat opens, the picture is pasted (with its own two retries)
+      for (let n = 0; n < 100 && opens.length === before; n++) await wait(100); // up to 10 s: the picture is copied by this Mac and the chat is asked for
+      if (opens.length === before) { why = 'WhatsApp was not opened (read the notice above)'; break; } // e.g. an intro message waiting, a price put back, a picture not ready
+      const opened = await opens[opens.length - 1]; // THIS MAC must have opened the chat: never an Enter into whatever chat was open
+      if (!opened || !opened.ok) { why = 'the chat was not opened (' + ((opened && opened.error) || 'no answer') + ')'; break; }
+      for (let n = 0; n < 400 && x.pasteState !== 'pasted' && !(x.pasteState === 'manual' && n > 120); n++) await wait(100); // up to 40 s: the picture is pasted (with its own two retries)
       if (x.pasteState !== 'pasted') { why = (x.pasteError || 'the picture was not pasted in WhatsApp'); break; }
       await wait(2500); // the chat shows the picture with its text as the caption
       let e; try { const r = await fetch('/__local/wa-enter', { method: 'POST', headers: { 'X-BT-Local': '1' } }); e = await r.json(); } catch (err) { e = { ok: false, error: 'no answer from this Mac' }; }
