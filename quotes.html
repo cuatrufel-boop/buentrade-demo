@@ -8767,7 +8767,26 @@ function rqWaFichasButton(it, i){
   const button = lastWayOut || st === 'working' ? `<button type="button" class="chip" ${st === 'working' ? 'disabled' : ''} onclick="rqWaPasteFichas(${i})">${st === 'working' ? 'Pasting…' : 'Paste specs and photos (' + n + ')'}</button> ` : '';
   return `<div class="loc-hint rq-fichas" style="margin-top:6px;">📎 ${n} ficha${n === 1 ? '' : 's'} · ${button}${status}</div>`;
 }
+// ONE PASTE FOR THE WHOLE OFFER (owner 2026-11-15: "un solo envío adjunta todo con fichas"; real send 21:55: the bars picture went and its card never did — two pastes a few seconds apart raced with Enter): the banner and ALL ficha cards, PDFs, photos and other formats go to the clipboard together and paste ONCE. One preview, one Enter sends them all.
+function rqWaPasteCompleteOffer(it){ const f = it && it.downloadFiles; return !!(f && f.length > 1 && it.fichasState === 'ready'); }
+async function rqWaPasteCompleteOfferFiles(it){
+  const files = it.downloadFiles.map(f => ({ name: f.filename, b64: rqBytesToBase64(f.bytes) }));
+  if (files.some(x => !x.b64)) return false; // an empty file is never pasted
+  for (let n = 0; n <= 2; n++) { // the same patience as the single paste: two more tries a little further apart
+    if (n) await new Promise((r) => setTimeout(r, n === 1 ? 2500 : 4000));
+    try {
+      const r = await fetch('/__local/wa-paste-files', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) }), j = await r.json();
+      if (r.ok && j && j.ok) { it.pasteState = 'pasted'; it.pasteError = ''; it.fichasPasteState = 'pasted'; it.fichasPasteError = ''; if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); return true; }
+    } catch (e) { /* ask again */ }
+  }
+  return false; // the caller shows the existing manual recovery; it never starts a competing second paste
+}
 async function rqWaAutoPaste(it){
+  if (typeof rqWaPasteCompleteOffer === 'function' && rqWaPasteCompleteOffer(it)) {
+    if (await rqWaPasteCompleteOfferFiles(it)) return;
+    it.pasteState = 'manual'; it.pasteError = 'The complete offer could not be pasted together. Use the downloaded files and review them in WhatsApp.';
+    it.fichasPasteState = 'failed'; it.fichasPasteError = it.pasteError; rqRenderWaModal(); return; // never silently fall back to two competing pastes
+  }
   try { const r = await fetch('/__local/wa-paste', { method: 'POST', headers: { 'X-BT-Local': '1' } }); const j = await r.json(); it.pasteState = j && j.ok ? 'pasted' : 'manual'; it.pasteError = j && !j.ok ? (j.error || 'no answer from this Mac') : ''; } catch (e) { it.pasteState = 'manual'; it.pasteError = String(e.message || e); } // the error is shown on the card, not hidden
   // ONE AUTOMATIC SECOND TRY (owner 2026-11-15: "el sistema debe subir las fichas cuando lee que ese producto las tiene como siempre… no poner más pasos"): the Mac paste fails when WhatsApp is not in front at that moment (the log showed one such failure among
   // successful runs); instead of leaving the button to the trader, the system tries once more by itself after a pause. The button stays as the last way out.
