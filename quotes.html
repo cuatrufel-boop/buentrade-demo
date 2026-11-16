@@ -8717,7 +8717,7 @@ function rqRenderWaModal(){
       <div class="rq-msg-head"><span class="rq-msg-who">${escapeHtml(who)}</span>${what ? `<span class="rq-msg-what">${escapeHtml(what)}</span>` : ''}${it.recorded ? '<span class="rq-msg-done">✓ Sent</span>' : it.recording ? '<span class="rq-msg-done">Saving record…</span>' : it.recordPending ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Sent — record pending</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">Retry record</button>` : it.opened ? `<span class="rq-msg-done" style="color:#FFC876;border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.1);">Opened — not confirmed</span><button type="button" class="btn secondary small" onclick="rqWaMarkSent(${i})">I sent it</button>` : ''}${it.phone ? `<span class="rq-msg-phone">+${escapeHtml(String(it.phone))}</span>` : ''}</div>
       <div class="rq-wa-row">
         <div class="rq-wa-chat"><div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div></div>
-        <button type="button" class="wa-btn outline rq-wa-send" title="${it.fichasState === 'pending' ? (it.chip ? 'Preparing ficha card' : 'Preparing specs and photos') : tip}" aria-label="${it.fichasState === 'pending' ? (it.chip ? 'Preparing ficha card' : 'Preparing specs and photos') : tip}" ${it.fichasState === 'pending' ? 'disabled' : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>
+        ${typeof rqWaChainHidesButton === 'function' && rqWaChainHidesButton(it) ? '' : `<button type="button" class="wa-btn outline rq-wa-send" title="${it.fichasState === 'pending' ? (it.chip ? 'Preparing ficha card' : 'Preparing specs and photos') : tip}" aria-label="${it.fichasState === 'pending' ? (it.chip ? 'Preparing ficha card' : 'Preparing specs and photos') : tip}" ${it.fichasState === 'pending' ? 'disabled' : ''}${typeof rqWaChainItems === 'function' && rqWaChainItems(it).length ? ` data-all="${rqWaChainItems(it).length + 1}"` : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>`}
         ${rqWaModalIsOffer && rqWaCanShare(it) ? `<button type="button" class="btn rq-wa-share" title="Send the picture and the text together" onclick="rqWaModalShareOne(${i})">Share</button>` : ''}
       </div>
       ${it.fichasState === 'pending' ? `<div class="loc-hint" style="margin-top:6px;">${it.chip ? 'Preparing the plant ficha card.' : 'Preparing specs and photos. WhatsApp will open when they are ready.'}</div>` : ['incomplete', 'failed'].includes(it.fichasState) ? `<div class="loc-hint" style="margin-top:6px;color:#FFC876;">${it.fichasError ? escapeHtml(it.fichasError) : `${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Review before sending.`}</div><button type="button" class="btn secondary small" onclick="rqWaModalOpenOne(${i}, true)">Open anyway without all fichas</button>` : ''}
@@ -8853,6 +8853,8 @@ async function rqWaAutoPaste(it){
 // server does ONLY when WhatsApp is the front app (a separate address, wa-enter). It asks once before it starts, and it STOPS at the first thing that does not go as expected (a picture not ready, a paste that failed, WhatsApp not in front): nothing
 // else is sent and every message keeps its own green button. The tab is reserved inside the click (a browser blocks one opened later) and reused for every message.
 let rqWaChainBusy = false, rqWaChainTarget = null;
+// the ficha-card messages have NO button of their own while the prices message sends them all (owner 2026-11-16: "ahora pusiste un botón por marca, te dije un solo mensaje"); after a stopped chain they get theirs back
+function rqWaChainHidesButton(it){ return !!(it && it.chip && !it.chainFree && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.some(x => x.bars && x.pairKey === it.pairKey)); }
 function rqWaChainItems(it){ return it && it.bars && typeof rqWaModalItems !== 'undefined' ? rqWaModalItems.filter(x => x.chip && x.pairKey === it.pairKey) : []; }
 async function rqWaSendChain(i){
   if (rqWaChainBusy) return; // a second click while it runs (or while it asks) does nothing
@@ -8860,7 +8862,7 @@ async function rqWaSendChain(i){
   if (seq.length < 2) return;
   if (seq.some(x => x.pictureState === 'pending' || x.fichasState === 'pending')) { rqShowNotice('Preparing the prices and the ficha cards. Wait until everything is ready.'); return; }
   if (seq.some(x => x.pictureState === 'failed' || ['incomplete', 'failed'].includes(x.fichasState) || !(x.downloadFiles && x.downloadFiles.length))) { rqShowNotice('Something could not be prepared. Reopen the offer to try again. Nothing was sent.'); return; }
-  rqWaChainBusy = true;
+  rqWaChainBusy = true; seq.forEach(x => { x.chainFree = false; });
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
   let done = 0, why = '', target = null;
   try {
@@ -8881,6 +8883,7 @@ async function rqWaSendChain(i){
       done++; await wait(3500); // WhatsApp sends it before the next one comes
     }
   } finally { rqWaChainBusy = false; rqWaChainTarget = null; }
+  if (done < seq.length) seq.forEach(x => { x.chainFree = true; }); // it stopped: every message gets its own green button back
   rqShowNotice(done === seq.length ? `Sent ${done} of ${seq.length} messages. Confirm them when WhatsApp asks.` : `Stopped after ${done} of ${seq.length}: ${why}. Nothing else was sent; each message keeps its own green button.`);
   if (typeof rqRenderWaModal === 'function') rqRenderWaModal();
 }
@@ -9022,7 +9025,7 @@ function rqComposerWaHtml(it, i){
   return `<div class="rq-cmp-msg${it.recorded ? ' sent' : it.opened ? ' opened' : ''}${sugg ? ' has-sugg' : ''}">
     <div class="rq-wa-bubble">${it.bannerUrl ? `<img class="rq-wa-banner"${it.cardFull ? ' data-full="1"' : ''} alt="" src="${it.bannerUrl}">` : ''}<textarea oninput="rqWaModalItems[${i}].body=this.value;rqWaFit(this)">${escapeHtml(it.body)}</textarea></div>
     <div class="rq-cmp-act">
-      <div class="rq-cmp-btns"><button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" ${it.pictureState === 'pending' || it.fichasState === 'pending' ? 'disabled' : ''}${typeof rqWaChainItems === 'function' && rqWaChainItems(it).length ? ` data-all="${rqWaChainItems(it).length + 1}"` : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button></div>
+      <div class="rq-cmp-btns">${typeof rqWaChainHidesButton === 'function' && rqWaChainHidesButton(it) ? '<div class="rq-cmp-hint">Goes with the prices message: one green button sends everything.</div>' : `<button type="button" class="wa-btn outline rq-wa-send" title="${tip}" aria-label="${tip}" ${it.pictureState === 'pending' || it.fichasState === 'pending' ? 'disabled' : ''}${typeof rqWaChainItems === 'function' && rqWaChainItems(it).length ? ` data-all="${rqWaChainItems(it).length + 1}"` : ''} onclick="rqWaModalOpenOne(${i})">${RQ_WA_ICON_LG}</button>`}</div>
       ${status ? `<div class="rq-cmp-status">${status}</div>` : ''}
     </div>${sugg ? `<div class="rq-cmp-suggs">${sugg}</div>` : ''}${hint}${typeof rqWaFichasProblem === 'function' ? rqWaFichasProblem(it, i) : ''}${typeof rqWaFichasButton === 'function' ? rqWaFichasButton(it, i) : ''}</div>`;
 }
