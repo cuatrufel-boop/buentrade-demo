@@ -7370,15 +7370,14 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     if (isUpdate) extras.push({ label: 'Title', text: `Lista actualizada — ${rqSpecEsForPlant(sorted[0].plant) || ''}:` }); else if (signalLine) extras.push({ label: 'Opening', text: signalLine });
     if (outro) extras.push({ label: 'Note', text: outro });
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
-    // THE FICHA CARDS (owner 2026-11-15): a brand with a spec / photo AND its own link (the short code of its offer) has its thin card attached to THIS message (a ficha of kind `linkCard`) and its link in the text; the brands without a link keep their document (the PDF), as before.
+    // THE FICHA LINK CHIPS (owner 2026-11-15): a brand with a spec / photo AND its own link (the short code of its offer) goes as its own thin card with that link; the brands without a link keep their document (the PDF), as before.
     const linkOf = (r) => (typeof RQ_FICHA_LINK_CHIPS !== 'undefined' && RQ_FICHA_LINK_CHIPS && (r.specU || r.photoU) ? rqWaFichaLink(r.offer) : null);
-    const cardLines = rows.filter(r => linkOf(r)).map(r => `${String(r.one.plant.name).trim()} ${linkOf(r)}`).join('\n');
-    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: cardLines, fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null, linkCard: false })), // pairKey: the customer × product row of the one offer window
+    const chipItems = rows.filter(r => linkOf(r)).map(r => ({ extras: [], id: c.id, rdPid: pid, label: `${pairKey} — ${String(r.one.plant.name).trim()} · ficha`, pairKey, phone, body: linkOf(r), chip: { brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null }, sentOffers: [], thinImages: [], fichas: [], onOpened: async () => {} }));
+    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
-      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })),
-        cards: rows.filter(r => linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })) }, // ONE MESSAGE (owner 2026-11-16: "debe ser un solo mensaje"): the linked cards are drawn INSIDE this picture; their links are the text
+      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } };
-    return [bannerItem];
+    return [bannerItem, ...chipItems];
   }
   return sorted.map((one, i) => {
     // THE MESSAGE IS THE PRICE (owner 2026-10-25: "quita los mensajes fuera del precio, déjalo a un lado como sugerencia para poder hacer copy paste"): the product, the price and its link — nothing else goes in the bubble. The opening line / the "Lista actualizada" title
@@ -7545,7 +7544,7 @@ function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
   items.filter(it => (it.thinImages && it.thinImages.length) || it.bars).forEach(it => {
     const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') + '|' + (bars.cards || []).map(c => c.brand + '~' + (c.logo_url || '')).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
-    if (bars && bars.cards && bars.cards.length) it.pictureState = 'pending';
+    if (bars) it.pictureState = 'pending'; // the green button never opens a chat before the prices picture is ready (a click that came first copied a promise and could end as a text-only WhatsApp, 2026-11-16 14:03)
     if (it.fichas && it.fichas.length && !it.fichasP) {
       const requestToken = {};
       it.fichasRequest = requestToken;
@@ -9412,7 +9411,7 @@ async function sendOfferWhatsAppTo(customerId){
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
     const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate: false, newKeys: new Set() }); // one message per customer × product, all brands highest price first
-    rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+    if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
   }
   if (!items.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
   rqOpenWaModal(`WhatsApp offer — ${c.trade_name}`, items, true);
@@ -9563,7 +9562,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine: signals[k], isUpdate, newKeys, onSent: opts.onSent }); // one message per customer × product, all brands highest price first
-      rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+      if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
     });
   }
   if (!items.length){
