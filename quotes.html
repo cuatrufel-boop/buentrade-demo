@@ -7372,12 +7372,15 @@ function rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, s
     // NO LINK under the picture (owner 2026-11-10: "sin link… solo el doc al lado de la marca abre la ficha"): the doc mark beside a brand on the picture means its ficha comes as a DOCUMENT in the chat, next to the picture; the window downloads them together (rqWaAttachThinImages)
     // THE FICHA LINK CHIPS (owner 2026-11-15): a brand with a spec / photo AND its own link (the short code of its offer) goes as its own thin card with that link; the brands without a link keep their document (the PDF), as before.
     const linkOf = (r) => (typeof RQ_FICHA_LINK_CHIPS !== 'undefined' && RQ_FICHA_LINK_CHIPS && (r.specU || r.photoU) ? rqWaFichaLink(r.offer) : null);
-    const chipItems = rows.filter(r => linkOf(r)).map(r => ({ extras: [], id: c.id, rdPid: pid, label: `${pairKey} — ${String(r.one.plant.name).trim()} · ficha`, pairKey, phone, body: linkOf(r), chip: { brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null }, sentOffers: [], thinImages: [], fichas: [], onOpened: async () => {} }));
-    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: '', fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })), // pairKey: the customer × product row of the one offer window
+    // ONE MESSAGE (owner 2026-11-16: "precios y fichas en el mismo mensaje… y links separados por cada marca con su link"): the card of every linked brand is drawn INSIDE the prices picture (logo, brand, doc mark, "Ficha técnica" / "Foto" / "Ficha técnica + Foto"), and the text of that same message is one block per brand — the brand and ITS OWN link.
+    const linked = rows.filter(r => linkOf(r));
+    const linkText = linked.map(r => `${String(r.one.plant.name).trim()}\n${linkOf(r)}`).join('\n\n');
+    const bannerItem = { extras, personal: { pid, brands: sorted.map(({ plant }) => String(plant.name).trim()), spec: (rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid) || '') }, id: c.id, rdPid: pid, label: `${pairKey} — ${sorted.length === 1 ? String(sorted[0].plant.name).trim() : 'all brands'}`, pairKey, phone, body: linkText, fichas: rows.filter(r => (r.specU || r.photoU) && !linkOf(r)).map(r => ({ brand: String(r.one.plant.name).trim(), spec_url: r.specU, photo_url: r.photoU, logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null })), // pairKey: the customer × product row of the one offer window
       sentOffers: offs, thinImages: [],
-      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })) },
+      bars: { title: rqSpecEsForPlant(sorted[0].plant) || rqProductName(pid), cur: sorted[0].calc.mxn ? 'mxn' : 'usd', rows: rows.map(r => ({ brand: String(r.one.plant.name).trim(), spec: r.spec, price: rqLinePrice(r.one.calc) })),
+        cards: linked.map(r => ({ brand: String(r.one.plant.name).trim(), logo_url: r.one.plant.logo_url || r.one.plant.logo_url_dark || null, kind: r.specU && r.photoU ? 'fp' : r.photoU ? 'p' : 'f' })) },
       onOpened: async () => { await rqConfirmOffers(offs.map(x => x.offer)); if (!customerDone) { customerDone = true; rqConfirmBullets(c.id, 'whatsapp'); if (onSent) onSent(c); } } };
-    return [bannerItem, ...chipItems];
+    return [bannerItem];
   }
   return sorted.map((one, i) => {
     // THE MESSAGE IS THE PRICE (owner 2026-10-25: "quita los mensajes fuera del precio, déjalo a un lado como sugerencia para poder hacer copy paste"): the product, the price and its link — nothing else goes in the bubble. The opening line / the "Lista actualizada" title
@@ -7511,8 +7514,8 @@ function rqWaAttachChips(items){
   if (typeof rqThinCache === 'undefined') return;
   items.filter(it => it.chip).forEach(it => {
     it.fichasState = 'pending'; it.fichasMissing = 0; it.fichasError = '';
-    const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN, key = 'chip|' + it.chip.brand + '|' + (it.chip.logo_url || '');
-    const url = `${base}/.netlify/functions/product-card-banner?ficha=${encodeURIComponent(it.chip.brand)}&logo=${encodeURIComponent(it.chip.logo_url || '')}&k=o`;
+    const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN, key = 'chip|' + it.chip.brand + '|' + (it.chip.kind || 'f') + '|' + (it.chip.logo_url || '');
+    const url = `${base}/.netlify/functions/product-card-banner?ficha=${encodeURIComponent(it.chip.brand)}&logo=${encodeURIComponent(it.chip.logo_url || '')}&k=${it.chip.kind || 'f'}`;
     if (!rqThinCache.has(key)) {
       const request = fetch(url).then(async r => { if (!r.ok) return null; const b = await r.arrayBuffer(); const u = new Uint8Array(b || 0); return u.length >= 24 && u[0] === 137 && u[1] === 80 && u[2] === 78 && u[3] === 71 && u[4] === 13 && u[5] === 10 && u[6] === 26 && u[7] === 10 ? b : null; }).catch(() => null);
       rqThinCache.set(key, request);
@@ -7543,7 +7546,7 @@ function rqWaAttachChips(items){
 function rqWaAttachThinImages(items){
   if (typeof rqThinCache === 'undefined') return; // not a page (no picture cache): the messages go as they are
   items.filter(it => (it.thinImages && it.thinImages.length) || it.bars).forEach(it => {
-    const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') + '|' + (bars.cards || []).map(c => c.brand + '~' + (c.logo_url || '')).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
+    const bars = it.bars, list = it.thinImages || [], key = bars ? 'bars|' + bars.cur + '|' + bars.title + '|' + bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|') + '|' + (bars.cards || []).map(c => c.brand + '~' + (c.kind || 'f') + '~' + (c.logo_url || '')).join('|') : list.map(b => `${b.brand}~${b.docs ? 1 : 0}~${b.price || ''}${b.cur === 'mxn' ? '~mxn' : ''}`).join('|'); // one brand = its banner; several = the BARS picture of ALL the brands of the offer (owner 2026-11-09)
     if (bars) it.pictureState = 'pending'; // the green button never opens a chat before the prices picture is ready (a click that came first copied a promise and could end as a text-only WhatsApp, 2026-11-16 14:03)
     if (it.fichas && it.fichas.length && !it.fichasP) {
       const requestToken = {};
@@ -7563,7 +7566,7 @@ function rqWaAttachThinImages(items){
       setTimeout(() => { if (it.fichasRequest === requestToken && it.fichasState === 'pending') { it.fichasRequest = null; it.fichasState = 'incomplete'; it.fichasMissing = it.fichas.length; it.fichas.forEach(f => rqFichaCache.delete(rqWaFichaCacheKey(f))); if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); } }, 30000);
     }
     const base = /^(localhost|127\.0\.0\.1|.*\.local)$/.test(typeof location !== 'undefined' ? location.hostname : '') ? '' : APP_ORIGIN; // on the trader's own machine the picture is drawn by the LOCAL function (the newest design, no publish needed); the links in the text stay the real ones
-    const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}&v=3${bars.cards && bars.cards.length ? `&f=${encodeURIComponent(bars.cards.map(c => `${c.brand}~${c.logo_url || ''}`).join('|'))}` : ''}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
+    const url = bars ? `${base}/.netlify/functions/product-card-banner?bars=${encodeURIComponent(bars.title)}&c=${bars.cur}&r=${encodeURIComponent(bars.rows.map(b => `${b.brand}~${b.spec ? 1 : 0}~${Number(b.price).toFixed(4)}`).join('|'))}&v=3${bars.cards && bars.cards.length ? `&f=${encodeURIComponent(bars.cards.map(c => `${c.brand}~${c.logo_url || ''}`).join('|'))}&fk=${bars.cards.map(c => c.kind || 'f').join(',')}` : ''}` : list.length === 1 ? `${base}/.netlify/functions/product-card-banner?b=${encodeURIComponent(list[0].brand)}&d=${list[0].docs ? 1 : 0}${list[0].price ? `&p=${Number(list[0].price).toFixed(4)}` : ''}&t=1${list[0].cur === 'mxn' ? '&c=mxn' : ''}` : `${base}/.netlify/functions/product-card-banner?l=${encodeURIComponent(key)}`;
     if (!rqThinCache.has(key)) {
       const request = fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
       rqThinCache.set(key, request);
