@@ -8856,7 +8856,10 @@ async function rqWaAutoPaste(it){
 let rqWaChainBusy = false, rqWaChainTarget = null;
 // SHORT LINKS (owner 2026-11-16: "cámbialo a una línea"): on THIS Mac the link under each ficha card is shortened by the local server with TinyURL (`tinyurl.com/yc2a4xyz`, 20 characters, one line on his phone and tappable). The card's button waits for it (up to 12 s) and, if it does not come,
 // the long link stays: nothing ever blocks a send. Only our own offer addresses are sent; the published site has no such address (the long link goes as before).
+// SWITCHED OFF (owner 2026-11-16, his own phone: the TinyURL link opened a TinyURL page with an AD and "Continue to Your Destination — redirecting in 7 seconds" instead of the spec): the link goes DIRECT to BuenTrade, as it did before. Nothing leaves this Mac.
+const RQ_SHORT_LINKS = false;
 function rqWaShortenLinks(items){
+  if (typeof RQ_SHORT_LINKS !== 'undefined' && !RQ_SHORT_LINKS) return;
   if (typeof location === 'undefined' || !/^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname)) return;
   (items || []).filter(it => it.chip && /^buentradegroup\.com\/p\/[a-z0-9]{4,16}$/.test(String(it.body))).forEach(it => {
     it.linkState = 'pending'; const done = () => { if (it.linkState === 'pending') it.linkState = 'ready'; if (typeof rqRenderWaModal === 'function' && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it)) rqRenderWaModal(); };
