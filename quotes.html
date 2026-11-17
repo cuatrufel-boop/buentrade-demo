@@ -7459,11 +7459,12 @@ async function rqBuildFichaDocs(f){
   // THE CARD, SIZED FOR THE PHONE — as it was on Thursday 2026-11-12, when the fichas arrived well (owner 2026-11-11: "las fichas deben adaptarse a este nuevo tamaño"; 2026-11-16: "el jueves mandaba las fichas bien"): WhatsApp shows the document's first page at the bubble's width, so the 612 × 76 row that came back after Thursday was zoomed and cropped
   // (only "Foods", blurred). The card is 612 × 188 again: the plant's logo on a rounded white patch, at the right the doc mark + "Ficha técnica" at 28 pt, the brand's name under them at 40 pt (never under 30; a longer name is shortened with "…").
   // The preview box of WhatsApp's document bubble is ~2.5 : 1 on the Mac (measured on the owner's own chat 2026-11-16: the 612 × 188 card, 3.26 : 1, still came out with its sides cut — "rd Foods" / "Ficha téc…"); WhatsApp shows the CENTER of the page in a ~2.4 : 1 window, so the page is 612 × 260 (2.35 : 1) with the same card centered in it: the whole card shows.
-  // THE THIN CARD "F" (owner 2026-11-16 22:35, from his mock-ups of 188 / 140 / 100 / 80 / 64 / 52: "mas delgadas fichas" · "ejecuta F"): the page is 612 × 52 and the card fills it. RISK told to him: the 612 × 76 row and the 612 × 188 card were both cropped by WhatsApp on his Mac (see above), so F may show only the middle of the card; if it does, put H = 260 back (the card then shows whole).
-  const W = 612, H = 52, M = 32, DY = 36, cover = out.addPage([W, H]);
+  // THE THIN CARD "F" (owner 2026-11-16 22:35, from his mock-ups of 188 / 140 / 100 / 80 / 64 / 52: "mas delgadas fichas" · "ejecuta F"): a thin navy bar with the plant's logo and name. TRIED AS A 612 × 52 PAGE and rejected by his own iPhone screenshot of 22:43: WhatsApp shows a fixed window (~2.8 : 1) of the CENTER of page 1, so the 52-high page came out as blank navy (no logo, no name).
+  // So the page stays 612 × 260 (green, the bubble's colour: the window shows it whole on the Mac and 216 of its 260 on the iPhone) and the F bar (534 × 68, rounded) sits in the middle of it — thin, with its logo and name, always inside what WhatsApp shows. (Owner 2026-11-16 22:50: "habíamos aprobado la F" · "por qué no la haces".)
+  const W = 612, H = 260, BAR_W = 534, BAR_H = 68, BAR_X = (612 - 534) / 2, M = 32, DY = 36, cover = out.addPage([W, H]);
   cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(217 / 255, 253 / 255, 211 / 255) }); // the page itself is the colour of WhatsApp's own bubble, so the card's ROUNDED corners show no white margin (a PDF page is always square)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
-  rr(0, H, W, H, 12, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
+  rr(BAR_X, H / 2 + BAR_H / 2, BAR_W, BAR_H, 10, rgb(23 / 255, 37 / 255, 75 / 255)); // the thin navy bar F, rounded, in the middle of the page
   let lx = 26;
   let logoImg = null;
   try {
@@ -7491,14 +7492,14 @@ async function rqBuildFichaDocs(f){
   if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
   // THE CARD OF HIS CHOICE "B" (owner 2026-11-16 21:15, from mock-ups): the plant's LOGO on a white patch and the PLANT'S NAME, big — nothing else. The word "Ver" lives in the file's own icon (WhatsApp draws the icon from the file's extension, see rqWaFileName).
   // The page stays 612 × 260 (WhatsApp crops anything thinner), the card centered in it.
-  const bw = 50, bh = 37, bx = 24, mid = H / 2; // card F: the patch is 72% of the card's height (his mock-up F)
+  const bw = 66, bh = 49, bx = BAR_X + 14, mid = H / 2; // bar F: the patch is 72% of the bar's height (his mock-up F)
   if (logoImg) {
     const sc = Math.min((bw - 6) / logoImg.width, (bh - 5) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
     rr(bx, mid + bh / 2, bw, bh, 6, rgb(1, 1, 1)); // the white patch behind the logo, rounded
     cover.drawImage(logoImg, { x: bx + (bw - w) / 2, y: mid - h / 2, width: w, height: h });
   }
-  const nameX = logoImg ? bx + bw + 18 : bx + 6, nameRoom = W - 30 - nameX;
-  let brand = String(f.brand), bsz = 19;
+  const nameX = logoImg ? bx + bw + 16 : bx + 6, nameRoom = BAR_X + BAR_W - 16 - nameX;
+  let brand = String(f.brand), bsz = 27;
   while (bsz > 12 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) bsz -= 1;
   while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) brand = brand.slice(0, -2).trim() + '…';
   cover.drawText(brand, { x: nameX, y: mid - bsz * 0.35, size: bsz, font: bold, color: rgb(1, 1, 1) });
