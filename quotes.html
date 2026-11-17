@@ -8854,6 +8854,17 @@ async function rqWaAutoPaste(it){
 // server does ONLY when WhatsApp is the front app (a separate address, wa-enter). It asks once before it starts, and it STOPS at the first thing that does not go as expected (a picture not ready, a paste that failed, WhatsApp not in front): nothing
 // else is sent and every message keeps its own green button. The tab is reserved inside the click (a browser blocks one opened later) and reused for every message.
 let rqWaChainBusy = false, rqWaChainTarget = null;
+// SHORT LINKS (owner 2026-11-16: option "2 · is.gd con nombre"): on THIS Mac the link under each ficha card is shortened by the local server (`is.gd/mountaire_k7q`, one line on his phone). The card's button waits for it (up to 12 s) and, if it does not come,
+// the long link stays: nothing ever blocks a send. Only our own offer addresses are sent; the published site has no such address (the long link goes as before).
+function rqWaShortenLinks(items){
+  if (typeof location === 'undefined' || !/^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname)) return;
+  (items || []).filter(it => it.chip && /^buentradegroup\.com\/p\/[a-z0-9]{4,16}$/.test(String(it.body))).forEach(it => {
+    it.linkState = 'pending'; const done = () => { if (it.linkState === 'pending') it.linkState = 'ready'; if (typeof rqRenderWaModal === 'function' && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it)) rqRenderWaModal(); };
+    setTimeout(done, 12000);
+    fetch('/__local/shorten', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ url: 'https://' + it.body, alias: String(it.chip.brand || '').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 9) }) })
+      .then(r => r.json()).then(j => { if (j && j.ok && /^https:\/\/is\.gd\/[A-Za-z0-9_]+$/.test(String(j.short)) && it.linkState === 'pending') { it.longBody = it.body; it.body = String(j.short).replace(/^https?:\/\//, ''); } }).catch(() => {}).then(done);
+  });
+}
 async function rqWaServerCopy(it){
   try {
     const f = it && it.downloadFiles && it.downloadFiles[0]; if (!f || !f.bytes) return false;
@@ -8868,7 +8879,7 @@ async function rqWaSendChain(i){
   if (rqWaChainBusy) return; // a second click while it runs (or while it asks) does nothing
   const first = rqWaModalItems[i], seq = first ? [first, ...rqWaChainItems(first)] : [];
   if (seq.length < 2) return;
-  if (seq.some(x => x.pictureState === 'pending' || x.fichasState === 'pending')) { rqShowNotice('Preparing the prices and the ficha cards. Wait until everything is ready.'); return; }
+  if (seq.some(x => x.pictureState === 'pending' || x.fichasState === 'pending' || x.linkState === 'pending')) { rqShowNotice('Preparing the prices and the ficha cards. Wait until everything is ready.'); return; }
   if (seq.some(x => x.pictureState === 'failed' || ['incomplete', 'failed'].includes(x.fichasState) || !(x.downloadFiles && x.downloadFiles.length))) { rqShowNotice('Something could not be prepared. Reopen the offer to try again. Nothing was sent.'); return; }
   rqWaChainBusy = true; seq.forEach(x => { x.chainFree = false; });
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -8914,6 +8925,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   if (!(typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget) && typeof rqWaChainItems === 'function' && rqWaChainItems(it).length) { rqWaSendChain(i); return; } // the prices message of an offer with ficha cards: ONE click sends every bubble (owner 2026-11-16)
   if (it.pictureState === 'pending' || it.pictureState === 'failed') { if (typeof rqShowNotice === 'function') rqShowNotice(it.pictureState === 'pending' ? 'Preparing the prices and fichas. Wait until the picture is ready.' : 'The prices and fichas picture could not be prepared. Reopen the offer to retry.'); return; }
   if (typeof rqCmpIntroPending === 'function' && rqCmpIntroPending(it) && typeof rqShowNotice === 'function') { rqShowNotice('The intro message is waiting in WhatsApp. Send it first and tap "I sent it" (or "Not now"): the offer goes as its own message after it.'); return; }
+  if (it.linkState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice('Shortening the link… WhatsApp opens in a moment.'); return; }
   if (it.fichasState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice(it.chip ? 'Preparing the ficha card — WhatsApp opens when it is ready.' : 'Preparing the specs and photos — WhatsApp opens when they are ready (up to 30 seconds).'); return; } // never a click that does nothing (owner 2026-11-13: "no está mandando nada")
   if (['incomplete', 'failed'].includes(it.fichasState) && !allowMissingFichas) { if (typeof rqShowNotice === 'function') rqShowNotice(`${it.fichasMissing || 'Some'} ficha(s) could not be prepared. Press "Open anyway without all fichas" to send the picture without them, or close and open the offer again.`);
     if (typeof rqRenderWaModal === 'function') rqRenderWaModal(); return; }
@@ -9471,7 +9483,7 @@ async function sendOfferWhatsAppTo(customerId){
     const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
     const signalLine = await rqFetchCustomerSignalLine(c.id, full);
     const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine, isUpdate: false, newKeys: new Set() }); // one message per customer × product, all brands highest price first
-    if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+    if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); if (typeof rqWaShortenLinks === 'function') rqWaShortenLinks(brandItems); // the picture never holds the window up
   }
   if (!items.length){ rqShowNotice(`${c.trade_name} already has every priced plant for this quote.`); return; }
   rqOpenWaModal(`WhatsApp offer — ${c.trade_name}`, items, true);
@@ -9622,7 +9634,7 @@ async function sendOfferWhatsAppToAll(filterProductIds, filterPlantIds, opts){
       const offersByPlantId = new Map(offers.map(o => [o.plant_id, o]));
       const newKeys = new Set(unsent.map(({ plant }) => plant.id + '|' + plant.rqProductId));
       const brandItems = rqWaBrandItems({ c, pid, cc, full, offers, offersByPlantId, warnings, signalLine: signals[k], isUpdate, newKeys, onSent: opts.onSent }); // one message per customer × product, all brands highest price first
-      if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); // the picture never holds the window up
+      if (typeof rqWaAttachChips === 'function') rqWaAttachChips(brandItems); rqWaAttachThinImages(brandItems); items.push(...brandItems); if (typeof rqWaShortenLinks === 'function') rqWaShortenLinks(brandItems); // the picture never holds the window up
     });
   }
   if (!items.length){
