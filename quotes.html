@@ -638,6 +638,178 @@
      existing translucent-white line/border tone instead of leaving it visually unstyled. */
   .rq-palette-results{max-height:56vh;overflow-y:auto;margin-top:14px;padding-right:10px;}
   .rq-palette-results:empty{display:none;}
+  /* ===== FIND PRODUCT, RADAR (owner 2026-11-17: "ejecuta el A… la funcionalidad y el alcance igual"). Same window, same flow: the results, the radar of who buys the product and its plants fit ONE screen. ===== */
+  @property --ang{syntax:'<angle>';initial-value:0deg;inherits:false;}
+  .rq-palette-overlay{padding:3vh 20px 20px;}
+  .rq-palette-box.rq-pal2{--rq-pal-h:clamp(240px,calc(100vh - 185px - var(--rq-pal-asked,0px)),680px);max-width:640px;display:grid;grid-template-columns:minmax(290px,.8fr) minmax(0,1.6fr);grid-template-areas:"bar bar" "list detail" "asked asked" "foot foot";column-gap:18px;}
+  .rq-palette-box.rq-pal2.rq-pal-open{max-width:min(1180px,100%);}
+  .rq-pal2 > .rq-hero-searchbar{grid-area:bar;}
+  .rq-pal2 > #rq_palette_results{grid-area:list;max-height:var(--rq-pal-h);}
+  .rq-pal2 > #rq_pal_detail{grid-area:detail;margin-top:14px;min-width:0;}
+  .rq-pal2 > #rq_pal_detail:empty{display:none;}
+  .rq-pal2 > #rq_sheet_asked{grid-area:asked;}
+  /* "Who asked for it?" in this window: the same row and the same chips, only tighter, so the window still fits when it appears */
+  .rq-pal2 > #rq_sheet_asked > div{padding:8px 2px 0 !important;}
+  .rq-pal2 > #rq_sheet_asked .chip{padding:4px 9px;font-size:10.5px;}
+  .rq-pal2 > .rq-palette-footer{grid-area:foot;}
+  /* the search bar: a light turns around it while it has the focus, and one beam crosses it with every key */
+  .rq-pal2 .rq-hero-searchbar::before{content:'';position:absolute;inset:-1.5px;border-radius:9.5px;padding:1.5px;z-index:2;pointer-events:none;background:conic-gradient(from var(--ang),#5AAAFF,#3FCB7E 18%,#5AAAFF 36%,transparent 55%,transparent 82%,#5AAAFF);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0;transition:opacity .3s;animation:rqPalAng 3.5s linear infinite;}
+  .rq-pal2 .rq-hero-searchbar:focus-within::before{opacity:1;}
+  @keyframes rqPalAng{to{--ang:360deg;}}
+  .rq-pal-beam{position:absolute;left:18px;right:18px;bottom:-1px;height:2px;z-index:3;pointer-events:none;background:linear-gradient(90deg,transparent,#8EC5FF,#3FCB7E,transparent);opacity:0;transform:scaleX(0);}
+  .rq-hero-searchbar.rq-pal-scan .rq-pal-beam{animation:rqPalBeam .7s ease-out;}
+  @keyframes rqPalBeam{0%{opacity:1;transform:scaleX(0);transform-origin:left;}60%{opacity:1;transform:scaleX(1);}100%{opacity:0;transform:scaleX(1);}}
+  /* the results: one row per product (the tile class stays, so keys, clicks and tests are the same) */
+  .rq-pal2 .rq-pal-list{display:block;}
+  .rq-pal2 .rq-result-variant.rq-pal-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto 22px;align-items:center;text-align:left;gap:10px;padding:9px 11px;margin-bottom:6px;border-radius:13px;}
+  .rq-pal2 .rq-pal-row:hover{transform:none;}
+  .rq-pal2 .rq-pal-row.hi{border-color:rgba(90,170,255,.55);}
+  .rq-pal2 .rq-pal-row.kbd-active{box-shadow:0 0 0 2px rgba(90,170,255,.4),0 0 24px rgba(90,170,255,.28);}
+  .rq-pal2 .rq-pal-row .rq-result-icon{width:38px;height:38px;border-radius:10px;}
+  .rq-pal2 .rq-pal-row .rq-result-icon svg{width:19px;height:19px;}
+  .rq-pal2 .rq-pal-row .rq-result-icon.frozen{color:var(--blue-bright);}
+  .rq-pal-nm{min-width:0;}
+  .rq-pal2 .rq-pal-row .rq-result-spec{display:block;font-size:13.5px;font-weight:600;line-height:1.25;}
+  .rq-pal-es{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px;line-height:1.25;}
+  .rq-pal-rel{display:block;height:2px;margin-top:6px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;}
+  .rq-pal-rel u{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,#5AAAFF,#3FCB7E);box-shadow:0 0 8px rgba(90,170,255,.8);}
+  .rq-pal2 .rq-pal-row .rq-result-add-btn{position:static;}
+  .rq-pal-sec{display:flex;align-items:baseline;gap:6px;margin:0 0 10px;padding:0 2px;font:500 11px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.06em;}
+  .rq-pal-sec b{color:#fff;font-weight:700;}
+  .rq-pal-sec.fz{color:var(--amber,#FFC876);margin-top:14px;}
+  .rq-pal-stack{display:inline-flex;align-items:center;}
+  .rq-pal-stack .rq-pal-av{margin-left:-9px;}
+  .rq-pal-stack .rq-pal-av:first-child{margin-left:0;}
+  .rq-pal-more{font:700 10.5px 'IBM Plex Mono',monospace;color:var(--ink-soft);margin-left:6px;}
+  .rq-pal-av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 11px 'Space Grotesk',sans-serif;color:#fff;flex:none;border:2px solid #14284a;overflow:hidden;background:linear-gradient(135deg,#2D6FD8,#5AAAFF);}
+  .rq-pal-av.a1{background:linear-gradient(135deg,#7B4FD6,#B08CFF);}
+  .rq-pal-av.a2{background:linear-gradient(135deg,#1F9E6B,#3FCB7E);}
+  .rq-pal-av.a3{background:linear-gradient(135deg,#C7822B,#FFC876);}
+  .rq-pal-av.logo{background:#fff;}
+  .rq-pal-av img{width:100%;height:100%;object-fit:contain;}
+  .rq-pal-skel{display:inline-block;width:76px;height:22px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.16),rgba(255,255,255,.06));background-size:200% 100%;animation:rqPalSh 1.2s linear infinite;}
+  @keyframes rqPalSh{to{background-position:-200% 0;}}
+  .rq-pal-pill{display:inline-block;font:700 11px 'IBM Plex Mono',monospace;padding:3px 9px;border-radius:20px;border:1px solid transparent;white-space:nowrap;background:transparent;}
+  .rq-pal-pill.g{color:#3FCB7E;border-color:rgba(63,203,126,.4);}
+  .rq-pal-pill.a{color:#FFC876;border-color:rgba(255,200,118,.4);}
+  .rq-pal-pill.n{color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.25);}
+  .rq-pal-pill.b{color:#5AAAFF;border-color:rgba(90,170,255,.4);}
+  /* the detail: the product, the radar of who buys it, the buyers and the plants — one screen, nothing to scroll */
+  .rq-pal-detail{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:18px;}
+  /* the radar always stays on the right (owner 2026-11-17: "deja el radar a mano derecha"): who buys it and the plants in the middle, the product and its radar at the right; the empty window centers its radar */
+  .rq-pal-detail > .rq-pal-side{grid-column:1;grid-row:1;}
+  .rq-pal-detail > .rq-pal-main{grid-column:2;grid-row:1;}
+  .rq-pal-detail > .rq-pal-main.rq-pal-idle{grid-column:1 / -1;}
+  .rq-pal-main,.rq-pal-side{min-width:0;}
+  .rq-pal-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(var(--rq-pal-h) - 20px);}
+  .rq-pal-idle .rq-pal-rr.r1,.rq-pal-idle .rq-pal-rr.r2{border-color:rgba(90,170,255,.28);background:none;}
+  .rq-pal-idle .rq-pal-radar{width:min(100%,460px,calc(var(--rq-pal-h) - 40px));}
+  /* the globe of the empty window: a planet seen from above its customers — graticule, bezel ticks, markers with crosshairs, labels with real coordinates */
+  .rq-pal-idle .rq-pal-rr.r1,.rq-pal-idle .rq-pal-rr.r2,.rq-pal-idle .rq-pal-rr.r3,.rq-pal-idle .rq-pal-core{display:none;}
+  .rq-pal-globe{container-type:inline-size;}
+  .rq-pal-planet{position:absolute;inset:17%;border-radius:50%;background:radial-gradient(circle at 33% 27%,rgba(142,197,255,.3),rgba(30,106,219,.22) 36%,rgba(10,37,71,.6) 70%,rgba(3,10,24,.9) 100%);box-shadow:0 0 60px rgba(90,170,255,.32),inset 0 0 50px rgba(90,170,255,.22),inset -22px -26px 50px rgba(2,8,22,.6);}
+  .rq-pal-planet::after{content:'';position:absolute;inset:-4%;border-radius:50%;border:1.5px solid rgba(90,170,255,.32);box-shadow:0 0 26px rgba(90,170,255,.35);pointer-events:none;}
+  .rq-pal-globe .rq-pal-sweep{opacity:.5;}
+  .rq-pal-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+  .rq-pal-svg .lat{fill:none;stroke:rgba(63,203,126,.28);stroke-width:.22;}
+  .rq-pal-svg .lon{fill:none;stroke:rgba(90,170,255,.3);stroke-width:.22;}
+  .rq-pal-svg .tk line{stroke:rgba(142,197,255,.5);stroke-width:.22;} .rq-pal-svg .tk line.maj{stroke:#8EC5FF;stroke-width:.4;}
+  .rq-pal-svg .cp{font:700 3px 'IBM Plex Mono',monospace;fill:#8EC5FF;text-anchor:middle;letter-spacing:.2px;}
+  .rq-pal-svg .ld{stroke-width:.28;stroke-dasharray:.9 .9;opacity:.8;} .rq-pal-svg .ld.b{stroke:#5AAAFF;} .rq-pal-svg .ld.a{stroke:#FFC876;}
+  .rq-pal-svg .mk .dot{stroke:#fff;stroke-width:.25;} .rq-pal-svg .mk.b .dot{fill:#5AAAFF;filter:drop-shadow(0 0 1.4px #5AAAFF);} .rq-pal-svg .mk.a .dot{fill:#FFC876;filter:drop-shadow(0 0 1.4px #FFC876);}
+  .rq-pal-svg .mk .ping{fill:none;stroke-width:.3;transform-box:fill-box;transform-origin:center;animation:rqPalPing 2.8s ease-out infinite;animation-delay:calc(var(--i)*.37s);} .rq-pal-svg .mk.b .ping{stroke:#5AAAFF;} .rq-pal-svg .mk.a .ping{stroke:#FFC876;}
+  .rq-pal-svg .mk .xh{stroke:#fff;stroke-width:.25;fill:none;opacity:.8;}
+  @keyframes rqPalPing{0%{transform:scale(.4);opacity:.95;}100%{transform:scale(2.2);opacity:0;}}
+  .rq-pal-svg .mk.pop{animation:rqPalFade .6s both;animation-delay:calc(var(--i)*70ms + .2s);}
+  @keyframes rqPalFade{from{opacity:0;}to{opacity:1;}}
+  .rq-pal-gl{position:absolute;transform:translate(-50%,-50%);text-align:center;white-space:nowrap;padding:.5cqw 1.4cqw;border-radius:1.6cqw;background:rgba(8,26,56,.72);border:1px solid rgba(90,170,255,.4);box-shadow:0 0 14px rgba(90,170,255,.18);backdrop-filter:blur(4px);z-index:5;pointer-events:auto;}
+  .rq-pal-gl.a{border-color:rgba(255,200,118,.5);box-shadow:0 0 14px rgba(255,200,118,.16);}
+  .rq-pal-gl b{display:block;font:600 2.6cqw 'Space Grotesk',sans-serif;color:#fff;letter-spacing:.01em;line-height:1.15;}
+  .rq-pal-gl b em{font:700 2.1cqw 'IBM Plex Mono',monospace;font-style:normal;color:#8EC5FF;margin-left:.8cqw;} .rq-pal-gl.a b em{color:#FFC876;}
+  .rq-pal-gl i{display:block;font:500 1.95cqw 'IBM Plex Mono',monospace;font-style:normal;color:rgba(142,197,255,.85);letter-spacing:.03em;line-height:1.2;} .rq-pal-gl.a i{color:rgba(255,200,118,.85);}
+  .rq-pal-gl.pop{animation:rqPalFade .6s both;animation-delay:calc(var(--i)*70ms + .3s);}
+  .rq-pal-ctr{font:500 10.5px 'IBM Plex Mono',monospace;color:#8EC5FF;letter-spacing:.04em;text-transform:none;}
+  .rq-pal-rest{margin-top:10px;text-align:center;font:500 10.5px 'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .rq-pal-side{max-height:var(--rq-pal-h);overflow-y:auto;overflow-x:hidden;padding-right:4px;}
+  .rq-pal-ph{display:flex;gap:12px;align-items:center;}
+  .rq-pal-ph h3{margin:0;font:700 18px 'Space Grotesk',sans-serif;line-height:1.2;color:#fff;}
+  .rq-pal-ph .es{color:var(--ink-soft);font-size:12.5px;margin-top:3px;}
+  .rq-pal-ph .rq-result-icon{width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;}
+  .rq-pal-ph .rq-result-icon svg{width:19px;height:19px;}
+  .rq-pal-tags{display:flex;gap:6px;margin:12px 0 0;flex-wrap:wrap;}
+  .rq-pal-radar{position:relative;width:min(100%,400px,calc(var(--rq-pal-h) - 132px));aspect-ratio:1;margin:6px auto 0;}
+  .rq-pal-rr{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);border:1px dashed;pointer-events:none;}
+  .rq-pal-rr.r0{width:100%;height:100%;border:1px solid rgba(90,170,255,.2);box-shadow:0 0 50px rgba(90,170,255,.12) inset;}
+  .rq-pal-rr.r3{width:94%;height:94%;border-color:rgba(255,255,255,.2);}
+  .rq-pal-rr.r2{width:72%;height:72%;border-color:rgba(255,200,118,.33);}
+  .rq-pal-rr.r1{width:46%;height:46%;border-color:rgba(63,203,126,.4);background:radial-gradient(circle,rgba(63,203,126,.1),transparent 70%);}
+  .rq-pal-sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0deg,transparent 290deg,rgba(90,170,255,.38) 359deg,rgba(142,197,255,.9) 360deg);animation:rqPalSpin 4.5s linear infinite;-webkit-mask:radial-gradient(circle,transparent 7%,#000 8%);mask:radial-gradient(circle,transparent 7%,#000 8%);pointer-events:none;}
+  @keyframes rqPalSpin{to{transform:rotate(360deg);}}
+  .rq-pal-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+  .rq-pal-lines line{stroke-width:.35;stroke-dasharray:1.2 1.6;animation:rqPalFlow 1.4s linear infinite;opacity:.55;}
+  .rq-pal-lines line.g{stroke:#3FCB7E;} .rq-pal-lines line.a{stroke:#FFC876;} .rq-pal-lines line.n{stroke:rgba(255,255,255,.5);}
+  @keyframes rqPalFlow{to{stroke-dashoffset:-5.6;}}
+  .rq-pal-core{position:absolute;left:50%;top:50%;width:58px;height:58px;transform:translate(-50%,-50%);border-radius:16px;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(90,170,255,.7);background:radial-gradient(circle at 30% 25%,rgba(90,170,255,.4),rgba(10,37,71,.95));color:#8EC5FF;animation:rqPalCore 2.6s ease-in-out infinite;z-index:3;}
+  .rq-pal-core.fresh{border-color:rgba(255,200,118,.8);color:#FFC876;background:radial-gradient(circle at 30% 25%,rgba(255,200,118,.35),rgba(10,37,71,.95));}
+  .rq-pal-core svg{width:28px;height:28px;}
+  @keyframes rqPalCore{0%,100%{box-shadow:0 0 22px rgba(90,170,255,.45),0 0 0 0 rgba(90,170,255,.4);}50%{box-shadow:0 0 38px rgba(90,170,255,.75),0 0 0 14px rgba(90,170,255,0);}}
+  .rq-pal-nd{--sc:rgba(255,255,255,.45);--sg:rgba(255,255,255,.15);position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;border:2px solid var(--sc);background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.28),rgba(14,40,80,.92));color:#fff;font:700 11.5px 'Space Grotesk',sans-serif;cursor:pointer;box-shadow:0 0 16px var(--sg);z-index:4;padding:0;overflow:visible;transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .2s,border-color .3s;}
+  .rq-pal-nd.g{--sc:#3FCB7E;--sg:rgba(63,203,126,.6);} .rq-pal-nd.a{--sc:#FFC876;--sg:rgba(255,200,118,.55);}
+  .rq-pal-nd:hover,.rq-pal-nd:focus-visible{transform:translate(-50%,-50%) scale(1.22);box-shadow:0 0 26px var(--sg),0 0 0 3px rgba(90,170,255,.45);z-index:6;outline:none;}
+  .rq-pal-nd:disabled{opacity:.6;cursor:default;}
+  .rq-pal-nd.asked{border-color:#5AAAFF;box-shadow:0 0 0 3px rgba(90,170,255,.45),0 0 24px rgba(90,170,255,.8);}
+  .rq-pal-nd.logo{background:#fff;}
+  .rq-pal-nd img{width:76%;height:76%;object-fit:contain;border-radius:50%;}
+  .rq-pal-nd em{position:absolute;right:-5px;top:-5px;width:16px;height:16px;border-radius:50%;background:#5AAAFF;color:#06203f;font:800 10px Inter,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  .rq-pal-nd.pop{animation:rqPalPop .5s cubic-bezier(.2,1.3,.4,1) both;animation-delay:calc(var(--i)*55ms + .12s);}
+  @keyframes rqPalPop{from{transform:translate(-50%,-50%) scale(0);opacity:0;}to{transform:translate(-50%,-50%) scale(1);opacity:1;}}
+  .rq-pal-tip{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(8,26,56,.96);border:1px solid rgba(90,170,255,.45);border-radius:9px;padding:7px 11px;font:500 11px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.75);opacity:0;pointer-events:none;transition:opacity .15s;box-shadow:0 10px 30px rgba(0,0,0,.5);text-align:left;}
+  .rq-pal-tip b{display:block;font:700 12px Inter,sans-serif;color:#fff;margin-bottom:2px;}
+  .rq-pal-nd:hover .rq-pal-tip,.rq-pal-nd:focus-visible .rq-pal-tip{opacity:1;}
+  .rq-pal-radar-msg{position:absolute;left:50%;top:70%;transform:translateX(-50%);width:72%;text-align:center;font:500 11px 'IBM Plex Mono',monospace;color:var(--ink-soft);z-index:5;}
+  .rq-pal-lab{font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px;}
+  .rq-pal-lab b{color:#fff;font-weight:700;}
+  .rq-pal-lab.sp{margin-top:16px;}
+  .rq-pal-by{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;padding:6px 8px;border-radius:10px;border:1.5px solid transparent;background:transparent;color:#fff;cursor:pointer;font:inherit;}
+  .rq-pal-by:hover{background:rgba(255,255,255,.05);}
+  .rq-pal-by.asked{border-color:rgba(90,170,255,.55);background:rgba(90,170,255,.14);}
+  .rq-pal-by:disabled{opacity:.6;cursor:default;}
+  .rq-pal-by b{display:block;font:600 13px Inter,sans-serif;}
+  .rq-pal-by i{display:block;font:400 11.5px Inter,sans-serif;color:var(--ink-soft);font-style:normal;}
+  .rq-pal-dot{display:none;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);}
+  .rq-pal-dot.g{background:#3FCB7E;box-shadow:0 0 8px rgba(63,203,126,.7);} .rq-pal-dot.a{background:#FFC876;box-shadow:0 0 8px rgba(255,200,118,.6);}
+  /* many buyers: two columns, a dot instead of the pill (its name stays in the tooltip and in the counts above the radar) */
+  .rq-pal-dense .rq-pal-buyers{display:grid;grid-template-columns:1fr 1fr;gap:0 6px;}
+  .rq-pal-dense .rq-pal-by{padding:3px 6px;grid-template-columns:22px minmax(0,1fr) 8px;gap:7px;} .rq-pal-dense .rq-pal-by i,.rq-pal-dense .rq-pal-by .rq-pal-pill{display:none;} .rq-pal-dense .rq-pal-dot{display:block;}
+  .rq-pal-dense .rq-pal-av{width:22px;height:22px;font-size:9.5px;} .rq-pal-dense .rq-pal-by b{font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  @media (max-height:760px){
+    .rq-palette-overlay{padding-top:2vh;}
+    .rq-palette-box.rq-pal2{--rq-pal-h:clamp(240px,calc(100vh - 160px - var(--rq-pal-asked,0px)),680px);padding:16px;}
+    .rq-pal2 > #rq_pal_detail{margin-top:10px;}
+    .rq-pal2 > .rq-palette-footer{margin-top:8px;padding-top:8px;}
+  }
+  @media (max-height:820px){ .rq-pal-by i{display:none;} .rq-pal-by{padding:3px 8px;} .rq-pal-pr{padding:3px 4px;} .rq-pal-lab.sp{margin-top:10px;} }
+  .rq-pal-pr{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px;}
+  .rq-pal-pr b{font:600 13px 'IBM Plex Mono',monospace;}
+  .rq-pal-pr .d{color:var(--ink-soft);font-size:11.5px;margin-left:8px;}
+  .rq-pal-pr > span:last-child{white-space:nowrap;}
+  .rq-pal-lab.sp2{margin:10px 0 6px;}
+  .rq-pal-names{display:flex;flex-wrap:wrap;gap:4px;}
+  .rq-pal-pn{font:500 10.5px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.75);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:2px 8px;}
+  .rq-pal-pn.more{color:var(--blue-bright);border-color:rgba(90,170,255,.4);cursor:default;}
+  .rq-pal-dense2 .rq-pal-pill{font-size:9.5px;padding:1px 6px;} .rq-pal-dense2 .rq-pal-lab.sp2{margin:6px 0 4px;} .rq-pal-dense2 .rq-pal-lab.sp{margin-top:8px;}
+  .rq-pal-dense2 .rq-pal-pr{padding:2px 4px;font-size:12px;} .rq-pal-dense2 .rq-pal-pr b{font-size:12px;}
+  @media (max-width:980px){
+    .rq-palette-overlay{overflow-y:auto;}
+    .rq-palette-box.rq-pal2.rq-pal-open{grid-template-columns:1fr;grid-template-areas:"bar" "list" "detail" "asked" "foot";}
+    .rq-pal2 > #rq_palette_results{max-height:30vh;}
+    .rq-pal-detail{grid-template-columns:1fr;}
+    .rq-pal-detail > .rq-pal-side,.rq-pal-detail > .rq-pal-main,.rq-pal-detail > .rq-pal-main.rq-pal-idle{grid-column:1;}
+    .rq-pal-detail > .rq-pal-side{grid-row:2;}
+    .rq-pal-side{max-height:none;}
+    .rq-pal-radar{width:min(100%,360px);}
+  }
+  .rq-match.fz{background:none;box-shadow:none;border-bottom:2px dotted #FFC876;border-radius:0;}
   /* Offer Sheet (2026-09-26) — built from this page's own pills/cards; colors are the existing ok/warn/expired/blue ones. */
   .rq-sheet-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;} /* Outbox sits under the table: the table needs the full width */
   @media (max-width:1000px){ .rq-sheet-grid{grid-template-columns:1fr;} }
@@ -1509,7 +1681,7 @@ auth.onAuthStateChanged(user => {
        Added: a cursor-tracked glow (#rq_palette_glow), a live match-count pill, and arrow-key
        navigation (rqPaletteHandleKey) over the same exact click action results already had. -->
   <div class="rq-palette-overlay" id="rq_palette_overlay" style="display:none;" onclick="if(event.target===this) rqCloseSearchPalette();">
-    <div class="rq-palette-box">
+    <div class="rq-palette-box rq-pal2">
       <div class="rq-palette-glow" id="rq_palette_glow"></div>
       <div class="rq-hero-searchbar">
         <svg class="rq-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -1518,7 +1690,9 @@ auth.onAuthStateChanged(user => {
           <span id="rq_palette_match_count" class="rq-palette-match-count"></span>
           <kbd class="rq-search-kbd rq-search-kbd-esc">ESC</kbd>
         </div>
+        <i class="rq-pal-beam"></i>
       </div>
+      <div id="rq_pal_detail" class="rq-pal-detail"></div>
       <div id="rq_palette_results" class="rq-palette-results"></div>
       <!-- Who asked (user 2026-10-10): after the product is picked, pick the customer right here — the search stays one clean flow. -->
       <div id="rq_sheet_asked"></div>
@@ -1819,6 +1993,12 @@ let rqProductSuggestions = []; // [{ label (name + full spec), matchName, produc
 // Declared early (well before rqRenderGroupedResults ever runs) so the arrow-key palette
 // navigation below always has it defined — see rqPaletteHandleKey et al. near rqOpenSearchPalette.
 let rqPaletteNavIndex = -1;
+// Find Product radar (2026-11-17) — declared early, like the line above, so the palette code never meets them before they exist.
+let rqPalHi = null, rqPalLastPid = null, rqPalDetailTries = 0, rqPalAskBusy = false;
+let rqPalBuyers = { at: 0, loading: false, failed: false, byPid: new Map() };
+let rqPalSent = {};
+let rqPalCitiesLoading = false, rqPalIdlePop = true;
+const RQ_PAL_RINGS = { has: 23, notsent: 36, never: 46.5 };
 let rqSelectedPlants = [];
 // The building-quote list — every product id the trader has explicitly added (search result "+
 // Add", or a quick pick, or "Open this product in Quotes" from Pending). Replaces the old single
@@ -2988,6 +3168,7 @@ function rqPaletteSetNavIndex(i){
   const active = items[rqPaletteNavIndex];
   active.classList.add('kbd-active');
   active.scrollIntoView({ block: 'nearest' });
+  if (active.dataset.key && typeof rqPalSetHi === 'function') rqPalSetHi(active.dataset.key); // the arrows also move the product shown at the right
 }
 function rqPaletteActivateCurrent(){
   const items = rqPaletteVisibleItems();
@@ -3732,6 +3913,7 @@ function rqRenderSheetAsked(keepFocus){
   }
   if (el === reqEl) el.classList.toggle('open', rqAskedChangeOpen || needed || rqAskedOtherOpen); // still to pick / searching another customer: the whole list shows
   rqSyncPaletteGate();
+  if (typeof rqPalRenderDetail === 'function') rqPalRenderDetail(); // the radar shows who is marked as having asked
 }
 
 // ===== THE REQUEST VIEW (user 2026-10-10: "no veo lo que se manda, lo que queda pendiente, dónde notifica… muéstrame algo fácil, bonito, diseñado") =====
@@ -5620,20 +5802,14 @@ function rqNormalizeSearchText(s){
   return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 function rqGroupedSearchMatches(term){
-  const t = rqNormalizeSearchText(term);
-  if (!t) return [];
-  const pool = products.filter(p =>
-    rqNormalizeSearchText(p.full_name_en).includes(t) || rqNormalizeSearchText(p.full_name_es).includes(t) ||
-    rqNormalizeSearchText(p.name).includes(t) || rqNormalizeSearchText(p.name_en).includes(t)
-  );
-  const groups = {};
-  pool.forEach(p => {
-    const cutName = p.name_en || p.name || '?';
-    const key = cutName + '|' + (p.subcategory_en || '');
-    if (!groups[key]) groups[key] = { cutName: cutName + (p.subcategory_en ? ' ' + p.subcategory_en : ''), variants: [] };
+  // Same name and shape as always: [{ cutName, variants }] — now on rqSearchProducts (the old phrase search is inside it, so nothing it found is lost; typos and words in any order are added). Best match first.
+  const r = rqSearchProducts(term), pool = r.strict.length ? r.strict : r.fuzzy, groups = {};
+  pool.forEach(x => {
+    const p = x.p, cutName = p.name_en || p.name || '?', key = cutName + '|' + (p.subcategory_en || '');
+    if (!groups[key]) groups[key] = { cutName: cutName + (p.subcategory_en ? ' ' + p.subcategory_en : ''), variants: [], s: x.s };
     groups[key].variants.push(p);
   });
-  return Object.values(groups).sort((a, b) => a.cutName.localeCompare(b.cutName));
+  return Object.values(groups).sort((a, b) => b.s - a.s);
 }
 
 const RQ_SNOWFLAKE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M4.5 6l15 12M19.5 6l-15 12"/></svg>`;
@@ -5669,78 +5845,441 @@ function rqHighlightMatch(text, rawTerm){
   return escaped.replace(new RegExp('(' + pattern + ')', 'ig'), '<mark class="rq-match">$1</mark>');
 }
 
+// ===== FIND PRODUCT, RADAR: ENGINE START (owner 2026-11-17: "ejecuta el A… la funcionalidad y el alcance igual") =====
+// Find Product does everything it did: the same catalog, the same names (English, Spanish, short), picks, "Who asked for it?", Done, Esc. What is new: the search also understands the words in any order, accents and small
+// typos (a typo is shown apart as a "close match"), and every result shows who buys it, what each of them has received and the plants with their price. READ ONLY: nothing in this block writes anything.
+// The old search is kept INSIDE the new one: any product the whole typed phrase used to find (inside one of its 4 names) is still found.
+function rqSearchNorm(s){
+  return String(s == null ? '' : s).split('').map(c => { const b = c.normalize('NFD').replace(/[̀-ͯ]/g, ''); return /^[a-z0-9]$/i.test(b) ? b.toLowerCase() : ' '; }).join('');
+}
+function rqSearchWords(s){
+  return rqSearchNorm(s).match(/[a-z0-9]+/g) || [];
+}
+function rqSearchLev(a, b){
+  const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => { const r = Array(n + 1).fill(0); r[0] = i; return r; });
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++){
+    const c = a[i - 1] === b[j - 1] ? 0 : 1;
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[m][n];
+}
+// One typed word against one word of a name: the whole word, its start, inside it, or (5+ letters) one or two letters off. One or two letters only match a whole word ("in" is "Bone-In", never "Inside").
+function rqSearchTok(q, w){
+  if (w === q) return { s: 100, t: 'exact' };
+  if (q.length < 3) return null;
+  if (w.startsWith(q)) return { s: 80, t: 'prefix' };
+  if (w.includes(q)) return { s: 55, t: 'sub' };
+  if (q.length >= 5){
+    const d = rqSearchLev(q, w);
+    if (d <= (q.length >= 8 ? 2 : 1)) return { s: 40 - d * 5, t: 'fuzzy' };
+    if (w.length >= q.length && rqSearchLev(q, w.slice(0, q.length)) <= 1) return { s: 30, t: 'fuzzy' };
+  }
+  return null;
+}
+function rqSearchIndex(){
+  const c = rqSearchIndex.cache;
+  if (c && c.src === products && c.n === products.length) return c.rows;
+  const rows = products.map(p => {
+    const words = [];
+    [[p.full_name_en, 1], [p.name_en, 1.05], [p.name, 1.05], [p.full_name_es, .9]].forEach(([t, w]) => rqSearchWords(t).forEach(x => words.push([x, w])));
+    return { p, words, legacy: [p.full_name_en, p.full_name_es, p.name, p.name_en].map(rqNormalizeSearchText) };
+  });
+  rqSearchIndex.cache = { src: products, n: products.length, rows };
+  return rows;
+}
+// -> { qts (the typed words), strict (found, best first), fuzzy (close matches: a typo away, at most 6) }
+function rqSearchProducts(term){
+  const qts = rqSearchWords(term), legacyTerm = rqNormalizeSearchText(term), strict = [], fuzzy = [];
+  if (!qts.length) return { qts, strict, fuzzy };
+  for (const row of rqSearchIndex()){
+    const legacy = !!legacyTerm && row.legacy.some(f => f.includes(legacyTerm)); // the search as it always was
+    let tot = 0, fz = false, ok = true;
+    for (const qt of qts){
+      let best = null;
+      for (const [w, wt] of row.words){ const r = rqSearchTok(qt, w); if (r){ const s = r.s * wt; if (!best || s > best.s) best = { s, t: r.t }; } }
+      if (!best){ ok = false; break; }
+      tot += best.s; if (best.t === 'fuzzy') fz = true;
+    }
+    if (!ok && !legacy) continue;
+    let score = ok ? tot : 40 * qts.length;
+    if (ok && legacy) score += 15;
+    score -= String(row.p.full_name_en || row.p.name || '').length * .05;
+    const item = { p: row.p, s: score, fz: ok && fz && !legacy };
+    (item.fz ? fuzzy : strict).push(item);
+  }
+  const byScore = (a, b) => b.s - a.s || String(a.p.full_name_en || a.p.name).localeCompare(String(b.p.full_name_en || b.p.name));
+  strict.sort(byScore); fuzzy.sort(byScore);
+  return { qts, strict, fuzzy: fuzzy.slice(0, 6) };
+}
+// The typed words highlighted inside an already-known text (accents ignored, a typo underlined, never changes what matches).
+function rqPalHl(text, qts){
+  const raw = String(text == null ? '' : text);
+  if (!qts || !qts.length) return escapeHtml(raw);
+  const n = rqSearchNorm(raw), re = /[a-z0-9]+/g, marks = [];
+  let m;
+  while ((m = re.exec(n))){
+    const w = m[0]; let best = null;
+    for (const q of qts){ const r = rqSearchTok(q, w); if (r && (!best || r.s > best.s)) best = { ...r, q }; }
+    if (!best) continue;
+    let a = m.index, b = m.index + w.length;
+    if (best.t === 'prefix') b = a + best.q.length;
+    else if (best.t === 'sub'){ a += w.indexOf(best.q); b = a + best.q.length; }
+    marks.push([a, b, best.t === 'fuzzy']);
+  }
+  let out = '', last = 0;
+  for (const [a, b, fz] of marks){ out += escapeHtml(raw.slice(last, a)) + '<mark class="rq-match' + (fz ? ' fz' : '') + '">' + escapeHtml(raw.slice(a, b)) + '</mark>'; last = b; }
+  return out + escapeHtml(raw.slice(last));
+}
+// ===== FIND PRODUCT, RADAR: ENGINE END =====
+
+// ===== FIND PRODUCT, RADAR: WHO BUYS IT, WHAT THEY HAVE, THE PLANTS (all read only) =====
+// Who buys each product: ONE bulk read with the same two calls the Send panel uses (customer_products by product, then the customers). What each customer has received of the highlighted product: its sent offers, read when it is
+// highlighted (the same fields rqAlreadySentPlantIdsByCustomer reads). The plants and their prices are rqAllPlantProductRows, already in memory. Nothing is guessed: while something is still loading the screen says so.
+function rqPalInitials(c){ return String(c.trade_name || '?').trim().split(/\s+/).slice(0, 2).map(x => x.charAt(0)).join('').toUpperCase(); }
+function rqPalAvatar(c){
+  const i = Array.from(String(c.id)).reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7) % 4;
+  return c.logo_url ? `<span class="rq-pal-av logo" title="${escapeHtml(c.trade_name)}"><img src="${escapeHtml(c.logo_url)}" alt=""></span>`
+    : `<span class="rq-pal-av a${i}" title="${escapeHtml(c.trade_name)}">${escapeHtml(rqPalInitials(c))}</span>`;
+}
+function rqPalBuyersOf(pid){
+  const out = (rqPalBuyers.byPid.get(pid) || []).slice();
+  // a customer just marked as having asked is linked by the server: he shows even if the bulk read is older
+  if (rqSheetState.key === rqSheetKey() && rqActiveProductFilterIds.includes(pid)) rqSheetCustomersOwning(pid).forEach(c => { if (!out.some(x => x.id === c.id)) out.push(c); });
+  return out.sort((a, b) => String(a.trade_name).localeCompare(String(b.trade_name)));
+}
+function rqPalStackHtml(pid){
+  const B = rqPalBuyersOf(pid);
+  if (!B.length) return rqPalBuyers.at ? '<span class="rq-pal-pill n">no buyers yet</span>' : (rqPalBuyers.failed ? '' : '<span class="rq-pal-skel"></span>');
+  return `<span class="rq-pal-stack">${B.slice(0, 4).map(rqPalAvatar).join('')}${B.length > 4 ? `<span class="rq-pal-more">+${B.length - 4}</span>` : ''}</span>`;
+}
+async function rqPalLoadBuyers(){
+  if (rqPalBuyers.loading || (rqPalBuyers.at && Date.now() - rqPalBuyers.at < 60000)) return;
+  rqPalBuyers.loading = true; rqPalBuyers.failed = false;
+  try {
+    const m = await rqMatchCustomersForProductIds(products.map(p => p.id));
+    if (m.failed) throw new Error('lookup failed');
+    const byId = new Map(m.customers.map(c => [c.id, c])), byPid = new Map();
+    Object.keys(m.linksByCustomer).forEach(cid => { const c = byId.get(cid); if (!c) return; m.linksByCustomer[cid].forEach(pid => { if (!byPid.has(pid)) byPid.set(pid, []); byPid.get(pid).push(c); }); });
+    rqPalBuyers = { at: Date.now(), loading: false, failed: false, byPid };
+  } catch (e){ rqPalBuyers = { at: 0, loading: false, failed: true, byPid: rqPalBuyers.byPid }; }
+  const po = document.getElementById('rq_palette_overlay');
+  if (po && po.style.display !== 'none') rqRenderGroupedResults();
+}
+async function rqPalLoadSent(pid){
+  const cur = rqPalSent[pid];
+  if (cur && (cur.loading || (cur.map && Date.now() - cur.at < 90000))) return;
+  rqPalSent[pid] = { loading: true, at: 0, map: null, failed: false };
+  try {
+    const rows = (await callApi('sent-offers-search', { product_id: pid, limit: 500 })).results || [], map = {};
+    rows.forEach(r => {
+      if (!r.sent_at) return; // a draft is not an offer; an expired one WAS sent
+      const key = r.plant_id + '|' + r.product_id, told = r.price_drop_told && r.price_drop_told.at;
+      const got = told && new Date(told).getTime() > new Date(r.sent_at).getTime() ? String(told) : r.sent_at;
+      if (!map[r.customer_id]) map[r.customer_id] = {};
+      const prev = map[r.customer_id][key];
+      if (!prev || new Date(got).getTime() > new Date(prev).getTime()){ map[r.customer_id][key] = got; map[r.customer_id][key + '#price'] = r.status === 'expired' ? null : r.purchase_price; }
+    });
+    rqPalSent[pid] = { loading: false, at: Date.now(), map, failed: false };
+  } catch (e){ rqPalSent[pid] = { loading: false, at: 0, map: null, failed: true }; }
+  if (rqPalHi === pid) rqPalRenderDetail();
+}
+// has = he has EVERY price now on file (the same rule as the Send panel's "has it"); notsent = he lacks one; never = no offer of this product was EVER sent to him (the "never worked" fact).
+function rqPalStatus(pid, c){
+  const s = rqPalSent[pid];
+  if (!s || !s.map) return null;
+  const m = s.map[c.id] || {}, keys = Object.keys(m).filter(k => k.indexOf('#') < 0);
+  const priced = rqAllPlantProductRows.filter(r => r.product_id === pid && !r.declined_at && r.current_price != null);
+  const sheet = rqSheetState.key === rqSheetKey() && rqActiveProductFilterIds.includes(pid) ? rqSheetFor(pid) : null;
+  const covered = r => { const k = r.plant_id + '|' + pid; return rqSentCoversPrice(m[k], r.price_date, r.price_arrived_at, m[k + '#price'], r.current_price) || ((((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []).indexOf(c.id) > -1); };
+  const last = keys.map(k => m[k]).sort().pop() || null;
+  if (!keys.length && !priced.some(covered)) return { st: 'never', at: null };
+  if (priced.length && priced.every(covered)) return { st: 'has', at: last };
+  return { st: 'notsent', at: last, noPrice: !priced.length };
+}
+function rqPalAgo(ts){
+  const d = rqPriceAgeDays(rqEtDay(ts));
+  return d == null || d <= 0 ? 'today' : d + 'd ago';
+}
+// One ring per state: inner = has it, middle = not sent yet, outer = never offered.
+function rqPalRadarNodes(list){
+  const rings = { has: [], notsent: [], never: [] }, out = [];
+  list.forEach(x => rings[x.s.st].push(x));
+  let k = 0;
+  Object.keys(rings).forEach((st, ri) => {
+    const arr = rings[st], n = arr.length;
+    arr.forEach((x, j) => {
+      const a = (-90 + ri * 43 + (360 / n) * j + (n === 1 ? 55 * ri : 0)) * Math.PI / 180;
+      out.push({ c: x.c, s: x.s, x: 50 + RQ_PAL_RINGS[st] * Math.cos(a), y: 50 + RQ_PAL_RINGS[st] * Math.sin(a), k: k++ });
+    });
+  });
+  return out;
+}
+// The plants that carry the product, with what we know of each (priced, asked and waiting, N/A) — the same facts the table shows after the pick.
+function rqPalPlantRows(pid){
+  return rqAllPlantProductRows.filter(r => r.product_id === pid && !r.declined_at).map(r => {
+    const priced = r.current_price != null;
+    const stale = priced && (rqPriceAgeDays(r.price_date) || 0) > RQ_PRICE_STALE_DAYS;
+    const na = !priced && rqIsNa(r) && !rqNaIsWaiting(r.unavailable_since || null, r.last_requested_at);
+    const waiting = !priced && !na && !!r.last_requested_at;
+    return { r, name: String(r.plant.name).trim(), priced, stale, na, waiting };
+  }).filter(x => x.priced || x.na || x.waiting).sort((a, b) => (b.priced - a.priced) || (Number(b.r.current_price || 0) - Number(a.r.current_price || 0)) || a.name.localeCompare(b.name));
+}
+// ===== FIND PRODUCT, RADAR: THE GLOBE (owner 2026-11-17: "adorna en el radar las ciudades bonitas como si fueran coordenadas… colores como coordenadas o planeta… espectacularidad") =====
+// Only for the looks: the cities where the customers are, on a globe seen from above their own centre — a graticule of real parallels and meridians, each city at its real place with its coordinates. The coordinates are
+// approximate city centres from this table (geography, not customer data); a city that is not in it is listed under the globe, never placed by a guess. Nothing here reads, filters or writes anything.
+const RQ_PAL_GEO = {
+  'ciudad de mexico': [19.43, -99.13, 'MX'], 'cdmx': [19.43, -99.13, 'MX'], 'mexico city': [19.43, -99.13, 'MX'], 'naucalpan': [19.48, -99.24, 'MX'], 'nezahualcoyotl': [19.40, -99.01, 'MX'], 'toluca': [19.28, -99.66, 'MX'],
+  'guadalajara': [20.66, -103.35, 'MX'], 'zapopan': [20.72, -103.39, 'MX'], 'monterrey': [25.69, -100.32, 'MX'], 'san pedro garza garcia': [25.66, -100.40, 'MX'], 'saltillo': [25.42, -100.99, 'MX'], 'torreon': [25.54, -103.41, 'MX'],
+  'mexicali': [32.62, -115.45, 'MX'], 'tijuana': [32.51, -117.04, 'MX'], 'ensenada': [31.87, -116.60, 'MX'], 'hermosillo': [29.07, -110.96, 'MX'], 'nogales': [31.31, -110.94, 'MX'], 'culiacan': [24.81, -107.39, 'MX'],
+  'mazatlan': [23.24, -106.42, 'MX'], 'chihuahua': [28.63, -106.07, 'MX'], 'ciudad juarez': [31.69, -106.42, 'MX'], 'durango': [24.03, -104.65, 'MX'], 'zacatecas': [22.77, -102.58, 'MX'], 'aguascalientes': [21.89, -102.29, 'MX'],
+  'san luis potosi': [22.16, -100.99, 'MX'], 'queretaro': [20.59, -100.39, 'MX'], 'leon': [21.13, -101.69, 'MX'], 'irapuato': [20.68, -101.35, 'MX'], 'penjamo': [20.43, -101.72, 'MX'], 'celaya': [20.52, -100.82, 'MX'],
+  'morelia': [19.71, -101.19, 'MX'], 'puebla': [19.04, -98.21, 'MX'], 'veracruz': [19.17, -96.13, 'MX'], 'oaxaca': [17.07, -96.73, 'MX'], 'acapulco': [16.85, -99.82, 'MX'], 'tampico': [22.23, -97.86, 'MX'],
+  'reynosa': [26.05, -98.30, 'MX'], 'merida': [20.97, -89.59, 'MX'], 'cancun': [21.16, -86.85, 'MX'], 'villahermosa': [17.99, -92.93, 'MX'], 'tuxtla gutierrez': [16.75, -93.12, 'MX'], 'tepic': [21.51, -104.89, 'MX'],
+  'tucson': [32.22, -110.97, 'US'], 'phoenix': [33.45, -112.07, 'US'], 'los angeles': [34.05, -118.24, 'US'], 'san diego': [32.72, -117.16, 'US'], 'el paso': [31.76, -106.49, 'US'], 'san antonio': [29.42, -98.49, 'US'],
+  'houston': [29.76, -95.37, 'US'], 'dallas': [32.78, -96.80, 'US'], 'laredo': [27.51, -99.51, 'US'], 'miami': [25.76, -80.19, 'US'], 'weston': [26.10, -80.40, 'US'], 'atlanta': [33.75, -84.39, 'US'],
+  'chicago': [41.88, -87.63, 'US'], 'new york': [40.71, -74.01, 'US'], 'nogales az': [31.34, -110.93, 'US']
+};
+function rqPalGeoOf(city){
+  const k = rqSearchWords(city).join(' ');
+  if (!k) return null;
+  if (RQ_PAL_GEO[k]) return RQ_PAL_GEO[k];
+  const hit = Object.keys(RQ_PAL_GEO).find(g => k.indexOf(g + ' ') === 0 || g.indexOf(k + ' ') === 0);
+  return hit ? RQ_PAL_GEO[hit] : null;
+}
+// 'N' / 'S' / 'E' / 'W' coordinates the way a map prints them
+function rqPalCoord(lat, lon){ return Math.abs(lat).toFixed(2) + '°' + (lat >= 0 ? 'N' : 'S') + ' ' + Math.abs(lon).toFixed(2) + '°' + (lon >= 0 ? 'E' : 'W'); }
+// The globe seen from above the centre of the customers (orthographic): where each city falls, the graticule lines (as SVG paths) and a place for every label that never overlaps another.
+function rqPalGlobe(groups){
+  const d = Math.PI / 180, pts = [], rest = [];
+  groups.forEach(g => { const geo = rqPalGeoOf(g.city); if (geo) pts.push({ g, geo }); else rest.push(g); });
+  if (!pts.length) return { markers: [], rest, parallels: [], meridians: [], lat0: 0, lon0: 0, K: 1 };
+  const lat0 = pts.reduce((a, p) => a + p.geo[0], 0) / pts.length, lon0 = pts.reduce((a, p) => a + p.geo[1], 0) / pts.length;
+  const proj = (lat, lon) => { const f = lat * d, l = (lon - lon0) * d, f0 = lat0 * d; return { x: Math.cos(f) * Math.sin(l), y: Math.cos(f0) * Math.sin(f) - Math.sin(f0) * Math.cos(f) * Math.cos(l), v: Math.sin(f0) * Math.sin(f) + Math.cos(f0) * Math.cos(f) * Math.cos(l) }; };
+  const rmax = Math.max(...pts.map(p => { const q = proj(p.geo[0], p.geo[1]); return Math.hypot(q.x, q.y); }));
+  const S = .66, K = Math.min(9, 0.85 / Math.max(rmax, 0.03)); // the planet fills S of the square; the labels live in the ring around it
+  const at = (lat, lon) => { const q = proj(lat, lon); return { X: 50 + 50 * S * K * q.x, Y: 50 - 50 * S * K * q.y, v: q.v }; };
+  const markers = pts.map((p, i) => { const q = at(p.geo[0], p.geo[1]); return { g: p.g, lat: p.geo[0], lon: p.geo[1], cc: p.geo[2], X: q.X, Y: q.Y, r: 1 + Math.min(3, p.g.customers.length) * .55, i, lx: 0, ly: 0 }; });
+  // graticule: a parallel / a meridian every `step` degrees, drawn where it faces us and falls inside the disc
+  const half = (1 / K) / d + 4, step = half > 24 ? 10 : half > 11 ? 5 : 2;
+  const line = (pairs) => { let out = '', pen = false; pairs.forEach(([lat, lon]) => { const q = at(lat, lon); if (q.v > 0 && Math.hypot(q.X - 50, q.Y - 50) <= 50 * S * 1.03){ out += (pen ? 'L' : 'M') + q.X.toFixed(1) + ' ' + q.Y.toFixed(1); pen = true; } else pen = false; }); return out; };
+  const parallels = [], meridians = [], lonHalf = half / Math.max(.35, Math.cos(lat0 * d)) + 4;
+  for (let lat = Math.ceil((lat0 - half) / step) * step; lat <= lat0 + half; lat += step){ const pr = []; for (let lon = lon0 - lonHalf; lon <= lon0 + lonHalf; lon += 1) pr.push([lat, lon]); parallels.push({ lat, d: line(pr) }); }
+  for (let lon = Math.ceil((lon0 - lonHalf) / step) * step; lon <= lon0 + lonHalf; lon += step){ const pr = []; for (let lat = lat0 - half; lat <= lat0 + half; lat += 1) pr.push([lat, lon]); meridians.push({ lon, d: line(pr) }); }
+  // labels: callouts in a ring around the planet, in the order of their markers around it, then they push each other apart (never overlap) and stay inside the square
+  const W = 25, H = 8.2, n = markers.length, ang = m => Math.atan2(m.Y - 50, m.X - 50), slot = k => -Math.PI + (2 * Math.PI / n) * k;
+  const order = markers.slice().sort((a, b) => ang(a) - ang(b));
+  let sx = 0, sy = 0; order.forEach((m, k) => { const dl = ang(m) - slot(k); sx += Math.cos(dl); sy += Math.sin(dl); });
+  const rot = Math.atan2(sy, sx);
+  order.forEach((m, k) => { const t = slot(k) + rot; m.ax = 50 + Math.cos(t) * 41; m.ay = 50 + Math.sin(t) * 41; m.lx = m.ax; m.ly = m.ay; });
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  for (let it = 0; it < 160; it++){
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++){
+      const A = markers[i], B = markers[j], dx = A.lx - B.lx, dy = A.ly - B.ly, ox = W - Math.abs(dx), oy = H - Math.abs(dy);
+      if (ox > 0 && oy > 0){ if (oy <= ox){ const s2 = (dy >= 0 ? 1 : -1) * (oy / 2 + .1); A.ly += s2; B.ly -= s2; } else { const s2 = (dx >= 0 ? 1 : -1) * (ox / 2 + .1); A.lx += s2; B.lx -= s2; } }
+    }
+    markers.forEach(m => { m.lx += (m.ax - m.lx) * .02; m.ly += (m.ay - m.ly) * .02; m.lx = clamp(m.lx, W / 2 + .5, 99.5 - W / 2); m.ly = clamp(m.ly, H / 2 + .5, 99.5 - H / 2); });
+  }
+  // the leader of each label ends on the border of its box (not under it)
+  markers.forEach(m => { const dx = m.lx - m.X, dy = m.ly - m.Y, t = Math.min(dx ? (W / 2) / Math.abs(dx) : 9, dy ? (H / 2) / Math.abs(dy) : 9); m.ex = m.lx - dx * Math.min(1, t); m.ey = m.ly - dy * Math.min(1, t); });
+  return { markers, rest, parallels, meridians, lat0, lon0, K, S, W, H };
+}
+// ===== FIND PRODUCT, RADAR: THE GLOBE END =====
+// THE EMPTY WINDOW (owner 2026-11-17: "muestra algo para que no se vea feo, como las ciudades donde están los clientes"): while nothing is typed the radar shows WHERE THE CUSTOMERS ARE — one bubble per city, bigger = more customers.
+// Real facts only: the customers' own city field, grouped; nothing is guessed (a customer with no city is counted apart). One read of all customers, the same one "+ Other customer" uses.
+function rqPalCityGroups(customers){
+  const by = new Map();
+  (customers || []).forEach(c => { const name = String(c.city || '').trim(); if (!name) return; const k = name.toLowerCase(); if (!by.has(k)) by.set(k, { city: name, customers: [] }); by.get(k).customers.push(c); });
+  return [...by.values()].sort((a, b) => b.customers.length - a.customers.length || a.city.localeCompare(b.city));
+}
+async function rqPalLoadAllCustomers(){
+  if (rqAllCustomersCache || rqPalCitiesLoading) return;
+  rqPalCitiesLoading = true;
+  try { rqAllCustomersCache = (await callApi('customers-search', {})).results || []; } catch (e) { /* stays unread: the next open asks again */ }
+  rqPalCitiesLoading = false;
+  rqPalRenderDetail();
+}
+function rqPalIdleHtml(pop){
+  // only for the looks: the cities where the customers are, on a globe with their coordinates (owner 2026-11-17: "como si fueran coordenadas o planeta, espectacularidad")
+  const all = rqAllCustomersCache || null, groups = all ? rqPalCityGroups(all) : [], G = rqPalGlobe(groups);
+  const col = cc => cc === 'US' ? 'a' : 'b';
+  const R = 50 * (G.S || .66), ticks = Array.from({ length: 72 }, (_, k) => { const a = k * 5 * Math.PI / 180, major = k % 6 === 0, mid = k % 2 === 0, r2 = R - (major ? 3.4 : mid ? 1.7 : .9);
+    return `<line x1="${(50 + R * Math.sin(a)).toFixed(2)}" y1="${(50 - R * Math.cos(a)).toFixed(2)}" x2="${(50 + r2 * Math.sin(a)).toFixed(2)}" y2="${(50 - r2 * Math.cos(a)).toFixed(2)}" class="${major ? 'maj' : ''}"/>`; }).join('');
+  const letters = `<text x="50" y="${(50 - R + 8).toFixed(1)}" class="cp">N</text><text x="${(50 + R - 6).toFixed(1)}" y="51.1" class="cp">E</text><text x="50" y="${(50 + R - 5.2).toFixed(1)}" class="cp">S</text><text x="${(50 - R + 6).toFixed(1)}" y="51.1" class="cp">W</text>`;
+  const grat = G.parallels.map(p => `<path d="${p.d}" class="lat"/>`).join('') + G.meridians.map(m => `<path d="${m.d}" class="lon"/>`).join('');
+  const leaders = G.markers.map(m => `<line x1="${m.X.toFixed(1)}" y1="${m.Y.toFixed(1)}" x2="${m.ex.toFixed(1)}" y2="${m.ey.toFixed(1)}" class="ld ${col(m.cc)}"/>`).join('');
+  const dots = G.markers.map(m => `<g class="mk ${col(m.cc)}${pop ? ' pop' : ''}" style="--i:${m.i}"><circle cx="${m.X.toFixed(1)}" cy="${m.Y.toFixed(1)}" r="${(m.r * 2.4).toFixed(2)}" class="ping"/><circle cx="${m.X.toFixed(1)}" cy="${m.Y.toFixed(1)}" r="${m.r.toFixed(2)}" class="dot"/><path d="M${(m.X - m.r * 2.6).toFixed(1)} ${m.Y.toFixed(1)}H${(m.X - m.r * 1.5).toFixed(1)}M${(m.X + m.r * 1.5).toFixed(1)} ${m.Y.toFixed(1)}H${(m.X + m.r * 2.6).toFixed(1)}M${m.X.toFixed(1)} ${(m.Y - m.r * 2.6).toFixed(1)}V${(m.Y - m.r * 1.5).toFixed(1)}M${m.X.toFixed(1)} ${(m.Y + m.r * 1.5).toFixed(1)}V${(m.Y + m.r * 2.6).toFixed(1)}" class="xh"/></g>`).join('');
+  const labels = G.markers.map(m => { const c = m.g.customers.length, names = m.g.customers.map(x => String(x.trade_name).trim()).join(', ');
+    return `<div class="rq-pal-gl ${col(m.cc)}${pop ? ' pop' : ''}" style="left:${m.lx.toFixed(1)}%;top:${m.ly.toFixed(1)}%;--i:${m.i}" title="${escapeHtml(m.g.city + ' — ' + names)}"><b>${escapeHtml(m.g.city)}${c > 1 ? `<em>×${c}</em>` : ''}</b><i>${rqPalCoord(m.lat, m.lon)}</i></div>`; }).join('');
+  const rest = G.rest.length ? `<div class="rq-pal-rest">${G.rest.map(g => escapeHtml(g.city) + (g.customers.length > 1 ? ' ×' + g.customers.length : '')).join(' · ')}</div>` : '';
+  return `<div class="rq-pal-main rq-pal-idle">
+    <div class="rq-pal-lab" style="justify-content:center;margin:0 0 6px;">Where your customers are${all ? ` <b>${groups.reduce((n, g) => n + g.customers.length, 0)}</b>` : ''}${G.markers.length ? ` <span class="rq-pal-ctr">${rqPalCoord(G.lat0, G.lon0)}</span>` : ''}</div>
+    <div class="rq-pal-radar rq-pal-globe"><div class="rq-pal-planet"><div class="rq-pal-sweep"></div></div>
+      <svg class="rq-pal-svg" viewBox="0 0 100 100"><defs><clipPath id="rqPalClip"><circle cx="50" cy="50" r="${(R - .4).toFixed(1)}"/></clipPath></defs><g clip-path="url(#rqPalClip)">${grat}</g><g class="tk">${ticks}</g>${letters}${leaders}${dots}</svg>
+      ${labels}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
+    ${rest}
+  </div>`;
+}
+function rqPalDetailHtml(pid, changed){
+  const p = products.find(x => x.id === pid);
+  if (!p) return '';
+  const qts = rqSearchWords((document.getElementById('rq_product_name') || {}).value);
+  const frozen = rqTempIsFrozen(p), B = rqPalBuyersOf(pid), sent = rqPalSent[pid];
+  const ready = rqAllPlantProductRows.length > 0 && !!(sent && sent.map);
+  const st = new Map(); if (ready) B.forEach(c => st.set(c.id, rqPalStatus(pid, c)));
+  const cnt = { has: 0, notsent: 0, never: 0 }; st.forEach(v => { if (v) cnt[v.st]++; });
+  const picked = rqActiveProductFilterIds.includes(pid), askedIds = picked && rqSheetState.key === rqSheetKey() ? rqSheetAskedIds(pid) : new Set();
+  const lbl = { has: 'HAS IT', notsent: 'NOT SENT YET', never: 'NEVER OFFERED' }, cls = { has: 'g', notsent: 'a', never: 'n' };
+  const txt = s => s.st === 'has' ? (s.at ? 'price sent ' + rqPalAgo(s.at) : 'has the price') : s.st === 'notsent' ? (s.noPrice ? 'offered before · no price to send yet' : 'price not sent yet') : 'no offer of this product, ever';
+  const busy = rqAskedBusy ? 'disabled' : '';
+  const nodes = ready ? rqPalRadarNodes(B.map(c => ({ c, s: st.get(c.id) }))) : [];
+  const lines = nodes.map(n => `<line x1="50" y1="50" x2="${n.x.toFixed(1)}" y2="${n.y.toFixed(1)}" class="${cls[n.s.st]}"/>`).join('');
+  const nds = nodes.map(n => { const c = n.c, on = askedIds.has(c.id);
+    return `<button type="button" class="rq-pal-nd ${cls[n.s.st]}${c.logo_url ? ' logo' : ''}${changed ? ' pop' : ''}${on ? ' asked' : ''}" style="--x:${n.x.toFixed(1)}%;--y:${n.y.toFixed(1)}%;--i:${n.k}" data-c="${c.id}" ${busy} onclick="rqPalAsk('${pid}','${c.id}')">${c.logo_url ? `<img src="${escapeHtml(c.logo_url)}" alt="">` : escapeHtml(rqPalInitials(c))}<span class="rq-pal-tip"><b>${escapeHtml(String(c.trade_name).trim())}</b>${lbl[n.s.st]} · ${escapeHtml(txt(n.s))}</span>${on ? '<em>✓</em>' : ''}</button>`; }).join('');
+  const retry = '<button type="button" class="chip" onclick="rqPalRetry()">↻ Retry</button>';
+  let msg = '';
+  if (rqPalBuyers.failed && !B.length) msg = `Couldn't load the customers who buy this. ${retry}`;
+  else if (!rqPalBuyers.at && !B.length) msg = 'Loading customers…';
+  else if (!B.length) msg = 'No customers linked to this product yet.';
+  else if (sent && sent.failed) msg = `Couldn't read what was sent. ${retry}`;
+  else if (!ready) msg = 'Loading customers…';
+  const buyRows = B.map(c => { const s = st.get(c.id), on = askedIds.has(c.id);
+    return `<button type="button" class="rq-pal-by${on ? ' asked' : ''}" data-c="${c.id}" title="${escapeHtml(String(c.trade_name).trim())}" ${busy} onclick="rqPalAsk('${pid}','${c.id}')">${rqPalAvatar(c)}<span><b>${on ? '✓ ' : ''}${escapeHtml(String(c.trade_name).trim())}</b>${s ? `<i>${escapeHtml(txt(s))}</i>` : ''}</span>${s ? `<span class="rq-pal-pill ${cls[s.st]}">${lbl[s.st]}</span><span class="rq-pal-dot ${cls[s.st]}" title="${lbl[s.st]}"></span>` : '<span></span>'}</button>`; }).join('');
+  const plants = rqPalPlantRows(pid);
+  // every plant stays visible: each price on its own line; the plants asked and still waiting, and the N/A ones, as small name chips under their label (so a product with 20 plants still fits the screen)
+  const cap = window.innerHeight < 780 ? 6 : 12; // on a short screen the waiting / N/A plants are only counted (the tooltip lists them) and many buyers go in columns, so the window still fits
+  const names = arr => cap < 12 ? '' : `<div class="rq-pal-names">${arr.slice(0, cap).map(x => `<span class="rq-pal-pn">${escapeHtml(x.name)}</span>`).join('')}${arr.length > cap ? `<span class="rq-pal-pn more" title="${escapeHtml(arr.slice(cap).map(x => x.name).join(', '))}">+${arr.length - cap}</span>` : ''}</div>`;
+  const waitingP = plants.filter(x => x.waiting), naP = plants.filter(x => x.na);
+  const plantRows = plants.filter(x => x.priced).map(x => `<div class="rq-pal-pr"><span>${escapeHtml(x.name)}${x.stale ? ' <span class="rq-pal-pill a">EXPIRED</span>' : ''}</span><span><b>$${Number(x.r.current_price).toFixed(4)}/lb</b><span class="d">${escapeHtml(rqFmtDate(x.r.price_date))}</span></span></div>`).join('')
+    + (waitingP.length ? `<div class="rq-pal-lab sp2" title="${escapeHtml(waitingP.map(x => x.name).join(', '))}"><span class="rq-pal-pill b">ASKED · WAITING</span> <b>${waitingP.length}</b></div>${names(waitingP)}` : '')
+    + (naP.length ? `<div class="rq-pal-lab sp2" title="${escapeHtml(naP.map(x => x.name).join(', '))}"><span class="rq-pal-pill n">N/A</span> <b>${naP.length}</b></div>${names(naP)}` : '');
+  const tmp = temperatures.find(t => t.id === p.temperature_id), pkg = packagings.find(k => k.id === p.packaging_id);
+  const tags = [tmp && (tmp.name_en || tmp.name), pkg && (pkg.name_en || pkg.name)].filter(Boolean).map(t => `<span class="rq-pal-pill ${frozen ? 'b' : 'a'}">${escapeHtml(t)}</span>`).join('')
+    + (cnt.has ? `<span class="rq-pal-pill g">${cnt.has} HAVE IT</span>` : '') + (cnt.notsent ? `<span class="rq-pal-pill a">${cnt.notsent} NOT SENT YET</span>` : '') + (cnt.never ? `<span class="rq-pal-pill n">${cnt.never} NEVER OFFERED</span>` : '');
+  return `<div class="rq-pal-main">
+    <div class="rq-pal-ph"><div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div><div><h3>${rqPalHl(p.full_name_en || p.name_en || p.name, qts)}</h3>${p.full_name_es ? `<div class="es">${rqPalHl(p.full_name_es, qts)}</div>` : ''}</div></div>
+    <div class="rq-pal-tags">${tags}</div>
+    <div class="rq-pal-radar"><div class="rq-pal-rr r0"></div><div class="rq-pal-rr r3"></div><div class="rq-pal-rr r2"></div><div class="rq-pal-rr r1"></div><div class="rq-pal-sweep"></div>
+      <svg class="rq-pal-lines" viewBox="0 0 100 100">${lines}</svg><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${nds}${msg ? `<div class="rq-pal-radar-msg">${msg}</div>` : ''}</div>
+  </div>
+  <div class="rq-pal-side${B.length > (cap < 12 ? 5 : 7) ? ' rq-pal-dense' : ''}${plants.filter(x => x.priced).length > (cap < 12 ? 3 : 6) ? ' rq-pal-dense2' : ''}">
+    <div class="rq-pal-lab">Who buys it <b>${B.length}</b></div><div class="rq-pal-buyers">${buyRows}</div>
+    <div class="rq-pal-lab sp">Plants with it <b>${plants.length}</b></div>${plantRows}
+  </div>`;
+}
+function rqPalRenderDetail(){
+  const host = document.getElementById('rq_pal_detail');
+  if (!host) return;
+  const po = document.getElementById('rq_palette_overlay');
+  if (!po || po.style.display === 'none'){ if (host.innerHTML){ host.innerHTML = ''; host.dataset.html = ''; } rqPalLastPid = null; rqPalIdlePop = true; return; }
+  if (!rqPalHi){ // nothing to show yet (nothing typed, or no match): the radar idles, turning, showing where the customers are — the window is the new one from the first click
+    rqPalLoadAllCustomers();
+    const idle = rqPalIdleHtml(rqPalIdlePop), key = idle.replace(/ pop/g, '');
+    if (host.dataset.html !== key){ host.dataset.html = key; host.innerHTML = idle; rqPalIdlePop = false; }
+    rqPalLastPid = null; return;
+  }
+  const pid = rqPalHi;
+  rqPalLoadSent(pid);
+  // the prices of every plant are read by the page's own loader: until they are in memory nothing about "has it" can be said
+  if (!rqAllPlantProductRows.length && rqPalDetailTries < 20){ rqPalDetailTries++; setTimeout(rqPalRenderDetail, 800); }
+  const changed = rqPalLastPid !== pid, html = rqPalDetailHtml(pid, changed), key = html.replace(/ pop/g, '');
+  if (!changed && host.dataset.html === key) return;
+  const ae = document.activeElement, focusC = ae && host.contains(ae) && ae.dataset ? ae.dataset.c : null, focusCls = ae && ae.classList && ae.classList.contains('rq-pal-by') ? '.rq-pal-by' : '.rq-pal-nd';
+  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid;
+  if (focusC){ const again = host.querySelector(`${focusCls}[data-c="${focusC}"]:not(:disabled)`); if (again) again.focus(); }
+}
+function rqPalSetHi(pid){
+  if (!pid || pid === rqPalHi) return;
+  rqPalHi = pid;
+  document.querySelectorAll('#rq_palette_results .rq-pal-row').forEach(el => el.classList.toggle('hi', el.dataset.key === pid));
+  rqPalRenderDetail();
+}
+function rqPalRetry(){
+  rqPalBuyers.at = 0; rqPalBuyers.failed = false; rqPalLoadBuyers();
+  if (rqPalHi) delete rqPalSent[rqPalHi];
+  rqPalRenderDetail();
+}
+// A click on a customer of the radar or of the list = the SAME two steps the trader does today: pick the product (a click on its tile) and click the customer who asked in "Who asked for it?" — nothing else, nothing skipped:
+// the pick is the normal pick, and the customer is marked through rqSheetToggleAsked, exactly as the chip is.
+async function rqPalAsk(pid, cid){
+  if (rqPalAskBusy || rqAskedBusy) return;
+  rqPalAskBusy = true;
+  try {
+    if (!rqActiveProductFilterIds.includes(pid)) rqToggleProductFilter(pid);
+    for (let i = 0; i < 200 && rqSheetState.key !== rqSheetKey(); i++) await new Promise(r => setTimeout(r, 100)); // the customers of the pick load first (up to 20 s)
+    if (rqSheetState.key !== rqSheetKey() || !rqActiveProductFilterIds.includes(pid)) return; // not loaded: the "Who asked for it?" row below stays as the way
+    await rqSheetToggleAsked(cid);
+  } finally { rqPalAskBusy = false; }
+}
+// the results list follows the mouse: the product under it is the one shown at the right (the pick itself is still the click)
+(function(){
+  const list = document.getElementById('rq_palette_results');
+  if (list) list.addEventListener('mouseover', e => { const row = e.target.closest ? e.target.closest('.rq-pal-row') : null; if (row && row.dataset.key) rqPalSetHi(row.dataset.key); });
+  const ask = document.getElementById('rq_sheet_asked'), box = document.querySelector('.rq-palette-box');
+  if (ask && box && typeof ResizeObserver === 'function') new ResizeObserver(() => box.style.setProperty('--rq-pal-asked', Math.ceil(ask.getBoundingClientRect().height) + 'px')).observe(ask); // the results and the radar give way to the "Who asked for it?" row, so Done is always on screen
+  const input = document.getElementById('rq_product_name');
+  if (input) input.addEventListener('input', () => { const sb = input.closest('.rq-hero-searchbar'); if (sb){ sb.classList.remove('rq-pal-scan'); void sb.offsetWidth; sb.classList.add('rq-pal-scan'); } });
+})();
+// ===== FIND PRODUCT, RADAR: END =====
+
+function rqPalRowHtml(r, R){
+  const v = r.p, spec = v.full_name_en || v.name_en || v.name, active = rqActiveProductFilterIds.includes(v.id), frozen = rqTempIsFrozen(v);
+  const rel = Math.max(10, Math.min(100, Math.round(r.s / (Math.max(1, R.qts.length) * 105) * 100)));
+  // the whole tile is the click target (rqToggleProductFilter: add/remove it — the palette stays open so several can be picked; Done closes), the same action as before; the button is only a visual affordance (tabindex -1, arrow keys are how keyboard users reach it)
+  return `<div class="rq-result-variant rq-pal-row${active ? ' picked' : ''}${v.id === rqPalHi ? ' hi' : ''}" data-key="${v.id}" onclick="rqToggleProductFilter('${v.id}')">
+    <div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>
+    <div class="rq-pal-nm"><span class="rq-result-spec">${rqPalHl(spec, R.qts)}</span>${v.full_name_es ? `<span class="rq-pal-es">${rqPalHl(v.full_name_es, R.qts)}</span>` : ''}<span class="rq-pal-rel" title="Relevance ${rel}%"><u style="width:${rel}%"></u></span></div>
+    <div>${rqPalStackHtml(v.id)}</div>
+    <button type="button" class="rq-result-add-btn${active ? ' added' : ''}" title="View this product across Ready/Expired/Updating" tabindex="-1">${RQ_VIEW_ARROW_SVG}</button>
+  </div>`;
+}
+
 async function rqRenderGroupedResults(){
-  // Real bug fixed 2026-09-05 (reported live: "le pongo combo y no los puedo ver ni escoger") —
-  // this used to always target a container behind the palette overlay's opaque/blurred backdrop.
-  // Matches were being found correctly the whole time, just rendered somewhere the trader could
-  // never see or click. Live-typed results render into #rq_palette_results, inside the floating
-  // box itself, always.
+  // Real bug fixed 2026-09-05 (reported live: "le pongo combo y no los puedo ver ni escoger") — live-typed results render into #rq_palette_results, inside the floating box itself, always.
   const box = document.getElementById('rq_palette_results');
   const term = document.getElementById('rq_product_name').value.trim();
   const countEl = document.getElementById('rq_palette_match_count');
+  const pal = document.querySelector('.rq-palette-box');
   rqPaletteNavIndex = -1;
+  rqPalLoadBuyers(); // who buys each product: one read, cached, never holds the typing up
 
-  // Real ask 2026-09-13 ("dame algo mas moderno interactivo"): every re-render animates existing
-  // tiles into their new position/opacity via the Web Animations API instead of just replacing
-  // them silently — captured here, before innerHTML wipes the old ones out, keyed by product id
-  // (not text, so a renamed spec still tracks the same tile).
+  // Real ask 2026-09-13 ("dame algo mas moderno interactivo"): every re-render animates existing tiles into their new position/opacity via the Web Animations API instead of just replacing them silently — captured here,
+  // before innerHTML wipes the old ones out, keyed by product id (not text, so a renamed spec still tracks the same tile).
   const beforeRects = new Map();
   if (box) box.querySelectorAll('[data-key]').forEach(el => beforeRects.set(el.dataset.key, el.getBoundingClientRect()));
 
-  // Real fix 2026-09-12: this used to re-fetch everything (loadPendingPrices, a real API round
-  // trip) every time the box went empty — a plain, cheap re-render off what's already in memory
-  // does the exact same job (clear the filter, show tab mode again) with nothing sent over the
-  // wire.
+  // Owner 2026-11-17 ("cuando doy el primer click no me gusta esto, sácame directo a lo nuevo"; then "por qué me muestra todo sin buscar?"): the window opens straight into the NEW view — the radar already turning at the right — but lists NOTHING until something is typed
+  // (2026-09-26: "si no he escogido producto solo debería sacar search"). The picks still start empty (rqOpenSearchPalette) and emptying the box still does not drop them.
   if (!term){
     if (rqPendingInlineOpenId) await rqCloseCalculator(rqPendingInlineOpenId);
-    // Real redesign 2026-09-13: this used to sit blank behind the "Most requested" quickpicks,
-    // now retired ("no me gusta esa ventana de search con most requested") — an empty box with
-    // nothing in it at all read as broken, so it shows the same resting prompt "no matches" already
-    // used elsewhere, just with different copy.
-    // Real ask 2026-09-26 ("si no he escogido producto solo debería sacar search"): nothing under the search box until
-    // something is typed. Emptying the box no longer drops the picks either (several can be picked across searches
-    // now) — "✕ Clear" on the page is what removes them.
-    if (box) box.innerHTML = '';
+    if (box) box.innerHTML = `<div class="rq-results-empty">${RQ_SEARCH_ICO_SVG}<div>Start typing to search the catalog.</div></div>`;
     if (countEl) countEl.classList.remove('show');
+    if (pal) pal.classList.add('rq-pal-open');
+    rqPalHi = null; rqPalRenderDetail();
     return;
   }
   if (rqPendingInlineOpenId) await rqCloseCalculator(rqPendingInlineOpenId);
-  const groups = rqGroupedSearchMatches(term);
-  if (!groups.length){
+  const R = rqSearchProducts(term), flat = [...R.strict, ...R.fuzzy];
+  if (pal) pal.classList.add('rq-pal-open');
+  if (!flat.length){
     box.innerHTML = `<div class="rq-results-empty">${RQ_SEARCH_ICO_SVG}<div>No catalog product matches "${escapeHtml(term)}".</div></div>`;
     if (countEl) countEl.classList.remove('show');
+    rqPalHi = null; rqPalRenderDetail();
   } else {
-    const totalVariants = groups.reduce((n, g) => n + g.variants.length, 0);
     if (countEl){
-      const label = `${totalVariants} match${totalVariants === 1 ? '' : 'es'}`;
+      const label = `${flat.length} match${flat.length === 1 ? '' : 'es'}`;
       if (countEl.textContent !== label){ countEl.classList.remove('bump'); void countEl.offsetWidth; countEl.classList.add('bump'); }
       countEl.textContent = label;
       countEl.classList.add('show');
     }
-    // Real redesign 2026-09-05, explicit ask ("me refiero en todos los espacios no una arriba de
-    // otra sino en todo el espacio"): a separate grid PER cut meant a cut with only 1 variant
-    // (the common case) still broke onto its own row, wasting the rest of that row's width — with
-    // 14 cuts of 1 variant each, that's 14 near-empty rows. One flat grid across every variant from
-    // every cut fills the row before wrapping, same as any real tile grid. The cut name isn't lost
-    // — full_name_en already states it (e.g. "Back Skin" in "Pork Back Skin Fresh, Combo"), so
-    // nothing here drops information, it just stops giving up a whole row to say it twice.
-    box.innerHTML = `<div class="rq-results-summary"><b>${totalVariants}</b> variant${totalVariants === 1 ? '' : 's'} across <b>${groups.length}</b> cut${groups.length === 1 ? '' : 's'}</div>`
-      + `<div class="rq-result-grid">
-          ${groups.flatMap(g => g.variants).map(v => {
-            const spec = v.full_name_en || v.name_en || v.name;
-            const active = rqActiveProductFilterIds.includes(v.id);
-            const frozen = rqTempIsFrozen(v);
-            // Real ask 2026-09-13: the whole tile is the click target now, not just the small arrow
-            // button — same exact action either way (rqFilterToProduct + close), the button is only
-            // a visual affordance so tabindex="-1" keeps it out of the tab order (arrow-key nav
-            // below, rqPaletteHandleKey, is how keyboard users reach it).
-            return `<div class="rq-result-variant${active ? ' picked' : ''}" data-key="${v.id}" onclick="rqToggleProductFilter('${v.id}')">
-              <div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>
-              <span class="rq-result-spec">${rqHighlightMatch(spec, term)}</span>
-              <button type="button" class="rq-result-add-btn${active ? ' added' : ''}" title="View this product across Ready/Expired/Updating" tabindex="-1">${RQ_VIEW_ARROW_SVG}</button>
-            </div>`;
-          }).join('')}
-        </div>`;
+    if (!flat.some(r => r.p.id === rqPalHi)) rqPalHi = flat[0].p.id; // the first result is the one shown at the right until the mouse or the arrows say another
+    const cuts = new Set(R.strict.map(r => (r.p.name_en || r.p.name || '?') + '|' + (r.p.subcategory_en || ''))).size;
+    box.innerHTML = (R.strict.length ? `<div class="rq-results-summary"><b>${R.strict.length}</b> variant${R.strict.length === 1 ? '' : 's'} across <b>${cuts}</b> cut${cuts === 1 ? '' : 's'}</div>` : '')
+      + `<div class="rq-pal-list">${R.strict.map(r => rqPalRowHtml(r, R)).join('')}`
+      + (R.fuzzy.length ? `<div class="rq-pal-sec fz">Close matches · typo-tolerant</div>${R.fuzzy.map(r => rqPalRowHtml(r, R)).join('')}` : '')
+      + `</div>`;
+    rqPalRenderDetail();
   }
 
   const tiles = box ? box.querySelectorAll('.rq-result-variant') : [];
