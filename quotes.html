@@ -7422,8 +7422,10 @@ const rqFichaCache = new Map();
 // (a tiny dot, then ".ver": a leading dot alone would be a hidden file with no extension). ONLY the paste into WhatsApp uses it — the e-mail attachment and the backup download keep "Brand.pdf". RISK (said to him before he chose it): the customer's phone may not know how to open ".ver";
 // one switch: 'pdf' puts the ordinary ".pdf" back.
 // B2 ON (owner 2026-11-16 22:15, his last word, knowing the cost he saw in his own chat at 21:51: "·.ver" sends and the square says VER, but WhatsApp draws no preview card and the customer's phone cannot open a ".ver" file): "B2 aprobado", ".ver". To go back to the ordinary document put 'pdf' here.
-const RQ_WA_FICHA_EXT = 'ver';
-function rqWaFileName(f){ return /\.pdf$/i.test(String((f && f.filename) || '')) && RQ_WA_FICHA_EXT !== 'pdf' ? '\u00B7.' + RQ_WA_FICHA_EXT : String(f && f.filename || ''); } // a tiny middle dot, not an invisible character: the 21:24 try (invisible character + ".ver") was pasted but not sent, and this tells which of the two WhatsApp refuses
+// B2 (".ver") REJECTED AGAIN (owner 2026-11-16 22:22, his real chat: "no abre el link \u00B7 no muestra las fichas con logo y nombre"): the files arrived as "\u00B7.ver" with no preview card and could not be opened. Back to a real ".pdf"; the owner's last word (2026-11-16 22:35): the ficha goes as a PDF named "VER" so the line under the card says only VER (RQ_WA_FICHA_NAME; '' puts "Brand.pdf" back).
+const RQ_WA_FICHA_EXT = 'pdf';
+const RQ_WA_FICHA_NAME = 'VER';
+function rqWaFileName(f){ const n = String((f && f.filename) || ''); if (!/\.pdf$/i.test(n)) return n; if (RQ_WA_FICHA_EXT !== 'pdf') return '\u00B7.' + RQ_WA_FICHA_EXT; return RQ_WA_FICHA_NAME ? RQ_WA_FICHA_NAME + '.pdf' : n; } // (".ver" mode kept behind the switch) a tiny middle dot, not an invisible character: the 21:24 try (invisible character + ".ver") was pasted but not sent, and this tells which of the two WhatsApp refuses
 function rqWaFichaCacheKey(f){ return [f.linkCard ? 'card' : 'doc', f.brand, f.spec_url, f.photo_url, f.logo_url].join('|'); }
 // THE THIN CARD of a brand with its own link (owner 2026-11-15): the picture the function draws (`?ficha=<brand>&logo=<url>&k=o`), asked like every banner and checked to be a REAL PNG before it is attached (an error page, an empty answer or a stub never goes into the chat). One file: the card, as a picture.
 async function rqBuildFichaCard(f){
@@ -7457,10 +7459,11 @@ async function rqBuildFichaDocs(f){
   // THE CARD, SIZED FOR THE PHONE — as it was on Thursday 2026-11-12, when the fichas arrived well (owner 2026-11-11: "las fichas deben adaptarse a este nuevo tamaño"; 2026-11-16: "el jueves mandaba las fichas bien"): WhatsApp shows the document's first page at the bubble's width, so the 612 × 76 row that came back after Thursday was zoomed and cropped
   // (only "Foods", blurred). The card is 612 × 188 again: the plant's logo on a rounded white patch, at the right the doc mark + "Ficha técnica" at 28 pt, the brand's name under them at 40 pt (never under 30; a longer name is shortened with "…").
   // The preview box of WhatsApp's document bubble is ~2.5 : 1 on the Mac (measured on the owner's own chat 2026-11-16: the 612 × 188 card, 3.26 : 1, still came out with its sides cut — "rd Foods" / "Ficha téc…"); WhatsApp shows the CENTER of the page in a ~2.4 : 1 window, so the page is 612 × 260 (2.35 : 1) with the same card centered in it: the whole card shows.
-  const W = 612, H = 260, M = 32, DY = 36, cover = out.addPage([W, H]);
+  // THE THIN CARD "F" (owner 2026-11-16 22:35, from his mock-ups of 188 / 140 / 100 / 80 / 64 / 52: "mas delgadas fichas" · "ejecuta F"): the page is 612 × 52 and the card fills it. RISK told to him: the 612 × 76 row and the 612 × 188 card were both cropped by WhatsApp on his Mac (see above), so F may show only the middle of the card; if it does, put H = 260 back (the card then shows whole).
+  const W = 612, H = 52, M = 32, DY = 36, cover = out.addPage([W, H]);
   cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(217 / 255, 253 / 255, 211 / 255) }); // the page itself is the colour of WhatsApp's own bubble, so the card's ROUNDED corners show no white margin (a PDF page is always square)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
-  rr(0, H, W, H, 26, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
+  rr(0, H, W, H, 12, rgb(23 / 255, 37 / 255, 75 / 255)); // the navy card, rounded
   let lx = 26;
   let logoImg = null;
   try {
@@ -7488,15 +7491,15 @@ async function rqBuildFichaDocs(f){
   if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
   // THE CARD OF HIS CHOICE "B" (owner 2026-11-16 21:15, from mock-ups): the plant's LOGO on a white patch and the PLANT'S NAME, big — nothing else. The word "Ver" lives in the file's own icon (WhatsApp draws the icon from the file's extension, see rqWaFileName).
   // The page stays 612 × 260 (WhatsApp crops anything thinner), the card centered in it.
-  const bw = 140, bh = 104, bx = 34, mid = H / 2;
+  const bw = 50, bh = 37, bx = 24, mid = H / 2; // card F: the patch is 72% of the card's height (his mock-up F)
   if (logoImg) {
-    const sc = Math.min((bw - 16) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(bx, mid + bh / 2, bw, bh, 12, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    const sc = Math.min((bw - 6) / logoImg.width, (bh - 5) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(bx, mid + bh / 2, bw, bh, 6, rgb(1, 1, 1)); // the white patch behind the logo, rounded
     cover.drawImage(logoImg, { x: bx + (bw - w) / 2, y: mid - h / 2, width: w, height: h });
   }
-  const nameX = logoImg ? bx + bw + 24 : bx + 6, nameRoom = W - 30 - nameX;
-  let brand = String(f.brand), bsz = 44;
-  while (bsz > 22 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) bsz -= 1;
+  const nameX = logoImg ? bx + bw + 18 : bx + 6, nameRoom = W - 30 - nameX;
+  let brand = String(f.brand), bsz = 19;
+  while (bsz > 12 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) bsz -= 1;
   while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) brand = brand.slice(0, -2).trim() + '…';
   cover.drawText(brand, { x: nameX, y: mid - bsz * 0.35, size: bsz, font: bold, color: rgb(1, 1, 1) });
   let pages = 0;
