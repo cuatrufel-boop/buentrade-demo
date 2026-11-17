@@ -9440,10 +9440,17 @@ async function rqWaServerCopy(it){
 // the ficha-card messages have NO button of their own while the prices message sends them all (owner 2026-11-16: "ahora pusiste un botón por marca, te dije un solo mensaje"); after a stopped chain they get theirs back
 function rqWaChainHidesButton(it){ return !!(it && it.chip && !it.chainFree && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.some(x => x.bars && x.pairKey === it.pairKey)); }
 function rqWaChainItems(it){ return it && it.bars && typeof rqWaModalItems !== 'undefined' ? rqWaModalItems.filter(x => x.chip && x.pairKey === it.pairKey) : []; }
+// ONE MESSAGE WITH SPEC OR PHOTO SENDS BY ITSELF TOO (owner 2026-11-17: "siempre debe mandar, con una o con varias; si el sistema encuentra spec y/o foto debe mandar automáticamente"). Until now only the ficha-card messages (link cards, asleep since 2026-11-16) were sent by
+// the one-click chain; a single message — the prices picture with its spec / photo files pasted in the same send — was only PASTED and the trader had to press Enter ("no manda"). Same chain, same guards, same Enter (only through the local wa-enter, only when
+// WhatsApp is in front, stops at the first problem). Only on this Mac (the local helper) and never on a phone: elsewhere the green button keeps doing what it did (open WhatsApp, the trader pastes and sends).
+function rqWaMacHelperHost(){ return typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname); }
+function rqWaAutoSendOne(it){
+  return !!(it && it.bars && !it.chip && typeof rqWaPasteCompleteOffer === 'function' && rqWaPasteCompleteOffer(it) && !rqWaIsPhone() && rqWaMacHelperHost());
+}
 async function rqWaSendChain(i){
   if (rqWaChainBusy) return; // a second click while it runs (or while it asks) does nothing
   const first = rqWaModalItems[i], seq = first ? [first, ...rqWaChainItems(first)] : [];
-  if (seq.length < 2) return;
+  if (seq.length < 2 && !(typeof rqWaAutoSendOne === 'function' && rqWaAutoSendOne(first))) return;
   if (seq.some(x => x.pictureState === 'pending' || x.fichasState === 'pending' || x.linkState === 'pending')) { rqShowNotice('Preparing the prices and the ficha cards. Wait until everything is ready.'); return; }
   if (seq.some(x => x.pictureState === 'failed' || ['incomplete', 'failed'].includes(x.fichasState) || !(x.downloadFiles && x.downloadFiles.length))) { rqShowNotice('Something could not be prepared. Reopen the offer to try again. Nothing was sent.'); return; }
   rqWaChainBusy = true; seq.forEach(x => { x.chainFree = false; });
@@ -9451,7 +9458,7 @@ async function rqWaSendChain(i){
   let done = 0, why = '', target = null;
   try {
     const who = String(first.pairKey || '').split(' — ')[0];
-    if (!(await rqConfirm(`Send ${seq.length} messages to ${who} now? The system pastes each one in WhatsApp and presses Enter by itself, one after the other. Do not touch the keyboard until it finishes.`))) return;
+    if (!(await rqConfirm(seq.length === 1 ? `Send the offer to ${who} now? The system pastes it in WhatsApp and presses Enter by itself. Do not touch the keyboard until it finishes.` : `Send ${seq.length} messages to ${who} now? The system pastes each one in WhatsApp and presses Enter by itself, one after the other. Do not touch the keyboard until it finishes.`))) return;
     // NO browser tab: the chain's "tab" is a stand-in whose address makes THIS MAC open the chat (`/__local/wa-open`); a real tab was gone after the first message (his real try, 2026-11-16) and the next chat never opened
     const opens = [];
     target = { closed: false, close() {}, location: { set href(u) {
@@ -9477,7 +9484,7 @@ async function rqWaSendChain(i){
     }
   } finally { rqWaChainBusy = false; rqWaChainTarget = null; }
   if (done < seq.length) seq.forEach(x => { x.chainFree = true; }); // it stopped: every message gets its own green button back
-  rqShowNotice(done === seq.length ? `Sent ${done} of ${seq.length} messages. Confirm them when WhatsApp asks.` : `Stopped after ${done} of ${seq.length}: ${why}. Nothing else was sent; each message keeps its own green button.`);
+  rqShowNotice(done === seq.length ? `Sent ${done} of ${seq.length} message${seq.length === 1 ? '' : 's'}. Confirm ${seq.length === 1 ? 'it' : 'them'} when WhatsApp asks.` : `Stopped after ${done} of ${seq.length}: ${why}. Nothing else was sent; each message keeps its own green button.`);
   if (typeof rqRenderWaModal === 'function') rqRenderWaModal();
 }
 // ON THE PHONE THE GREEN BUTTON SENDS THE PICTURE AND THE TEXT TOGETHER (owner 2026-10-28: "usd peso, con link o sin link, cel o pc, todas iguales"): a phone has no Mac paste, so a wa.me message went out as text only and WhatsApp
@@ -9488,6 +9495,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
   if (!it) return;
   if (typeof rqBuildStale !== 'undefined' && rqBuildStale) { rqShowNotice('This page is older than the code on this Mac: reloading it. Open the offer again.'); setTimeout(() => location.reload(), 900); return; } // never a chat opened from old code
   if (!(typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget) && typeof rqWaChainItems === 'function' && rqWaChainItems(it).length) { rqWaSendChain(i); return; } // the prices message of an offer with ficha cards: ONE click sends every bubble (owner 2026-11-16)
+  if (!(typeof rqWaChainTarget !== 'undefined' && rqWaChainTarget) && typeof rqWaAutoSendOne === 'function' && rqWaAutoSendOne(it)) { rqWaSendChain(i); return; } // ONE message with its spec / photo files: it sends by itself too (owner 2026-11-17: "siempre debe mandar… automáticamente")
   if (it.pictureState === 'pending' || it.pictureState === 'failed') { if (typeof rqShowNotice === 'function') rqShowNotice(it.pictureState === 'pending' ? 'Preparing the prices and fichas. Wait until the picture is ready.' : 'The prices and fichas picture could not be prepared. Reopen the offer to retry.'); return; }
   if (typeof rqCmpIntroPending === 'function' && rqCmpIntroPending(it) && typeof rqShowNotice === 'function') { rqShowNotice('The intro message is waiting in WhatsApp. Send it first and tap "I sent it" (or "Not now"): the offer goes as its own message after it.'); return; }
   if (it.linkState === 'pending') { if (typeof rqShowNotice === 'function') rqShowNotice('Shortening the link… WhatsApp opens in a moment.'); return; }
