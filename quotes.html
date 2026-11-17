@@ -7462,11 +7462,11 @@ async function rqBuildFichaDocs(f){
   // THE THIN CARD "F" (owner 2026-11-16 22:35, from his mock-ups of 188 / 140 / 100 / 80 / 64 / 52: "mas delgadas fichas" · "ejecuta F"): a thin navy bar with the plant's logo and name. TRIED AS A 612 × 52 PAGE and rejected by his own iPhone screenshot of 22:43: WhatsApp shows a fixed window (~2.8 : 1) of the CENTER of page 1, so the 52-high page came out as blank navy (no logo, no name).
   // So the page stays 612 × 260 (green, the bubble's colour: the window shows it whole on the Mac and 216 of its 260 on the iPhone) and the F bar (534 × 68, rounded) sits in the middle of it — thin, with its logo and name, always inside what WhatsApp shows. (Owner 2026-11-16 22:50: "habíamos aprobado la F" · "por qué no la haces".)
   // LONG AND THIN (owner 2026-11-16 23:06, looking at the 534-wide bar on his Mac: "debe ser alargada delgada… la F no este mamarracho"): the bar now runs the whole width of the window (604 of the page's 612, 4 pt of margin so WhatsApp's own rounding never clips it).
-  const W = 612, H = 260, BAR_W = 604, BAR_H = 68, BAR_X = 4, M = 32, DY = 36, cover = out.addPage([W, H]);
+  // SAME CARD AS HIS THIN LINK CARD, BUT AS THE PDF (owner 2026-11-16 23:40, his two screenshots — the PDF with tiny letters in a big navy window, and the link card of 23:34 —: "quiero ese mismo tamaño así delgadas pero sin link sino con pdf" · "hazlo con pdf"): the page is navy all over and carries the SAME layout as that card scaled to the page's width — the plant's logo on a rounded white patch, the brand's name, and at the right the doc mark with "Ficha técnica" — centered, so the whole card shows in WhatsApp's fixed window. The window's height and the file row under it are WhatsApp's.
+  const W = 612, H = 260, M = 32, DY = 36, cover = out.addPage([W, H]);
   // THE WHOLE WINDOW IS NAVY (owner 2026-11-16 23:25, mock-up 7: "es la 2 pero más delgada" · "ejecuta"): WhatsApp's preview window has a fixed height, so the green around the bar was empty bubble; now the page is the card's own navy and only the logo and the name (slim, as in bar F) sit in it. The window's height and the file row under it are WhatsApp's.
   cover.drawRectangle({ x: 0, y: 0, width: W, height: H, color: rgb(23 / 255, 37 / 255, 75 / 255) }); // the page itself is the card's navy (a PDF page is always square; WhatsApp rounds the preview itself)
   const rr = (x, top, w, h, r, color) => cover.drawSvgPath(`M ${r},0 H ${w - r} A ${r},${r} 0 0 1 ${w},${r} V ${h - r} A ${r},${r} 0 0 1 ${w - r},${h} H ${r} A ${r},${r} 0 0 1 0,${h - r} V ${r} A ${r},${r} 0 0 1 ${r},0 Z`, { x, y: top, color }); // rounded corners
-  rr(BAR_X, H / 2 + BAR_H / 2, BAR_W, BAR_H, 10, rgb(23 / 255, 37 / 255, 75 / 255)); // the thin navy bar F, rounded, in the middle of the page
   let lx = 26;
   let logoImg = null;
   try {
@@ -7494,14 +7494,19 @@ async function rqBuildFichaDocs(f){
   if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
   // THE CARD OF HIS CHOICE "B" (owner 2026-11-16 21:15, from mock-ups): the plant's LOGO on a white patch and the PLANT'S NAME, big — nothing else. The word "Ver" lives in the file's own icon (WhatsApp draws the icon from the file's extension, see rqWaFileName).
   // The page stays 612 × 260 (WhatsApp crops anything thinner), the card centered in it.
-  const bw = 66, bh = 49, bx = BAR_X + 22, mid = H / 2; // bar F: the patch is 72% of the bar's height (his mock-up F)
+  const bw = 83, bh = 60, bx = 28, mid = H / 2; // the proportions of his link card (patch 152 × 110 of 1118 wide), scaled to the 612-wide page
   if (logoImg) {
-    const sc = Math.min((bw - 6) / logoImg.width, (bh - 5) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(bx, mid + bh / 2, bw, bh, 6, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    const sc = Math.min((bw - 8) / logoImg.width, (bh - 6) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(bx, mid + bh / 2, bw, bh, 8, rgb(1, 1, 1)); // the white patch behind the logo, rounded
     cover.drawImage(logoImg, { x: bx + (bw - w) / 2, y: mid - h / 2, width: w, height: h });
   }
-  const nameX = logoImg ? bx + bw + 16 : bx + 6, nameRoom = BAR_X + BAR_W - 16 - nameX;
-  let brand = String(f.brand), bsz = 27;
+  // at the right, as on his link card: the doc mark and "Ficha técnica" (light blue / grey-blue)
+  const tag = 'Ficha técnica', tsz = 20, tagW = reg.widthOfTextAtSize(tag, tsz), tagX = W - 27 - tagW, iconW = 22, iconX = tagX - 10 - iconW, iconC = rgb(147 / 255, 176 / 255, 231 / 255);
+  cover.drawText(tag, { x: tagX, y: mid - tsz * 0.35, size: tsz, font: reg, color: rgb(167 / 255, 180 / 255, 216 / 255) });
+  cover.drawRectangle({ x: iconX, y: mid - 14, width: iconW, height: 28, borderColor: iconC, borderWidth: 2 }); // the document mark: a page with three lines
+  [8, 0, -8].forEach((dy) => cover.drawRectangle({ x: iconX + 5, y: mid + dy - 1, width: iconW - 10, height: 2, color: iconC }));
+  const nameX = logoImg ? bx + bw + 14 : bx + 6, nameRoom = iconX - 16 - nameX;
+  let brand = String(f.brand), bsz = 33;
   while (bsz > 12 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) bsz -= 1;
   while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) brand = brand.slice(0, -2).trim() + '…';
   cover.drawText(brand, { x: nameX, y: mid - bsz * 0.35, size: bsz, font: bold, color: rgb(1, 1, 1) });
