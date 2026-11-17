@@ -8854,15 +8854,15 @@ async function rqWaAutoPaste(it){
 // server does ONLY when WhatsApp is the front app (a separate address, wa-enter). It asks once before it starts, and it STOPS at the first thing that does not go as expected (a picture not ready, a paste that failed, WhatsApp not in front): nothing
 // else is sent and every message keeps its own green button. The tab is reserved inside the click (a browser blocks one opened later) and reused for every message.
 let rqWaChainBusy = false, rqWaChainTarget = null;
-// SHORT LINKS (owner 2026-11-16: option "2 · is.gd con nombre"): on THIS Mac the link under each ficha card is shortened by the local server (`is.gd/mountaire_k7q`, one line on his phone). The card's button waits for it (up to 12 s) and, if it does not come,
+// SHORT LINKS (owner 2026-11-16: "cámbialo a una línea"): on THIS Mac the link under each ficha card is shortened by the local server with TinyURL (`tinyurl.com/yc2a4xyz`, 20 characters, one line on his phone and tappable). The card's button waits for it (up to 12 s) and, if it does not come,
 // the long link stays: nothing ever blocks a send. Only our own offer addresses are sent; the published site has no such address (the long link goes as before).
 function rqWaShortenLinks(items){
   if (typeof location === 'undefined' || !/^(localhost|127\.0\.0\.1|.*\.local)$/.test(location.hostname)) return;
   (items || []).filter(it => it.chip && /^buentradegroup\.com\/p\/[a-z0-9]{4,16}$/.test(String(it.body))).forEach(it => {
     it.linkState = 'pending'; const done = () => { if (it.linkState === 'pending') it.linkState = 'ready'; if (typeof rqRenderWaModal === 'function' && typeof rqWaModalItems !== 'undefined' && rqWaModalItems.includes(it)) rqRenderWaModal(); };
     setTimeout(done, 12000);
-    fetch('/__local/shorten', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ url: 'https://' + it.body, alias: String(it.chip.brand || '').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 9) }) })
-      .then(r => r.json()).then(j => { if (j && j.ok && /^https:\/\/is\.gd\/[A-Za-z0-9_]+$/.test(String(j.short)) && it.linkState === 'pending') { it.longBody = it.body; it.body = String(j.short).replace(/^https?:\/\//, ''); } }).catch(() => {}).then(done);
+    fetch('/__local/shorten', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ url: 'https://' + it.body }) })
+      .then(r => r.json()).then(j => { if (j && j.ok && /^https:\/\/tinyurl\.com\/[A-Za-z0-9]{6,12}$/.test(String(j.short)) && it.linkState === 'pending') { it.longBody = it.body; it.body = String(j.short).replace(/^https?:\/\//, ''); } }).catch(() => {}).then(done); // bare tinyurl.com/<8 letters>: WhatsApp links a bare .com address (it does not link is.gd/…)
   });
 }
 async function rqWaServerCopy(it){
