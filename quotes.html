@@ -7498,19 +7498,20 @@ async function rqBuildFichaDocs(f){
   if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
   // THE CARD OF HIS CHOICE "B" (owner 2026-11-16 21:15, from mock-ups): the plant's LOGO on a white patch and the PLANT'S NAME, big — nothing else. The word "Ver" lives in the file's own icon (WhatsApp draws the icon from the file's extension, see rqWaFileName).
   // The page stays 612 × 260 (WhatsApp crops anything thinner), the card centered in it.
-  const bw = 83, bh = 60, bx = 28, mid = H / 2; // the proportions of his link card (patch 152 × 110 of 1118 wide), scaled to the 612-wide page
+  // SLIMMER (owner 2026-11-17: "no vuelvas a esa, adelgázala" — not back to the tiny 22:54 bar, thinner than the 23:55 card): the patch 70 × 52 (was 83 × 60), the name 29 pt (was 33), the tag 18 pt (was 20). The window's own height is WhatsApp's.
+  const bw = 70, bh = 52, bx = 28, mid = H / 2; // the layout of his link card, slimmer
   if (logoImg) {
     const sc = Math.min((bw - 8) / logoImg.width, (bh - 6) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
     rr(bx, mid + bh / 2, bw, bh, 8, rgb(1, 1, 1)); // the white patch behind the logo, rounded
     cover.drawImage(logoImg, { x: bx + (bw - w) / 2, y: mid - h / 2, width: w, height: h });
   }
   // at the right, as on his link card: the doc mark and "Ficha técnica" (light blue / grey-blue)
-  const tag = 'Ficha técnica', tsz = 20, tagW = reg.widthOfTextAtSize(tag, tsz), tagX = W - 27 - tagW, iconW = 22, iconX = tagX - 10 - iconW, iconC = rgb(147 / 255, 176 / 255, 231 / 255);
+  const tag = 'Ficha técnica', tsz = 18, tagW = reg.widthOfTextAtSize(tag, tsz), tagX = W - 27 - tagW, iconW = 18, iconX = tagX - 10 - iconW, iconC = rgb(147 / 255, 176 / 255, 231 / 255);
   cover.drawText(tag, { x: tagX, y: mid - tsz * 0.35, size: tsz, font: reg, color: rgb(167 / 255, 180 / 255, 216 / 255) });
-  cover.drawRectangle({ x: iconX, y: mid - 14, width: iconW, height: 28, borderColor: iconC, borderWidth: 2 }); // the document mark: a page with three lines
-  [8, 0, -8].forEach((dy) => cover.drawRectangle({ x: iconX + 5, y: mid + dy - 1, width: iconW - 10, height: 2, color: iconC }));
+  cover.drawRectangle({ x: iconX, y: mid - 12, width: iconW, height: 24, borderColor: iconC, borderWidth: 2 }); // the document mark: a page with three lines
+  [7, 0, -7].forEach((dy) => cover.drawRectangle({ x: iconX + 4, y: mid + dy - 1, width: iconW - 8, height: 2, color: iconC }));
   const nameX = logoImg ? bx + bw + 14 : bx + 6, nameRoom = iconX - 16 - nameX;
-  let brand = String(f.brand), bsz = 33;
+  let brand = String(f.brand), bsz = 29;
   while (bsz > 12 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) bsz -= 1;
   while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) brand = brand.slice(0, -2).trim() + '…';
   cover.drawText(brand, { x: nameX, y: mid - bsz * 0.35, size: bsz, font: bold, color: rgb(1, 1, 1) });
