@@ -7418,6 +7418,11 @@ const rqThinCache = new Map(), rqThinUrls = new Map(); // rqThinUrls: the same p
 // ONE PDF per brand named Brand_ficha.pdf. Its FIRST page is a wide, short BuenTrade card (navy, the plant's logo on white, the brand, "Ficha técnica"/"Ficha técnica + Foto") — the page WhatsApp draws as the document's preview, so it
 // reads as a small card, not a red PDF icon; then the photo page when there is a photo, then the ficha's own pages copied untouched. A ficha that is not a PDF (Word…) cannot be merged: it goes as it is, beside the card.
 const rqFichaCache = new Map();
+// THE FILE THE CHAT SHOWS (owner 2026-11-16 21:20: "es B2 … quita el nombre, solo el cubo VER"): WhatsApp draws the document's square icon with the file's EXTENSION inside it and writes the file's whole name next to it. With ".pdf" the square says "PDF"; the owner chose a square that says "VER" and no name, so each ficha goes into the chat as `<invisible>.ver`
+// (an invisible character, then ".ver": a leading dot alone would be a hidden file with no extension). ONLY the paste into WhatsApp uses it — the e-mail attachment and the backup download keep "Brand.pdf". RISK (said to him before he chose it): the customer's phone may not know how to open ".ver";
+// one switch: 'pdf' puts the ordinary ".pdf" back.
+const RQ_WA_FICHA_EXT = 'ver';
+function rqWaFileName(f){ return /\.pdf$/i.test(String((f && f.filename) || '')) && RQ_WA_FICHA_EXT !== 'pdf' ? '\u200B.' + RQ_WA_FICHA_EXT : String(f && f.filename || ''); }
 function rqWaFichaCacheKey(f){ return [f.linkCard ? 'card' : 'doc', f.brand, f.spec_url, f.photo_url, f.logo_url].join('|'); }
 // THE THIN CARD of a brand with its own link (owner 2026-11-15): the picture the function draws (`?ficha=<brand>&logo=<url>&k=o`), asked like every banner and checked to be a REAL PNG before it is attached (an error page, an empty answer or a stub never goes into the chat). One file: the card, as a picture.
 async function rqBuildFichaCard(f){
@@ -7480,19 +7485,19 @@ async function rqBuildFichaDocs(f){
     }
   } catch (e) { throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha: ' + String(e && e.message || e)); }
   if (!logoImg) throw new Error('the plant logo of ' + f.brand + ' could not be put on its ficha');
-  const rowMid = H - DY - 24 - 34; // the middle of the first row (the logo patch is 68 high, 24 under the card's content)
+  // THE CARD OF HIS CHOICE "B" (owner 2026-11-16 21:15, from mock-ups): the plant's LOGO on a white patch and the PLANT'S NAME, big — nothing else. The word "Ver" lives in the file's own icon (WhatsApp draws the icon from the file's extension, see rqWaFileName).
+  // The page stays 612 × 260 (WhatsApp crops anything thinner), the card centered in it.
+  const bw = 140, bh = 104, bx = 34, mid = H / 2;
   if (logoImg) {
-    const bw = 132, bh = 68, sc = Math.min((bw - 16) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
-    rr(M, H - DY - 24, bw, bh, 12, rgb(1, 1, 1)); // the white patch behind the logo, rounded
-    cover.drawImage(logoImg, { x: M + (bw - w) / 2, y: H - DY - 24 - bh + (bh - h) / 2, width: w, height: h });
+    const sc = Math.min((bw - 16) / logoImg.width, (bh - 12) / logoImg.height), w = logoImg.width * sc, h = logoImg.height * sc;
+    rr(bx, mid + bh / 2, bw, bh, 12, rgb(1, 1, 1)); // the white patch behind the logo, rounded
+    cover.drawImage(logoImg, { x: bx + (bw - w) / 2, y: mid - h / 2, width: w, height: h });
   }
-  let brand = String(f.brand), bsz = 40;
-  while (bsz > 30 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) bsz -= 1;
-  while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > W - 2 * M) brand = brand.slice(0, -2).trim() + '…';
-  cover.drawText(brand, { x: M, y: 38 + DY, size: bsz, font: bold, color: rgb(1, 1, 1) });
-  const label = specB && photoB ? 'Ficha técnica + Foto' : photoB && !specB ? 'Foto' : 'Ficha técnica', lw = reg.widthOfTextAtSize(label, 28), lblX = logoImg ? W - M - lw : M + 46;
-  cover.drawText(label, { x: lblX, y: rowMid - 10, size: 28, font: reg, color: rgb(159 / 255, 176 / 255, 200 / 255) });
-  cover.drawSvgPath('M 1,1 H 14 L 21,8 V 25 H 1 Z M 14,1 V 8 H 21 M 5,14 H 17 M 5,19 H 17', { x: lblX - 42, y: rowMid + 20, scale: 1.6, borderColor: rgb(158 / 255, 197 / 255, 250 / 255), borderWidth: 2.2 }); // the doc mark
+  const nameX = logoImg ? bx + bw + 24 : bx + 6, nameRoom = W - 30 - nameX;
+  let brand = String(f.brand), bsz = 44;
+  while (bsz > 22 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) bsz -= 1;
+  while (brand.length > 9 && bold.widthOfTextAtSize(brand, bsz) > nameRoom) brand = brand.slice(0, -2).trim() + '…';
+  cover.drawText(brand, { x: nameX, y: mid - bsz * 0.35, size: bsz, font: bold, color: rgb(1, 1, 1) });
   let pages = 0;
   if (photoB && (isPng(photoB) || isJpg(photoB))) {
     try {
@@ -8790,7 +8795,7 @@ async function rqWaPasteFichas(i){
   if (!it || !docs.length) return;
   it.fichasPasteState = 'working'; it.fichasPasteError = ''; rqRenderWaModal();
   try {
-    const files = docs.map((f) => ({ name: f.filename, b64: rqBytesToBase64(f.bytes) }));
+    const files = docs.map((f) => ({ name: (typeof rqWaFileName === 'function' ? rqWaFileName(f) : f.filename), b64: rqBytesToBase64(f.bytes) }));
     const empty = files.find((x) => !x.b64); // never paste an EMPTY file: WhatsApp drops the whole attachment list (the banner included) — said out loud instead
     if (empty) { it.fichasPasteState = 'failed'; it.fichasPasteError = 'the file ' + empty.name + ' came out empty: not pasted'; rqRenderWaModal(); return; }
     const r = await fetch('/__local/wa-paste-files', { method: 'POST', headers: { 'X-BT-Local': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) });
@@ -8820,7 +8825,7 @@ function rqWaFichasButton(it, i){
 // ONE PASTE FOR THE WHOLE OFFER (owner 2026-11-15: "un solo envío adjunta todo con fichas"; real send 21:55: the bars picture went and its card never did — two pastes a few seconds apart raced with Enter): the banner and ALL ficha cards, PDFs, photos and other formats go to the clipboard together and paste ONCE. One preview, one Enter sends them all.
 function rqWaPasteCompleteOffer(it){ const f = it && it.downloadFiles; return !!(f && f.length > 1 && it.fichasState === 'ready'); }
 async function rqWaPasteCompleteOfferFiles(it){
-  const files = it.downloadFiles.map(f => ({ name: f.filename, b64: rqBytesToBase64(f.bytes) }));
+  const files = it.downloadFiles.map(f => ({ name: (typeof rqWaFileName === 'function' ? rqWaFileName(f) : f.filename), b64: rqBytesToBase64(f.bytes) }));
   if (files.some(x => !x.b64)) return false; // an empty file is never pasted
   for (let n = 0; n <= 2; n++) { // the same patience as the single paste: two more tries a little further apart
     if (n) await new Promise((r) => setTimeout(r, n === 1 ? 2500 : 4000));
