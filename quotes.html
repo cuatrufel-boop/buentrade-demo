@@ -847,8 +847,13 @@
   .rq-pal-fc em{position:absolute;top:-8px;right:32px;width:17px;height:17px;border-radius:50%;background:#5AAAFF;color:#06203f;font:800 10px Inter,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;}
   /* who asked in the night screen: the cards are the picker, the old row is not shown, the Done is new (owner 2026-11-17) */
   .rq-pal-night-on #rq_sheet_asked{display:none;}
-  .rq-pal-lchip{position:absolute;left:12px;top:10px;z-index:2;display:flex;align-items:center;gap:8px;padding:6px 13px 6px 9px;border-radius:999px;background:rgba(6,20,46,.88);border:1px solid rgba(143,211,255,.55);font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#cfeaff;pointer-events:none;} .rq-pal-lchip[hidden]{display:none;} .rq-pal-lchip b{color:#fff;font-size:12px;} .rq-pal-lchip svg{width:18px;height:13px;}
-  .rq-pal-lroute{animation:rqPalFlow 1.4s linear infinite;} @keyframes rqPalFlow{to{stroke-dashoffset:-30;}}
+  .rq-pal-lhtml{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;}
+  .rq-pal-lroute.wait{stroke-dasharray:7 7;animation:rqPalFlow 1.6s linear infinite;} @keyframes rqPalFlow{to{stroke-dashoffset:-36;}}
+  .rq-pal-lpulse{transform-box:fill-box;transform-origin:center;animation:rqPalLpulse 2.6s ease-out infinite;} @keyframes rqPalLpulse{0%{transform:scale(.7);opacity:.75;}100%{transform:scale(2.8);opacity:0;}}
+  .rq-pal-mini{position:absolute;pointer-events:none;transform:translate(14px,-50%);padding:2px 8px 2px 7px;border-radius:999px;background:rgba(5,20,46,.92);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);font:600 9.5px Inter,sans-serif;white-space:nowrap;color:#fff;box-shadow:0 0 10px color-mix(in srgb,var(--c) 25%,transparent);transition:opacity .15s;} .rq-pal-mini i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--c);margin-right:5px;box-shadow:0 0 6px var(--c);} .rq-pal-mini span{color:rgba(255,255,255,.6);}
+  .rq-pal-ltip{position:absolute;pointer-events:none;opacity:0;transition:opacity .15s;transform:translate(-50%,-100%);margin-top:-18px;z-index:3;} .rq-pal-ltip.on{opacity:1;}
+  .rq-pal-lcard{padding:5px 10px 5px 12px;border-radius:10px;background:linear-gradient(180deg,rgba(10,32,70,.97),rgba(5,20,46,.97));border:1px solid color-mix(in srgb,var(--c) 65%,transparent);box-shadow:0 0 24px color-mix(in srgb,var(--c) 30%,transparent),0 10px 24px rgba(0,0,0,.5);position:relative;white-space:nowrap;} .rq-pal-lcard:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px;background:var(--c);box-shadow:0 0 12px var(--c);}
+  .rq-pal-lcard b{display:block;font:700 11px 'Space Grotesk',sans-serif;color:#fff;} .rq-pal-lcard span{display:block;font:500 9.5px Inter,sans-serif;color:rgba(255,255,255,.7);} .rq-pal-lcard small{display:block;font:700 8.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--c);margin-top:2px;text-transform:uppercase;} .rq-pal-lcard em{display:block;font:500 8px 'IBM Plex Mono',monospace;font-style:normal;color:rgba(255,255,255,.45);margin-top:1px;}
   .rq-pal-askrow{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:10px 0 0;font-size:12.5px;}
   .rq-pal-askrow > b{font:700 13px 'Space Grotesk',sans-serif;margin-right:4px;}
   .rq-pal-mute{color:var(--ink-soft);font-size:12px;}
@@ -6197,7 +6202,7 @@ function rqPalNightIdleHtml(pop){
   const total = groups.reduce((n, g) => n + g.customers.length, 0);
   return `<div class="rq-pal-main rq-pal-idle rq-pal-idle-n">
     <div class="rq-pal-lab" style="justify-content:center;margin:0 0 8px;">Where your customers are${all ? ` <b>${total}</b>` : ''}</div>
-    <div class="rq-pal-night idle" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .3).toFixed(1)}" ry="${(H * .3).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".2" stroke-dasharray="2 8"/><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .46).toFixed(1)}" ry="${(H * .46).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".14" stroke-dasharray="2 8"/><g class="rq-pal-loads"></g><g class="rq-pal-pins"></g></svg><div class="rq-pal-lchip" hidden></div><div class="rq-pal-nbeam"></div>${labels.join('')}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
+    <div class="rq-pal-night idle" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .3).toFixed(1)}" ry="${(H * .3).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".2" stroke-dasharray="2 8"/><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .46).toFixed(1)}" ry="${(H * .46).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".14" stroke-dasharray="2 8"/><g class="rq-pal-loads"></g><g class="rq-pal-pins"></g></svg><div class="rq-pal-lhtml"></div><div class="rq-pal-nbeam"></div>${labels.join('')}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
     ${rest.length ? `<div class="rq-pal-rest">${rest.map(g => escapeHtml(g.city) + (g.customers.length > 1 ? ' ×' + g.customers.length : '')).join(' · ')}</div>` : ''}
   </div>`;
 }
@@ -6298,7 +6303,7 @@ function rqPalNightHtml(x){
     <div class="rq-pal-ph"><div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div><div><h3>${rqPalHl(p.full_name_en || p.name_en || p.name, qts)}</h3>${p.full_name_es ? `<div class="es">${rqPalHl(p.full_name_es, qts)}</div>` : ''}</div></div>
     <div class="rq-pal-tags">${tags}</div>
     <div class="rq-pal-askrow"><b>Who asked for it?</b>${list.some(v => askedIds.has(v.c.id)) ? list.filter(v => askedIds.has(v.c.id)).map(v => `<span class="rq-pal-pill b">✓ ${escapeHtml(String(v.c.trade_name).trim())}</span>`).join('') : '<span class="rq-pal-mute">nobody has asked yet</span>'}${rqPalOtherHtml(B)}</div>
-    <div class="rq-pal-night${L.sm ? ' sm' : ''}${needed ? ' need' : ''}" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}<g class="rq-pal-loads"></g><g class="rq-pal-pins"></g></svg><div class="rq-pal-lchip" hidden></div><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}${needed ? '<div class="rq-pal-need pkg-tag-blink">Pick the customer who asked for it to continue.</div>' : ''}</div>
+    <div class="rq-pal-night${L.sm ? ' sm' : ''}${needed ? ' need' : ''}" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}<g class="rq-pal-loads"></g><g class="rq-pal-pins"></g></svg><div class="rq-pal-lhtml"></div><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}${needed ? '<div class="rq-pal-need pkg-tag-blink">Pick the customer who asked for it to continue.</div>' : ''}</div>
   </div>
   <div class="rq-pal-side rq-pal-dside">
     <div class="rq-pal-lab">Plants with it <b>${plants.length}</b></div>${priceRows}${chips ? `<div class="rq-pal-lab sp2">${chips}</div>` : ''}
@@ -6313,7 +6318,7 @@ function rqPalNight(host){
   cv.width = BW * dpr; cv.height = BH * dpr; const x = cv.getContext('2d'); if (!x) return; x.scale(dpr, dpr);
   let sd = 7; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
   for (let n = 0, N = Math.round(BW * BH / 1700); n < N; n++){ x.fillStyle = `rgba(205,228,255,${.12 + rnd() * .55})`; x.beginPath(); x.arc(rnd() * BW, rnd() * BH, rnd() * .85 + .2, 0, 7); x.fill(); }
-  const sy = BH / 34, sx = sy * .86, P = (lat, lon) => [BW / 2 + (lon + 98) * sx, BH / 2 - (lat - 26.5) * sy], M = RQ_PAL_MAP, c = rqPalMapCells();
+  const P = rqPalProj(ox, oy, st.clientWidth || +st.dataset.w, st.clientHeight || +st.dataset.h), M = RQ_PAL_MAP, c = rqPalMapCells(); // the wide map: the plants of the USA and Mexico, all on the stage
   const tint = new Map(); st.querySelectorAll('.rq-pal-fc[data-lat]').forEach(f => { const sid = rqPalMxStateOf(+f.dataset.lat, +f.dataset.lon); if (!sid) return; const kk = f.classList.contains('g') ? 'g' : f.classList.contains('a') ? 'a' : 'n'; tint.set(sid, tint.has(sid) && tint.get(sid) !== kk ? 'mix' : kk); });
   if (!rqPalMapVector(x, P, BW, BH, ox + st.clientWidth / 2, oy + st.clientHeight / 2, tint)) for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){ // the real outlines of Mexico; the dots only if they cannot be read
     const v = c[j * M.w + i]; if (!v) continue;
@@ -6399,7 +6404,7 @@ function rqPalRenderDetail(){
     rqPalLastPid = null; return;
   }
   const pid = rqPalHi;
-  rqPalLoadSent(pid); rqPalLoadLoads(); // (the loads on the way, a view only)
+  rqPalLoadSent(pid); rqPalLoadLoads(); rqPalLoadAllCustomers(); // (the loads on the way, a view only; the customers say which customs agency each load crosses at)
   // the prices of every plant are read by the page's own loader: until they are in memory nothing about "has it" can be said
   if (!rqAllPlantProductRows.length && rqPalDetailTries < 20){ rqPalDetailTries++; setTimeout(rqPalRenderDetail, 800); }
   const changed = rqPalLastPid !== pid, html = rqPalDetailHtml(pid, changed), key = html.replace(/ pop/g, '');
@@ -6502,32 +6507,47 @@ function rqPalPickupGeo(name){
   const g = rqPalGeoOf(String(name).split(',')[0]); return g ? [g[0], g[1]] : null;
 }
 const RQ_PAL_TRUCK = '<rect x="0" y="1" width="9" height="7" rx="1.2"/><path d="M9.8 3h2.6l2 2.4V8H9.8z"/><circle cx="3.2" cy="9" r="1.6" fill="#06122b" stroke="#cfeaff" stroke-width="1"/><circle cx="11.4" cy="9" r="1.6" fill="#06122b" stroke="#cfeaff" stroke-width="1"/>';
-// the SVG of the loads on the stage (stage pixels): rows = the loads going to customers on the stage, pin = customer id -> his dot, P = lat/lon -> stage pixels
-function rqPalLoadsSvg(rows, pin, P, W, H, dots){ // dots = customer ids whose place has no ficha or label of its own: a small dot marks where the load goes
-  let body = ''; const seen = {}, marked = {};
-  rows.forEach((r, i) => {
-    const q = pin[r.customer_id]; if (!q) return;
-    if (dots && dots[r.customer_id] && !marked[r.customer_id]){ marked[r.customer_id] = 1; body += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="7" fill="#8fd3ff" fill-opacity=".22"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="3.6" fill="#8fd3ff" stroke="#fff" stroke-width="1"/>`; }
-    const geo = rqPalPickupGeo(r.pickup_location && r.pickup_location.location_name), moving = r.status === 'picked_up', txt = String(r.order_number || '') + (moving ? '' : ' · PENDING PICKUP'), n = seen[r.customer_id] = (seen[r.customer_id] || 0) + 1;
-    let lab = [q[0], q[1] + 19];
-    if (geo){
-      const o = P(geo[0], geo[1]), dx = q[0] - o[0], dy = q[1] - o[1], dist = Math.hypot(dx, dy) || 1, mx = (o[0] + q[0]) / 2, my = (o[1] + q[1]) / 2, nx = -dy / dist, ny = dx / dist, sg = ny < 0 ? 1 : -1, cx = mx + nx * dist * .16 * sg, cy = my + ny * dist * .16 * sg;
-      const B = t => [(1 - t) * (1 - t) * o[0] + 2 * (1 - t) * t * cx + t * t * q[0], (1 - t) * (1 - t) * o[1] + 2 * (1 - t) * t * cy + t * t * q[1]];
-      let t0 = 0; for (; t0 < 1; t0 += .01){ const p = B(t0); if (p[0] >= 0 && p[0] <= W && p[1] >= 0 && p[1] <= H) break; }
-      if (t0 < 1){ // the part of the road that is on the stage
-        const id = 'rq_pal_lp' + i, a = B(t0), m = B((t0 + 1) / 2), glyph = '<circle r="12" fill="#06122b" stroke="#8fd3ff" stroke-width="1.5" style="filter:drop-shadow(0 0 7px #8fd3ff)"/><g transform="translate(-7 -5.5) scale(.9)" fill="#cfeaff">' + RQ_PAL_TRUCK + '</g>';
-        body += `<path id="${id}" class="rq-pal-lroute" d="M${o[0].toFixed(1)} ${o[1].toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${q[0].toFixed(1)} ${q[1].toFixed(1)}" fill="none" stroke="rgba(170,225,255,.85)" stroke-width="1.9" stroke-dasharray="4 6"/>`;
-        if (t0 === 0) body += `<path d="M${o[0].toFixed(1)} ${(o[1] - 6).toFixed(1)}l6 6-6 6-6-6z" fill="rgba(143,211,255,.18)" stroke="#8fd3ff" stroke-width="1.3"/>`;
-        body += moving ? `<g class="rq-pal-lt">${glyph}<animateMotion dur="${(12 + dist / 40).toFixed(1)}s" begin="${(i * 1.7).toFixed(1)}s" repeatCount="indefinite"><mpath href="#${id}"/></animateMotion></g>` : `<g class="rq-pal-lt" transform="translate(${a[0].toFixed(1)} ${a[1].toFixed(1)})">${glyph}</g>`;
-        lab = [m[0], m[1] - 15];
-      }
-    }
-    const w = txt.length * 5.6 + 18, lx = Math.max(w / 2 + 4, Math.min(W - w / 2 - 4, lab[0])), ly = Math.max(12, Math.min(H - 12, lab[1] + (n - 1) * 18));
-    body += `<g transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})"><rect x="${(-w / 2).toFixed(1)}" y="-8" width="${w.toFixed(1)}" height="16" rx="8" fill="rgba(6,20,46,.9)" stroke="rgba(143,211,255,.55)"/><text y="3.2" text-anchor="middle" fill="#cfeaff" font-size="8.5" font-family="IBM Plex Mono,monospace" font-weight="700" letter-spacing=".06em">${escapeHtml(txt)}</text></g>`;
-  });
-  return `<clipPath id="rq_pal_lclip"><rect x="0" y="0" width="${W}" height="${H}"/></clipPath><g clip-path="url(#rq_pal_lclip)">${body}</g>`;
+// where a load crosses into Mexico: the city of the customs agency of its customer (the approved order: the customer's own agency, else the one of the offer), written as the DB writes it. A city that is not here is not placed.
+const RQ_PAL_BORDER_GEO = {
+  'laredo': [27.50, -99.51], 'pharr': [26.19, -98.18], 'mission': [26.21, -98.33], 'mcallen': [26.20, -98.23], 'hidalgo': [26.10, -98.26], 'edinburg': [26.30, -98.16], 'san juan': [26.19, -98.16], 'weslaco': [26.16, -97.99], 'donna': [26.17, -98.05],
+  'brownsville': [25.90, -97.50], 'rio grande city': [26.38, -98.82], 'roma': [26.40, -99.02], 'eagle pass': [28.71, -100.50], 'del rio': [29.36, -100.90], 'el paso': [31.76, -106.49], 'nogales': [31.33, -110.94], 'calexico': [32.67, -115.50], 'otay mesa': [32.55, -117.03]
+};
+function rqPalBorderGeo(city){
+  const k = String(city || '').split(',')[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  return RQ_PAL_BORDER_GEO[k] || null;
 }
-let rqPalLoads = { at: 0, rows: [], busy: false };
+// THE WIDE MAP (owner 2026-11-18: "construye la 3 igual"): the stage shows the plants of the USA at the top and Mexico below, all of it inside the stage, so a load is seen from the plant to the border
+function rqPalProj(ox, oy, W, H){
+  const sy = Math.max(7, Math.min(30, (H - 24) / 28.6)), sx = sy * .86;
+  return (lat, lon) => [ox + W / 2 + (lon + 97) * sx, oy + 12 + (42.9 - lat) * sy];
+}
+const RQ_PAL_LAB = [[-13, -8, 'end'], [-13, 12, 'end'], [14, 6, 'start'], [14, 20, 'start'], [-13, 26, 'end'], [14, 34, 'start']], RQ_PAL_JIT = [[0, 0], [-10, -4], [10, 6], [2, 14], [-13, 12], [14, -7]];
+// the loads on the stage, as DESIGNED with the owner (mock-up "3"): only little trucks that move along a road from the plant (its pickup city) to the border (the city of the customs agency); amber and dashed while the load waits for pickup, blue and solid
+// once it is on the road, green at the border; each truck carries a one-line label (product · customer); a truck that is stopped on (see rqPalLoadsRun) shows its small card. items = { order, status, ps, spec, cust, plant, from, oGeo, bGeo, bName };
+// P = lat/lon -> stage pixels. Returns the SVG, the HTML of the labels, and the roads (for the movement).
+function rqPalLoadsBuild(items, P, W, H){
+  const L = [];
+  items.forEach((it, i) => {
+    const base = P(it.bGeo[0], it.bGeo[1]), near = L.filter(q => Math.hypot(q.base[0] - base[0], q.base[1] - base[1]) < 14).length, j = RQ_PAL_JIT[near % 6], d = [base[0] + j[0], base[1] + j[1]];
+    const o = it.oGeo ? P(it.oGeo[0], it.oGeo[1]) : [d[0] - 46, -30], sg = i % 2 ? 1 : -1, C = [(o[0] + d[0]) / 2 + sg * 34, (o[1] + d[1]) / 2];
+    const B = t => [(1 - t) * (1 - t) * o[0] + 2 * (1 - t) * t * C[0] + t * t * d[0], (1 - t) * (1 - t) * o[1] + 2 * (1 - t) * t * C[1] + t * t * d[1]];
+    let t0 = 0; while (t0 < 1 && B(t0)[1] < 8) t0 += .01;
+    L.push({ i, it, base, d, o, C, B, t0, t: t0 + (1 - t0) * ((i % 5) * .23), speed: (1 - t0) / (11 + 2.4 * (i % 6)), lab: RQ_PAL_LAB[near % 6], entry: B(t0), c: it.status === 'picked_up' ? '#5AAAFF' : '#FFC876' });
+  });
+  let defs = '', paths = '', marks = '', tks = '', html = ''; const origin = {};
+  L.forEach(l => {
+    const it = l.it, c = l.c, road = it.status === 'picked_up', d = `M${l.o[0].toFixed(1)} ${l.o[1].toFixed(1)} Q${l.C[0].toFixed(1)} ${l.C[1].toFixed(1)} ${l.d[0].toFixed(1)} ${l.d[1].toFixed(1)}`;
+    defs += `<linearGradient id="rq_pal_lg${l.i}" gradientUnits="userSpaceOnUse" x1="${l.o[0].toFixed(1)}" y1="${Math.max(0, l.entry[1]).toFixed(1)}" x2="${l.d[0].toFixed(1)}" y2="${l.d[1].toFixed(1)}"><stop offset="0" stop-color="${c}" stop-opacity=".3"/><stop offset=".55" stop-color="${c}"/><stop offset="1" stop-color="#3FCB7E"/></linearGradient>`;
+    paths += `<path d="${d}" fill="none" stroke="url(#rq_pal_lg${l.i})" stroke-width="8" stroke-opacity=".12"/><path class="rq-pal-lroute${road ? '' : ' wait'}" d="${d}" fill="none" stroke="url(#rq_pal_lg${l.i})" stroke-width="2" opacity=".7"/>`;
+    marks += `<g transform="translate(${l.d[0].toFixed(1)} ${l.d[1].toFixed(1)})"><path d="M0 -6l6 6-6 6-6-6z" fill="#3FCB7E" fill-opacity=".25" stroke="#3FCB7E" stroke-width="1.5" style="filter:drop-shadow(0 0 6px #3FCB7E)"/><circle class="rq-pal-lpulse" r="8" fill="none" stroke="#3FCB7E" stroke-width="1.1" style="animation-delay:${(l.i % 5) * .4}s"/></g>`
+      + `<text x="${(l.d[0] + l.lab[0]).toFixed(1)}" y="${(l.d[1] + l.lab[1]).toFixed(1)}" font-size="8.5" font-weight="700" letter-spacing="1" font-family="IBM Plex Mono,monospace" fill="#9fe9c4" text-anchor="${l.lab[2]}">${escapeHtml(String(it.bName).toUpperCase())}</text>`;
+    if (it.oGeo && !origin[it.from]){ origin[it.from] = 1; marks += `<circle cx="${l.o[0].toFixed(1)}" cy="${l.o[1].toFixed(1)}" r="3.6" fill="${c}" stroke="#fff" stroke-width="1"/><text x="${(l.o[0] + 7).toFixed(1)}" y="${(l.o[1] + 3).toFixed(1)}" font-size="8.5" font-weight="700" letter-spacing=".8" font-family="IBM Plex Mono,monospace" fill="rgba(207,234,255,.9)">${escapeHtml(String(it.from).toUpperCase())}</text>`; }
+    tks += `<g class="rq-pal-tk" data-i="${l.i}"><circle class="ring" r="15" fill="none" stroke="${c}" stroke-width="1.5" opacity="0"/><circle r="12" fill="#06122b" stroke="${c}" stroke-width="1.6" style="filter:drop-shadow(0 0 7px ${c})"/><g transform="translate(-7 -5.5) scale(.9)" fill="${c}" color="${c}">${RQ_PAL_TRUCK}</g><circle r="19" fill="transparent" style="pointer-events:all"/></g>`;
+    html += `<div class="rq-pal-mini" data-i="${l.i}" style="--c:${c}"><i></i>${escapeHtml(it.ps)} <span>· ${escapeHtml(it.cust.length > 16 ? it.cust.slice(0, 15) + '…' : it.cust)}</span></div>`;
+  });
+  return { svg: L.length ? `<clipPath id="rq_pal_lclip"><rect x="0" y="0" width="${W}" height="${H}"/></clipPath><defs>${defs}</defs><g clip-path="url(#rq_pal_lclip)">${paths}${marks}${tks}</g>` : '', html: html + (L.length ? '<div class="rq-pal-ltip"></div>' : ''), L };
+}
+let rqPalLoads = { at: 0, rows: [], busy: false, offer: {}, t: {}, run: null };
 async function rqPalLoadLoads(){
   if (rqPalLoads.busy || Date.now() - rqPalLoads.at < 120000) return;
   rqPalLoads.busy = true;
@@ -6535,19 +6555,43 @@ async function rqPalLoadLoads(){
   catch (e){ rqPalLoads.at = Date.now() - 100000; } // no loads to show: the screen is the same without them; it tries again in 20 s
   rqPalLoads.busy = false; rqPalLoadsDraw();
 }
-// the start screen and a product both show EVERY load on the way (a customer that has a ficha: to his ficha; any other: to his city)
+// the agency of the OFFER, read once per order, only for a customer that has none of his own (the same order of resolution as "Share with customs" in Orders)
+async function rqPalLoadOffer(order){
+  rqPalLoads.offer[order] = null;
+  try { const o = ((await callApi('sent-offers-search', { order_number: order, limit: 1 })).results || [])[0]; rqPalLoads.offer[order] = (o && o.customs_agency_provider_id) || false; }
+  catch (e){ delete rqPalLoads.offer[order]; return; }
+  rqPalLoadsDraw();
+}
+function rqPalBorderOf(r){
+  const c = (rqAllCustomersCache || []).find(x => x.id === r.customer_id); let agency = c && c.customs_agency_provider_id;
+  if (!agency){ const o = rqPalLoads.offer[r.order_number]; if (o === undefined) rqPalLoadOffer(r.order_number); else agency = o; }
+  const p = agency && (rqAllProviders || []).find(x => x.id === agency); if (!p) return null;
+  const geo = rqPalBorderGeo(p.city); return geo ? { geo, name: String(p.city).split(',')[0].trim() } : null;
+}
+// the start screen and a product both show EVERY load on the way, on the stage
 function rqPalLoadsDraw(){
-  const st = document.querySelector('#rq_pal_detail .rq-pal-night'), bx = document.querySelector('.rq-palette-box'); if (!st || !bx) return;
-  const g = st.querySelector('.rq-pal-loads'), chip = st.querySelector('.rq-pal-lchip'); if (!g || !chip) return;
-  g.innerHTML = ''; chip.hidden = true;
-  const br = bx.getBoundingClientRect(), sr = st.getBoundingClientRect(), BW = bx.clientWidth, BH = bx.clientHeight, sy = BH / 34, sx = sy * .86, ox = sr.left - br.left, oy = sr.top - br.top;
-  const P = (lat, lon) => [BW / 2 + (lon + 98) * sx - ox, BH / 2 - (lat - 26.5) * sy - oy], pin = {}, dots = {}, idle = st.classList.contains('idle'), cust = {};
-  (rqAllCustomersCache || []).forEach(c => { cust[c.id] = c; });
-  st.querySelectorAll('.rq-pal-fc[data-c]').forEach(f => { if (f.dataset.lat) pin[f.dataset.c] = P(+f.dataset.lat, +f.dataset.lon); });
-  const rows = rqPalLoads.rows.filter(r => r.customer_id); if (!rows.length) return;
-  rows.forEach(r => { if (pin[r.customer_id]) return; const c = cust[r.customer_id], geo = c && rqPalGeoOf(c.city); if (!geo) return; pin[r.customer_id] = P(geo[0], geo[1]); if (!idle) dots[r.customer_id] = 1; });
-  chip.innerHTML = `<svg viewBox="0 0 15 11" fill="#cfeaff">${RQ_PAL_TRUCK}</svg><b>${rows.length}</b> load${rows.length === 1 ? '' : 's'} on the way`; chip.hidden = false;
-  g.innerHTML = rqPalLoadsSvg(rows, pin, P, st.clientWidth || +st.dataset.w, st.clientHeight || +st.dataset.h, dots);
+  const st = document.querySelector('#rq_pal_detail .rq-pal-night'); if (!st) return;
+  const g = st.querySelector('.rq-pal-loads'), hh = st.querySelector('.rq-pal-lhtml'); if (!g || !hh) return;
+  if (rqPalLoads.run) rqPalLoads.run.alive = false;
+  g.innerHTML = ''; hh.innerHTML = '';
+  const W = st.clientWidth || +st.dataset.w, H = st.clientHeight || +st.dataset.h, cust = {}; (rqAllCustomersCache || []).forEach(c => { cust[c.id] = c; });
+  const items = []; rqPalLoads.rows.forEach(r => { const b = rqPalBorderOf(r); if (!b) return; const from = String((r.pickup_location && r.pickup_location.location_name) || '').trim(), c = cust[r.customer_id];
+    items.push({ order: r.order_number, status: r.status, ps: String(r.product_name || '').trim() || String(r.product_spec || '').trim(), spec: String(r.product_spec || r.product_name || '').trim(), cust: String((c && c.trade_name) || r.customer_name || '').trim(), plant: String(r.plant_name || '').trim(), from, oGeo: from ? rqPalPickupGeo(from) : null, bGeo: b.geo, bName: b.name }); });
+  if (!items.length) return;
+  const out = rqPalLoadsBuild(items, rqPalProj(0, 0, W, H), W, H); g.innerHTML = out.svg; hh.innerHTML = out.html; rqPalLoadsRun(g, hh, out.L, st);
+}
+// the movement: the trucks drive along their roads; a truck that the pointer is on stops, and its small card says product, customer, from where to which border (view only: nothing here can be clicked)
+function rqPalLoadsRun(g, hh, L, st){
+  const run = rqPalLoads.run = { alive: true }, tks = [...g.querySelectorAll('.rq-pal-tk')], chips = [...hh.querySelectorAll('.rq-pal-mini')], rts = [...g.querySelectorAll('.rq-pal-lroute')], tip = hh.querySelector('.rq-pal-ltip'); let hov = -1;
+  L.forEach(l => { const k = rqPalLoads.t[l.it.order]; if (k != null) l.t = Math.max(l.t0, Math.min(1, k)); });
+  const place = l => { const p = l.B(l.t); tks[l.i].setAttribute('transform', `translate(${p[0].toFixed(1)} ${p[1].toFixed(1)})`); chips[l.i].style.left = p[0].toFixed(1) + 'px'; chips[l.i].style.top = p[1].toFixed(1) + 'px'; return p; };
+  const show = l => { const p = l.B(l.t), it = l.it; tks.forEach((t, i) => { t.querySelector('.ring').setAttribute('opacity', i === l.i ? 1 : 0); t.style.opacity = i === l.i ? 1 : .35; }); rts.forEach((r, i) => { r.setAttribute('opacity', i === l.i ? 1 : .18); r.setAttribute('stroke-width', i === l.i ? 3 : 2); }); chips[l.i].style.opacity = 0;
+    tip.innerHTML = `<div class="rq-pal-lcard" style="--c:${l.c}"><b>${escapeHtml(it.spec)}</b><span>${escapeHtml(it.cust)}</span><small>${escapeHtml((it.from || it.plant) + ' → ' + it.bName)}</small><em>${escapeHtml(it.order)} · ${it.status === 'picked_up' ? 'On the road' : 'Pending pickup'}</em></div>`; tip.style.left = p[0].toFixed(1) + 'px'; tip.style.top = Math.max(p[1], 110).toFixed(1) + 'px'; tip.classList.add('on'); };
+  const hide = () => { tks.forEach(t => { t.querySelector('.ring').setAttribute('opacity', 0); t.style.opacity = 1; }); rts.forEach(r => { r.setAttribute('opacity', .7); r.setAttribute('stroke-width', 2); }); chips.forEach(m => { m.style.opacity = 1; }); tip.classList.remove('on'); };
+  tks.forEach((t, i) => { t.addEventListener('mouseenter', () => { hov = i; show(L[i]); }); t.addEventListener('mouseleave', () => { hov = -1; hide(); }); });
+  L.forEach(place); let last = performance.now();
+  const tick = now => { if (!run.alive || !st.isConnected) return; const dt = Math.min(.1, (now - last) / 1000); last = now; L.forEach(l => { if (hov !== l.i){ l.t += dt * l.speed; if (l.t > 1) l.t = l.t0; } rqPalLoads.t[l.it.order] = l.t; place(l); }); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
 }
 // ===== FIND PRODUCT, NIGHT: THE REAL MAP AND THE LOADS END
 
