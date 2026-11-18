@@ -799,6 +799,44 @@
   .rq-pal-pn.more{color:var(--blue-bright);border-color:rgba(90,170,255,.4);cursor:default;}
   .rq-pal-dense2 .rq-pal-pill{font-size:9.5px;padding:1px 6px;} .rq-pal-dense2 .rq-pal-lab.sp2{margin:6px 0 4px;} .rq-pal-dense2 .rq-pal-lab.sp{margin-top:8px;}
   .rq-pal-dense2 .rq-pal-pr{padding:2px 4px;font-size:12px;} .rq-pal-dense2 .rq-pal-pr b{font-size:12px;}
+  /* ===== the night radar "D" (owner 2026-11-17: "construye D pero no hagas nada distinto, esa misma… construye la D IGUAL"): the product once, the radar at night with a ficha for each customer, the plants at the right ===== */
+  @media (min-width:981px){
+    .rq-palette-box.rq-pal2.rq-pal-open:has(#rq_pal_detail.rq-pal-dgrid){grid-template-columns:minmax(250px,.55fr) minmax(0,2fr);}
+  }
+  @media (min-width:981px){
+    .rq-palette-box.rq-pal2.rq-pal-open.rq-pal-solo:has(#rq_pal_detail.rq-pal-dgrid){grid-template-columns:118px minmax(0,1fr);}
+  }
+  .rq-pal-solo #rq_palette_results .rq-pal-sec,.rq-pal-solo #rq_palette_results .rq-results-summary{display:none;}
+  .rq-pal-solo #rq_palette_results .rq-result-variant.rq-pal-row{grid-template-columns:38px 22px;justify-content:center;gap:8px;padding:9px 8px;}
+  .rq-pal-solo #rq_palette_results .rq-pal-row .rq-pal-nm,.rq-pal-solo #rq_palette_results .rq-pal-row > div:nth-child(3){display:none;}
+  .rq-pal-detail.rq-pal-dgrid{grid-template-columns:minmax(0,1fr) 236px;}
+  .rq-pal-detail.rq-pal-dgrid > .rq-pal-main{grid-column:1;grid-row:1;}
+  .rq-pal-detail.rq-pal-dgrid > .rq-pal-side{grid-column:2;grid-row:1;}
+  .rq-pal-night{position:relative;margin:10px 0 0;border-radius:20px;overflow:hidden;border:1px solid rgba(90,170,255,.22);background:radial-gradient(60% 60% at 50% 50%,#081c40 0,#04102a 55%,#01040c 100%);}
+  .rq-pal-night canvas,.rq-pal-night > svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .rq-pal-nbeam{position:absolute;left:50%;top:50%;width:var(--bd);height:var(--bd);margin:calc(var(--bd) / -2) 0 0 calc(var(--bd) / -2);border-radius:50%;background:conic-gradient(from 0deg,rgba(63,203,126,0) 0deg 318deg,rgba(63,203,126,.04) 336deg,rgba(63,203,126,.16) 360deg);animation:rqPalSpin 7s linear infinite;pointer-events:none;}
+  .rq-pal-night .rq-pal-core{width:52px;height:52px;z-index:2;}
+  .rq-pal-lead{animation:rqPalFlow 1.2s linear infinite;}
+  .rq-pal-fc{--sc:rgba(255,255,255,.5);position:absolute;transform:translate(-50%,-50%);width:142px;height:58px;padding:6px 9px 5px;border-radius:14px;border:1px solid var(--sc);background:linear-gradient(180deg,rgba(14,48,98,.94),rgba(8,30,62,.94));color:#fff;text-align:left;cursor:pointer;z-index:3;box-shadow:0 8px 22px rgba(0,0,0,.4);transition:transform .15s,box-shadow .15s;font:inherit;}
+  .rq-pal-fc.g{--sc:#3FCB7E;} .rq-pal-fc.a{--sc:#FFC876;} .rq-pal-fc.n{--sc:#8FA3BF;}
+  .rq-pal-fc:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px;background:var(--sc);box-shadow:0 0 12px var(--sc);}
+  .rq-pal-fc:hover,.rq-pal-fc:focus-visible{transform:translate(-50%,-50%) scale(1.06);box-shadow:0 0 26px color-mix(in srgb,var(--sc) 50%,transparent);z-index:6;outline:none;}
+  .rq-pal-fc:disabled{opacity:.6;cursor:default;}
+  .rq-pal-fc.asked{border-color:#5AAAFF;box-shadow:0 0 0 2px rgba(90,170,255,.45),0 0 24px rgba(90,170,255,.7);}
+  .rq-pal-fc .t{display:flex;gap:7px;align-items:center;min-width:0;}
+  .rq-pal-fc .t > span:last-child{min-width:0;}
+  .rq-pal-fc .rq-pal-av{width:26px;height:26px;font-size:10px;border-width:1.5px;}
+  .rq-pal-fc b{display:block;font:700 12px 'Space Grotesk',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
+  .rq-pal-fc small{display:block;font:400 10px Inter,sans-serif;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rq-pal-fc .no{position:absolute;top:-8px;right:10px;width:17px;height:17px;border-radius:50%;background:var(--sc);color:#04112a;font:700 9.5px 'IBM Plex Mono',monospace;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  .rq-pal-fc em{position:absolute;top:-8px;right:32px;width:17px;height:17px;border-radius:50%;background:#5AAAFF;color:#06203f;font:800 10px Inter,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  .rq-pal-pips{display:flex;gap:3px;margin-top:5px;}
+  .rq-pal-pips u{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.35);border:1px dashed rgba(255,255,255,.2);box-sizing:border-box;}
+  .rq-pal-pips u.on{background:rgba(63,203,126,.6);border:1px solid #3FCB7E;} .rq-pal-pips u.old{background:rgba(255,200,118,.18);border:1px solid #FFC876;}
+  .rq-pal-fc.pop{animation:rqPalFcIn .5s ease both;animation-delay:calc(var(--i)*70ms + .1s);}
+  @keyframes rqPalFcIn{from{opacity:0;}to{opacity:1;}}
+  @media (prefers-reduced-motion:reduce){.rq-pal-nbeam,.rq-pal-lead{animation:none;}}
+  @media (max-width:980px){ .rq-pal-detail.rq-pal-dgrid{grid-template-columns:1fr;} .rq-pal-detail.rq-pal-dgrid > .rq-pal-main,.rq-pal-detail.rq-pal-dgrid > .rq-pal-side{grid-column:1;} .rq-pal-detail.rq-pal-dgrid > .rq-pal-side{grid-row:2;} }
   @media (max-width:980px){
     .rq-palette-overlay{overflow-y:auto;}
     .rq-palette-box.rq-pal2.rq-pal-open{grid-template-columns:1fr;grid-template-areas:"bar" "list" "detail" "asked" "foot";}
@@ -1994,7 +2032,7 @@ let rqProductSuggestions = []; // [{ label (name + full spec), matchName, produc
 // navigation below always has it defined — see rqPaletteHandleKey et al. near rqOpenSearchPalette.
 let rqPaletteNavIndex = -1;
 // Find Product radar (2026-11-17) — declared early, like the line above, so the palette code never meets them before they exist.
-let rqPalHi = null, rqPalLastPid = null, rqPalDetailTries = 0, rqPalAskBusy = false;
+let rqPalHi = null, rqPalLastPid = null, rqPalDetailTries = 0, rqPalAskBusy = false, rqPalRerun = false;
 let rqPalBuyers = { at: 0, loading: false, failed: false, byPid: new Map() };
 let rqPalSent = {};
 let rqPalCitiesLoading = false, rqPalIdlePop = true;
@@ -6128,6 +6166,88 @@ function rqPalIdleHtml(pop){
     ${rest}
   </div>`;
 }
+// ===== FIND PRODUCT, RADAR: THE NIGHT RADAR "D" (owner 2026-11-17: "construye D pero no hagas nada distinto, esa misma… construye la D IGUAL") =====
+// Looks only. For up to RQ_PAL_D_MAX buyers each customer is a ficha on the ring of his state (inner = has it, middle = not sent yet, outer = never offered) over a night sky with the real places of the customers as numbered
+// dots; the plants stay at the right with their prices. A click on a ficha is the SAME click as before (rqPalAsk). Nothing here reads or writes anything: the dots of the land come from this small mask of the earth (0.4°, 2 bits a cell).
+const RQ_PAL_D_MAX = 7;
+const RQ_PAL_MAP = { lon0: -128, lat1: 46, st: .4, w: 155, h: 100, cells: null, b64: 'AABQVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUVAABUVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUFAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVFVVVVVVVVVVQUAAEBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVRVVVVVVVVVVVFQAAAFBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVRVVVVVVVVVUVAAAAAFRVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUVVVVVVVVVUAAAAAQFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQUAAAAAUFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQAAAAAAVFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVFQAAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVBQAAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVAQAAAABAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUFAAAAAABQVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVBQAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVAQAAAAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUVAAAAAAAAAEBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUFAAAAAAAAAFBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVRUAAAAAAAAAAFBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQUAAAAAAAAAAFBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVRQEAAAAAAAAAAFBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVAQAAAAAAAAAAAFRVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVBAAAAAAAAAAAAFRVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUVAAAAAAAAAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUVAAAAAAAAAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUFAAAAAAAAAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUFAAAAAAAAAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVRUAAAAAAAAAAAAAQFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQEAAAAAAAAAAAAAQFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVFQAAAAAAAAAAAAAAAFRVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVAAAAAAAAAAAAAAAAAFBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUBAAAAAAAAAAAAAAAAAEBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVRUAAAAAAAAAAAAAAAAAAEBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQEAAAAAAAAAAAAAAAAAAFCpVlVVVVVVVVVVVVVVVVVVVVVVVVVVBQAAAAAAAAAAAAAAAAAAAKCqWlVVVVVVVVVVVVVVVVVVVVVVVVVVAAAAAAAAAAAAAAAAAAAAAKiqqlVVVVVVVVVVVVVVVVVVVVVVVVUFAAAAAAAAAAAAAAAAAAAAAKgCqlpVpWpVVVVVVVVVVVVVVVVVVVUBAAAAAAAAAAAAAAAAAAAAAKoAqqqqqmpVVVVVVVVVVVVVVVVVVRUAAAAAAAAAAAAAAAAAAAAAACqAqqqqqlpVVVVVVVVVVVVVVVVVVQUAAAAAAAAAAAAAAAAAAAAAgAqAqqqqqlpVVVVVVVVVVVUFAEBVVQUAAAAAAAAAAAAAAAAAAAAAgAqgqqqqqlpVVVVVVVVVVVUBAEBAVQEAAAAAAAAAAAAAAAAAAAAAgKqgqqqqqmpVVVVVVQUAVFUAAABAVQAAAAAAAAAAAAAAAAAAAAAAAAqoqqqqqqpVVVVVVQAAAAAAAABAVQAAAAAAAAAAAAAAAAAAAAAAAAqgqqqqqqqqWlVVAQAAAAAAAABQFQAAAAAAAAAAAAAAAAAAAAAAgAqgqqqqqqqqWlUFAAAAAAAAAABUBQAAAAAAAAAAAAAAAAAAAAAAqAKgqqqqqqqqWlUAAAAAAAAAAABVBQAAAAAAAAAAAAAAAAAAAAAAqgKgqqqqqqqqWhUAAAAAAAAAAABVAQAAAAAAAAAAAAAAAAAAAAAAqgKgqqqqqqqqWgUAAAAAAAAAAEBVAQAAAAAAAAAAAAAAAAAAAAAAqAKgqqqqqqqqagEAAAAAAAAAAEBVAAAAAAAAAAAAAAAAAAAAAAAAoAKgqqqqqqqqagAAAAAAAAAAAFAVABAAAAAAAAAAAAAAAAAAAAAAoACoqqqqqqqqKgAAAAAAAAAAAEAFAAAAAAAAAAAAAAAAAAAAAAAAKACoqqqqqqqqCgAAAAAAAAAAAFAAAAAAAAAAAAAAAAAAAAAAAAAAKgCgqqqqqqqqAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACgCgqqqqqqoqAAAAAAAAAAAAAABAAQAAAAAAAAAAAAAAAAAAAAAAKgCgqqqqqqoKAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAKgCgqqqqqqoCAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAACgCgqqqqqioAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgCgqqqqqgoAAAAAAAAAAABVFQAAAAAAAAAAAAAAAAAAAAAAAAAAAACgqqqqqgIAAAAAAAAAABVQFQAAAAAAAAAAAAAAAAAAAAAAAAAAAACoqqqqqgAAAAAAAAAAUABUVRUAAAAAAAAAAAAAAAAAAAAAAAAAAACqqqqqqgAAAAAAAAAAAAAAVQUAAAAAAAAAAAAAAAAAAAAAAAAAAACqqqqqqgAAAAAAqAIAAAAAQBUAAAAAAAAAAAAAAAAAAAAAAAAAAICqqqqqKgAAAACqqgIAAAAAUFUBAAAAAAAAAAAAAAAAAAAAAAAAAKCqqqqqCgAAAICqKgAAAAAAAFUFAAAAAAAAAAAAAAAAAAAAAAAAAKqqqqqqCgAAAKCqAgAAAAAAQFUFAAAAAAAAAAAAAAAAAAAAAAAAAKqqqqqqCgAAAKiqAAAAAAAAFAAABQUAAQAAAAAAAAAAAAAAAAAAAKqqqqqqAgAAgKoqAAAAAAAAAAAAVVUAAAAAAAAAAAAAAAAAAAAAAKqqqqqqAgAAqKoKAAAAAAAAAABAVVUAAAAAAAAAAAAAAAAAAAAAAKiqqqqqCgCqqqoAAAAAAAAAABBAVVUBAAAAAAAAAAAAAAAAAAAAAKiqqqqqCqqqqioAAAAAAAAVABBVAQBABQAAAAAAAAAAAAAAAAAAAACqqqqqqqpVVQUAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAACqqqqqqmpVVQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACgqqqqqlpVFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqqqqqlZVBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqKqgqlVVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAKAalVVBFQFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAWlVVVVUFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAVlVVVVUVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAVVVVVVUBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVVVVVVUBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQFVVVRUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFVVVQUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBVVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBVVQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBVFQAAAAAAAAAFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBVBQAAAAAAAFBBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBVAAAAAAAAQAVQBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAVAAAAAABAVUVVBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAVAAAAAEBVVVVVAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFQVAAAAAFBVFVRVVQUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFQVAAAAAFRVBVVVVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAVAFQBQFVVRVVVVQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAFQFEBVFVVVVVVFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFBVFUBFVVVVVVVVBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABUAVBVVVVVVVVVAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABUAVRVVVVVVVVVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAFRVVVVVVVUVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFRVVVVVVVUFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFRVVVVVVVUBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFVVVVVVVVU=' };
+function rqPalMapCells(){
+  if (RQ_PAL_MAP.cells) return RQ_PAL_MAP.cells;
+  const bin = atob(RQ_PAL_MAP.b64), n = RQ_PAL_MAP.w * RQ_PAL_MAP.h, c = new Uint8Array(n);
+  for (let i = 0; i < n; i++) c[i] = (bin.charCodeAt(i >> 2) >> ((i & 3) * 2)) & 3;
+  return (RQ_PAL_MAP.cells = c);
+}
+// where a latitude / longitude falls on the night stage (centre: northern Mexico, the part of the world where the customers are)
+function rqPalMapProj(W, H){ const sy = H / 34, sx = sy * .86; return (lat, lon) => [W / 2 + (lon + 98) * sx, H / 2 - (lat - 26.5) * sy]; }
+// the fichas: each one on the ring of its state, pushed apart until none overlaps and all stay inside the stage
+function rqPalOrbit(list, W, H){
+  const CW = 142, CH = 58, cx = W / 2, cy = H / 2, RX = W / 2 - CW / 2 - 8, RY = H / 2 - CH / 2 - 8, f = { has: .47, notsent: .78, never: 1 };
+  const ring = { has: [RX * f.has, RY * f.has], notsent: [RX * f.notsent, RY * f.notsent], never: [RX, RY] };
+  const by = { has: [], notsent: [], never: [] }, ang = { has: [-42, 24, 100, -104], notsent: [-66, 0, 62, 126, -118], never: [24, 84, -22, 142] }, out = [];
+  list.forEach(x => by[x.s.st].push(x));
+  Object.keys(by).forEach(k => by[k].forEach((x, i) => { const a = (ang[k][i % ang[k].length] + Math.floor(i / ang[k].length) * 17) * Math.PI / 180, px = cx + ring[k][0] * Math.cos(a), py = cy + ring[k][1] * Math.sin(a); out.push({ c: x.c, s: x.s, tx: px, ty: py, x: px, y: py }); }));
+  for (let it = 0; it < 140; it++){
+    for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++){
+      const A = out[i], B = out[j], dx = A.x - B.x, dy = A.y - B.y, ox = CW + 8 - Math.abs(dx), oy = CH + 8 - Math.abs(dy);
+      if (ox > 0 && oy > 0){ if (oy <= ox){ const s = (dy >= 0 ? 1 : -1) * (oy / 2 + .2); A.y += s; B.y -= s; } else { const s = (dx >= 0 ? 1 : -1) * (ox / 2 + .2); A.x += s; B.x -= s; } }
+    }
+    out.forEach(o => { o.x += (o.tx - o.x) * .02; o.y += (o.ty - o.y) * .02; o.x = Math.max(CW / 2 + 4, Math.min(W - CW / 2 - 4, o.x)); o.y = Math.max(CH / 2 + 4, Math.min(H - CH / 2 - 4, o.y)); });
+  }
+  return { items: out, cx, cy, ring };
+}
+// what a customer has of one priced plant: on = he has this price, old = it was offered and the offer expired, '' = never (the same facts as rqPalStatus, read only)
+function rqPalCover(pid, c, r){
+  const s = rqPalSent[pid]; if (!s || !s.map) return '';
+  const m = s.map[c.id] || {}, k = r.plant_id + '|' + pid, sheet = rqSheetState.key === rqSheetKey() && rqActiveProductFilterIds.includes(pid) ? rqSheetFor(pid) : null;
+  const arrived = (((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []).indexOf(c.id) > -1, onlyExpired = !!(m[k + '#expired'] && !m[k]); // the server's "has it" also counts an expired offer: ignored when his only sends are expired
+  if (rqSentCoversPrice(m[k], r.price_date, r.price_arrived_at, m[k + '#price'], r.current_price) || (arrived && !onlyExpired)) return 'on';
+  return m[k] || m[k + '#expired'] ? 'old' : '';
+}
+// the width the night stage can really have in this window (0 = it does not fit, then the radar of avatars and the list stay as before)
+function rqPalNightW(){
+  if (window.innerWidth <= 980) return 0;
+  const bx = document.querySelector('.rq-palette-box'), bw = bx ? bx.clientWidth : 0; if (!bw) return 0;
+  const solo = document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1, inner = bw - 48 - 18, detail = solo ? inner - 118 : Math.round(inner * 2 / 2.55), W = Math.min(660, detail - 236 - 18);
+  return W >= 440 ? W : 0;
+}
+function rqPalNightHtml(x){
+  const { pid, p, qts, frozen, B, st, askedIds, plants, plantRows, tags, changed, lbl, cls, txt, busy } = x;
+  const W = rqPalNightW() || 440, H = Math.max(330, Math.min(500, window.innerHeight - 340));
+  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbit(list, W, H), proj = rqPalMapProj(W, H), priced = plants.filter(v => v.priced);
+  const pct = (v, T) => (v / T * 100).toFixed(2) + '%';
+  const rings = [['has', '#3FCB7E'], ['notsent', '#FFC876'], ['never', '#8FA3BF']].map(([k, col]) => { const rx = L.ring[k][0], ry = L.ring[k][1]; return `<ellipse cx="${L.cx}" cy="${L.cy}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".38" stroke-dasharray="2 8"/><text x="${(L.cx - rx * .7071).toFixed(1)}" y="${(L.cy - ry * .7071).toFixed(1)}" fill="${col}" fill-opacity=".85" font-size="8.5" font-family="IBM Plex Mono,monospace" letter-spacing="1.4" text-anchor="middle">${lbl[k]}</text>`; }).join('');
+  const spokes = L.items.map(o => o.s.st === 'never' ? '' : `<line x1="${L.cx}" y1="${L.cy}" x2="${o.x.toFixed(1)}" y2="${o.y.toFixed(1)}" stroke="${o.s.st === 'has' ? '#3FCB7E' : '#FFC876'}" stroke-width="${o.s.st === 'has' ? 1.8 : 1.1}" stroke-opacity="${o.s.st === 'has' ? .75 : .45}"${o.s.st === 'has' ? '' : ' stroke-dasharray="3 7"'}/>`).join('');
+  const pins = L.items.map((o, i) => { const geo = rqPalGeoOf(o.c.city); if (!geo) return ''; const q = proj(geo[0], geo[1]), on = askedIds.has(o.c.id), col = o.s.st === 'has' ? '#3FCB7E' : o.s.st === 'notsent' ? '#FFC876' : '#8FA3BF';
+    return `<g><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="8" fill="${col}" fill-opacity=".22"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="6" fill="#06122b" stroke="${col}" stroke-width="1.5"/><text x="${q[0].toFixed(1)}" y="${(q[1] + 3.3).toFixed(1)}" text-anchor="middle" fill="#fff" font-size="8.5" font-family="IBM Plex Mono,monospace" font-weight="700">${i + 1}</text>${on ? `<path d="M${q[0].toFixed(1)} ${q[1].toFixed(1)} C${(q[0] + 90).toFixed(1)} ${(q[1] - 26).toFixed(1)},${(o.x - 130).toFixed(1)} ${(o.y - 26).toFixed(1)},${(o.x - 71).toFixed(1)} ${o.y.toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-width="1.3" stroke-dasharray="3 5" class="rq-pal-lead"/>` : ''}</g>`; }).join('');
+  const fichas = L.items.map((o, i) => { const c = o.c, on = askedIds.has(c.id), cl = o.s.st === 'has' ? 'g' : o.s.st === 'notsent' ? 'a' : 'n';
+    const pips = priced.map(v => `<u class="${rqPalCover(pid, c, v.r)}" title="${escapeHtml(v.name)}"></u>`).join('');
+    return `<button type="button" class="rq-pal-fc ${cl}${on ? ' asked' : ''}${changed ? ' pop' : ''}" style="left:${pct(o.x, W)};top:${pct(o.y, H)};--i:${i}" data-c="${c.id}" ${busy} title="${escapeHtml(String(c.trade_name).trim())} — ${lbl[o.s.st]} · ${escapeHtml(txt(o.s))}" onclick="rqPalAsk('${pid}','${c.id}')"><i class="no">${i + 1}</i>${on ? '<em>✓</em>' : ''}<span class="t">${rqPalAvatar(c)}<span><b>${escapeHtml(String(c.trade_name).trim())}</b><small>${escapeHtml(String(c.city || '').trim())}</small></span></span><span class="rq-pal-pips">${pips}</span></button>`; }).join('');
+  const waitingP = plants.filter(v => v.waiting), naP = plants.filter(v => v.na);
+  const chips = (waitingP.length ? `<span class="rq-pal-pill b" title="${escapeHtml(waitingP.map(v => v.name).join(', '))}">ASKED · WAITING ${waitingP.length}</span>` : '') + (naP.length ? `<span class="rq-pal-pill n" title="${escapeHtml(naP.map(v => v.name).join(', '))}">N/A ${naP.length}</span>` : '');
+  const priceRows = priced.map(v => `<div class="rq-pal-pr"><span>${escapeHtml(v.name)}${v.stale ? ' <span class="rq-pal-pill a">EXPIRED</span>' : ''}</span><span><b>$${Number(v.r.current_price).toFixed(4)}/lb</b><span class="d">${escapeHtml(rqFmtDate(v.r.price_date))}</span></span></div>`).join('');
+  return `<div class="rq-pal-main rq-pal-d">
+    <div class="rq-pal-ph"><div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div><div><h3>${rqPalHl(p.full_name_en || p.name_en || p.name, qts)}</h3>${p.full_name_es ? `<div class="es">${rqPalHl(p.full_name_es, qts)}</div>` : ''}</div></div>
+    <div class="rq-pal-tags">${tags}</div>
+    <div class="rq-pal-night" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><canvas data-w="${W}" data-h="${H}"></canvas><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}${pins}</svg><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}</div>
+  </div>
+  <div class="rq-pal-side rq-pal-dside">
+    <div class="rq-pal-lab">Plants with it <b>${plants.length}</b></div>${priceRows}${chips ? `<div class="rq-pal-lab sp2">${chips}</div>` : ''}
+  </div>`;
+}
+// the night: stars and the land as dots (Mexico lit), drawn once for the stage that was just written
+function rqPalNight(host){
+  const cv = host.querySelector('.rq-pal-night canvas'); if (!cv) return;
+  const W = +cv.dataset.w, H = +cv.dataset.h, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr; const x = cv.getContext('2d'); if (!x) return; x.scale(dpr, dpr);
+  let sd = 7; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+  for (let n = 0; n < 380; n++){ x.fillStyle = `rgba(205,228,255,${.12 + rnd() * .55})`; x.beginPath(); x.arc(rnd() * W, rnd() * H, rnd() * .85 + .2, 0, 7); x.fill(); }
+  const M = RQ_PAL_MAP, c = rqPalMapCells(), proj = rqPalMapProj(W, H);
+  for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){
+    const v = c[j * M.w + i]; if (!v) continue;
+    const q = proj(M.lat1 - (j + .5) * M.st, M.lon0 + (i + .5) * M.st); if (q[0] < -4 || q[0] > W + 4 || q[1] < -4 || q[1] > H + 4) continue;
+    x.fillStyle = v === 2 ? 'rgba(150,205,250,.5)' : 'rgba(100,150,225,.12)'; x.beginPath(); x.arc(q[0], q[1], v === 2 ? 1.35 : .95, 0, 7); x.fill();
+  }
+}
 function rqPalDetailHtml(pid, changed){
   const p = products.find(x => x.id === pid);
   if (!p) return '';
@@ -6164,6 +6284,7 @@ function rqPalDetailHtml(pid, changed){
   const tmp = temperatures.find(t => t.id === p.temperature_id), pkg = packagings.find(k => k.id === p.packaging_id);
   const tags = [tmp && (tmp.name_en || tmp.name), pkg && (pkg.name_en || pkg.name)].filter(Boolean).map(t => `<span class="rq-pal-pill ${frozen ? 'b' : 'a'}">${escapeHtml(t)}</span>`).join('')
     + (cnt.has ? `<span class="rq-pal-pill g">${cnt.has} HAVE IT</span>` : '') + (cnt.notsent ? `<span class="rq-pal-pill a">${cnt.notsent} NOT SENT YET</span>` : '') + (cnt.never ? `<span class="rq-pal-pill n">${cnt.never} NEVER OFFERED</span>` : '');
+  if (ready && B.length && B.length <= RQ_PAL_D_MAX && rqPalNightW()) return rqPalNightHtml({ pid, p, qts, frozen, B, st, askedIds, plants, plantRows, tags, changed, lbl, cls, txt, busy }); // the night radar (up to 7 buyers); more buyers keep the radar of avatars and the list
   return `<div class="rq-pal-main">
     <div class="rq-pal-ph"><div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div><div><h3>${rqPalHl(p.full_name_en || p.name_en || p.name, qts)}</h3>${p.full_name_es ? `<div class="es">${rqPalHl(p.full_name_es, qts)}</div>` : ''}</div></div>
     <div class="rq-pal-tags">${tags}</div>
@@ -6179,11 +6300,11 @@ function rqPalRenderDetail(){
   const host = document.getElementById('rq_pal_detail');
   if (!host) return;
   const po = document.getElementById('rq_palette_overlay');
-  if (!po || po.style.display === 'none'){ if (host.innerHTML){ host.innerHTML = ''; host.dataset.html = ''; } rqPalLastPid = null; rqPalIdlePop = true; return; }
+  if (!po || po.style.display === 'none'){ if (host.innerHTML){ host.innerHTML = ''; host.dataset.html = ''; } host.classList.remove('rq-pal-dgrid'); { const bx = document.querySelector('.rq-palette-box'); if (bx) bx.classList.remove('rq-pal-solo'); } rqPalLastPid = null; rqPalIdlePop = true; return; }
   if (!rqPalHi){ // nothing to show yet (nothing typed, or no match): the radar idles, turning, showing where the customers are — the window is the new one from the first click
     rqPalLoadAllCustomers();
     const idle = rqPalIdleHtml(rqPalIdlePop), key = idle.replace(/ pop/g, '');
-    if (host.dataset.html !== key){ host.dataset.html = key; host.innerHTML = idle; rqPalIdlePop = false; }
+    if (host.dataset.html !== key){ host.dataset.html = key; host.innerHTML = idle; rqPalIdlePop = false; } host.classList.remove('rq-pal-dgrid'); { const bx = document.querySelector('.rq-palette-box'); if (bx) bx.classList.remove('rq-pal-solo'); }
     rqPalLastPid = null; return;
   }
   const pid = rqPalHi;
@@ -6192,8 +6313,8 @@ function rqPalRenderDetail(){
   if (!rqAllPlantProductRows.length && rqPalDetailTries < 20){ rqPalDetailTries++; setTimeout(rqPalRenderDetail, 800); }
   const changed = rqPalLastPid !== pid, html = rqPalDetailHtml(pid, changed), key = html.replace(/ pop/g, '');
   if (!changed && host.dataset.html === key) return;
-  const ae = document.activeElement, focusC = ae && host.contains(ae) && ae.dataset ? ae.dataset.c : null, focusCls = ae && ae.classList && ae.classList.contains('rq-pal-by') ? '.rq-pal-by' : '.rq-pal-nd';
-  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid;
+  const ae = document.activeElement, focusC = ae && host.contains(ae) && ae.dataset ? ae.dataset.c : null, focusCls = ae && ae.classList && ae.classList.contains('rq-pal-by') ? '.rq-pal-by' : ae && ae.classList && ae.classList.contains('rq-pal-fc') ? '.rq-pal-fc' : '.rq-pal-nd';
+  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid; { const dn = html.indexOf('rq-pal-night') > -1, bx = document.querySelector('.rq-palette-box'); host.classList.toggle('rq-pal-dgrid', dn); if (bx) bx.classList.toggle('rq-pal-solo', dn && document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1); if (dn) rqPalNight(host); if (dn && !rqPalRerun){ const sg = host.querySelector('.rq-pal-night'), need = rqPalNightW(); if (sg && Math.abs((need || 440) - sg.clientWidth) > 24){ rqPalRerun = true; host.dataset.html = ''; try { rqPalRenderDetail(); } finally { rqPalRerun = false; } } } } // one result: its tile shrinks to a small picker, the product is written once (owner: "se repite el producto")
   if (focusC){ const again = host.querySelector(`${focusCls}[data-c="${focusC}"]:not(:disabled)`); if (again) again.focus(); }
 }
 function rqPalSetHi(pid){
