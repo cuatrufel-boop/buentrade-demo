@@ -6196,7 +6196,7 @@ async function rqPalLoadAllCustomers(){
 function rqPalNightIdleHtml(pop){
   const all = rqAllCustomersCache || null, groups = all ? rqPalCityGroups(all) : [];
   const hostW = (document.getElementById('rq_pal_detail') || {}).clientWidth || 640;
-  const W = Math.max(440, Math.min(1200, hostW)), H = Math.max(250, rqPalNightH() + 60), rest = [], labels = []; // no product row above it: the stage takes that room
+  const W = Math.max(440, Math.min(1200, hostW)), H = Math.max(250, rqPalNightH() + 74), rest = [], labels = []; // no product row above it: the stage takes that room
   groups.forEach(g => { const geo = rqPalGeoOf(g.city); if (!geo){ rest.push(g); return; } const c = g.customers.length, names = g.customers.map(x => String(x.trade_name).trim()).join(', ');
     labels.push(`<div class="rq-pal-nl${geo[2] === 'US' ? ' a' : ''}${pop ? ' pop' : ''}" data-lat="${geo[0]}" data-lon="${geo[1]}" style="width:124px;height:31px;--i:${labels.length}" title="${escapeHtml(g.city + ' — ' + names)}"><b>${escapeHtml(g.city)}${c > 1 ? `<em>×${c}</em>` : ''}</b><i>${rqPalCoord(geo[0], geo[1])}</i></div>`); });
   const total = groups.reduce((n, g) => n + g.customers.length, 0);
@@ -6321,7 +6321,7 @@ function rqPalNight(host){
   const P = rqPalProj(ox, oy, st.clientWidth || +st.dataset.w, st.clientHeight || +st.dataset.h), M = RQ_PAL_MAP, c = rqPalMapCells(); // the wide map: the plants of the USA and Mexico, all on the stage
   const tint = new Map(); st.querySelectorAll('.rq-pal-fc[data-lat]').forEach(f => { const sid = rqPalMxStateOf(+f.dataset.lat, +f.dataset.lon); if (!sid) return; const kk = f.classList.contains('g') ? 'g' : f.classList.contains('a') ? 'a' : 'n'; tint.set(sid, tint.has(sid) && tint.get(sid) !== kk ? 'mix' : kk); });
   st.querySelectorAll('.rq-pal-nl[data-lat]').forEach(el => { const sid = rqPalMxStateOf(+el.dataset.lat, +el.dataset.lon); if (sid) tint.set(sid, 'mix'); }); // the start screen has no product, so no status: the states where customers are take the neutral blue
-  if (!rqPalMapVector(x, P, BW, BH, ox + st.clientWidth / 2, oy + st.clientHeight / 2, tint)) for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){ // the real outlines of Mexico; the dots only if they cannot be read
+  if (!rqPalMapVector(x, P, BW, BH, ox + st.clientWidth / 2, oy + st.clientHeight / 2, tint, st.classList.contains('idle'))) for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){ // the real outlines of Mexico; the dots only if they cannot be read
     const v = c[j * M.w + i]; if (!v) continue;
     const q = P(M.lat1 - (j + .5) * M.st, M.lon0 + (i + .5) * M.st); if (q[0] < -4 || q[0] > BW + 4 || q[1] < -4 || q[1] > BH + 4) continue;
     x.fillStyle = v === 2 ? 'rgba(150,205,250,.5)' : 'rgba(100,150,225,.12)'; x.beginPath(); x.arc(q[0], q[1], v === 2 ? 1.5 : 1, 0, 7); x.fill();
@@ -6472,7 +6472,8 @@ function rqPalMxStateOf(lat, lon){
   return best ? best.id : '';
 }
 // draws the land on the night canvas; tint = Map(state id -> 'g' | 'a' | 'n' | 'mix'); false when the outlines are not there (the caller draws the dots)
-function rqPalMapVector(x, P, BW, BH, cx, cy, tint){
+// colors = the start screen: every state in its own soft colour (owner 2026-11-18: "mas grande que se vea bien los estados colores")
+function rqPalMapVector(x, P, BW, BH, cx, cy, tint, colors){
   const G = rqPalMxGeo(); if (!G.st.length) return false;
   const path = rings => { const p = new Path2D(); rings.forEach(r => { r.forEach((q, i) => { const a = P(q[1], q[0]); if (i) p.lineTo(a[0], a[1]); else p.moveTo(a[0], a[1]); }); p.closePath(); }); return p; };
   const nb = path(G.nb), sp = G.st.map(s => ({ s, p: path(s.rings) }));
@@ -6482,6 +6483,7 @@ function rqPalMapVector(x, P, BW, BH, cx, cy, tint){
   if (off){ const a = P(46, -128), b = P(6, -66), f = 110, edge = (x0, y0, x1, y1) => { const g2 = nx.createLinearGradient(x0, y0, x1, y1); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, 'rgba(0,0,0,1)'); nx.globalCompositeOperation = 'destination-in'; nx.fillStyle = g2; nx.fillRect(0, 0, BW, BH); };
     edge(a[0], 0, a[0] + f, 0); edge(b[0], 0, b[0] - f, 0); edge(0, a[1], 0, a[1] + f); edge(0, b[1], 0, b[1] - f); nx.globalCompositeOperation = 'source-over'; x.drawImage(off, 0, 0, BW, BH); }
   x.fillStyle = 'rgba(34,76,140,.20)'; sp.forEach(o => x.fill(o.p));
+  if (colors){ const PAL = ['90,170,255', '75,214,160', '167,139,250', '255,122,198', '255,194,77', '45,212,212', '138,180,255']; sp.forEach((o, i) => { x.fillStyle = `rgba(${PAL[i % 7]},.22)`; x.fill(o.p); }); }
   const gl = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(BW, BH) * .5); gl.addColorStop(0, 'rgba(70,150,240,.10)'); gl.addColorStop(1, 'rgba(70,150,240,0)'); x.fillStyle = gl; x.fillRect(0, 0, BW, BH);
   x.strokeStyle = 'rgba(150,205,255,.30)'; x.lineWidth = .9; sp.forEach(o => x.stroke(o.p));
   x.save(); x.strokeStyle = 'rgba(120,190,255,.35)'; x.lineWidth = 1.6; x.shadowColor = 'rgba(100,170,255,.55)'; x.shadowBlur = 10; sp.forEach(o => x.stroke(o.p)); x.restore();
@@ -6523,10 +6525,10 @@ function rqPalBorderGeo(city){
 }
 // THE WIDE MAP (owner 2026-11-18: "construye la 3 igual"): the stage shows the plants of the USA at the top and Mexico below, all of it inside the stage, so a load is seen from the plant to the border
 function rqPalProj(ox, oy, W, H){ // (owner 2026-11-18: "agranda un poco el mapa, que se vean bien los estados de México con colores"): Mexico and the south of the USA fill the stage; a plant further north enters from the top edge
-  const sy = Math.max(7, Math.min(40, (H - 24) / 22.5)), sx = sy * .86;
-  return (lat, lon) => [ox + W / 2 + (lon + 97) * sx, oy + 12 + (36.8 - lat) * sy];
+  const sy = Math.max(7, Math.min(46, (H - 16) / 20)), sx = sy * .86;
+  return (lat, lon) => [ox + W / 2 + (lon + 97) * sx, oy + 8 + (34.3 - lat) * sy];
 }
-const RQ_PAL_LAB = [[-13, -8, 'end'], [-13, 12, 'end'], [14, 6, 'start'], [14, 20, 'start'], [-13, 26, 'end'], [14, 34, 'start']], RQ_PAL_JIT = [[0, 0], [-10, -4], [10, 6], [2, 14], [-13, 12], [14, -7]];
+const RQ_PAL_LAB = [[-13, -8, 'end'], [-13, 12, 'end'], [14, 6, 'start'], [14, 20, 'start'], [-13, 26, 'end'], [14, 34, 'start']], RQ_PAL_JIT = [[0, 0], [-12, -4], [12, 7], [2, 17], [-15, 14], [16, -8]];
 // the loads on the stage, as DESIGNED with the owner (mock-up "3"): only little trucks that move along a road from the plant (its pickup city) to the border (the city of the customs agency); amber and dashed while the load waits for pickup, blue and solid
 // once it is on the road, green at the border; each truck carries a one-line label (product · customer); a truck that is stopped on (see rqPalLoadsRun) shows its small card. items = { order, status, ps, spec, cust, plant, from, oGeo, bGeo, bName };
 // P = lat/lon -> stage pixels. Returns the SVG, the HTML of the labels, and the roads (for the movement).
