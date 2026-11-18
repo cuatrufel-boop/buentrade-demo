@@ -845,6 +845,20 @@
   .rq-pal-fc small{display:block;font:400 10px Inter,sans-serif;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .rq-pal-fc .no{position:absolute;top:-8px;right:10px;width:17px;height:17px;border-radius:50%;background:var(--sc);color:#04112a;font:700 9.5px 'IBM Plex Mono',monospace;font-style:normal;display:flex;align-items:center;justify-content:center;}
   .rq-pal-fc em{position:absolute;top:-8px;right:32px;width:17px;height:17px;border-radius:50%;background:#5AAAFF;color:#06203f;font:800 10px Inter,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;}
+  /* who asked in the night screen: the cards are the picker, the old row is not shown, the Done is new (owner 2026-11-17) */
+  .rq-pal-night-on #rq_sheet_asked{display:none;}
+  .rq-pal-askrow{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:10px 0 0;font-size:12.5px;}
+  .rq-pal-askrow > b{font:700 13px 'Space Grotesk',sans-serif;margin-right:4px;}
+  .rq-pal-mute{color:var(--ink-soft);font-size:12px;}
+  .rq-pal-other{border:1px solid rgba(90,170,255,.5);background:rgba(90,170,255,.08);color:#8EC5FF;border-radius:20px;padding:3px 11px;font:600 11px 'IBM Plex Mono',monospace;cursor:pointer;}
+  .rq-pal-other:hover{background:rgba(90,170,255,.2);} .rq-pal-other:disabled{opacity:.5;cursor:default;} .rq-pal-other.x{padding:3px 8px;}
+  .rq-pal-oth{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .rq-pal-oth input{max-width:190px;padding:4px 11px;border-radius:20px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:#fff;font:12px Inter,sans-serif;}
+  .rq-pal-need{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:5;padding:6px 14px;border-radius:12px;background:rgba(8,26,56,.92);border:1px solid #FFC876;color:#FFC876;font:600 12.5px Inter,sans-serif;white-space:nowrap;}
+  .rq-pal-night.need .rq-pal-fc{animation:rqPalNeed .9s ease-in-out 4;}
+  @keyframes rqPalNeed{0%,100%{box-shadow:0 8px 22px rgba(0,0,0,.4);}50%{box-shadow:0 0 0 3px rgba(255,200,118,.55),0 0 24px rgba(255,200,118,.5);}}
+  .rq-palette-box.rq-pal-night-on .rq-palette-done-btn{padding:11px 34px;border-radius:999px;border:0;background:linear-gradient(135deg,#1E6ADB,#3F8CFF);color:#fff;font:700 14px 'Space Grotesk',sans-serif;letter-spacing:.02em;box-shadow:0 10px 30px rgba(30,106,219,.5);transition:filter .15s,transform .15s;}
+  .rq-palette-box.rq-pal-night-on .rq-palette-done-btn:hover{filter:brightness(1.12);transform:translateY(-1px);}
   .rq-pal-night.sm .rq-pal-fc{width:126px;height:46px;padding:4px 8px 3px;} .rq-pal-night.sm .rq-pal-fc small{display:none;} .rq-pal-night.sm .rq-pal-pips{margin-top:3px;} .rq-pal-night.sm .rq-pal-fc .rq-pal-av{width:22px;height:22px;font-size:9px;}
   .rq-pal-pips{display:flex;gap:3px;margin-top:5px;}
   .rq-pal-pips u{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.35);border:1px dashed rgba(255,255,255,.2);box-sizing:border-box;}
@@ -6253,12 +6267,22 @@ function rqPalNightW(){
 // the height the stage can have: the window is the whole screen, minus the search bar, the product, the "Who asked" row and the footer
 function rqPalNightH(){
   const ask = document.getElementById('rq_sheet_asked'), askH = ask ? ask.getBoundingClientRect().height : 0;
-  return Math.max(250, Math.min(900, Math.round(window.innerHeight - 20 - 40 - 66 - 64 - 14 - askH - 100)));
+  return Math.max(250, Math.min(900, Math.round(window.innerHeight - 20 - 40 - 66 - 64 - 14 - askH - 100 - 34)));
+}
+// WHO ASKED FOR IT, in the night screen (owner 2026-11-17: "who asked for debe quedar añadido como producto a ese cliente y puede ser escogido de las cards, quitar lo viejo y poner botón nuevo de done"): the cards ARE the picker
+// (a click is the same rqPalAsk → rqSheetToggleAsked; the server records the customer as a buyer of the product, learnBuyer "asked"). The old row is only not shown while the night is on (it still renders: the same gate, the same
+// "Pick the customer who asked for it to continue."). "+ Other customer" is here too: the same search, the same click.
+function rqPalOtherInput(el){ rqAskedOtherQ = el.value; rqPalRenderDetail(); const i = document.getElementById('rq_pal_other_q'); if (i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+function rqPalOtherHtml(B){
+  if (!rqAskedOtherOpen) return '<button type="button" class="rq-pal-other" onclick="rqSheetAskedOther()">+ Other customer</button>';
+  const q = rqAskedOtherQ.trim().toLowerCase(), have = new Set(B.map(c => c.id));
+  const hits = (rqAllCustomersCache || []).filter(c => !have.has(c.id) && (!q || String(c.trade_name).toLowerCase().includes(q) || String(c.legal_name || '').toLowerCase().includes(q))).slice(0, 8);
+  return `<span class="rq-pal-oth"><input id="rq_pal_other_q" type="text" placeholder="Search a customer…" value="${escapeHtml(rqAskedOtherQ)}" oninput="rqPalOtherInput(this)" ${rqAskedBusy ? 'disabled' : ''}>${rqAllCustomersCache ? (hits.length ? hits.map(c => `<button type="button" class="rq-pal-other" ${rqAskedBusy ? 'disabled' : ''} onclick="rqSheetToggleAsked('${c.id}')">${escapeHtml(String(c.trade_name).trim())}</button>`).join('') : '<span class="rq-pal-mute">No other customer matches.</span>') : '<span class="rq-pal-mute">Loading…</span>'}<button type="button" class="rq-pal-other x" onclick="rqSheetAskedOther()">✕</button></span>`;
 }
 function rqPalNightHtml(x){
   const { pid, p, qts, frozen, B, st, askedIds, plants, plantRows, tags, changed, lbl, cls, txt, busy } = x;
   const W = rqPalNightW() || 440, H = rqPalNightH();
-  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbit(list, W, H), priced = plants.filter(v => v.priced);
+  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbit(list, W, H), priced = plants.filter(v => v.priced), needed = rqAskedNeeded && rqPaletteNeedsCustomer();
   const pct = (v, T) => (v / T * 100).toFixed(2) + '%';
   const rings = [['has', '#3FCB7E'], ['notsent', '#FFC876'], ['never', '#8FA3BF']].map(([k, col]) => { const rx = L.ring[k][0], ry = L.ring[k][1]; return `<ellipse cx="${L.cx}" cy="${L.cy}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".38" stroke-dasharray="2 8"/><text x="${(L.cx - rx * .7071).toFixed(1)}" y="${(L.cy - ry * .7071).toFixed(1)}" fill="${col}" fill-opacity=".85" font-size="8.5" font-family="IBM Plex Mono,monospace" letter-spacing="1.4" text-anchor="middle">${lbl[k]}</text>`; }).join('');
   const spokes = L.items.map(o => o.s.st === 'never' ? '' : `<line x1="${L.cx}" y1="${L.cy}" x2="${o.x.toFixed(1)}" y2="${o.y.toFixed(1)}" stroke="${o.s.st === 'has' ? '#3FCB7E' : '#FFC876'}" stroke-width="${o.s.st === 'has' ? 1.8 : 1.1}" stroke-opacity="${o.s.st === 'has' ? .75 : .45}"${o.s.st === 'has' ? '' : ' stroke-dasharray="3 7"'}/>`).join('');
@@ -6271,7 +6295,8 @@ function rqPalNightHtml(x){
   return `<div class="rq-pal-main rq-pal-d">
     <div class="rq-pal-ph"><div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div><div><h3>${rqPalHl(p.full_name_en || p.name_en || p.name, qts)}</h3>${p.full_name_es ? `<div class="es">${rqPalHl(p.full_name_es, qts)}</div>` : ''}</div></div>
     <div class="rq-pal-tags">${tags}</div>
-    <div class="rq-pal-night${L.sm ? ' sm' : ''}" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}<g class="rq-pal-pins"></g></svg><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}</div>
+    <div class="rq-pal-askrow"><b>Who asked for it?</b>${list.some(v => askedIds.has(v.c.id)) ? list.filter(v => askedIds.has(v.c.id)).map(v => `<span class="rq-pal-pill b">✓ ${escapeHtml(String(v.c.trade_name).trim())}</span>`).join('') : '<span class="rq-pal-mute">nobody has asked yet</span>'}${rqPalOtherHtml(B)}</div>
+    <div class="rq-pal-night${L.sm ? ' sm' : ''}${needed ? ' need' : ''}" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}<g class="rq-pal-pins"></g></svg><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}${needed ? '<div class="rq-pal-need pkg-tag-blink">Pick the customer who asked for it to continue.</div>' : ''}</div>
   </div>
   <div class="rq-pal-side rq-pal-dside">
     <div class="rq-pal-lab">Plants with it <b>${plants.length}</b></div>${priceRows}${chips ? `<div class="rq-pal-lab sp2">${chips}</div>` : ''}
