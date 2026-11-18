@@ -812,8 +812,14 @@
   .rq-pal-detail.rq-pal-dgrid{grid-template-columns:minmax(0,1fr) 236px;}
   .rq-pal-detail.rq-pal-dgrid > .rq-pal-main{grid-column:1;grid-row:1;}
   .rq-pal-detail.rq-pal-dgrid > .rq-pal-side{grid-column:2;grid-row:1;}
-  .rq-pal-night{position:relative;margin:10px 0 0;border-radius:20px;overflow:hidden;border:1px solid rgba(90,170,255,.22);background:radial-gradient(60% 60% at 50% 50%,#081c40 0,#04102a 55%,#01040c 100%);}
-  .rq-pal-night canvas,.rq-pal-night > svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  /* the night is the WHOLE window (owner 2026-11-17: "una tarjeta pegada en vez de ser toda la pantalla"): one canvas of stars and land behind everything; the stage is only where the fichas live */
+  #rq_pal_sky{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;border-radius:inherit;display:none;}
+  .rq-palette-box.rq-pal2.rq-pal-night-on{overflow:hidden;background:radial-gradient(70% 75% at 55% 50%,#0a2250 0,#04112c 55%,#01040c 100%);}
+  .rq-pal-night-on #rq_pal_sky{display:block;}
+  .rq-pal-night-on > *:not(#rq_pal_sky){z-index:1;}
+  .rq-pal-night{position:relative;margin:10px 0 0;}
+  .rq-pal-night > svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+  .rq-pal-dside{background:rgba(6,18,42,.55);border:1px solid rgba(90,170,255,.2);border-radius:16px;padding:12px 12px 10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
   .rq-pal-nbeam{position:absolute;left:50%;top:50%;width:var(--bd);height:var(--bd);margin:calc(var(--bd) / -2) 0 0 calc(var(--bd) / -2);border-radius:50%;background:conic-gradient(from 0deg,rgba(63,203,126,0) 0deg 318deg,rgba(63,203,126,.04) 336deg,rgba(63,203,126,.16) 360deg);animation:rqPalSpin 7s linear infinite;pointer-events:none;}
   .rq-pal-night .rq-pal-core{width:52px;height:52px;z-index:2;}
   .rq-pal-lead{animation:rqPalFlow 1.2s linear infinite;}
@@ -6153,30 +6159,19 @@ async function rqPalLoadAllCustomers(){
   rqPalCitiesLoading = false;
   rqPalRenderDetail();
 }
-// THE FIRST CLICK OPENS THE NEW SCREEN (owner 2026-11-17: "find product debe llevar directo a la pantalla nueva, no a lo viejo"): before anything is typed the window already shows the NIGHT screen — the same sky and star map as the
-// radar, the cities where the customers are as lit dots (blue = Mexico, amber = the US) and their names in two columns at the sides, each at the height of its dot. Real facts only (the customers' own city field, grouped);
-// a city that is not in the table is listed under the stage, never placed by a guess. Nothing here reads or writes anything (the radar of avatars is for a highlighted product).
+// THE FIRST CLICK OPENS THE NEW SCREEN (owner 2026-11-17: "find product debe llevar directo a la pantalla nueva, no a lo viejo"): before anything is typed the window already is the night: the same sky and star map as the radar behind the
+// whole window, the cities where the customers are as lit dots and their names in two columns at the sides, each at the height of its dot. Real facts only (the customers' own city field, grouped); a city that is not in the table is
+// listed under the stage, never placed by a guess. Nothing here reads or writes anything (the radar of avatars is for a highlighted product).
 function rqPalNightIdleHtml(pop){
   const all = rqAllCustomersCache || null, groups = all ? rqPalCityGroups(all) : [];
   const hostW = (document.getElementById('rq_pal_detail') || {}).clientWidth || 640;
-  const W = Math.max(440, Math.min(780, hostW)), H = Math.max(330, Math.min(500, window.innerHeight - 330)), proj = rqPalMapProj(W, H), LW = 124, LH = 31;
-  const pts = [], rest = [];
-  groups.forEach(g => { const geo = rqPalGeoOf(g.city); if (geo) pts.push({ g, geo, p: proj(geo[0], geo[1]) }); else rest.push(g); });
-  const side = left => pts.filter(m => (m.p[0] < W / 2) === left).sort((a, b) => a.p[1] - b.p[1]);
-  const spread = arr => { arr.forEach(m => { m.ly = m.p[1]; }); for (let it = 0; it < 80; it++){ for (let i = 1; i < arr.length; i++){ const gap = LH + 4 - (arr[i].ly - arr[i - 1].ly); if (gap > 0){ arr[i].ly += gap / 2; arr[i - 1].ly -= gap / 2; } } arr.forEach(m => { m.ly = Math.max(LH / 2 + 8, Math.min(H - LH / 2 - 8, m.ly)); }); } };
-  const Lc = side(true), Rc = side(false); spread(Lc); spread(Rc);
-  const col = cc => cc === 'US' ? '#FFC876' : '#5AAAFF', lead = [], labels = [];
-  [[Lc, true], [Rc, false]].forEach(([arr, left]) => arr.forEach(m => {
-    const x1 = left ? 12 + LW : W - 12 - LW, c = m.g.customers.length, names = m.g.customers.map(x => String(x.trade_name).trim()).join(', ');
-    lead.push(`<polyline points="${m.p[0].toFixed(1)},${m.p[1].toFixed(1)} ${(left ? x1 + 16 : x1 - 16).toFixed(1)},${m.ly.toFixed(1)} ${x1},${m.ly.toFixed(1)}" fill="none" stroke="${col(m.geo[2])}" stroke-opacity=".45" stroke-width="1" stroke-dasharray="2 4"/>`);
-    labels.push(`<div class="rq-pal-nl${m.geo[2] === 'US' ? ' a' : ''}${pop ? ' pop' : ''}" style="left:${left ? 12 : W - 12 - LW}px;top:${(m.ly - LH / 2).toFixed(1)}px;width:${LW}px;height:${LH}px;--i:${labels.length}" title="${escapeHtml(m.g.city + ' — ' + names)}"><b>${escapeHtml(m.g.city)}${c > 1 ? `<em>×${c}</em>` : ''}</b><i>${rqPalCoord(m.geo[0], m.geo[1])}</i></div>`);
-  }));
-  const dots = pts.map((m, i) => `<g class="rq-pal-npin${pop ? ' pop' : ''}" style="--i:${i}"><circle cx="${m.p[0].toFixed(1)}" cy="${m.p[1].toFixed(1)}" r="${(5 + Math.min(3, m.g.customers.length) * 1.4).toFixed(1)}" fill="${col(m.geo[2])}" fill-opacity=".2"/><circle cx="${m.p[0].toFixed(1)}" cy="${m.p[1].toFixed(1)}" r="3.2" fill="${col(m.geo[2])}" stroke="#fff" stroke-width="1"/></g>`).join('');
-  const rings = [.3, .52].map(f => `<ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * f).toFixed(1)}" ry="${(H * f).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".2" stroke-dasharray="2 8"/>`).join('') + `<line x1="${W / 2}" y1="0" x2="${W / 2}" y2="${H}" stroke="#5AAAFF" stroke-opacity=".1"/><line x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" stroke="#5AAAFF" stroke-opacity=".1"/>`;
+  const W = Math.max(440, Math.min(900, hostW)), H = Math.max(330, Math.min(500, window.innerHeight - 330)), rest = [], labels = [];
+  groups.forEach(g => { const geo = rqPalGeoOf(g.city); if (!geo){ rest.push(g); return; } const c = g.customers.length, names = g.customers.map(x => String(x.trade_name).trim()).join(', ');
+    labels.push(`<div class="rq-pal-nl${geo[2] === 'US' ? ' a' : ''}${pop ? ' pop' : ''}" data-lat="${geo[0]}" data-lon="${geo[1]}" style="width:124px;height:31px;--i:${labels.length}" title="${escapeHtml(g.city + ' — ' + names)}"><b>${escapeHtml(g.city)}${c > 1 ? `<em>×${c}</em>` : ''}</b><i>${rqPalCoord(geo[0], geo[1])}</i></div>`); });
   const total = groups.reduce((n, g) => n + g.customers.length, 0);
   return `<div class="rq-pal-main rq-pal-idle rq-pal-idle-n">
     <div class="rq-pal-lab" style="justify-content:center;margin:0 0 8px;">Where your customers are${all ? ` <b>${total}</b>` : ''}</div>
-    <div class="rq-pal-night" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><canvas data-w="${W}" data-h="${H}"></canvas><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${lead.join('')}${dots}</svg><div class="rq-pal-nbeam"></div>${labels.join('')}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
+    <div class="rq-pal-night idle" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .3).toFixed(1)}" ry="${(H * .3).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".2" stroke-dasharray="2 8"/><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .46).toFixed(1)}" ry="${(H * .46).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".14" stroke-dasharray="2 8"/><g class="rq-pal-pins"></g></svg><div class="rq-pal-nbeam"></div>${labels.join('')}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
     ${rest.length ? `<div class="rq-pal-rest">${rest.map(g => escapeHtml(g.city) + (g.customers.length > 1 ? ' ×' + g.customers.length : '')).join(' · ')}</div>` : ''}
   </div>`;
 }
@@ -6242,45 +6237,62 @@ function rqPalCover(pid, c, r){
 function rqPalNightW(){
   if (window.innerWidth <= 980) return 0;
   const bx = document.querySelector('.rq-palette-box'), bw = bx ? bx.clientWidth : 0; if (!bw) return 0;
-  const solo = document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1, inner = bw - 48 - 18, detail = solo ? inner - 118 : Math.round(inner * 2 / 2.55), W = Math.min(660, detail - 236 - 18);
+  const solo = document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1, inner = bw - 48 - 18, detail = solo ? inner - 118 : Math.round(inner * 2 / 2.55), W = Math.min(760, detail - 236 - 18);
   return W >= 440 ? W : 0;
 }
 function rqPalNightHtml(x){
   const { pid, p, qts, frozen, B, st, askedIds, plants, plantRows, tags, changed, lbl, cls, txt, busy } = x;
   const W = rqPalNightW() || 440, H = Math.max(330, Math.min(500, window.innerHeight - 340));
-  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbit(list, W, H), proj = rqPalMapProj(W, H), priced = plants.filter(v => v.priced);
+  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbit(list, W, H), priced = plants.filter(v => v.priced);
   const pct = (v, T) => (v / T * 100).toFixed(2) + '%';
   const rings = [['has', '#3FCB7E'], ['notsent', '#FFC876'], ['never', '#8FA3BF']].map(([k, col]) => { const rx = L.ring[k][0], ry = L.ring[k][1]; return `<ellipse cx="${L.cx}" cy="${L.cy}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".38" stroke-dasharray="2 8"/><text x="${(L.cx - rx * .7071).toFixed(1)}" y="${(L.cy - ry * .7071).toFixed(1)}" fill="${col}" fill-opacity=".85" font-size="8.5" font-family="IBM Plex Mono,monospace" letter-spacing="1.4" text-anchor="middle">${lbl[k]}</text>`; }).join('');
   const spokes = L.items.map(o => o.s.st === 'never' ? '' : `<line x1="${L.cx}" y1="${L.cy}" x2="${o.x.toFixed(1)}" y2="${o.y.toFixed(1)}" stroke="${o.s.st === 'has' ? '#3FCB7E' : '#FFC876'}" stroke-width="${o.s.st === 'has' ? 1.8 : 1.1}" stroke-opacity="${o.s.st === 'has' ? .75 : .45}"${o.s.st === 'has' ? '' : ' stroke-dasharray="3 7"'}/>`).join('');
-  const pins = L.items.map((o, i) => { const geo = rqPalGeoOf(o.c.city); if (!geo) return ''; const q = proj(geo[0], geo[1]), on = askedIds.has(o.c.id), col = o.s.st === 'has' ? '#3FCB7E' : o.s.st === 'notsent' ? '#FFC876' : '#8FA3BF';
-    return `<g><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="8" fill="${col}" fill-opacity=".22"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="6" fill="#06122b" stroke="${col}" stroke-width="1.5"/><text x="${q[0].toFixed(1)}" y="${(q[1] + 3.3).toFixed(1)}" text-anchor="middle" fill="#fff" font-size="8.5" font-family="IBM Plex Mono,monospace" font-weight="700">${i + 1}</text>${on ? `<path d="M${q[0].toFixed(1)} ${q[1].toFixed(1)} C${(q[0] + 90).toFixed(1)} ${(q[1] - 26).toFixed(1)},${(o.x - 130).toFixed(1)} ${(o.y - 26).toFixed(1)},${(o.x - 71).toFixed(1)} ${o.y.toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-width="1.3" stroke-dasharray="3 5" class="rq-pal-lead"/>` : ''}</g>`; }).join('');
-  const fichas = L.items.map((o, i) => { const c = o.c, on = askedIds.has(c.id), cl = o.s.st === 'has' ? 'g' : o.s.st === 'notsent' ? 'a' : 'n';
+  const fichas = L.items.map((o, i) => { const c = o.c, on = askedIds.has(c.id), cl = o.s.st === 'has' ? 'g' : o.s.st === 'notsent' ? 'a' : 'n', geo = rqPalGeoOf(c.city);
     const pips = priced.map(v => `<u class="${rqPalCover(pid, c, v.r)}" title="${escapeHtml(v.name)}"></u>`).join('');
-    return `<button type="button" class="rq-pal-fc ${cl}${on ? ' asked' : ''}${changed ? ' pop' : ''}" style="left:${pct(o.x, W)};top:${pct(o.y, H)};--i:${i}" data-c="${c.id}" ${busy} title="${escapeHtml(String(c.trade_name).trim())} — ${lbl[o.s.st]} · ${escapeHtml(txt(o.s))}" onclick="rqPalAsk('${pid}','${c.id}')"><i class="no">${i + 1}</i>${on ? '<em>✓</em>' : ''}<span class="t">${rqPalAvatar(c)}<span><b>${escapeHtml(String(c.trade_name).trim())}</b><small>${escapeHtml(String(c.city || '').trim())}</small></span></span><span class="rq-pal-pips">${pips}</span></button>`; }).join('');
+    return `<button type="button" class="rq-pal-fc ${cl}${on ? ' asked' : ''}${changed ? ' pop' : ''}" style="left:${pct(o.x, W)};top:${pct(o.y, H)};--i:${i}" data-c="${c.id}" data-n="${i + 1}" data-x="${o.x.toFixed(1)}" data-y="${o.y.toFixed(1)}"${geo ? ` data-lat="${geo[0]}" data-lon="${geo[1]}"` : ''} ${busy} title="${escapeHtml(String(c.trade_name).trim())} — ${lbl[o.s.st]} · ${escapeHtml(txt(o.s))}" onclick="rqPalAsk('${pid}','${c.id}')"><i class="no">${i + 1}</i>${on ? '<em>✓</em>' : ''}<span class="t">${rqPalAvatar(c)}<span><b>${escapeHtml(String(c.trade_name).trim())}</b><small>${escapeHtml(String(c.city || '').trim())}</small></span></span><span class="rq-pal-pips">${pips}</span></button>`; }).join('');
   const waitingP = plants.filter(v => v.waiting), naP = plants.filter(v => v.na);
   const chips = (waitingP.length ? `<span class="rq-pal-pill b" title="${escapeHtml(waitingP.map(v => v.name).join(', '))}">ASKED · WAITING ${waitingP.length}</span>` : '') + (naP.length ? `<span class="rq-pal-pill n" title="${escapeHtml(naP.map(v => v.name).join(', '))}">N/A ${naP.length}</span>` : '');
   const priceRows = priced.map(v => `<div class="rq-pal-pr"><span>${escapeHtml(v.name)}${v.stale ? ' <span class="rq-pal-pill a">EXPIRED</span>' : ''}</span><span><b>$${Number(v.r.current_price).toFixed(4)}/lb</b><span class="d">${escapeHtml(rqFmtDate(v.r.price_date))}</span></span></div>`).join('');
   return `<div class="rq-pal-main rq-pal-d">
     <div class="rq-pal-ph"><div class="rq-result-icon ${frozen ? 'frozen' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div><div><h3>${rqPalHl(p.full_name_en || p.name_en || p.name, qts)}</h3>${p.full_name_es ? `<div class="es">${rqPalHl(p.full_name_es, qts)}</div>` : ''}</div></div>
     <div class="rq-pal-tags">${tags}</div>
-    <div class="rq-pal-night" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><canvas data-w="${W}" data-h="${H}"></canvas><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}${pins}</svg><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}</div>
+    <div class="rq-pal-night" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${rings}${spokes}<g class="rq-pal-pins"></g></svg><div class="rq-pal-nbeam"></div><div class="rq-pal-core ${frozen ? '' : 'fresh'}">${frozen ? RQ_SNOWFLAKE_SVG : RQ_SUN_SVG}</div>${fichas}</div>
   </div>
   <div class="rq-pal-side rq-pal-dside">
     <div class="rq-pal-lab">Plants with it <b>${plants.length}</b></div>${priceRows}${chips ? `<div class="rq-pal-lab sp2">${chips}</div>` : ''}
   </div>`;
 }
-// the night: stars and the land as dots (Mexico lit), drawn once for the stage that was just written
+// THE NIGHT IS THE WHOLE WINDOW (owner 2026-11-17: "quedó bien acomodado, una tarjeta pegada en vez de ser toda la pantalla"): the stars and the land are drawn on ONE canvas behind the whole Find Product window (search, product, plants, footer are over it);
+// the dots of the customers' places and the leaders are placed from where the stage really is.
 function rqPalNight(host){
-  const cv = host.querySelector('.rq-pal-night canvas'); if (!cv) return;
-  const W = +cv.dataset.w, H = +cv.dataset.h, dpr = Math.min(window.devicePixelRatio || 1, 2);
-  cv.width = W * dpr; cv.height = H * dpr; const x = cv.getContext('2d'); if (!x) return; x.scale(dpr, dpr);
+  const st = host.querySelector('.rq-pal-night'), bx = document.querySelector('.rq-palette-box'); if (!st || !bx) return;
+  let cv = document.getElementById('rq_pal_sky'); if (!cv){ cv = document.createElement('canvas'); cv.id = 'rq_pal_sky'; bx.insertBefore(cv, bx.firstChild); }
+  const BW = bx.clientWidth, BH = bx.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2), br = bx.getBoundingClientRect(), sr = st.getBoundingClientRect(), ox = sr.left - br.left, oy = sr.top - br.top;
+  cv.width = BW * dpr; cv.height = BH * dpr; const x = cv.getContext('2d'); if (!x) return; x.scale(dpr, dpr);
   let sd = 7; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
-  for (let n = 0; n < 380; n++){ x.fillStyle = `rgba(205,228,255,${.12 + rnd() * .55})`; x.beginPath(); x.arc(rnd() * W, rnd() * H, rnd() * .85 + .2, 0, 7); x.fill(); }
-  const M = RQ_PAL_MAP, c = rqPalMapCells(), proj = rqPalMapProj(W, H);
+  for (let n = 0, N = Math.round(BW * BH / 1700); n < N; n++){ x.fillStyle = `rgba(205,228,255,${.12 + rnd() * .55})`; x.beginPath(); x.arc(rnd() * BW, rnd() * BH, rnd() * .85 + .2, 0, 7); x.fill(); }
+  const sy = BH / 34, sx = sy * .86, P = (lat, lon) => [BW / 2 + (lon + 98) * sx, BH / 2 - (lat - 26.5) * sy], M = RQ_PAL_MAP, c = rqPalMapCells();
   for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){
     const v = c[j * M.w + i]; if (!v) continue;
-    const q = proj(M.lat1 - (j + .5) * M.st, M.lon0 + (i + .5) * M.st); if (q[0] < -4 || q[0] > W + 4 || q[1] < -4 || q[1] > H + 4) continue;
-    x.fillStyle = v === 2 ? 'rgba(150,205,250,.5)' : 'rgba(100,150,225,.12)'; x.beginPath(); x.arc(q[0], q[1], v === 2 ? 1.35 : .95, 0, 7); x.fill();
+    const q = P(M.lat1 - (j + .5) * M.st, M.lon0 + (i + .5) * M.st); if (q[0] < -4 || q[0] > BW + 4 || q[1] < -4 || q[1] > BH + 4) continue;
+    x.fillStyle = v === 2 ? 'rgba(150,205,250,.5)' : 'rgba(100,150,225,.12)'; x.beginPath(); x.arc(q[0], q[1], v === 2 ? 1.5 : 1, 0, 7); x.fill();
+  }
+  bx.classList.add('rq-pal-night-on');
+  const g = st.querySelector('.rq-pal-pins'); if (!g) return;
+  const NS = 'http://www.w3.org/2000/svg', col = cl => cl.contains('g') ? '#3FCB7E' : cl.contains('a') ? '#FFC876' : '#8FA3BF', add = (tag, at, txt) => { const e = document.createElementNS(NS, tag); Object.keys(at).forEach(k => e.setAttribute(k, at[k])); if (txt != null) e.textContent = txt; g.appendChild(e); return e; };
+  const W = st.clientWidth || +st.dataset.w, H = st.clientHeight || +st.dataset.h; // the stage as it really is now
+  if (st.classList.contains('idle')){ // the empty window: the names in two columns, at the height of their dots
+    const labs = [...st.querySelectorAll('.rq-pal-nl')].map(el => { const q = P(+el.dataset.lat, +el.dataset.lon); return { el, X: q[0] - ox, Y: q[1] - oy, us: el.classList.contains('a') }; }).sort((a, b) => a.X - b.X);
+    const LW = 124, LH = 31, half = Math.ceil(labs.length / 2), cols = [labs.slice(0, half), labs.slice(half)];
+    cols.forEach((arr, k) => { arr.sort((a, b) => a.Y - b.Y); arr.forEach(m => { m.ly = Math.max(LH / 2 + 6, Math.min(H - LH / 2 - 6, m.Y)); });
+      for (let it = 0; it < 90; it++){ for (let i = 1; i < arr.length; i++){ const gap = LH + 4 - (arr[i].ly - arr[i - 1].ly); if (gap > 0){ arr[i].ly += gap / 2; arr[i - 1].ly -= gap / 2; } } arr.forEach(m => { m.ly = Math.max(LH / 2 + 6, Math.min(H - LH / 2 - 6, m.ly)); }); }
+      arr.forEach(m => { const left = k === 0, x1 = left ? 12 + LW : W - 12 - LW, cc = m.us ? '#FFC876' : '#5AAAFF'; m.el.style.left = (left ? 12 : W - 12 - LW) + 'px'; m.el.style.top = (m.ly - LH / 2).toFixed(1) + 'px';
+        add('polyline', { points: `${m.X.toFixed(1)},${m.Y.toFixed(1)} ${(left ? x1 + 16 : x1 - 16).toFixed(1)},${m.ly.toFixed(1)} ${x1},${m.ly.toFixed(1)}`, fill: 'none', stroke: cc, 'stroke-opacity': .45, 'stroke-width': 1, 'stroke-dasharray': '2 4' });
+        add('circle', { cx: m.X.toFixed(1), cy: m.Y.toFixed(1), r: 6.5, fill: cc, 'fill-opacity': .2 }); add('circle', { cx: m.X.toFixed(1), cy: m.Y.toFixed(1), r: 3.2, fill: cc, stroke: '#fff', 'stroke-width': 1 }); }); });
+  } else { // a product: a numbered dot at the real city of each customer, and a leader to the ficha of the ones marked as having asked
+    st.querySelectorAll('.rq-pal-fc[data-lat]').forEach(f => { const q = P(+f.dataset.lat, +f.dataset.lon), X = q[0] - ox, Y = q[1] - oy, cc = col(f.classList);
+      add('circle', { cx: X.toFixed(1), cy: Y.toFixed(1), r: 8, fill: cc, 'fill-opacity': .22 }); add('circle', { cx: X.toFixed(1), cy: Y.toFixed(1), r: 6, fill: '#06122b', stroke: cc, 'stroke-width': 1.5 }); add('text', { x: X.toFixed(1), y: (Y + 3.3).toFixed(1), 'text-anchor': 'middle', fill: '#fff', 'font-size': 8.5, 'font-family': 'IBM Plex Mono,monospace', 'font-weight': 700 }, f.dataset.n);
+      if (f.classList.contains('asked')){ const fx = +f.dataset.x - 71, fy = +f.dataset.y; add('path', { d: `M${X.toFixed(1)} ${Y.toFixed(1)} C${(X + 90).toFixed(1)} ${(Y - 26).toFixed(1)},${(fx - 60).toFixed(1)} ${(fy - 26).toFixed(1)},${fx.toFixed(1)} ${fy.toFixed(1)}`, fill: 'none', stroke: '#5AAAFF', 'stroke-width': 1.3, 'stroke-dasharray': '3 5', class: 'rq-pal-lead' }); } });
   }
 }
 function rqPalDetailHtml(pid, changed){
@@ -6335,7 +6347,7 @@ function rqPalRenderDetail(){
   const host = document.getElementById('rq_pal_detail');
   if (!host) return;
   const po = document.getElementById('rq_palette_overlay');
-  if (!po || po.style.display === 'none'){ if (host.innerHTML){ host.innerHTML = ''; host.dataset.html = ''; } host.classList.remove('rq-pal-dgrid'); { const bx = document.querySelector('.rq-palette-box'); if (bx) bx.classList.remove('rq-pal-solo'); } rqPalLastPid = null; rqPalIdlePop = true; return; }
+  if (!po || po.style.display === 'none'){ if (host.innerHTML){ host.innerHTML = ''; host.dataset.html = ''; } host.classList.remove('rq-pal-dgrid'); { const bx = document.querySelector('.rq-palette-box'); if (bx) bx.classList.remove('rq-pal-solo', 'rq-pal-night-on'); } rqPalLastPid = null; rqPalIdlePop = true; return; }
   if (!rqPalHi){ // nothing to show yet (nothing typed, or no match): the radar idles, turning, showing where the customers are — the window is the new one from the first click
     rqPalLoadAllCustomers();
     const idle = rqPalNightIdleHtml(rqPalIdlePop), key = idle.replace(/ pop/g, '');
@@ -6349,7 +6361,7 @@ function rqPalRenderDetail(){
   const changed = rqPalLastPid !== pid, html = rqPalDetailHtml(pid, changed), key = html.replace(/ pop/g, '');
   if (!changed && host.dataset.html === key) return;
   const ae = document.activeElement, focusC = ae && host.contains(ae) && ae.dataset ? ae.dataset.c : null, focusCls = ae && ae.classList && ae.classList.contains('rq-pal-by') ? '.rq-pal-by' : ae && ae.classList && ae.classList.contains('rq-pal-fc') ? '.rq-pal-fc' : '.rq-pal-nd';
-  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid; { const dn = html.indexOf('rq-pal-night') > -1, bx = document.querySelector('.rq-palette-box'); host.classList.toggle('rq-pal-dgrid', dn); if (bx) bx.classList.toggle('rq-pal-solo', dn && document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1); if (dn) rqPalNight(host); if (dn && !rqPalRerun){ const sg = host.querySelector('.rq-pal-night'), need = rqPalNightW(); if (sg && Math.abs((need || 440) - sg.clientWidth) > 24){ rqPalRerun = true; host.dataset.html = ''; try { rqPalRenderDetail(); } finally { rqPalRerun = false; } } } } // one result: its tile shrinks to a small picker, the product is written once (owner: "se repite el producto")
+  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid; { const dn = html.indexOf('rq-pal-night') > -1, bx = document.querySelector('.rq-palette-box'); host.classList.toggle('rq-pal-dgrid', dn); if (bx) bx.classList.toggle('rq-pal-solo', dn && document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1); if (bx && !dn) bx.classList.remove('rq-pal-night-on'); if (dn) rqPalNight(host); if (dn && !rqPalRerun){ const sg = host.querySelector('.rq-pal-night'), need = rqPalNightW(); if (sg && Math.abs((need || 440) - sg.clientWidth) > 24){ rqPalRerun = true; host.dataset.html = ''; try { rqPalRenderDetail(); } finally { rqPalRerun = false; } } } } // one result: its tile shrinks to a small picker, the product is written once (owner: "se repite el producto")
   if (focusC){ const again = host.querySelector(`${focusCls}[data-c="${focusC}"]:not(:disabled)`); if (again) again.focus(); }
 }
 function rqPalSetHi(pid){
