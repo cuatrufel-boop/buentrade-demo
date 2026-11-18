@@ -5975,8 +5975,13 @@ async function rqPalLoadSent(pid){
     const rows = (await callApi('sent-offers-search', { product_id: pid, limit: 500 })).results || [], map = {};
     rows.forEach(r => {
       if (!r.sent_at) return; // a draft is not an offer
-      if (r.status === 'expired') return; // an offer expired in Offers is history, not "he has it" (owner 2026-11-17)
-      const key = r.plant_id + '|' + r.product_id, told = r.price_drop_told && r.price_drop_told.at;
+      const key = r.plant_id + '|' + r.product_id;
+      if (r.status === 'expired'){ // history, never "he has it" (owner 2026-11-17) — but it WAS offered: "sí debo saber cuál ya mandé", so he is not "never offered"
+        if (!map[r.customer_id]) map[r.customer_id] = {};
+        const px = map[r.customer_id][key + '#expired']; if (!px || new Date(r.sent_at).getTime() > new Date(px).getTime()) map[r.customer_id][key + '#expired'] = r.sent_at;
+        return;
+      }
+      const told = r.price_drop_told && r.price_drop_told.at;
       const got = told && new Date(told).getTime() > new Date(r.sent_at).getTime() ? String(told) : r.sent_at;
       if (!map[r.customer_id]) map[r.customer_id] = {};
       const prev = map[r.customer_id][key];
@@ -5995,9 +6000,10 @@ function rqPalStatus(pid, c){
   const sheet = rqSheetState.key === rqSheetKey() && rqActiveProductFilterIds.includes(pid) ? rqSheetFor(pid) : null;
   const covered = r => { const k = r.plant_id + '|' + pid; return rqSentCoversPrice(m[k], r.price_date, r.price_arrived_at, m[k + '#price'], r.current_price) || (((((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []).indexOf(c.id) > -1) && !(m[k + '#expired'] && !m[k])); };
   const last = keys.map(k => m[k]).sort().pop() || null;
-  if (!keys.length && !priced.some(covered)) return { st: 'never', at: null };
+  const lastExpired = Object.keys(m).filter(k => k.endsWith('#expired')).map(k => m[k]).sort().pop() || null; // offered before, the offer expired: not "has it", not "never offered"
+  if (!keys.length && !lastExpired && !priced.some(covered)) return { st: 'never', at: null };
   if (priced.length && priced.every(covered)) return { st: 'has', at: last };
-  return { st: 'notsent', at: last, noPrice: !priced.length };
+  return { st: 'notsent', at: last || lastExpired, noPrice: !priced.length };
 }
 function rqPalAgo(ts){
   const d = rqPriceAgeDays(rqEtDay(ts));
