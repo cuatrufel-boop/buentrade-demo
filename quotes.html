@@ -6197,7 +6197,7 @@ function rqPalNightIdleHtml(pop){
   const total = groups.reduce((n, g) => n + g.customers.length, 0);
   return `<div class="rq-pal-main rq-pal-idle rq-pal-idle-n">
     <div class="rq-pal-lab" style="justify-content:center;margin:0 0 8px;">Where your customers are${all ? ` <b>${total}</b>` : ''}</div>
-    <div class="rq-pal-night idle" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .3).toFixed(1)}" ry="${(H * .3).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".2" stroke-dasharray="2 8"/><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .46).toFixed(1)}" ry="${(H * .46).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".14" stroke-dasharray="2 8"/><g class="rq-pal-pins"></g></svg><div class="rq-pal-nbeam"></div>${labels.join('')}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
+    <div class="rq-pal-night idle" data-w="${W}" data-h="${H}" style="width:${W}px;max-width:100%;height:${H}px;--bd:${Math.round(Math.max(W, H) * 1.05)}px"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .3).toFixed(1)}" ry="${(H * .3).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".2" stroke-dasharray="2 8"/><ellipse cx="${W / 2}" cy="${H / 2}" rx="${(W * .46).toFixed(1)}" ry="${(H * .46).toFixed(1)}" fill="none" stroke="#5AAAFF" stroke-opacity=".14" stroke-dasharray="2 8"/><g class="rq-pal-loads"></g><g class="rq-pal-pins"></g></svg><div class="rq-pal-lchip" hidden></div><div class="rq-pal-nbeam"></div>${labels.join('')}${all ? '' : '<div class="rq-pal-radar-msg">Loading customers…</div>'}</div>
     ${rest.length ? `<div class="rq-pal-rest">${rest.map(g => escapeHtml(g.city) + (g.customers.length > 1 ? ' ×' + g.customers.length : '')).join(' · ')}</div>` : ''}
   </div>`;
 }
@@ -6337,7 +6337,7 @@ function rqPalNight(host){
       add('circle', { cx: X.toFixed(1), cy: Y.toFixed(1), r: 8, fill: cc, 'fill-opacity': .22 }); add('circle', { cx: X.toFixed(1), cy: Y.toFixed(1), r: 6, fill: '#06122b', stroke: cc, 'stroke-width': 1.5 }); add('text', { x: X.toFixed(1), y: (Y + 3.3).toFixed(1), 'text-anchor': 'middle', fill: '#fff', 'font-size': 8.5, 'font-family': 'IBM Plex Mono,monospace', 'font-weight': 700 }, f.dataset.n);
       if (f.classList.contains('asked')){ const fx = +f.dataset.x - 71, fy = +f.dataset.y; add('path', { d: `M${X.toFixed(1)} ${Y.toFixed(1)} C${(X + 90).toFixed(1)} ${(Y - 26).toFixed(1)},${(fx - 60).toFixed(1)} ${(fy - 26).toFixed(1)},${fx.toFixed(1)} ${fy.toFixed(1)}`, fill: 'none', stroke: '#5AAAFF', 'stroke-width': 1.3, 'stroke-dasharray': '3 5', class: 'rq-pal-lead' }); } });
   }
-  if (!st.classList.contains('idle')) rqPalLoadsDraw(); // the loads on the way (view only)
+  rqPalLoadsDraw(); // the loads on the way (view only), on the start screen and on a product
 }
 function rqPalDetailHtml(pid, changed){
   const p = products.find(x => x.id === pid);
@@ -6393,7 +6393,7 @@ function rqPalRenderDetail(){
   const po = document.getElementById('rq_palette_overlay');
   if (!po || po.style.display === 'none'){ if (host.innerHTML){ host.innerHTML = ''; host.dataset.html = ''; } host.classList.remove('rq-pal-dgrid'); { const bx = document.querySelector('.rq-palette-box'); if (bx) bx.classList.remove('rq-pal-solo', 'rq-pal-night-on'); } rqPalLastPid = null; rqPalIdlePop = true; return; }
   if (!rqPalHi){ // nothing to show yet (nothing typed, or no match): the radar idles, turning, showing where the customers are — the window is the new one from the first click
-    rqPalLoadAllCustomers();
+    rqPalLoadAllCustomers(); rqPalLoadLoads(); // (the loads on the way, a view only)
     const idle = rqPalNightIdleHtml(rqPalIdlePop), key = idle.replace(/ pop/g, '');
     if (host.dataset.html !== key){ host.dataset.html = key; host.innerHTML = idle; rqPalIdlePop = false; rqPalNight(host); } host.classList.remove('rq-pal-dgrid'); { const bx = document.querySelector('.rq-palette-box'); if (bx) bx.classList.remove('rq-pal-solo'); }
     rqPalLastPid = null; return;
@@ -6503,10 +6503,11 @@ function rqPalPickupGeo(name){
 }
 const RQ_PAL_TRUCK = '<rect x="0" y="1" width="9" height="7" rx="1.2"/><path d="M9.8 3h2.6l2 2.4V8H9.8z"/><circle cx="3.2" cy="9" r="1.6" fill="#06122b" stroke="#cfeaff" stroke-width="1"/><circle cx="11.4" cy="9" r="1.6" fill="#06122b" stroke="#cfeaff" stroke-width="1"/>';
 // the SVG of the loads on the stage (stage pixels): rows = the loads going to customers on the stage, pin = customer id -> his dot, P = lat/lon -> stage pixels
-function rqPalLoadsSvg(rows, pin, P, W, H){
-  let body = ''; const seen = {};
+function rqPalLoadsSvg(rows, pin, P, W, H, dots){ // dots = customer ids whose place has no ficha or label of its own: a small dot marks where the load goes
+  let body = ''; const seen = {}, marked = {};
   rows.forEach((r, i) => {
     const q = pin[r.customer_id]; if (!q) return;
+    if (dots && dots[r.customer_id] && !marked[r.customer_id]){ marked[r.customer_id] = 1; body += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="7" fill="#8fd3ff" fill-opacity=".22"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="3.6" fill="#8fd3ff" stroke="#fff" stroke-width="1"/>`; }
     const geo = rqPalPickupGeo(r.pickup_location && r.pickup_location.location_name), moving = r.status === 'picked_up', txt = String(r.order_number || '') + (moving ? '' : ' · PENDING PICKUP'), n = seen[r.customer_id] = (seen[r.customer_id] || 0) + 1;
     let lab = [q[0], q[1] + 19];
     if (geo){
@@ -6534,16 +6535,19 @@ async function rqPalLoadLoads(){
   catch (e){ rqPalLoads.at = Date.now() - 100000; } // no loads to show: the screen is the same without them; it tries again in 20 s
   rqPalLoads.busy = false; rqPalLoadsDraw();
 }
+// the start screen and a product both show EVERY load on the way (a customer that has a ficha: to his ficha; any other: to his city)
 function rqPalLoadsDraw(){
-  const st = document.querySelector('#rq_pal_detail .rq-pal-night:not(.idle)'), bx = document.querySelector('.rq-palette-box'); if (!st || !bx) return;
+  const st = document.querySelector('#rq_pal_detail .rq-pal-night'), bx = document.querySelector('.rq-palette-box'); if (!st || !bx) return;
   const g = st.querySelector('.rq-pal-loads'), chip = st.querySelector('.rq-pal-lchip'); if (!g || !chip) return;
   g.innerHTML = ''; chip.hidden = true;
   const br = bx.getBoundingClientRect(), sr = st.getBoundingClientRect(), BW = bx.clientWidth, BH = bx.clientHeight, sy = BH / 34, sx = sy * .86, ox = sr.left - br.left, oy = sr.top - br.top;
-  const P = (lat, lon) => [BW / 2 + (lon + 98) * sx - ox, BH / 2 - (lat - 26.5) * sy - oy], pin = {}, here = {};
-  st.querySelectorAll('.rq-pal-fc[data-c]').forEach(f => { here[f.dataset.c] = 1; if (f.dataset.lat) pin[f.dataset.c] = P(+f.dataset.lat, +f.dataset.lon); });
-  const rows = rqPalLoads.rows.filter(r => r.customer_id && here[r.customer_id]); if (!rows.length) return;
+  const P = (lat, lon) => [BW / 2 + (lon + 98) * sx - ox, BH / 2 - (lat - 26.5) * sy - oy], pin = {}, dots = {}, idle = st.classList.contains('idle'), cust = {};
+  (rqAllCustomersCache || []).forEach(c => { cust[c.id] = c; });
+  st.querySelectorAll('.rq-pal-fc[data-c]').forEach(f => { if (f.dataset.lat) pin[f.dataset.c] = P(+f.dataset.lat, +f.dataset.lon); });
+  const rows = rqPalLoads.rows.filter(r => r.customer_id); if (!rows.length) return;
+  rows.forEach(r => { if (pin[r.customer_id]) return; const c = cust[r.customer_id], geo = c && rqPalGeoOf(c.city); if (!geo) return; pin[r.customer_id] = P(geo[0], geo[1]); if (!idle) dots[r.customer_id] = 1; });
   chip.innerHTML = `<svg viewBox="0 0 15 11" fill="#cfeaff">${RQ_PAL_TRUCK}</svg><b>${rows.length}</b> load${rows.length === 1 ? '' : 's'} on the way`; chip.hidden = false;
-  g.innerHTML = rqPalLoadsSvg(rows, pin, P, st.clientWidth || +st.dataset.w, st.clientHeight || +st.dataset.h);
+  g.innerHTML = rqPalLoadsSvg(rows, pin, P, st.clientWidth || +st.dataset.w, st.clientHeight || +st.dataset.h, dots);
 }
 // ===== FIND PRODUCT, NIGHT: THE REAL MAP AND THE LOADS END
 
