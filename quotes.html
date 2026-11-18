@@ -4896,7 +4896,7 @@ async function rqCloseFinishedLiveQuotes(links){
       try { offers = (await callApi('sent-offers-search', { product_id: s.product_id, limit: 500 })).results || []; }
       catch (e) { continue; } // can't confirm: stays, the next refresh checks again
       const wentOut = priced.every(p => customers.every(cid => offers.some(o =>
-        o.plant_id === p.plantId && o.customer_id === cid && o.sent_at && rqSentCoversPrice(String(o.sent_at), p.priceDay, p.link && p.link.price_arrived_at, o.status === 'expired' ? null : o.purchase_price, p.link && p.link.current_price))));
+        o.plant_id === p.plantId && o.customer_id === cid && o.sent_at && o.status !== 'expired' && rqSentCoversPrice(String(o.sent_at), p.priceDay, p.link && p.link.price_arrived_at, o.status === 'expired' ? null : o.purchase_price, p.link && p.link.current_price))));
       if (!wentOut) continue;
     }
     try {
@@ -5974,7 +5974,8 @@ async function rqPalLoadSent(pid){
   try {
     const rows = (await callApi('sent-offers-search', { product_id: pid, limit: 500 })).results || [], map = {};
     rows.forEach(r => {
-      if (!r.sent_at) return; // a draft is not an offer; an expired one WAS sent
+      if (!r.sent_at) return; // a draft is not an offer
+      if (r.status === 'expired') return; // an offer expired in Offers is history, not "he has it" (owner 2026-11-17)
       const key = r.plant_id + '|' + r.product_id, told = r.price_drop_told && r.price_drop_told.at;
       const got = told && new Date(told).getTime() > new Date(r.sent_at).getTime() ? String(told) : r.sent_at;
       if (!map[r.customer_id]) map[r.customer_id] = {};
@@ -6351,6 +6352,7 @@ async function rqFetchPlantLinksForProduct(productId){
   // other four who also buy this product, with no way to reach them. Now tracked per customer.
   const sentByPlant = {}; // plant_id -> { customer_id -> latest sent_at }
   sentRows.forEach(r => {
+    if (r.status === 'expired') return; // an offer expired in Offers is history, not "he has it" (owner 2026-11-17: "vence en offers pero no puede vencer en quotes")
     if (!sentByPlant[r.plant_id]) sentByPlant[r.plant_id] = {};
     const prev = sentByPlant[r.plant_id][r.customer_id];
     if (!prev || r.sent_at > prev) sentByPlant[r.plant_id][r.customer_id] = r.sent_at;
