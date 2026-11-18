@@ -3705,7 +3705,7 @@ function rqSheetRows(pids = rqActiveProductFilterIds, ctx = rqSheetState){
         const owners = rqSheetCustomersOwning(pid, ctx);
         // who HAS the price: the page's own reading of what went out, OR the server's (customer_has_price — which also counts the cost an offer really carried, e.g. a pesos offer whose page copy of the price was stale)
         const serverHas = new Set(((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []);
-        const sentTo = owners.filter(c => { const m = ctx.sentByCustomer[c.id] || {}; return rqSentCoversPrice(m[key], r.price_date, r.price_arrived_at, m[key + '#price'], r.current_price) || serverHas.has(c.id); });
+        const sentTo = owners.filter(c => { const m = ctx.sentByCustomer[c.id] || {}; return (rqSentCoversPrice(m[key], r.price_date, r.price_arrived_at, m[key + '#price'], r.current_price) || serverHas.has(c.id)) && !(m[key + '#expired'] && !m[key]); }); // the server's "has it" also counts an expired offer: when the page knows his only sends of it are expired, he does not have it (owner 2026-11-17)
         const isNew = !!(base.answeredAt || (askedAt && r.price_date && String(r.price_date).slice(0, 10) >= String(askedAt).slice(0, 10) && !stale))
           || rqIsNewArrival(rqSheetArrival(sheet, r.plant_id), r);
         // A sale read in the background from the saved QT is only a proposal: it goes out once the trader has opened that QT and
@@ -5992,7 +5992,7 @@ function rqPalStatus(pid, c){
   const m = s.map[c.id] || {}, keys = Object.keys(m).filter(k => k.indexOf('#') < 0);
   const priced = rqAllPlantProductRows.filter(r => r.product_id === pid && !r.declined_at && r.current_price != null);
   const sheet = rqSheetState.key === rqSheetKey() && rqActiveProductFilterIds.includes(pid) ? rqSheetFor(pid) : null;
-  const covered = r => { const k = r.plant_id + '|' + pid; return rqSentCoversPrice(m[k], r.price_date, r.price_arrived_at, m[k + '#price'], r.current_price) || ((((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []).indexOf(c.id) > -1); };
+  const covered = r => { const k = r.plant_id + '|' + pid; return rqSentCoversPrice(m[k], r.price_date, r.price_arrived_at, m[k + '#price'], r.current_price) || (((((rqSheetArrival(sheet, r.plant_id) || {}).sent_customer_ids) || []).indexOf(c.id) > -1) && !(m[k + '#expired'] && !m[k])); };
   const last = keys.map(k => m[k]).sort().pop() || null;
   if (!keys.length && !priced.some(covered)) return { st: 'never', at: null };
   if (priced.length && priced.every(covered)) return { st: 'has', at: last };
@@ -8350,9 +8350,12 @@ async function rqAlreadySentPlantIdsByCustomer(productIds, channel){
     try { sentRows = (await callApi('sent-offers-search', { product_id: pid, limit: 500 })).results || []; }
     catch (e) { continue; }
     sentRows.filter(r => !channel || r.channel === channel).forEach(r => { // per channel (owner 2026-10-09: sending by WhatsApp must not hide the email)
-      if (!r.sent_at) return; // a draft is not an offer; an expired one WAS sent (owner 2026-11-03)
+      if (!r.sent_at) return; // a draft is not an offer
       if (!byCustomer[r.customer_id]) byCustomer[r.customer_id] = {};
       const key = r.plant_id + '|' + r.product_id;
+      // owner 2026-11-17 (IDE Foods, Chicken Drumsticks Frozen: Wayne Sanderson $0.48 sent Oct 22, expired in Offers, Quotes still said "he has it"): "vence en offers pero no puede vencer en quotes".
+      // An EXPIRED offer is only history here: it is kept apart (`#expired`) and never counts as "he has it", so the plant's price is sendable again and goes with all the others.
+      if (r.status === 'expired'){ const prevX = byCustomer[r.customer_id][key + '#expired']; if (!prevX || new Date(r.sent_at).getTime() > new Date(prevX).getTime()) byCustomer[r.customer_id][key + '#expired'] = r.sent_at; if (r.sale_per_lb != null && (!rqLastSentSale[key] || r.sent_at > rqLastSentSale[key].sent_at)) rqLastSentSale[key] = { sale_per_lb: r.sale_per_lb, sent_at: r.sent_at }; return; }
       const prev = byCustomer[r.customer_id][key];
       // what the customer last RECEIVED about this plant: the send, or the updated list he was told after it (price_drop_told) — whichever is later
       const told = r.price_drop_told && r.price_drop_told.at, got = told && new Date(told).getTime() > new Date(r.sent_at).getTime() ? String(told) : r.sent_at;
