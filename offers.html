@@ -1736,8 +1736,8 @@ const FROM_DISPLAY = {
 // call now live once in js/email-modal.js (bcOpenEmailModal/bcSendEmailApi) instead of four
 // separate copies. This file's own sendEmailApi keeps its exact original signature and every one
 // of its real call sites is unchanged — it's now a thin wrapper onto the shared implementation.
-async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo){
-  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
+async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc){
+  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
 }
 
 // Opens Gmail's own compose screen instead of a mailto: link — same fix as quotes.html's
@@ -1865,7 +1865,7 @@ async function sharePO(orderNumber){
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (waCardPO), so no waInfo here to avoid a duplicate inside the
     // Email modal.
-    await sendEmailApi('purchasing', emails, subject, body, [pdfAttachment(built.doc, filename)], null);
+    await sendEmailApi('purchasing', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
     showToast('PO sent', emails.join(', '));
     markDocSent(orderNumber, 'po');
   } catch(e){
@@ -1922,7 +1922,7 @@ async function shareSO(orderNumber){
     + `Total: $${(so.total_sale || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
     + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`;
   try {
-    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null);
+    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
     showToast('SO sent', emails.join(', '));
     markDocSent(orderNumber, 'so');
   } catch(e){

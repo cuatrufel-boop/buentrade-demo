@@ -446,3 +446,14 @@ async function bcSendEmailApi(opts){
   if (outcome.failed) throw new Error(outcome.error);
   return outcome.result;
 }
+
+// Owner 2026-11-19: when the load is paid with Summar factoring, the PO (to the plant) and the SO (to the customer) go copying Summar in the SAME send.
+// The one place that knows Summar's address; the page's own Pay via Summar email uses it too. A load not paid with Summar, or a lookup that fails,
+// gives no copy (the trader still sees the CC line of every email before it goes).
+const BC_SUMMAR_EMAIL = 'achavez@summar.com';
+async function bcSummarCopy(callApi, orderNumber){
+  try {
+    const sh = ((await callApi('shipments-search', { order_number: orderNumber, limit: 1 })).results || [])[0];
+    return sh && sh.financing && sh.financing.financing_method === 'summar' ? [BC_SUMMAR_EMAIL] : [];
+  } catch (e) { console.warn('bcSummarCopy failed (the email goes without the Summar copy):', e && e.message); return []; }
+}

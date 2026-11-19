@@ -2429,7 +2429,7 @@ function payPlantClick(orderNumber){
 // cost — confirmed explicitly, the document text alone doesn't spell out the reconciliation)
 // plus what BuenTrade wires them here (cost − 80% of sale; see summarWireAmount below). BuenTrade -> Summar -> Planta, never BuenTrade ->
 // Planta directly for these orders.
-const SUMMAR_EMAIL = 'achavez@summar.com'; // owner 2026-11-19: this is the only Summar address
+const SUMMAR_EMAIL = BC_SUMMAR_EMAIL; // owner 2026-11-19: achavez@summar.com is the only Summar address (js/email-modal.js)
 let summarPaymentOrderNumber = null;
 // Corrected 2026-09-28 with the user's own examples (cost 60,000 / sale 63,000 → wire 9,600; cost 20,000 / sale
 // 25,000 → wire 0): Summar advances 80% of the SALE and pays the plant 100% of the COST; BuenTrade wires Summar only
@@ -3300,7 +3300,7 @@ async function sharePO(orderNumber){
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (waCardPO, same screen) so the Email modal doesn't need a
     // second "También por WhatsApp" duplicating it — passing no waInfo just hides that inner button.
-    await sendEmailApi('purchasing', emails, subject, body, [pdfAttachment(built.doc, filename)], null);
+    await sendEmailApi('purchasing', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
     showToast('PO sent', emails.join(', '));
     await markDocSent(orderNumber, 'po');
     await loadStatusOrders();
@@ -3348,7 +3348,7 @@ async function shareSO(orderNumber){
     + `Total: $${(so.total_sale || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
     + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`;
   try {
-    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null);
+    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
     showToast('SO sent', emails.join(', '));
     await markDocSent(orderNumber, 'so');
     await loadStatusOrders();
