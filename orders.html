@@ -1167,6 +1167,36 @@ async function confirmPickupReadyClick(orderNumber){
       gmailFallbackLinkHtml([toEmail], subject, body));
   }
 }
+// Owner 2026-11-19: three days before pick-up the plant is asked for the status of the load ("tres dias antes de la recogida… correo a la planta pidiendo el status en ingles…
+// copiando a carrier"), always with HIS approval: "nada automatico, ese correo debe salirme para yo aprobar y anadir a quien quiera". The email opens in the usual preview
+// (To and CC editable), goes to the pick-up location's person (else the plant's email) and copies the carrier; nothing is sent until he presses Send.
+function pickupStatusEmailContent(orderNumber, plantName, product, pickupDateText){
+  const subject = `Pick-up status — Order PO-BT-${btNum(orderNumber)} — ${plantName}`;
+  const body = `Dear ${plantName} Team,\n\nPlease confirm that the load below is on track for pick-up on ${pickupDateText}.\n\n`
+    + `PO Number: PO-BT-${btNum(orderNumber)}\n`
+    + `Product: ${product}\n\nThank you,\nBuenTrade Team`;
+  return { subject, body };
+}
+async function askPlantStatusClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const location = await resolvePickupLocationForOrder(o, orderNumber);
+  if (location === undefined) return; // cancelled the location picker, or saving it failed
+  const toEmail = (location && location.email) || (o.plant && o.plant.email) || null;
+  if (!toEmail){ await btAlert(`Neither the pick-up location nor the plant has an email on file — add one in Plants before asking for the status of ${orderNumber}.`); return; }
+  const { subject, body } = pickupStatusEmailContent(orderNumber, String(o.plant_name || '').trim(), fullProductLabel(o), fmtDateStr(o.pickup_date));
+  const cc = (o.carrier && o.carrier.email) ? [o.carrier.email] : [];
+  try {
+    await sendEmailApi('logistics', [toEmail], subject, body, [], null, cc);
+    showToast('Status requested', toEmail);
+    await markDocSent(orderNumber, 'pickup_status');
+    await loadStatusOrders();
+  } catch (e) {
+    if (e.cancelled) return;
+    showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true,
+      gmailFallbackLinkHtml([toEmail], subject, body, orderNumber, 'pickup_status'));
+  }
+}
 // Real ask 2026-09-07: "todos deben ser linkeables con una accion" — Signature has no real
 // trader-side action (only the customer signs remotely), but it still needs to respond to a click
 // instead of sitting there dead. Reports the real status instead of doing nothing.
@@ -1492,6 +1522,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   }
   entries.push(miniEntry({ icon: '#', label: 'Release #', done: !!o.release_number, date: null, wait: !o.plant_paid_at, waitReason: 'Confirm the plant payment first.', onClick: `recordReleaseNumber('${o.order_number}')`, raised: true, urgent: releaseNumberUrgent }));
   if (o.carrier && o.carrier.phone) entries.push(miniEntry({ icon: STEP_ICONS.picked_up, label: 'Send Release #', done: !!o.release_number_sent_at, date: o.release_number_sent_at, wait: !o.release_number, waitReason: 'Record the release number first.', onClick: `sendReleaseNumberToCarrier('${o.order_number}')` }));
+  // Owner 2026-11-19: the plant's status of the load (email to the pick-up location, copying the carrier, sent only when he approves it).
+  entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: !!o.pickup_status_sent_at, date: o.pickup_status_sent_at, onClick: `askPlantStatusClick('${o.order_number}')` }));
   const confirmIdx = entries.length;
   entries.push(mainEntry('pending_pickup'));
   entries.push(mainEntry('picked_up'));
@@ -1797,6 +1829,15 @@ function computeAttentionItems(){
               : `<button class="wa-btn" onclick="showSummarPaymentBreakdown('${o.order_number}')">Pay via Summar</button>`)
           : `<button class="wa-btn" onclick="payPlantClick('${o.order_number}')">Confirm Payment Sent</button>`;
         items.push({ orderNumber: label, order_number: o.order_number, text: `Pay the plant — ${productName}`, btn: payBtnHtml });
+      }
+    }
+    // Owner 2026-11-19: three days before pick-up, ask the plant for the status of the load (same day-count as shipment-alerts-poll); the email opens for HIS approval.
+    const PICKUP_STATUS_DAYS_BEFORE_PICKUP = 3;
+    if (stage === 'pending_pickup' && o.pickup_date && !o.pickup_status_sent_at){
+      const daysToPickup = Math.round((new Date(String(o.pickup_date).slice(0, 10) + 'T00:00:00').getTime() - today.getTime()) / 86400000);
+      if (daysToPickup <= PICKUP_STATUS_DAYS_BEFORE_PICKUP){
+        items.push({ orderNumber: label, order_number: o.order_number, text: `Ask the plant for the load status — ${productName}`,
+          btn: `<button class="wa-btn" onclick="askPlantStatusClick('${o.order_number}')">Ask Plant Status</button>` });
       }
     }
     if (stage === 'pending_pickup' && o.plant_paid_at && !o.release_number){
