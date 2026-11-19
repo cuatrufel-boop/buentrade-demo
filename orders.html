@@ -2140,6 +2140,8 @@ function renderOrderDocsPanel(o, nextActionLabel){
     const pickupDocsHtml = pickupDocs.length
       ? pickupDocs.map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${escapeHtml(d.filename)}</a><span class="doc-row-status${d.forwarded_to_customs_at ? ' sent' : ''}">${d.forwarded_to_customs_at ? 'Sent to Customs' : 'Received, pending customs'}</span></div>`).join('')
       : '<div class="doc-row-empty doc-row-span">No pickup documents yet.</div>';
+    // The plant's proforma / prepay invoices, filed from its reply (owner 2026-11-19: everything is kept on the order).
+    const proformaHtml = (o.proforma_invoices || []).map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${escapeHtml(d.filename)}</a><span class="doc-row-status sent">Proforma received</span></div>`).join('');
     body = `<div class="docs-panel-grid">
       ${dateRow}
       ${renderTradeDocRow('PO (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing)}
@@ -2148,6 +2150,7 @@ function renderOrderDocsPanel(o, nextActionLabel){
       ${paymentRow}
       ${renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions)}
       ${renderSignatureEvidenceRow(o)}
+      ${proformaHtml}
       ${pickupDocsHtml}
     </div>`;
   }
