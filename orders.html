@@ -2429,7 +2429,7 @@ function payPlantClick(orderNumber){
 // cost — confirmed explicitly, the document text alone doesn't spell out the reconciliation)
 // plus what BuenTrade wires them here (cost − 80% of sale; see summarWireAmount below). BuenTrade -> Summar -> Planta, never BuenTrade ->
 // Planta directly for these orders.
-const SUMMAR_EMAIL = 'marango@summar.com';
+const SUMMAR_EMAIL = 'achavez@summar.com'; // owner 2026-11-19: this is the only Summar address
 let summarPaymentOrderNumber = null;
 // Corrected 2026-09-28 with the user's own examples (cost 60,000 / sale 63,000 → wire 9,600; cost 20,000 / sale
 // 25,000 → wire 0): Summar advances 80% of the SALE and pays the plant 100% of the COST; BuenTrade wires Summar only
@@ -2458,9 +2458,26 @@ function closeSummarPaymentOverlay(){
   summarPaymentOrderNumber = null;
 }
 
-// Sends the SO + wire notification to Summar (marango@summar.com), asking them to confirm once
-// they've paid the plant — same preview-before-send send path as every other document in this
-// file, same SO PDF buildSODoc already builds for shareSO. Copy approved by the user 2026-09-21.
+// Owner 2026-11-19 ("el boton de pay plant y el email esta mal hecho, esta mandando la SO"): the email to Summar carries BuenTrade's OWN payment
+// confirmation (the bank proof, attached by the trader), never the SO. Summar sends its payment confirmation to the plant's payments person
+// (the same one the direct payment goes to), copying BuenTrade; the plant answers with proforma, release number and, on FOB loads, the pick-up
+// appointment, and the mail reader takes it from there. The amount is still summarWireAmount — what BuenTrade owes Summar, nothing else changes.
+// Exact wording approved by the owner 2026-11-19.
+function summarPaymentEmailContent(orderNumber, plantName, product, wireAmount, plantPaymentsEmails, pickupAppointment){
+  const subject = `Payment Sent — Order BT-${btNum(orderNumber)} — ${plantName} / ${product}`;
+  const body = `Dear Summar Team,\n\nAttached is our payment confirmation for the order below.\n\n`
+    + `Order: BT-${btNum(orderNumber)}\n`
+    + `Plant: ${plantName}\n`
+    + `Product: ${product}\n`
+    + `Amount: $${wireAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\n`
+    + `Once you have paid ${plantName}, please send your payment confirmation to ${plantPaymentsEmails.join(', ')}, copying us. ${plantName} will then reply with:\n`
+    + `- Proforma invoice\n`
+    + `- Release number\n`
+    + (pickupAppointment ? `- Pick-up appointment\n` : '')
+    + `\nPlease keep us copied on their reply.\n\nThank you,\nBuenTrade`;
+  return { subject, body };
+}
+// Sends BuenTrade's payment confirmation to Summar (achavez@summar.com) — same preview-before-send send path as every other document in this file.
 async function sendPaymentToSummar(orderNumber){
   if (!orderNumber) return;
   const o = findStatusOrder(orderNumber);
@@ -2478,16 +2495,20 @@ async function sendPaymentToSummar(orderNumber){
   // Nothing to wire (Summar's 80% already covers the cost): the approved text says "We have sent the payment…", which
   // would be false — the wording for this case is waiting on the user's approval, so nothing is sent.
   if (wireAmount === 0){ await btAlert(`${orderNumber}: Summar's 80% advance already covers the plant cost — there is nothing to wire. The message to Summar for this case isn't approved yet, so nothing was sent.`); return; }
-  const filename = `SO-BT-${btNum(orderNumber)}.pdf`;
-  const subject = `Payment Sent — Order BT-${btNum(orderNumber)} — ${o.plant_name} / ${soProductName}`;
-  const body = `Hello,\n\nWe have sent the payment for the above order via wire transfer to the account on file.\n\n`
-    + `Order: BT-${btNum(orderNumber)}\n`
-    + `Plant: ${o.plant_name}\n`
-    + `Product: ${soProductName}\n`
-    + `Amount: $${wireAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\n`
-    + `Please find the Sales Order attached for reference. Once the plant has been paid, please send us confirmation (payment receipt or equivalent) so we can request the release number from the plant.\n\nThank you,\nBuenTrade`;
+  // Same recipient rule as the direct payment: the plant's payments person, or the sales contact when no payments person is on file.
+  const { to: plantPaymentsEmails } = resolvePaymentRecipients(o);
+  if (!plantPaymentsEmails.length){ await btAlert(`This plant has no email on file at all (neither Payments Contact nor general contact) — add one in Plants before sending the payment to Summar for ${orderNumber}.`); return; }
+  await btAlert('Select the bank payment confirmation (PDF or image) to attach.');
+  const file = await pickBankConfirmationFile();
+  if (!file) return; // no bank confirmation selected — nothing sent
+  let base64;
+  try { base64 = await readFileAsBase64(file); }
+  catch (e) { await btAlert('No se pudo leer el archivo: ' + e.message); return; }
+  // A load with our own carrier booked is FOB: only then does the plant also owe the pick-up appointment.
+  const isFob = !!(o.carrier && (o.carrier.name || o.carrier.email || o.carrier.phone));
+  const { subject, body } = summarPaymentEmailContent(orderNumber, String(o.plant_name || '').trim(), soProductName, wireAmount, plantPaymentsEmails, isFob);
   try {
-    await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, [pdfAttachment(built.doc, filename)], null);
+    await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, [{ filename: file.name, content: base64, contentType: file.type }], null);
     showToast('Sent to Summar', SUMMAR_EMAIL);
     await markDocSent(orderNumber, 'summar_payment');
     closeSummarPaymentOverlay();
