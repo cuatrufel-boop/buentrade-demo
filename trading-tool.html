@@ -2546,33 +2546,33 @@ async function ttLoadPlantProductVersion(){
 // confirmed USD version (its border numbers — US freight, docs, payment days) with the selling price and the Mexico costs empty, for Quotes to fill with his destination.
 // Without a confirmed USD version it opens nothing and saves nothing.
 function ttLoadPesosVersion(row){
+  // owner 2026-11-19 ("el QT en pesos aplica para el cliente, no para la planta; las plantas siempre cotizan en USD"): the pesos QT of a customer ALWAYS opens. It starts from the plant's confirmed USD version when there is one for this price (its
+  // border numbers), otherwise from the QT's own defaults (the plant's USD price as the cost) — it never waits for, and is never voided by, the plant's USD QT.
   const usd = row.qt_state && row.qt_state.confirmed;
   const samePrice = (p, d) => p != null && Number(p) === Number(row.current_price) && (d == null || String(d).slice(0, 10) === String(row.price_date || '').slice(0, 10));
-  if (!usd || !usd.state_json || !samePrice(usd.price, usd.price_date)){
-    ttReportSaveProblem("Confirm this plant's USD price first — the pesos QT starts from it. Nothing here is being saved.");
-    return;
-  }
-  ttPesosBuiltFrom = usd.state_json;
+  const usdOk = !!(usd && usd.state_json && samePrice(usd.price, usd.price_date));
+  ttPesosBuiltFrom = usdOk ? usd.state_json : null;
   // ONE VERSION PER CITY (owner 2026-11-09: "todas las ciudades… que funcione igual", "no tener que confirmarlo dos veces"): the pesos QT of a customer opens from the newest valid version saved by ANY customer of the same city (the entries
   // carry the tariff they were made with, rate_id — the same one Quotes uses to group them), confirmed or not; his own when nobody's is newer. A version made with another tariff is never borrowed.
-  const wantRate = __qp.get('pesosRateId') || null, pesosOn = row.qt_state.pesos || {};
-  const valid = (e) => !!(e && e.built_from === usd.state_json && e.plant_price && samePrice(e.plant_price.price, e.plant_price.date));
+  const wantRate = __qp.get('pesosRateId') || null, pesosOn = (row.qt_state && row.qt_state.pesos) || {};
+  const valid = (e) => !!(e && e.plant_price && samePrice(e.plant_price.price, e.plant_price.date));
   const stamp = (e) => String((e.confirmed && e.confirmed.at) || e.saved_at || '');
   const own = pesosOn[ttPesosCid];
+  const confirmedOk = (e) => !!(e && e.confirmed && samePrice(e.confirmed.price, e.confirmed.price_date));
   const entry = [own, ...Object.entries(pesosOn).filter(([cid, e]) => cid !== ttPesosCid && wantRate && e && (e.rate_id || null) === wantRate).map(([, e]) => e)]
-    .filter(valid).sort((a, b) => (!!(b.confirmed && b.confirmed.built_from === usd.state_json) - !!(a.confirmed && a.confirmed.built_from === usd.state_json)) || stamp(b).localeCompare(stamp(a)))[0] || own;
-  const reuse = !!(entry && entry.built_from === usd.state_json && entry.plant_price && samePrice(entry.plant_price.price, entry.plant_price.date));
-  let st;
+    .filter(valid).sort((a, b) => (confirmedOk(b) - confirmedOk(a)) || stamp(b).localeCompare(stamp(a)))[0] || own;
+  const reuse = valid(entry);
+  let st = null;
   if (reuse){
     st = JSON.parse(JSON.stringify(entry));
     if ((entry.rate_id || null) !== (__qp.get('pesosRateId') || null) && st.inputs) st.inputs.freightMx = ''; // his destination's tariff changed: the freight is filled again
-  } else {
+  } else if (usdOk){
     st = JSON.parse(usd.state_json);
     if (Array.isArray(st.products) && st.products[0]) Object.assign(st.products[0], { sellBorder: 0, sellManual: false, sellMx: 0, sellMxManual: false });
     if (st.inputs){ st.inputs.importCost = ''; st.inputs.freightMx = ''; }
   }
-  ttApplyState(st);
-  ttConfirmed = (reuse && entry.confirmed && entry.confirmed.built_from === usd.state_json && samePrice(entry.confirmed.price, entry.confirmed.price_date)) ? entry.confirmed : null;
+  if (st) ttApplyState(st); // without a USD version and without his own: the QT's own defaults stay (the plant's USD price is the cost)
+  ttConfirmed = (reuse && confirmedOk(entry)) ? entry.confirmed : null;
   ttStateReady = true;
 }
 if (__qp.get('ppId') && !__qp.get('offerId')) ttLoadPlantProductVersion();

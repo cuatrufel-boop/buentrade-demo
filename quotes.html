@@ -4068,14 +4068,14 @@ function rqToggleReqCustomer(id){
 }
 async function rqRequestSend(channel){
   const pids = rqActiveProductFilterIds.slice();
-  const rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key)));
   // only the customers who are ready go (green): a pesos customer without his own pesos price waits, and nothing is sent to him in dollars
   const customers = rqSheetState.customers.filter(c => rqReqSel.ids && rqReqSel.ids.has(c.id) && rqReqReadyIds.includes(c.id));
+  const rows = rqSheetRows().filter(r => r.kind === 'priced' && !r.proposed && (!r.stale || rqReqOld.has(r.key)) && rqRowCanGo(r, customers)); // a USD-confirmed row, or one a pesos customer of this send confirmed in his own QT
   if (!rows.length || !customers.length) return;
   // The updated list goes out only when EVERY new price of a plant the customer already has an offer from is confirmed (user 2026-10-12: "tengo que confirmar los dos
   // precios nuevos antes de mandar"): otherwise he would receive a list that silently leaves that plant out.
   const waiting = rqSheetRows().filter(r => r.kind === 'priced' && !r.na && !r.stale
-    && customers.some(c => (rqSheetState.sentByCustomer[c.id] || {})[r.key] && !((r.calc && r.confirmed && !r.proposed) && (!rqIsPesosCustomer(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id))) && !r.sentTo.some(x => x.id === c.id)));
+    && customers.some(c => (rqSheetState.sentByCustomer[c.id] || {})[r.key] && !(rqIsPesosCustomer(c) ? !!rqPesosConfirmation(r.plant.id, r.pid, c.id) : !!(r.calc && r.confirmed && !r.proposed)) && !r.sentTo.some(x => x.id === c.id)));
   if (waiting.length){
     const names = [...new Set(waiting.map(r => r.plant.name.trim()))].join(', ');
     await btAlert(`Not sent yet. Confirm the new price of ${names} first (Confirm price). The updated list goes out only when every new price is confirmed.`);
@@ -4318,7 +4318,7 @@ function rqRenderRequestView(rows){
   const isPes = c => rqIsPesosCustomer(c);
   const liveRows = priced.filter(r => !r.na && (!r.stale || inc(r)));
   const usdOk = r => !!(r.calc && r.confirmed && !r.proposed);
-  const hisRows = c => liveRows.filter(r => usdOk(r) && (!isPes(c) || rqPesosConfirmation(r.plant.id, r.pid, c.id)));
+  const hisRows = c => liveRows.filter(r => isPes(c) ? !r.proposed && !!rqPesosConfirmation(r.plant.id, r.pid, c.id) : usdOk(r)); // a pesos customer needs HIS confirmed QT only (owner 2026-11-19: the plants quote in USD, his QT is his); a USD customer needs the confirmed USD QT
   const canSendHim = c => { const mine = hisRows(c); return mine.length > 0 && mine.some(r => !r.sentTo.some(x => x.id === c.id)); };
   const markedCs = order.filter(c => rqReqSel.ids.has(c.id));
   const sendable = markedCs.filter(canSendHim);
@@ -4828,7 +4828,8 @@ const RQ_BRAND_SEND_ALONE = true; // a row's own button sends THAT brand alone �
 const RQ_CLIENT_NAMES = false; // the Client cell of a card says HOW MANY customers (and how many already have that price), not who (owner 2026-11-15: "no necesita el texto enumerando los clientes"); the names are on hover. true brings the names back
 async function rqBrandSend(channel, key, customerId){
   const pids = rqActiveProductFilterIds.slice();
-  let rows = rqSheetRows().filter(r => r.kind === 'priced' && r.calc && r.confirmed && !r.proposed && (!r.stale || rqReqOld.has(r.key))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
+  const wantedCs = customerId ? String(customerId).split(',').map(id => rqSheetState.customers.find(c => c.id === id)).filter(Boolean) : [];
+  let rows = rqSheetRows().filter(r => r.kind === 'priced' && !r.proposed && (!r.stale || rqReqOld.has(r.key)) && (r.calc && r.confirmed || rqRowCanGo(r, wantedCs))); // an EXPIRED price joins only when the trader chose it ("Send old price"), never offered by itself (owner 2026-10-22: "estoy mandando un solo precio y me pide mandarlo con uno expirado")
   const one = rows.find(r => r.key === key);
   if (!one) { rqShowNotice(rqSendWhyNot(rqSheetRows().find(r => r.key === key && r.kind === 'priced'), [], false)); return; }
   const alone = typeof RQ_BRAND_SEND_ALONE !== 'undefined' && RQ_BRAND_SEND_ALONE && !!one.stale; // only an old price used on purpose goes alone; a new price carries the updated list
@@ -4860,9 +4861,8 @@ async function rqBrandSend(channel, key, customerId){
 // once it is confirmed (rqConfirmPriceFromTool). Already confirmed: his pesos QT opens at once. The follow-up is forgotten after 20 minutes or when used.
 let rqBrandPesosNext = null;
 async function rqBrandOpenPesos(productId, plantId, customerId){
-  if (rqUsdConfirmedJson(plantId, productId)){ rqBrandPesosNext = null; await rqPesosOpenQt(productId, plantId, customerId); return; }
-  rqBrandPesosNext = { productId, plantId, customerId, at: Date.now() };
-  await rqConfirmPriceClick(null, productId, plantId);
+  rqBrandPesosNext = null; // owner 2026-11-19: a pesos customer's QT opens at once, whether or not the plant's USD QT is confirmed (it no longer starts from it)
+  await rqPesosOpenQt(productId, plantId, customerId);
 }
 // An old (expired) price used on purpose (owner 2026-10-22: "debe dejar confirmar el precio viejo para mandar nuevos con viejos"): it joins this send (the same rqReqOld set as before) and its QT opens at once,
 // where the trader confirms the sale price; once confirmed it is a normal line and goes with the new prices.
@@ -4885,7 +4885,7 @@ async function rqSendReadyRows(channel, rows, customers, linksByCustomer, pids =
     } catch (e) { /* the send itself never depends on this */ }
   }
   const saved = { plants: rqSelectedPlants, customers: rqMatchedCustomers, links: rqCustomerProductIds };
-  rqSelectedPlants = rows.map(r => ({ ...r.confirmed, rqProductId: r.pid, rqLastCalc: r.calc, rqIncludeStale: true }));
+  rqSelectedPlants = rows.map(r => rqSendEntryFor(r, customers)).filter(Boolean); // the USD QT's line, or a pesos-only line when a pesos customer confirmed his own QT (js/quote-pesos.js)
   rqMatchedCustomers = customers;
   rqCustomerProductIds = linksByCustomer;
   // After ANY completed send the recipients are chosen again: whoever still lacks the prices is marked, the one who just got them is not (user 2026-10-14: "cuando envío a un solo cliente… ya no me deja mandar

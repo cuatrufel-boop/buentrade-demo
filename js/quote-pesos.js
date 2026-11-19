@@ -68,8 +68,9 @@ function rqUsdConfirmedJson(plantId, productId){
 function rqPesosConfirmation(plantId, productId, customerId){
   const c = rqAnyCustomer(customerId), link = rqPesosLink(plantId, productId);
   if (!rqIsPesosCustomer(c) || !link || link.current_price == null) return null;
-  const rate = rqPesosDestRate(c), usdJson = rqUsdConfirmedJson(plantId, productId);
-  if (!rate || !usdJson) return null;
+  // The pesos QT stands on its own (owner 2026-11-19: "el QT en pesos aplica para el cliente, no para la planta; las plantas siempre cotizan en USD"): it needs the plant's USD price and his city's tariff, NOT a confirmed USD QT.
+  const rate = rqPesosDestRate(c);
+  if (!rate) return null;
   // ONE CONFIRMATION PER CITY (owner 2026-11-09: "si ya confirmé una ciudad con un flete debe aplicar para los clientes de Guadalajara y no tener que confirmarlo dos veces"): two pesos customers whose destination uses the SAME
   // Mexican freight tariff (the same city) have the same pesos price, so the newest valid confirmation made in ANY of their QTs is the price of all of them. A customer of another city, or one whose numbers were made with
   // another tariff, never borrows it (the rate id must match), and every validity rule below still applies to whichever confirmation is used.
@@ -80,7 +81,7 @@ function rqPesosConfirmation(plantId, productId, customerId){
     if (id !== customerId) { const m = rqAnyCustomer(id), mr = m && rqIsPesosCustomer(m) ? rqPesosDestRate(m) : null; if (!mr || mr.id !== rate.id) return; } // only a customer of the same city lends his confirmation
     cands.push(rqPesosSession[prefix + id], saved[id] && saved[id].confirmed);
   });
-  const valid = cands.filter(Boolean).filter(conf => conf.calc && conf.calc.pesosQt && conf.built_from === usdJson
+  const valid = cands.filter(Boolean).filter(conf => conf.calc && conf.calc.pesosQt
     && Number(conf.price) === Number(link.current_price) && String(conf.price_date || '').slice(0, 10) === String(link.price_date || '').slice(0, 10)
     && conf.calc.pesosQt.rateId === rate.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   return valid[0] || null;
@@ -96,13 +97,27 @@ const rqPesosCityName = (c) => { const r = rqPesosDestRate(c); return r ? String
 // version, its price in MX$/kg — and a plant he has not confirmed in his own QT gives null: a pesos customer is never sent a border price.
 function rqWithPesos(customerId, it){
   const c = rqAnyCustomer(customerId);
-  if (!rqIsPesosCustomer(c)) return it;
+  if (!rqIsPesosCustomer(c)) return (it && it.plant && it.plant.rqPesosOnly) ? null : it; // a line that exists only because a pesos customer confirmed his QT (the plant's USD QT is not confirmed) is never sent to a USD customer
   const conf = rqPesosConfirmation(it.plant.id, it.plant.rqProductId, customerId);
   if (!conf) return null;
   const q = conf.calc.pesosQt;
   let state = null; try { state = JSON.parse(conf.state_json); } catch (e) { /* the numbers stay; the offer just carries no version */ }
   return { ...it, plant: { ...it.plant, rqLastState: state, rqUsFreightRateId: conf.us_freight_rate_id || null }, calc: { ...conf.calc, mxn: { perKg: q.perKg, total: q.total, dest: q.dest, fx: q.fx } } };
 }
+
+// What goes into the send for one sheet row (owner 2026-11-19: the plants quote in USD; a pesos customer's QT stands on its own): the row's confirmed USD QT when there is one; otherwise, when a pesos customer of this send confirmed HIS pesos QT for the plant,
+// a line that exists only for pesos customers (rqPesosOnly — rqWithPesos never gives it to a USD customer); otherwise nothing.
+function rqSendEntryFor(r, customers){
+  if (r.calc && r.confirmed && !r.proposed) return { ...r.confirmed, rqProductId: r.pid, rqLastCalc: r.calc, rqIncludeStale: true };
+  for (const c of customers || []){
+    if (!rqIsPesosCustomer(c)) continue;
+    const conf = rqPesosConfirmation(r.plant.id, r.pid, c.id);
+    if (conf) return { ...rqPlantOfferObj(r.plant, r.link, r.pid), rqProductId: r.pid, rqLastCalc: conf.calc, rqIncludeStale: true, rqPesosOnly: true };
+  }
+  return null;
+}
+// a row can go out when its USD QT is confirmed, or when a pesos customer among `customers` confirmed his own QT for it
+const rqRowCanGo = (r, customers) => !!rqSendEntryFor(r, customers);
 
 // The send never goes to a pesos customer without HIS pesos price: his lines are the plants he has confirmed in his own QT (rqWithPesos); none → nothing is sent to him and the trader is told.
 // Returns the customer's fresh offer entries, or null when there is nothing to send him.
@@ -132,15 +147,16 @@ async function rqPesosFiles(full){
 // ---- The send panel's pesos side: which plants a pesos customer still has to confirm in his own QT, and opening it plant by plant.
 // The plants of the product that can be sent (a live price, its USD price confirmed): where HE stands for each one.
 function rqPesosPlantStates(rows, customerId){
-  return rows.filter(r => r.kind === 'priced' && !r.stale && !r.na).map(r => ({
-    row: r, state: !(r.calc && r.confirmed && !r.proposed) ? 'needs_usd' : (rqPesosConfirmation(r.plant.id, r.pid, customerId) ? 'ready' : 'needs_qt'),
+  // The caller decides which EXPIRED prices are in (the ones the trader chose with "Send old price", rqReqOld): a pesos customer is offered them like a USD one (owner 2026-11-19: "debe dejar enviar precio en pesos a productos con fecha vencida").
+  // A pesos customer's QT is always available — it never waits for a USD QT of the plant (the plants quote in USD; the pesos QT belongs to the customer).
+  return rows.filter(r => r.kind === 'priced' && !r.na).map(r => ({
+    row: r, state: rqPesosConfirmation(r.plant.id, r.pid, customerId) ? 'ready' : 'needs_qt',
   }));
 }
 async function rqPesosOpenQt(productId, plantId, customerId){
   const c = rqAnyCustomer(customerId), plant = rqAllPlants.find(p => p.id === plantId);
   if (!c || !plant) return;
   if (!rqPesosDestRate(c)){ btAlert(`There is no Mexican freight tariff for ${c.usual_destination || "this customer's city"} — add it in the carrier's profile (Rates → Mexican Freight) before quoting ${c.trade_name} in pesos.`); return; }
-  if (!rqUsdConfirmedJson(plantId, productId)){ rqShowNotice(`Confirm ${String(plant.name).trim()}'s USD price first — ${c.trade_name}'s QT starts from it.`); return; }
   await qOpenPendingPlantInline(productId, plantId, customerId);
 }
 // The customer's row in the send panel: opens the first plant he has not confirmed in his own QT (else the first one, to look at it again).
@@ -148,9 +164,10 @@ async function rqPesosOpenFirst(customerId){
   const pid = rqActiveProductFilterIds[0], c = rqAnyCustomer(customerId);
   if (!pid || !c) return;
   if (!rqCurrencyKnown() && !(await rqLoadMxnCurrency())){ rqShowNotice("Could not check the customers' currency — try again in a moment."); return; }
-  const states = rqPesosPlantStates(rqSheetRows(), customerId).filter(x => x.row.pid === pid);
+  const inSend = r => !r.stale || (typeof rqReqOld !== 'undefined' && rqReqOld.has(r.key)); // an expired price is in only when the trader chose it
+  const states = rqPesosPlantStates(rqSheetRows().filter(inSend), customerId).filter(x => x.row.pid === pid);
   const target = states.find(x => x.state === 'needs_qt') || states.find(x => x.state === 'ready');
-  if (!target){ rqShowNotice(`Confirm the USD price of the plants first — ${c.trade_name}'s QT starts from it.`); return; }
+  if (!target){ rqShowNotice(`No plant has a price for ${c.trade_name}'s QT yet.`); return; }
   await rqPesosOpenQt(pid, target.row.plant.id, customerId);
 }
 // After a pesos QT is confirmed: the next plant of the same customer, until all of his are green. A QT that closed without a valid pesos price stops the chain and says why.
