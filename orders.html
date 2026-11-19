@@ -1197,6 +1197,28 @@ async function askPlantStatusClick(orderNumber){
       gmailFallbackLinkHtml([toEmail], subject, body, orderNumber, 'pickup_status'));
   }
 }
+// Owner 2026-11-19: "cuando se confirma [el status de la carga] sigue el flujo a Pay Plant". Paying the plant opens only after the PLANT confirmed the load is on track (he records it
+// here once the plant answers). A payment already under way (sent to Summar, or the plant already paid) never goes back to waiting.
+function plantStatusAllowsPayment(o){
+  return !!(o && (o.pickup_status_confirmed_at || o.plant_paid_at || o.summar_payment_sent_at));
+}
+async function plantStatusGate(o){
+  if (plantStatusAllowsPayment(o)) return true;
+  await btAlert(`${o.order_number}: confirm the plant's load status first — ask the plant (Plant status step), and record its confirmation here. Then you can pay.`);
+  return false;
+}
+async function confirmPlantStatusClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  if (o.pickup_status_confirmed_at){ showToast('Already confirmed', fmtDateStr(o.pickup_status_confirmed_at)); return; }
+  const plantName = String(o.plant_name || 'The plant').trim();
+  const yes = await btConfirm(`Did ${plantName} confirm that the load is on track for pick-up on ${fmtDateStr(o.pickup_date)}?`, 'Yes, confirmed', 'Not yet');
+  if (!yes) return;
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'pickup_status_confirmed' }); }
+  catch (e) { await btAlert('Could not record the confirmation: ' + e.message); return; }
+  showToast('Plant status confirmed', 'You can now pay the plant.');
+  await loadStatusOrders();
+}
 // Real ask 2026-09-07: "todos deben ser linkeables con una accion" — Signature has no real
 // trader-side action (only the customer signs remotely), but it still needs to respond to a click
 // instead of sitting there dead. Reports the real status instead of doing nothing.
@@ -1505,7 +1527,10 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   const payPlantOnClick = isSummarFinancedTimeline
     ? (o.summar_payment_sent_at ? `recordSummarConfirmation('${o.order_number}')` : `showSummarPaymentBreakdown('${o.order_number}')`)
     : `payPlantClick('${o.order_number}')`;
-  entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: payPlantOnClick }));
+  // Owner 2026-11-19: the plant's status of the load comes BEFORE paying — ask it (e-mail to the pick-up location copying the carrier, sent only when he approves it), then record the plant's
+  // confirmation (clicking the step again once asked); Pay Plant opens after (plantStatusAllowsPayment: a payment already under way never goes back to waiting).
+  entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: plantStatusAllowsPayment(o), date: o.pickup_status_confirmed_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: o.pickup_status_sent_at ? `confirmPlantStatusClick('${o.order_number}')` : `askPlantStatusClick('${o.order_number}')` }));
+  entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: !docBeforePaymentDone || !plantStatusAllowsPayment(o), waitReason: !docBeforePaymentDone ? docBeforePaymentReason : 'The plant must confirm the load status first.', onClick: payPlantOnClick }));
   // Real gap found 2026-09-07: "revisa todo... faltan mas cosas" — recordReleaseNumber/
   // sendReleaseNumberToCarrier only lived inside the collapsed Documentos panel, invisible on the
   // main flow this whole rebuild exists to show at a glance. Two real milestones now, same as every
@@ -1522,8 +1547,6 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   }
   entries.push(miniEntry({ icon: '#', label: 'Release #', done: !!o.release_number, date: null, wait: !o.plant_paid_at, waitReason: 'Confirm the plant payment first.', onClick: `recordReleaseNumber('${o.order_number}')`, raised: true, urgent: releaseNumberUrgent }));
   if (o.carrier && o.carrier.phone) entries.push(miniEntry({ icon: STEP_ICONS.picked_up, label: 'Send Release #', done: !!o.release_number_sent_at, date: o.release_number_sent_at, wait: !o.release_number, waitReason: 'Record the release number first.', onClick: `sendReleaseNumberToCarrier('${o.order_number}')` }));
-  // Owner 2026-11-19: the plant's status of the load (email to the pick-up location, copying the carrier, sent only when he approves it).
-  entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: !!o.pickup_status_sent_at, date: o.pickup_status_sent_at, onClick: `askPlantStatusClick('${o.order_number}')` }));
   const confirmIdx = entries.length;
   entries.push(mainEntry('pending_pickup'));
   entries.push(mainEntry('picked_up'));
@@ -1828,16 +1851,25 @@ function computeAttentionItems(){
               ? `<button class="wa-btn" onclick="recordSummarConfirmation('${o.order_number}')">Record Summar's Confirmation</button>`
               : `<button class="wa-btn" onclick="showSummarPaymentBreakdown('${o.order_number}')">Pay via Summar</button>`)
           : `<button class="wa-btn" onclick="payPlantClick('${o.order_number}')">Confirm Payment Sent</button>`;
-        items.push({ orderNumber: label, order_number: o.order_number, text: `Pay the plant — ${productName}`, btn: payBtnHtml });
+        // Owner 2026-11-19: it shows once the plant confirmed the load status (until then the items above ask for it).
+        if (plantStatusAllowsPayment(o)) items.push({ orderNumber: label, order_number: o.order_number, text: `Pay the plant — ${productName}`, btn: payBtnHtml });
       }
     }
     // Owner 2026-11-19: three days before pick-up, ask the plant for the status of the load (same day-count as shipment-alerts-poll); the email opens for HIS approval.
     const PICKUP_STATUS_DAYS_BEFORE_PICKUP = 3;
-    if (stage === 'pending_pickup' && o.pickup_date && !o.pickup_status_sent_at){
+    if (stage === 'pending_pickup' && o.pickup_date && !o.pickup_status_sent_at && !plantStatusAllowsPayment(o)){
       const daysToPickup = Math.round((new Date(String(o.pickup_date).slice(0, 10) + 'T00:00:00').getTime() - today.getTime()) / 86400000);
       if (daysToPickup <= PICKUP_STATUS_DAYS_BEFORE_PICKUP){
         items.push({ orderNumber: label, order_number: o.order_number, text: `Ask the plant for the load status — ${productName}`,
           btn: `<button class="wa-btn" onclick="askPlantStatusClick('${o.order_number}')">Ask Plant Status</button>` });
+      }
+    }
+    // Asked but not yet confirmed by the plant: the payment waits for it (owner 2026-11-19); he records the confirmation here, or asks again.
+    if (stage === 'pending_pickup' && o.pickup_date && o.pickup_status_sent_at && !plantStatusAllowsPayment(o)){
+      const daysToConfirm = Math.round((new Date(String(o.pickup_date).slice(0, 10) + 'T00:00:00').getTime() - today.getTime()) / 86400000);
+      if (daysToConfirm <= PICKUP_STATUS_DAYS_BEFORE_PICKUP){
+        items.push({ orderNumber: label, order_number: o.order_number, text: `Waiting for the plant to confirm the load status — ${productName}`,
+          btn: `<button class="wa-btn" onclick="confirmPlantStatusClick('${o.order_number}')">Plant Confirmed</button> <button class="wa-btn outline" onclick="askPlantStatusClick('${o.order_number}')">Ask Again</button>` });
       }
     }
     if (stage === 'pending_pickup' && o.plant_paid_at && !o.release_number){
@@ -2086,6 +2118,12 @@ function renderOrderDocsPanel(o, nextActionLabel){
     if (!docBeforePaymentDoneHere && !o.plant_paid_at){
       paymentBtn = '';
       paymentStatus = `Waiting on ${o.has_freight_order ? 'FO' : 'SO'}`;
+    } else if (!plantStatusAllowsPayment(o)){
+      // Owner 2026-11-19: the plant confirms the load status before the payment opens — ask it, then record its confirmation.
+      paymentBtn = o.pickup_status_sent_at
+        ? docRowBtn('Plant Confirmed', `confirmPlantStatusClick('${o.order_number}')`) + docRowBtn('↻ Ask Again', `askPlantStatusClick('${o.order_number}')`)
+        : docRowBtn('Ask Plant Status', `askPlantStatusClick('${o.order_number}')`);
+      paymentStatus = o.pickup_status_sent_at ? 'Waiting for the plant to confirm the load status' : 'Waiting on the plant status';
     } else if (isSummarFinanced && !o.plant_paid_at){
       if (!o.summar_payment_sent_at){
         paymentBtn = docRowBtn('Pay via Summar', `showSummarPaymentBreakdown('${o.order_number}')`);
@@ -2462,6 +2500,9 @@ function readFileAsBase64(file){
 // then continues into the existing confirm-and-attach-receipt flow below in this same tab.
 const BANK_LOGIN_URL = 'https://my.grovebankandtrust.com/login';
 function payPlantClick(orderNumber){
+  // Owner 2026-11-19: paying opens only after the plant confirmed the load status (checked first and synchronously, so the bank tab below is still opened by the click itself).
+  const gated = findStatusOrder(orderNumber);
+  if (gated && !plantStatusAllowsPayment(gated)){ plantStatusGate(gated); return; }
   window.open(BANK_LOGIN_URL, '_blank');
   confirmPlantPaymentSent(orderNumber);
 }
@@ -2488,6 +2529,7 @@ function summarWireAmount(o, salePrice){
 function showSummarPaymentBreakdown(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
+  if (!plantStatusAllowsPayment(o)){ plantStatusGate(o); return; } // owner 2026-11-19: the plant confirms the load status first
   const salePrice = Number(o.sale_amount) || 0;
   const wireAmount = summarWireAmount(o, salePrice);
   if (wireAmount == null){ btAlert(`${orderNumber}: the plant cost or the sale price is missing, so the amount to wire Summar can't be calculated.`); return; }
@@ -2621,6 +2663,7 @@ function resolvePaymentRecipients(o){
 async function confirmPlantPaymentSent(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
+  if (!(await plantStatusGate(o))) return; // owner 2026-11-19: the plant confirms the load status first
 
   const { to: paymentsEmails, cc: salesEmails } = resolvePaymentRecipients(o);
   if (!paymentsEmails.length){
@@ -2695,6 +2738,7 @@ async function markPlantPaidFallback(orderNumber){
 async function confirmPlantPaymentWhatsApp(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
+  if (!plantStatusAllowsPayment(o)){ await plantStatusGate(o); return; } // owner 2026-11-19: the plant confirms the load status first
   const waPhone = o.plant && (o.plant.payments_whatsapp || o.plant.whatsapp || o.plant.phone);
   if (!waPhone){ await btAlert('No WhatsApp/phone on file for this plant.'); return; }
   window.open(BANK_LOGIN_URL, '_blank');
