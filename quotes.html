@@ -6201,7 +6201,7 @@ function rqPalNightIdleHtml(pop){
   const W = Math.max(440, Math.min(1200, hostW)), H = Math.max(250, rqPalNightH() + 74), rest = [], labels = []; // no product row above it: the stage takes that room
   groups.forEach(g => { const geo = rqPalGeoOf(g.city); if (!geo){ rest.push(g); return; }
     g.customers.forEach(cu => { const nm = String(cu.trade_name).trim(); // one card per customer: the city is written on the map, at its dot, and not here (owner 2026-11-18: "no muestres el nombre de la ciudad dos veces")
-      labels.push(`<div class="rq-pal-nl${geo[2] === 'US' ? ' a' : ''}${pop ? ' pop' : ''}" data-lat="${geo[0]}" data-lon="${geo[1]}" data-city="${escapeHtml(String(g.city).trim())}" style="width:${Math.max(104, Math.min(230, Math.round(nm.length * 7 + 30)))}px;height:28px;--i:${labels.length}" title="${escapeHtml(nm + ' — ' + g.city)}"><b>${escapeHtml(nm)}</b></div>`); }); });
+      labels.push(`<div class="rq-pal-nl${geo[2] === 'US' ? ' a' : ''}${pop ? ' pop' : ''}" data-lat="${geo[0]}" data-lon="${geo[1]}" data-city="${escapeHtml(String(g.city).trim())}" style="width:${Math.max(104, Math.min(268, Math.round(nm.length * 7.2 + 32)))}px;height:28px;--i:${labels.length}" title="${escapeHtml(nm + ' — ' + g.city)}"><b>${escapeHtml(nm)}</b></div>`); }); });
   const total = groups.reduce((n, g) => n + g.customers.length, 0);
   return `<div class="rq-pal-main rq-pal-idle rq-pal-idle-n">
     <div class="rq-pal-lab" style="justify-content:center;margin:0 0 8px;">Where your customers are${all ? ` <b>${total}</b>` : ''}</div>
@@ -6272,7 +6272,7 @@ function rqPalNightW(){
   if (window.innerWidth <= 980) return 0;
   const bx = document.querySelector('.rq-palette-box'), bw = bx ? bx.clientWidth : 0; if (!bw) return 0;
   const solo = document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1, inner = bw - 48 - 18, detail = solo ? inner - 118 : Math.round(inner * 2 / 2.55), W = Math.min(1200, detail - 236 - 18);
-  return W >= 440 ? W : 0;
+  return W >= 400 ? W : 0; // (owner 2026-11-18: "no salen fichas": at 1000 px with several results the stage is 433 px wide: it fits, so the fichas come out)
 }
 // the height the stage can have: the window is the whole screen, minus the search bar, the product, the "Who asked" row and the footer
 function rqPalNightH(){
@@ -6314,7 +6314,14 @@ function rqPalNightHtml(x){
 }
 // THE NIGHT IS THE WHOLE WINDOW (owner 2026-11-17: "quedó bien acomodado, una tarjeta pegada en vez de ser toda la pantalla"): the stars and the land are drawn on ONE canvas behind the whole Find Product window (search, product, plants, footer are over it);
 // the dots of the customers' places and the leaders are placed from where the stage really is.
+let rqPalFontsAsked = false;
+// the sky writes with web fonts (Space Grotesk, IBM Plex Mono) that may still be arriving the first time: a canvas keeps the letters it drew, so when they are in the night is drawn again (owner 2026-11-18: "las letras no están bien hechas")
+function rqPalFontsReady(){
+  if (rqPalFontsAsked || !document.fonts || !document.fonts.load) return; rqPalFontsAsked = true;
+  Promise.all(['500 10px "Space Grotesk"', '600 10px "Space Grotesk"', '700 10px "Space Grotesk"', '600 10px "IBM Plex Mono"'].map(f => document.fonts.load(f))).then(() => { const h = document.getElementById('rq_pal_detail'); if (h && h.querySelector('.rq-pal-night')) rqPalNight(h); }).catch(() => {});
+}
 function rqPalNight(host){
+  rqPalFontsReady();
   const st = host.querySelector('.rq-pal-night'), bx = document.querySelector('.rq-palette-box'); if (!st || !bx) return;
   let cv = document.getElementById('rq_pal_sky'); if (!cv){ cv = document.createElement('canvas'); cv.id = 'rq_pal_sky'; bx.insertBefore(cv, bx.firstChild); }
   const BW = bx.clientWidth, BH = bx.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2), br = bx.getBoundingClientRect(), sr = st.getBoundingClientRect(), ox = sr.left - br.left, oy = sr.top - br.top;
@@ -6324,13 +6331,15 @@ function rqPalNight(host){
   const P = rqPalProj(ox, oy, st.clientWidth || +st.dataset.w, st.clientHeight || +st.dataset.h), M = RQ_PAL_MAP, c = rqPalMapCells(); // the wide map: the plants of the USA and Mexico, all on the stage
   const tint = new Map(); st.querySelectorAll('.rq-pal-fc[data-lat]').forEach(f => { const sid = rqPalMxStateOf(+f.dataset.lat, +f.dataset.lon); if (!sid) return; const kk = f.classList.contains('g') ? 'g' : f.classList.contains('a') ? 'a' : 'n'; tint.set(sid, tint.has(sid) && tint.get(sid) !== kk ? 'mix' : kk); });
   st.querySelectorAll('.rq-pal-nl[data-lat]').forEach(el => { const sid = rqPalMxStateOf(+el.dataset.lat, +el.dataset.lon); if (sid) tint.set(sid, 'mix'); }); // the start screen has no product, so no status: the states where customers are take the neutral blue
-  if (!rqPalMapVector(x, P, BW, BH, ox + st.clientWidth / 2, oy + st.clientHeight / 2, tint, true)) for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){ // the real outlines of Mexico; the dots only if they cannot be read
+  const hide = new Set(), nrm = v => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); // a state whose name is the name of one of the cities written on the map is not named twice
+  st.querySelectorAll('.rq-pal-nl[data-city], .rq-pal-fc[data-city]').forEach(el => { const sid = rqPalMxStateOf(+el.dataset.lat, +el.dataset.lon), sn = sid && (rqPalMxGeo().st.find(z => z.id === sid) || {}).name; if (sn && nrm(sn) === nrm(el.dataset.city)) hide.add(sid); });
+  if (!rqPalMapVector(x, P, BW, BH, ox + st.clientWidth / 2, oy + st.clientHeight / 2, tint, true, hide)) for (let j = 0; j < M.h; j++) for (let i = 0; i < M.w; i++){ // the real outlines of Mexico; the dots only if they cannot be read
     const v = c[j * M.w + i]; if (!v) continue;
     const q = P(M.lat1 - (j + .5) * M.st, M.lon0 + (i + .5) * M.st); if (q[0] < -4 || q[0] > BW + 4 || q[1] < -4 || q[1] > BH + 4) continue;
     x.fillStyle = v === 2 ? 'rgba(150,205,250,.5)' : 'rgba(100,150,225,.12)'; x.beginPath(); x.arc(q[0], q[1], v === 2 ? 1.5 : 1, 0, 7); x.fill();
   }
   bx.classList.add('rq-pal-night-on');
-  const g = st.querySelector('.rq-pal-pins'); if (!g) return;
+  const g = st.querySelector('.rq-pal-pins'); if (!g) return; g.innerHTML = ''; // (the night can be drawn again, when the fonts arrive)
   const NS = 'http://www.w3.org/2000/svg', col = cl => cl.contains('g') ? '#3FCB7E' : cl.contains('a') ? '#FFC876' : '#8FA3BF', add = (tag, at, txt) => { const e = document.createElementNS(NS, tag); Object.keys(at).forEach(k => e.setAttribute(k, at[k])); if (txt != null) e.textContent = txt; g.appendChild(e); return e; };
   const W = st.clientWidth || +st.dataset.w, H = st.clientHeight || +st.dataset.h; // the stage as it really is now
   const pin = (X, Y, cc) => { add('circle', { cx: X.toFixed(1), cy: Y.toFixed(1), r: 11, fill: cc, 'fill-opacity': .14 }); add('circle', { class: 'rq-pal-lpulse', cx: X.toFixed(1), cy: Y.toFixed(1), r: 6, fill: 'none', stroke: cc, 'stroke-width': 1.2 }); add('circle', { cx: X.toFixed(1), cy: Y.toFixed(1), r: 3.8, fill: '#fff', stroke: cc, 'stroke-width': 1.8, style: `filter:drop-shadow(0 0 5px ${cc})` }); };
@@ -6489,7 +6498,8 @@ function rqPalSplitName(n){
   return cut > 0 ? [n.slice(0, cut), n.slice(cut + 1)] : null;
 }
 // colors = the start screen: every state in its own soft colour (owner 2026-11-18: "mas grande que se vea bien los estados colores")
-function rqPalMapVector(x, P, BW, BH, cx, cy, tint, colors){
+// hide = Set of state ids whose name is not written (the city of the same name is written on the map: never twice)
+function rqPalMapVector(x, P, BW, BH, cx, cy, tint, colors, hide){
   const G = rqPalMxGeo(); if (!G.st.length) return false;
   const path = rings => { const p = new Path2D(); rings.forEach(r => { r.forEach((q, i) => { const a = P(q[1], q[0]); if (i) p.lineTo(a[0], a[1]); else p.moveTo(a[0], a[1]); }); p.closePath(); }); return p; };
   const nb = path(G.nb), sp = G.st.map(s => { let y0 = 1e9, y1 = -1e9; s.rings.forEach(r => r.forEach(q => { const yy = P(q[1], q[0])[1]; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; })); return { s, p: path(s.rings), y0, y1 }; });
@@ -6513,14 +6523,14 @@ function rqPalMapVector(x, P, BW, BH, cx, cy, tint, colors){
   sp.forEach(o => { // the NAME of every state (owner 2026-11-18: "muestra mejor los nombres de los estados que se vean bien con los colores"): as big as the state allows, in two lines if it needs, the code if even that does not fit; a dark halo over the colour
     const rg = o.s.rings.reduce((b, r) => r.length > b.length ? r : b, []); let A = 0, mx = 0, my = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     for (let i = 0; i < rg.length - 1; i++){ const a = P(rg[i][1], rg[i][0]), b = P(rg[i + 1][1], rg[i + 1][0]), w = a[0] * b[1] - b[0] * a[1]; A += w; mx += (a[0] + b[0]) * w; my += (a[1] + b[1]) * w; x0 = Math.min(x0, a[0]); x1 = Math.max(x1, a[0]); y0 = Math.min(y0, a[1]); y1 = Math.max(y1, a[1]); }
-    A /= 2; if (!A) return; mx /= 6 * A; my /= 6 * A; const k = tint.get(o.s.id), big = !!k, fs = big ? 10 : 9, cw = fs * .6, bw = (x1 - x0) * .84, bh = y1 - y0, name = o.s.name.toUpperCase(); let lines = null;
+    A /= 2; if (!A || (hide && hide.has(o.s.id))) return; mx /= 6 * A; my /= 6 * A; const k = tint.get(o.s.id), big = !!k, fs = big ? 10.5 : 9.5, cw = fs * .62 + .6, bw = (x1 - x0) * .86, bh = y1 - y0, name = o.s.name.toUpperCase(); let lines = null;
     if (name.length * cw <= bw && bh >= fs * 1.7) lines = [name];
     else { const two = rqPalSplitName(name); if (two && Math.max(two[0].length, two[1].length) * cw <= bw && bh >= fs * 3.2) lines = two; else if (o.s.id.length * cw <= bw && bh >= fs * 1.7) lines = [o.s.id]; }
     if (!lines) return;
-    x.font = `${big ? 700 : 600} ${fs}px IBM Plex Mono,monospace`; x.lineWidth = 3; x.strokeStyle = 'rgba(3,12,30,.85)'; x.fillStyle = big ? (k === 'mix' && colors && o.c ? '#fff' : KC[k][1]) : 'rgba(228,241,255,.94)';
+    x.font = `${big ? 700 : 600} ${fs}px "Space Grotesk",Inter,sans-serif`; if ('letterSpacing' in x) x.letterSpacing = '.6px'; x.lineWidth = 2.6; x.strokeStyle = 'rgba(3,12,30,.78)'; x.fillStyle = big ? (k === 'mix' && colors && o.c ? '#fff' : KC[k][1]) : 'rgba(228,241,255,.94)';
     lines.forEach((ln, i) => { const yy = my + (i - (lines.length - 1) / 2) * fs * 1.15; x.strokeText(ln, mx, yy); x.fillText(ln, mx, yy); });
   });
-  x.font = '600 10px IBM Plex Mono,monospace'; x.fillStyle = 'rgba(160,205,255,.30)'; x.lineWidth = 3; x.strokeStyle = 'rgba(3,12,30,.55)'; if ('letterSpacing' in x) x.letterSpacing = '4px';
+  x.font = '600 10.5px "Space Grotesk",Inter,sans-serif'; x.fillStyle = 'rgba(170,212,255,.34)'; x.lineWidth = 3; x.strokeStyle = 'rgba(3,12,30,.55)'; if ('letterSpacing' in x) x.letterSpacing = '5px';
   [['UNITED STATES', 37, -98], ['GULF OF MEXICO', 24.6, -90.2], ['PACIFIC OCEAN', 21.5, -113.5]].forEach(r => { const q = P(r[1], r[2]); x.strokeText(r[0], q[0], q[1]); x.fillText(r[0], q[0], q[1]); }); if ('letterSpacing' in x) x.letterSpacing = '0px'; // the country and the two seas, named quietly
   x.textBaseline = 'alphabetic';
   return true;
@@ -6546,7 +6556,7 @@ function rqPalCityPlace(cities, W, H, avoid){
   const taken = (avoid || []).slice(), out = [], over = (a, b) => Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
   cities.forEach(c => taken.push([c.X - 8, c.Y - 8, 16, 16]));
   cities.slice().sort((a, b) => a.Y - b.Y || a.X - b.X).forEach(c => {
-    const w = c.name.length * 6.4 + (c.count > 1 ? 20 : 0), cand = [[11, 4, 'start'], [-11, 4, 'end'], [10, -9, 'start'], [-10, -9, 'end'], [10, 17, 'start'], [-10, 17, 'end'], [0, -14, 'middle'], [0, 22, 'middle'], [20, 4, 'start'], [-20, 4, 'end']]; let best = null, bestA = 1e9;
+    const w = c.name.length * 7 + (c.count > 1 ? 22 : 0), cand = [[11, 4, 'start'], [-11, 4, 'end'], [10, -9, 'start'], [-10, -9, 'end'], [10, 17, 'start'], [-10, 17, 'end'], [0, -14, 'middle'], [0, 22, 'middle'], [20, 4, 'start'], [-20, 4, 'end']]; let best = null, bestA = 1e9;
     cand.forEach(k => { const x0 = k[2] === 'start' ? c.X + k[0] : k[2] === 'end' ? c.X + k[0] - w : c.X - w / 2, y0 = c.Y + k[1] - 10, r = [x0, y0, w, 14]; let a = 0; taken.forEach(t => { a += over(r, t); }); if (x0 < 4 || x0 + w > W - 4 || y0 < 2 || y0 + 14 > H - 2) a += 600;
       if (a < bestA){ bestA = a; best = { c, x: k[2] === 'middle' ? c.X : c.X + k[0], y: c.Y + k[1], anchor: k[2], rect: r }; } });
     taken.push(best.rect); out.push(best);
