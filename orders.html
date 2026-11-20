@@ -2350,6 +2350,8 @@ let orderCustomsName = {}; // the customs agency's name, shown under its city (o
 const ocTruckShown = new Set(); // the truck drives once per load, not on every refresh
 const customsAgencyCity = {};
 const customsAgencyName = {};
+// a city as the agency typed it may carry the zip code ("Mission, TX 78572"): the card shows the city only; the stored address is untouched
+function ocCleanCity(c){ return String(c || '').trim().replace(/[,\s]+\d{5}(-\d{4})?$/, ''); }
 function ocPickupCity(o){ return String((o.pickup_location && o.pickup_location.location_name) || '').trim(); }
 // the plant delivers the load to the border itself (DAP: no carrier booked, no pick-up place): there is no pick-up city, the card says "Delivered at border" and the day (owner 2026-11-20)
 function ocPlantDelivers(o){ return !o.has_freight_order && !ocPickupCity(o); }
@@ -2446,7 +2448,7 @@ async function loadCustomsCities(){
   }
   for (const id of [...new Set(Object.values(agencyOf).filter(Boolean))]){
     if (customsAgencyCity[id] !== undefined) continue;
-    try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && String(pr.city || '').trim()) || false; customsAgencyName[id] = (pr && String(pr.name || '').trim()) || ''; }
+    try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && ocCleanCity(pr.city)) || false; customsAgencyName[id] = (pr && String(pr.name || '').trim()) || ''; }
     catch (e) { /* tried again next load */ }
   }
   const next = {};
