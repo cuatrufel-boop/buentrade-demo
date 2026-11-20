@@ -2453,9 +2453,9 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
 
-  try { await callApi('shipments-update-status', { actor: currentActor(), shipment_id: o.id, status: newStatus, notes: notes || null }); }
-  catch (e) { await btAlert('Error updating status: ' + e.message); return; }
-
+  // Owner 2026-11-19: "se movió a delivered porque yo abrí el correo, después lo cerré y el sistema piensa que sí se mandó… no me preguntó después si mandé o no". The stage used to change BEFORE the
+  // customer's message was even opened, so closing the preview left the load moved. Now the message comes first, and the stage moves ONLY when it really went out, or when he says "Yes, sent" after
+  // closing it (e.g. he sent it by WhatsApp). Closing it without sending and answering "Not sent" leaves the load exactly where it was.
   const bodyFn = STAGE_EMAIL_BODY_ES[newStatus];
   const waFn = STAGE_WHATSAPP_ES[newStatus];
   const subjFn = STAGE_SUBJECTS_ES[newStatus];
@@ -2463,8 +2463,10 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
     const contact = (o.customer && o.customer.contact_name) ? o.customer.contact_name.split(' ')[0] : o.customer_name;
     const emails = o.customer ? collectCustomerEmails(o.customer) : [];
     const phone = (o.customer && (o.customer.whatsapp || o.customer.phone)) || '';
+    const stageLabel = (LOAD_STAGES.find(s => s.key === newStatus) || {}).label || newStatus;
     if (!emails.length){
-      await btAlert('Status updated, but this customer has no email on file — no notification sent.');
+      const told = await btConfirm(`${o.customer_name} has no email on file. Did you let the customer know the load is ${stageLabel} another way (WhatsApp, phone)?`, 'Yes, sent', 'Not sent');
+      if (!told){ showToast('Stage not changed', `${orderNumber} stays where it was.`); return; }
     } else {
       try {
         // Real bug found live 2026-09-12: this went out as "Logistics BuenTrade" — the carrier/
@@ -2474,10 +2476,19 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
         await sendEmailApi('offers', emails, subjFn(o), bodyFn(o, contact), [], { phone, message: waFn(o, contact) });
         showToast('Customer notified', emails.join(', '));
       } catch (e){
-        if (!e.cancelled) await btAlert('Could not send the notification: ' + e.message);
+        if (e.cancelled){
+          const told = await btConfirm(`Did you send the "${stageLabel}" message to ${o.customer_name} (for example by WhatsApp)?`, 'Yes, sent', 'Not sent');
+          if (!told){ showToast('Stage not changed', `${orderNumber} stays where it was.`); return; }
+        } else {
+          await btAlert('Could not send the notification: ' + e.message + ' The stage was not changed.');
+          return;
+        }
       }
     }
   }
+
+  try { await callApi('shipments-update-status', { actor: currentActor(), shipment_id: o.id, status: newStatus, notes: notes || null }); }
+  catch (e) { await btAlert('Error updating status: ' + e.message); return; }
 
   await loadStatusOrders();
 }
