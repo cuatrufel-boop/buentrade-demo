@@ -2365,8 +2365,8 @@ function ocCrossing(city){
   const k = ocCleanCity(city).split(',')[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   return OC_CROSSING[k] || ocCleanCity(city);
 }
-// crossing + the agency's short name ("McAllen Integrity"); no short name on file = the crossing alone
-function ocCrossingShort(crossing, short){ return crossing && short ? crossing + ' ' + short : crossing; }
+// under the crossing the card says the agency's SHORT name ("Integrity", "Portus", "Palos Garza"), never the long one; no short name on file = its full name
+function ocAgencyLabel(short, full){ return String(short || full || '').trim(); }
 function ocPickupCity(o){ return String((o.pickup_location && o.pickup_location.location_name) || '').trim(); }
 // the plant delivers the load to the border itself (DAP: no carrier booked, no pick-up place): there is no pick-up city, the card says "Delivered at border" and the day (owner 2026-11-20)
 function ocPlantDelivers(o){ return !o.has_freight_order && !ocPickupCity(o); }
@@ -2467,9 +2467,9 @@ async function loadCustomsCities(){
     catch (e) { /* tried again next load */ }
   }
   const next = {};
-  orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : ocCrossingShort(ocCrossing(customsAgencyCity[a]), customsAgencyShort[a])) : false; });
+  orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : ocCrossing(customsAgencyCity[a])) : false; });
   orderCustomsCity = { ...orderCustomsCity, ...next };
-  orders.forEach(o => { const a = agencyOf[o.order_number]; if (a && customsAgencyName[a]) orderCustomsName[o.order_number] = customsAgencyName[a]; });
+  orders.forEach(o => { const a = agencyOf[o.order_number]; const lab = a && ocAgencyLabel(customsAgencyShort[a], customsAgencyName[a]); if (lab) orderCustomsName[o.order_number] = lab; });
   renderStatusOrders();
 }
 
