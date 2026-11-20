@@ -2346,8 +2346,10 @@ const OC_ICO = {
 };
 // customs city per order (the customs agency of the customer, else of the offer — same order as "Share with customs"); undefined = still looking, false = none on file
 let orderCustomsCity = {};
+let orderCustomsName = {}; // the customs agency's name, shown under its city (owner 2026-11-20: name of the agency and the crossing city)
 const ocTruckShown = new Set(); // the truck drives once per load, not on every refresh
 const customsAgencyCity = {};
+const customsAgencyName = {};
 function ocPickupCity(o){ return String((o.pickup_location && o.pickup_location.location_name) || '').trim(); }
 // the plant delivers the load to the border itself (DAP: no carrier booked, no pick-up place): there is no pick-up city, the card says "Delivered at border" and the day (owner 2026-11-20)
 function ocPlantDelivers(o){ return !o.has_freight_order && !ocPickupCity(o); }
@@ -2421,7 +2423,7 @@ function renderOrderRow(o, attentionOrderNumbers){
           ? `<div class="oc-stop p"><div class="dot">${OC_ICO.truck}</div><div><b>Delivered at border</b><small>${escapeHtml(ocShortDay(o) || o.plant_name || '—')}</small></div></div>`
           : `<div class="oc-stop p"><div class="dot">${OC_ICO.pin}</div><div><b>${escapeHtml(city || 'City not set')}</b><small>${escapeHtml(o.plant_name || '—')}</small></div></div>`}
         <div class="oc-lane"><div class="fill" style="width:${pct}%"></div><div class="tr ${delivered ? 'ok' : ''}" style="left:${pct}%">${delivered ? OC_ICO.check : OC_ICO.truck}</div></div>
-        <div class="oc-stop c"><div class="dot">${OC_ICO.shield}</div><div><b>${escapeHtml(borderTxt)}</b><small>${delivered ? 'Delivered · customs' : 'Customs'}</small></div></div>
+        <div class="oc-stop c"><div class="dot">${OC_ICO.shield}</div><div><b>${escapeHtml(borderTxt)}</b><small>${escapeHtml(delivered ? 'Delivered · ' + (orderCustomsName[o.order_number] || 'customs') : (orderCustomsName[o.order_number] || 'Customs'))}</small></div></div>
       </div></div>
     <div class="oc-act">${head}${delivered && btn ? btn : ''}<small>${sub}</small>${ocRail(railSteps)}</div>
   </div>`;
@@ -2444,12 +2446,13 @@ async function loadCustomsCities(){
   }
   for (const id of [...new Set(Object.values(agencyOf).filter(Boolean))]){
     if (customsAgencyCity[id] !== undefined) continue;
-    try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && String(pr.city || '').trim()) || false; }
+    try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && String(pr.city || '').trim()) || false; customsAgencyName[id] = (pr && String(pr.name || '').trim()) || ''; }
     catch (e) { /* tried again next load */ }
   }
   const next = {};
   orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : customsAgencyCity[a]) : false; });
   orderCustomsCity = { ...orderCustomsCity, ...next };
+  orders.forEach(o => { const a = agencyOf[o.order_number]; if (a && customsAgencyName[a]) orderCustomsName[o.order_number] = customsAgencyName[a]; });
   renderStatusOrders();
 }
 
