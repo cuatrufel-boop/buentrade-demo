@@ -2350,12 +2350,14 @@ let orderCustomsName = {}; // the customs agency's name, shown under its city (o
 const ocTruckShown = new Set(); // the truck drives once per load, not on every refresh
 const customsAgencyCity = {};
 const customsAgencyName = {};
+const customsAgencyShort = {};
 // a city as the agency typed it may carry the zip code ("Mission, TX 78572"): the card shows the city only; the stored address is untouched
 function ocCleanCity(c){ return String(c || '').trim().replace(/[,\s]+\d{5}(-\d{4})?$/, ''); }
 // The customs side of the card names the CROSSING, not the agency's own town (owner 2026-11-20: "no quiero la ciudad como mission, solo laredo, mcallen, san diego o nogales"):
 // the towns of the McAllen crossing (the Rio Grande Valley) say McAllen, Laredo says Laredo, San Diego / Otay Mesa say San Diego, Nogales says Nogales. A town that is in none of these is shown as the agency typed it — never guessed.
 const OC_CROSSING = {
   'laredo': 'Laredo', 'nogales': 'Nogales', 'san diego': 'San Diego', 'otay mesa': 'San Diego',
+  'brownsville': 'Brownsville', 'eagle pass': 'Eagle Pass', 'del rio': 'Del Rio', 'el paso': 'El Paso', 'calexico': 'Calexico', 'rio grande city': 'Rio Grande City', 'roma': 'Roma', // the other borders the system already knows (Quotes map): each one names itself
   'mcallen': 'McAllen', 'mission': 'McAllen', 'pharr': 'McAllen', 'hidalgo': 'McAllen', 'edinburg': 'McAllen', 'san juan': 'McAllen', 'alamo': 'McAllen', 'donna': 'McAllen', 'weslaco': 'McAllen', 'mercedes': 'McAllen', 'palmview': 'McAllen', 'penitas': 'McAllen',
 };
 function ocCrossing(city){
@@ -2363,6 +2365,8 @@ function ocCrossing(city){
   const k = ocCleanCity(city).split(',')[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   return OC_CROSSING[k] || ocCleanCity(city);
 }
+// crossing + the agency's short name ("McAllen Integrity"); no short name on file = the crossing alone
+function ocCrossingShort(crossing, short){ return crossing && short ? crossing + ' ' + short : crossing; }
 function ocPickupCity(o){ return String((o.pickup_location && o.pickup_location.location_name) || '').trim(); }
 // the plant delivers the load to the border itself (DAP: no carrier booked, no pick-up place): there is no pick-up city, the card says "Delivered at border" and the day (owner 2026-11-20)
 function ocPlantDelivers(o){ return !o.has_freight_order && !ocPickupCity(o); }
@@ -2459,11 +2463,11 @@ async function loadCustomsCities(){
   }
   for (const id of [...new Set(Object.values(agencyOf).filter(Boolean))]){
     if (customsAgencyCity[id] !== undefined) continue;
-    try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && ocCleanCity(pr.city)) || false; customsAgencyName[id] = (pr && String(pr.name || '').trim()) || ''; }
+    try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && ocCleanCity(pr.city)) || false; customsAgencyName[id] = (pr && String(pr.name || '').trim()) || ''; customsAgencyShort[id] = (pr && String(pr.short_name || '').trim()) || ''; }
     catch (e) { /* tried again next load */ }
   }
   const next = {};
-  orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : ocCrossing(customsAgencyCity[a])) : false; });
+  orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : ocCrossingShort(ocCrossing(customsAgencyCity[a]), customsAgencyShort[a])) : false; });
   orderCustomsCity = { ...orderCustomsCity, ...next };
   orders.forEach(o => { const a = agencyOf[o.order_number]; if (a && customsAgencyName[a]) orderCustomsName[o.order_number] = customsAgencyName[a]; });
   renderStatusOrders();
