@@ -1186,8 +1186,12 @@ async function askPlantStatusClick(orderNumber){
   if (!toEmail){ await btAlert(`Neither the pick-up location nor the plant has an email on file — add one in Plants before asking for the status of ${orderNumber}.`); return; }
   const { subject, body } = pickupStatusEmailContent(orderNumber, String(o.plant_name || '').trim(), fullProductLabel(o), fmtDateStr(o.pickup_date));
   const cc = (o.carrier && o.carrier.email) ? [o.carrier.email] : [];
+  // The same companion WhatsApp every pick-up e-mail has (owner 2026-11-19: "el mensaje del pickup solo tiene opción de email y no de whatsapp"): the plant's own WhatsApp / phone, the approved status text
+  // (statusCheckMessage); the e-mail preview offers it next to the e-mail, nothing goes until he presses Send.
+  const waPhone = String((o.plant && (o.plant.whatsapp || o.plant.phone)) || '').replace(/\D/g, '');
+  const waInfo = waPhone ? { phone: waPhone, message: statusCheckMessage(o) } : null;
   try {
-    await sendEmailApi('logistics', [toEmail], subject, body, [], null, cc);
+    await sendEmailApi('logistics', [toEmail], subject, body, [], waInfo, cc);
     showToast('Status requested', toEmail);
     await markDocSent(orderNumber, 'pickup_status');
     await loadStatusOrders();
