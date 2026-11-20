@@ -1223,6 +1223,20 @@ async function confirmPlantStatusClick(orderNumber){
   showToast('Plant status confirmed', 'You can now pay the plant.');
   await loadStatusOrders();
 }
+// Owner 2026-11-19: "debe tener un botón que confirme si mandó o no". Nothing is marked as sent by itself: when the request went out some other way (his own Gmail, a call), HE states it here.
+// Only "Yes, I sent it" records it; "No, not sent" records nothing.
+async function confirmPlantStatusSentClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  if (o.pickup_status_sent_at){ showToast('Already recorded as sent', fmtDateStr(o.pickup_status_sent_at)); return; }
+  const plantName = String(o.plant_name || 'the plant').trim();
+  const yes = await btConfirm(`Did you send the load-status request to ${plantName} for ${orderNumber}?`, 'Yes, I sent it', 'No, not sent');
+  if (!yes){ showToast('Not recorded', 'Nothing was marked as sent.'); return; }
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'pickup_status' }); }
+  catch (e) { await btAlert('Could not record it: ' + e.message); return; }
+  showToast('Status request recorded as sent', plantName);
+  await loadStatusOrders();
+}
 // Real ask 2026-09-07: "todos deben ser linkeables con una accion" — Signature has no real
 // trader-side action (only the customer signs remotely), but it still needs to respond to a click
 // instead of sitting there dead. Reports the real status instead of doing nothing.
@@ -1533,7 +1547,11 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     : `payPlantClick('${o.order_number}')`;
   // Owner 2026-11-19: the plant's status of the load comes BEFORE paying — ask it (e-mail to the pick-up location copying the carrier, sent only when he approves it), then record the plant's
   // confirmation (clicking the step again once asked); Pay Plant opens after (plantStatusAllowsPayment: a payment already under way never goes back to waiting).
-  entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: plantStatusAllowsPayment(o), date: o.pickup_status_confirmed_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: o.pickup_status_sent_at ? `confirmPlantStatusClick('${o.order_number}')` : `askPlantStatusClick('${o.order_number}')` }));
+  // Owner 2026-11-19: "nunca confirmé que había mandado email y sale como delivered" — the step is done ONLY when he recorded the plant's confirmation; a payment already under way without any status
+  // request (e.g. 1002, paid before this step existed) no longer shows it as done — the step is simply not part of that order's line.
+  if (o.pickup_status_sent_at || o.pickup_status_confirmed_at || !(o.plant_paid_at || o.summar_payment_sent_at)){
+    entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: !!o.pickup_status_confirmed_at, date: o.pickup_status_confirmed_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: o.pickup_status_sent_at ? `confirmPlantStatusClick('${o.order_number}')` : `askPlantStatusClick('${o.order_number}')` }));
+  }
   entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: !docBeforePaymentDone || !plantStatusAllowsPayment(o), waitReason: !docBeforePaymentDone ? docBeforePaymentReason : 'The plant must confirm the load status first.', onClick: payPlantOnClick }));
   // Real gap found 2026-09-07: "revisa todo... faltan mas cosas" — recordReleaseNumber/
   // sendReleaseNumberToCarrier only lived inside the collapsed Documentos panel, invisible on the
@@ -1865,7 +1883,7 @@ function computeAttentionItems(){
       const daysToPickup = Math.round((new Date(String(o.pickup_date).slice(0, 10) + 'T00:00:00').getTime() - today.getTime()) / 86400000);
       if (daysToPickup <= PICKUP_STATUS_DAYS_BEFORE_PICKUP){
         items.push({ orderNumber: label, order_number: o.order_number, text: `Ask the plant for the load status — ${productName}`,
-          btn: `<button class="wa-btn" onclick="askPlantStatusClick('${o.order_number}')">Ask Plant Status</button>` });
+          btn: `<button class="wa-btn" onclick="askPlantStatusClick('${o.order_number}')">Ask Plant Status</button> <button class="wa-btn outline" onclick="confirmPlantStatusSentClick('${o.order_number}')">Did You Send It?</button>` });
       }
     }
     // Asked but not yet confirmed by the plant: the payment waits for it (owner 2026-11-19); he records the confirmation here, or asks again.
@@ -2126,7 +2144,7 @@ function renderOrderDocsPanel(o, nextActionLabel){
       // Owner 2026-11-19: the plant confirms the load status before the payment opens — ask it, then record its confirmation.
       paymentBtn = o.pickup_status_sent_at
         ? docRowBtn('Plant Confirmed', `confirmPlantStatusClick('${o.order_number}')`) + docRowBtn('↻ Ask Again', `askPlantStatusClick('${o.order_number}')`)
-        : docRowBtn('Ask Plant Status', `askPlantStatusClick('${o.order_number}')`);
+        : docRowBtn('Ask Plant Status', `askPlantStatusClick('${o.order_number}')`) + docRowBtn('Did You Send It?', `confirmPlantStatusSentClick('${o.order_number}')`);
       paymentStatus = o.pickup_status_sent_at ? 'Waiting for the plant to confirm the load status' : 'Waiting on the plant status';
     } else if (isSummarFinanced && !o.plant_paid_at){
       if (!o.summar_payment_sent_at){
