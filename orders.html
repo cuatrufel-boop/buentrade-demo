@@ -2349,6 +2349,9 @@ let orderCustomsCity = {};
 const ocTruckShown = new Set(); // the truck drives once per load, not on every refresh
 const customsAgencyCity = {};
 function ocPickupCity(o){ return String((o.pickup_location && o.pickup_location.location_name) || '').trim(); }
+// the plant delivers the load to the border itself (DAP: no carrier booked, no pick-up place): there is no pick-up city, the card says "Delivered at border" and the day (owner 2026-11-20)
+function ocPlantDelivers(o){ return !o.has_freight_order && !ocPickupCity(o); }
+function ocShortDay(o){ const d = ocDate(o); return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''; }
 // the date a load is read by: delivered loads use the delivery day, the rest the pick-up day
 function ocDate(o){
   const d = o.load_status === 'delivered' ? (o.delivered_at || o.pickup_date) : o.pickup_date;
@@ -2383,6 +2386,9 @@ function ocDateBlock(o){
 function ocPlantHover(o){
   const city = ocPickupCity(o), d = ocDate(o), when = d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : '';
   const border = orderCustomsCity[o.order_number];
+  if (ocPlantDelivers(o) && o.load_status !== 'delivered'){
+    return `<span class="oc-plant">${escapeHtml(o.plant_name || '—')}<div class="oc-pop"><div class="k">Plant delivers</div><div class="v">${OC_ICO.truck} Delivered at border</div>${when ? `<div class="s">${OC_ICO.clock} ${escapeHtml(when)} · ${escapeHtml(ocRelative(o))}</div>` : ''}</div></span>`;
+  }
   if (o.load_status === 'delivered'){
     return `<span class="oc-plant">${escapeHtml(o.plant_name || '—')}<div class="oc-pop gr"><div class="k">Delivered</div><div class="v">${OC_ICO.check} ${escapeHtml(border ? border + ' border' : 'Delivered')}</div>${city ? `<div class="s">${OC_ICO.pin} Picked up in ${escapeHtml(city)}</div>` : ''}${when ? `<div class="s" style="margin-top:4px">${OC_ICO.clock} ${escapeHtml(when)}</div>` : ''}</div></span>`;
   }
@@ -2411,7 +2417,9 @@ function renderOrderRow(o, attentionOrderNumbers){
       <h3 onclick="openOrderDetail('${o.order_number}')" title="View order">${escapeHtml(o.customer_name || '—')}</h3>
       <div class="sub">${escapeHtml(productName || '—')} · ${ocPlantHover(o)}</div>
       <div class="oc-route">
-        <div class="oc-stop p"><div class="dot">${OC_ICO.pin}</div><div><b>${escapeHtml(city || 'City not set')}</b><small>${escapeHtml(o.plant_name || '—')}</small></div></div>
+        ${ocPlantDelivers(o)
+          ? `<div class="oc-stop p"><div class="dot">${OC_ICO.truck}</div><div><b>Delivered at border</b><small>${escapeHtml(ocShortDay(o) || o.plant_name || '—')}</small></div></div>`
+          : `<div class="oc-stop p"><div class="dot">${OC_ICO.pin}</div><div><b>${escapeHtml(city || 'City not set')}</b><small>${escapeHtml(o.plant_name || '—')}</small></div></div>`}
         <div class="oc-lane"><div class="fill" style="width:${pct}%"></div><div class="tr ${delivered ? 'ok' : ''}" style="left:${pct}%">${delivered ? OC_ICO.check : OC_ICO.truck}</div></div>
         <div class="oc-stop c"><div class="dot">${OC_ICO.shield}</div><div><b>${escapeHtml(borderTxt)}</b><small>${delivered ? 'Delivered · customs' : 'Customs'}</small></div></div>
       </div></div>
