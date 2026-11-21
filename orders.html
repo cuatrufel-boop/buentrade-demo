@@ -2454,25 +2454,31 @@ async function loadCustomsCities(){
   const ids = [...new Set(orders.map(o => o.customer_id).filter(Boolean))];
   const custAgency = {};
   try { (((await callApi('customers-search', { ids })).results) || []).forEach(c => { custAgency[c.id] = c.customs_agency_provider_id || null; }); } catch (e) { return; }
-  for (const o of orders){
+  // every question at once, never one after another (owner 2026-11-20: "no puede haber nada lento")
+  await Promise.all(orders.map(async o => {
     let a = custAgency[o.customer_id];
     if (!a){
       try { const so = ((await callApi('sent-offers-search', { order_number: o.order_number, limit: 1 })).results || [])[0]; a = so && so.customs_agency_provider_id; }
-      catch (e) { continue; }
+      catch (e) { return; }
     }
     agencyOf[o.order_number] = a || null;
-  }
-  for (const id of [...new Set(Object.values(agencyOf).filter(Boolean))]){
-    if (customsAgencyCity[id] !== undefined) continue;
+  }));
+  await Promise.all([...new Set(Object.values(agencyOf).filter(Boolean))].filter(id => customsAgencyCity[id] === undefined).map(async id => {
     try { const pr = ((await callApi('providers-search', { id })).results || [])[0]; customsAgencyCity[id] = (pr && ocCleanCity(pr.city)) || false; customsAgencyName[id] = (pr && String(pr.name || '').trim()) || ''; customsAgencyShort[id] = (pr && String(pr.short_name || '').trim()) || ''; }
     catch (e) { /* tried again next load */ }
-  }
+  }));
   const next = {};
   orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : ocCrossing(customsAgencyCity[a])) : false; });
   orderCustomsCity = { ...orderCustomsCity, ...next };
   orders.forEach(o => { const a = agencyOf[o.order_number]; const lab = a && ocAgencyLabel(customsAgencyShort[a], customsAgencyName[a]); if (lab) orderCustomsName[o.order_number] = lab; });
+  try { localStorage.setItem('btOrdersCustoms', JSON.stringify({ city: orderCustomsCity, name: orderCustomsName })); } catch (e) { /* no storage: it is simply read again */ }
   renderStatusOrders();
 }
+// the last customs answers are kept in this browser: the next visit paints them at once and refreshes them in the background
+function ocLoadCustomsCache(){
+  try { const c = JSON.parse(localStorage.getItem('btOrdersCustoms') || 'null'); if (c && c.city && c.name){ orderCustomsCity = c.city; orderCustomsName = c.name; } } catch (e) { /* nothing kept */ }
+}
+ocLoadCustomsCache();
 
 // The exact content that used to render inline for every order at once — unchanged, just extracted
 // so it can be built for one order on demand (openOrderDetail) instead of all of them always.
