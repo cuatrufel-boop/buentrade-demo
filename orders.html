@@ -3934,13 +3934,16 @@ async function shareSO(orderNumber){
   orderDocsFileCache.delete(orderNumber);
   const so = built.so;
   const soProductName = so.product_spec_es || so.product_name_es || so.product_name || '';
-  const subject = `SO-BT-${btNum(orderNumber)} — Orden de Venta — ${soProductName}`;
-  const body = `Hola,\n\nAdjuntamos la Confirmación de Venta de la orden SO-BT-${btNum(orderNumber)}.\n\n`
+  // SO SEND (owner 2026-11-21, new 12-step flow: his subject, greeting, sentences and closing; "sí" to keeping the detail lines): the same lines the e-mail always carried stay between his two paragraphs.
+  const subject = `SO-BT-${btNum(orderNumber)} | Confirmación de Orden de Venta – ${(built.customer && built.customer.trade_name) || ''}`;
+  const soContactName = String((built.customer && built.customer.contact_name) || '').trim();
+  const body = `Hola${soContactName ? ' ' + soContactName : ''},\n\nTe compartimos adjunta la Orden de Venta (SO) correspondiente a tu pedido SO-BT-${btNum(orderNumber)}.\n\n`
     + `Producto: ${soProductName}\n`
     + `Cantidad: ${(so.weight || 0).toLocaleString('en-US')} lbs\n`
     + `Precio: $${(so.sale_price || 0).toFixed(4)}/lb\n`
     + `Total: $${(so.total_sale || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
-    + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`;
+    + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`
+    + `\n\nPor favor confírmanos de recibido. Quedamos a tus órdenes para cualquier duda.\n\nSaludos,`;
   try {
     await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
     showToast('SO sent', emails.join(', '));
