@@ -3879,14 +3879,17 @@ async function sharePO(orderNumber){
   orderDocsFileCache.delete(orderNumber);
   const po = built.po;
   const poProductName = po.product_spec || po.product_name || '';
-  const subject = `PO-BT-${btNum(orderNumber)} — BuenTrade — ${poProductName}`;
+  // PO SEND (owner 2026-11-21, new 12-step flow: "debe ser así, incluirlo"; "Hi puede sonar feo, puede ser Dear"): his subject and text, and the same detail lines + the customs agency block that the e-mail always carried.
+  const subject = `PO-BT-${btNum(orderNumber)} | Purchase Order – ${(built.plant && built.plant.name) || ''}`;
+  const poContactName = String((built.plant && built.plant.contact_name) || '').trim() || 'Team';
   // The plant delivers (DAP): the e-mail also carries the customs agency's data (address, contact, phone…) — js/customs-block.js, owner 2026-11-04.
-  const body = BTCustomsBlock.appendCustoms(`Hi,\n\nPlease find the Purchase Order PO-BT-${btNum(orderNumber)} attached.\n\n`
+  const body = BTCustomsBlock.appendCustoms(`Dear ${poContactName},\n\nPlease find attached our Purchase Order PO-BT-${btNum(orderNumber)} for your review and processing.\n\n`
     + `Product: ${poProductName}\n`
     + `Quantity: ${(po.weight || 0).toLocaleString('en-US')} lbs\n`
     + `Unit Cost: $${(po.purchase_price || 0).toFixed(4)}\n`
     + `Total: $${(po.total_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
-    + `Pick-up / Delivery Date: ${fmtDatesList(po.delivery_dates)}`, built.composed.customs_agency);
+    + `Pick-up / Delivery Date: ${fmtDatesList(po.delivery_dates)}`, built.composed.customs_agency)
+    + `\n\nKindly confirm receipt and share the order confirmation once available.\n\nBest regards,`;
   try {
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (waCardPO, same screen) so the Email modal doesn't need a
