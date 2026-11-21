@@ -3237,7 +3237,7 @@ async function sendFactoringDocs(){
   const attachments = [pdfAttachment(poBuilt.doc, `PO-BT-${btNum(orderNumber)}.pdf`), pdfAttachment(soBuilt.doc, `SO-BT-${btNum(orderNumber)}.pdf`), ...confirmation];
   const orderId = `BT-${btNum(orderNumber)}`;
   const subject = `${orderId} | Factoring Documents & Financial Breakdown – ${o.customer_name || ''}`;
-  const body = `Hi Summar team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\nLet us know once everything is reviewed on your end.\n\nBest regards,`;
+  const body = `Dear Summar Team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\nLet us know once everything is reviewed on your end.\n\nBest regards,`;
   try {
     await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, attachments, null);
     showToast('Sent to Summar', SUMMAR_EMAIL);
