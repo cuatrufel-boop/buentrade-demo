@@ -88,7 +88,8 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .table-scroll{overflow-x:auto;}
   /* ===== Orders route cards (owner 2026-11-20, approved mock-up "B") ===== */
   .oc-list{display:grid;gap:16px;}
-  .oc{position:relative;display:grid;grid-template-columns:76px 1fr auto;gap:22px;align-items:center;padding:20px 24px;border:1.5px solid var(--line);border-radius:16px;background:rgba(255,255,255,.045);}
+  .oc{position:relative;display:grid;grid-template-columns:132px 1fr auto 132px;gap:26px;align-items:center;padding:26px 28px;border:1.5px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:0 24px 60px -24px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .3s,box-shadow .3s;}
+  .oc:hover{border-color:rgba(90,170,255,.45);}
   .oc::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(90,170,255,.16),transparent 70%);}
   .oc:hover::before{opacity:1;}
   .oc:hover{z-index:30;}
@@ -102,7 +103,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-rel{font:500 11px 'IBM Plex Mono',monospace;margin-top:3px;display:block;text-align:center;color:var(--ink-soft);}
   .oc-rel.soon{color:var(--amber);}
   .oc-meta .on{font:600 13px 'IBM Plex Mono',monospace;color:var(--ink-soft);cursor:pointer;}
-  .oc-meta h3{font:700 20px 'Space Grotesk',sans-serif;margin:2px 0 2px;cursor:pointer;}
+  .oc-meta h3{font:700 23px 'Space Grotesk',sans-serif;margin:3px 0 3px;cursor:pointer;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .oc-meta .sub{margin:0;color:var(--ink-soft);}
   .oc-plant{position:relative;display:inline-flex;align-items:center;gap:7px;color:var(--ink-soft);cursor:default;border-bottom:1px dashed rgba(255,255,255,.3);padding-bottom:1px;}
   .oc-plant:hover{color:var(--ink);}
@@ -122,18 +123,36 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-stop b{display:block;font:600 14px Inter,sans-serif;line-height:1.15;}
   .oc-stop small{font:500 11px 'IBM Plex Mono',monospace;color:var(--ink-soft);}
   .oc-stop.c{text-align:right;flex-direction:row-reverse;}
-  .oc-lane{position:relative;height:34px;display:flex;align-items:center;}
-  .oc-lane::before{content:"";position:absolute;left:0;right:0;height:0;border-top:2px dashed rgba(255,255,255,.22);}
-  .oc-lane .fill{position:absolute;left:0;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--blue-bright),var(--green-bright));box-shadow:0 0 14px rgba(90,170,255,.6);transition:width 1s cubic-bezier(.2,.8,.2,1);}
-  .oc-lane .tr{position:absolute;top:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#0b1a36;border:1.5px solid var(--blue-bright);color:var(--blue-bright);box-shadow:0 0 18px rgba(90,170,255,.5);transition:left 1s cubic-bezier(.2,.8,.2,1);}
-  .oc-lane .tr.ok{border-color:var(--green-bright);color:var(--green-bright);box-shadow:0 0 18px rgba(63,203,126,.5);}
+  .oc-lane{position:relative;height:46px;display:flex;align-items:center;}
+  .oc-lane::before{content:"";position:absolute;left:0;right:0;height:6px;border-radius:6px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);}
+  .oc-lane::after{content:"";position:absolute;left:0;right:0;top:50%;border-top:2px dashed rgba(255,255,255,.2);}
+  .oc-lane .fill{position:absolute;left:0;z-index:1;height:6px;border-radius:6px;overflow:hidden;background:linear-gradient(90deg,#FFC876,#5AAAFF 55%,#3FCB7E);box-shadow:0 0 22px rgba(90,170,255,.7);transition:width 2.2s cubic-bezier(.2,.8,.2,1);}
+  .oc-lane .fill.mv::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 8px,transparent 8px 20px);animation:ocRoad 1s linear infinite;mix-blend-mode:overlay;}
+  .oc-lane .fill.full{background:linear-gradient(90deg,#FFC876,#3FCB7E);box-shadow:0 0 22px rgba(63,203,126,.7);}
+  .oc-lane .fill.hide{display:none;}
+  @keyframes ocRoad{to{background-position:20px 0;}}
+  .oc-lane .tr{position:absolute;top:50%;z-index:3;transform:translate(-50%,-50%);transition:left 2.2s cubic-bezier(.2,.8,.2,1);}
+  .oc-lane .tr .b{position:relative;z-index:2;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:19px;background:#0b1a36;border:2px solid var(--blue-bright);color:var(--blue-bright);box-shadow:0 0 26px rgba(90,170,255,.6);}
+  .oc-lane .tr.go .b{border-color:#7CF0AE;color:#7CF0AE;animation:ocBob 1.2s ease-in-out infinite,ocBlink 1.2s infinite;}
+  .oc-lane .tr.go::before{content:"";position:absolute;left:34px;top:50%;width:90px;height:44px;transform:translateY(-50%);background:linear-gradient(90deg,rgba(255,240,190,.45),transparent);clip-path:polygon(0 38%,100% 0,100% 100%,0 62%);filter:blur(2px);animation:ocBeam 1.2s ease-in-out infinite;}
+  .oc-lane .tr.go::after{content:"";position:absolute;right:38px;top:50%;width:70px;height:2px;transform:translateY(-50%);z-index:1;background:repeating-linear-gradient(90deg,rgba(255,255,255,.7) 0 14px,transparent 14px 22px);-webkit-mask:linear-gradient(90deg,transparent,#000);mask:linear-gradient(90deg,transparent,#000);animation:ocSpeed .5s linear infinite;}
+  .oc-lane .tr.wait .b{border-color:rgba(90,170,255,.55);}
+  .oc-lane .tr.wait .b::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--blue-bright);animation:ocRing 2.2s ease-out infinite;}
+  .oc-lane .tr.dim .b{border:2px dashed rgba(255,255,255,.35);color:var(--ink-soft);box-shadow:none;background:#0d1730;}
+  @keyframes ocBob{0%,100%{transform:translateY(-1px);}50%{transform:translateY(1px);}}
+  @keyframes ocBeam{0%,100%{opacity:.9;}50%{opacity:.45;}}
+  @keyframes ocSpeed{to{background-position:-22px 0;}}
+  @keyframes ocRing{0%{transform:scale(1);opacity:.8;}100%{transform:scale(1.9);opacity:0;}}
+  @keyframes ocBlink{0%,100%{box-shadow:0 0 0 0 rgba(63,203,126,.6);opacity:1;}50%{box-shadow:0 0 0 8px rgba(63,203,126,0);opacity:.6;}}
+  @keyframes ocDot{0%,100%{opacity:1;}50%{opacity:.15;}}
+  .oc-lane .tr.ok .b{border-color:var(--green-bright);color:var(--green-bright);box-shadow:0 0 26px rgba(63,203,126,.6);}
   .oc-act{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:190px;}
   .oc-act small{font:500 11px 'IBM Plex Mono',monospace;color:var(--ink-soft);}
   .oc-btn{cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;font:600 12.5px Inter,sans-serif;border:1.5px solid;transition:.15s;white-space:nowrap;}
   .oc-btn.b{color:var(--blue-bright);border-color:rgba(90,170,255,.5);background:rgba(90,170,255,.1);}
   .oc-btn.b:hover{background:rgba(90,170,255,.26);border-color:var(--blue-bright);}
-  .oc-btn.a{color:var(--amber);border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.09);}
-  .oc-btn.a:hover{background:rgba(255,200,118,.24);border-color:var(--amber);}
+  .oc-btn.a{color:#1a1203;border-color:transparent;background:linear-gradient(90deg,#FFC876,#FFE0A8);box-shadow:0 8px 24px -8px rgba(255,200,118,.8);}
+  .oc-btn.a:hover{transform:translateY(-1px);box-shadow:0 12px 28px -8px rgba(255,200,118,.9);}
   .oc-done{display:inline-flex;align-items:center;gap:8px;font:600 12.5px Inter,sans-serif;color:var(--green-bright);}
   .oc-rail{display:flex;align-items:center;margin-top:3px;}
   .oc-rail i{width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.25);position:relative;flex-shrink:0;cursor:help;}
@@ -143,7 +162,60 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-rail u.d{background:var(--green-bright);}
   @keyframes ocPing{0%{box-shadow:0 0 0 0 rgba(90,170,255,.55);}100%{box-shadow:0 0 0 9px rgba(90,170,255,0);}}
   .oc-rail i[data-t]:hover::after{content:attr(data-t);position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font:500 10.5px 'IBM Plex Mono',monospace;background:#0b1730;border:1px solid var(--line);border-radius:6px;padding:3px 7px;white-space:nowrap;z-index:5;}
-  @media(max-width:900px){.oc{grid-template-columns:1fr;}.oc-act{align-items:flex-start;}.oc-route{grid-template-columns:1fr;}.oc-stop.c{text-align:left;flex-direction:row;}}
+  /* pick-up and delivery boxes, the cities under them, ON ROAD (owner 2026-11-20, approved mock-up "A") */
+  @property --oca{syntax:'<angle>';initial-value:0deg;inherits:false;}
+  .oc.live{border-color:rgba(63,203,126,.35);box-shadow:0 24px 70px -22px rgba(63,203,126,.35),inset 0 1px 0 rgba(255,255,255,.08);}
+  .oc.live::after{content:"";position:absolute;inset:-1.5px;border-radius:22px;padding:2px;pointer-events:none;background:conic-gradient(from var(--oca),transparent 0 62%,rgba(63,203,126,.95) 82%,rgba(160,255,200,1) 88%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:ocSpin 5s linear infinite;}
+  @keyframes ocSpin{to{--oca:360deg;}}
+  .oc-tk{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
+  .oc-box{position:relative;width:100%;padding:11px 8px 12px;border-radius:18px;border:1.5px solid rgba(90,170,255,.45);overflow:hidden;background:linear-gradient(165deg,rgba(90,170,255,.30),rgba(90,170,255,.06) 70%);box-shadow:0 10px 30px -10px rgba(90,170,255,.55),inset 0 1px 0 rgba(255,255,255,.25);}
+  .oc-box::before{content:"";position:absolute;top:0;bottom:0;width:60%;left:-80%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:ocShine 5.5s ease-in-out infinite;}
+  @keyframes ocShine{0%,70%{left:-80%;}100%{left:140%;}}
+  .oc-box .k{display:flex;align-items:center;justify-content:center;gap:5px;font:700 9.5px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:var(--blue-bright);}
+  .oc-box .m{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:var(--ink-soft);text-transform:uppercase;margin-top:6px;}
+  .oc-box .d{font:700 44px/1 'Space Grotesk',sans-serif;margin:1px 0;letter-spacing:-.02em;text-shadow:0 2px 18px rgba(90,170,255,.55);}
+  .oc-box .w{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:var(--ink-soft);text-transform:uppercase;}
+  .oc-box .r{display:inline-block;margin-top:9px;font:600 10.5px 'IBM Plex Mono',monospace;text-transform:uppercase;padding:2px 9px;border-radius:20px;background:rgba(0,0,0,.28);color:var(--ink-soft);}
+  .oc-box.amber{border-color:rgba(255,200,118,.65);background:linear-gradient(165deg,rgba(255,200,118,.28),rgba(255,200,118,.05) 70%);box-shadow:0 10px 30px -10px rgba(255,200,118,.5),inset 0 1px 0 rgba(255,255,255,.25);}
+  .oc-box.amber .k,.oc-box.amber .r{color:var(--amber);}
+  .oc-box.amber .d{text-shadow:0 2px 18px rgba(255,200,118,.55);}
+  .oc-box.green{border-color:rgba(63,203,126,.6);background:linear-gradient(165deg,rgba(63,203,126,.30),rgba(63,203,126,.05) 70%);box-shadow:0 10px 30px -10px rgba(63,203,126,.55),inset 0 1px 0 rgba(255,255,255,.25);}
+  .oc-box.green .k,.oc-box.green .r{color:var(--green-bright);}
+  .oc-box.green .d{text-shadow:0 2px 18px rgba(63,203,126,.6);}
+  .oc-box.pulse{animation:ocBoxPulse 2.2s infinite;}
+  @keyframes ocBoxPulse{0%,100%{box-shadow:0 10px 30px -10px rgba(255,200,118,.5),0 0 0 0 rgba(255,200,118,.4);}50%{box-shadow:0 10px 30px -10px rgba(255,200,118,.5),0 0 0 9px rgba(255,200,118,0);}}
+  /* the plant delivers: the pick-up day is the plant's, shaded, with its notice */
+  .oc-box.shade{border:1.5px dashed rgba(255,255,255,.32);background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 7px,rgba(255,255,255,.015) 7px 14px);box-shadow:none;padding-bottom:22px;}
+  .oc-box.shade::before{display:none;}
+  .oc-box.shade .k{color:var(--ink-soft);}
+  .oc-box.shade .d{color:rgba(255,255,255,.55);text-shadow:none;}
+  .oc-flag{position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);white-space:nowrap;font:700 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#0A2547;background:linear-gradient(90deg,#FFC876,#FFE2AE);border-radius:10px 10px 0 0;padding:3px 10px 2px;box-shadow:0 0 18px rgba(255,200,118,.6);}
+  .oc-city{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:100%;}
+  .oc-city .t{display:flex;align-items:center;gap:6px;}
+  .oc-city b{font:600 14px Inter,sans-serif;line-height:1.2;}
+  .oc-city .t svg{font-size:15px;color:var(--amber);}
+  .oc-tk.d .oc-city .t svg{color:var(--green-bright);}
+  .oc-city.plant .t svg{color:var(--ink-soft);}
+  .oc-city small{font:500 10.5px 'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .oc-pill{display:inline-flex;align-items:center;gap:8px;font:700 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;padding:4px 12px;border-radius:20px;border:1.5px solid;}
+  .oc-pill i{width:8px;height:8px;border-radius:50%;background:currentColor;}
+  .oc-pill.road{color:#7CF0AE;border-color:rgba(63,203,126,.7);background:linear-gradient(90deg,rgba(63,203,126,.22),rgba(63,203,126,.08));animation:ocBlink 1.2s infinite;}
+  .oc-pill.road i{animation:ocDot 1.2s infinite;}
+  .oc-pill.wait{color:var(--blue-bright);border-color:rgba(90,170,255,.5);background:rgba(90,170,255,.1);}
+  .oc-pill.wait i{animation:ocDot 2.4s infinite;}
+  .oc-pill.plant{color:var(--amber);border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.09);}
+  .oc-pill.ok{color:var(--green-bright);border-color:rgba(63,203,126,.5);background:rgba(63,203,126,.1);}
+  .oc-route{display:block;margin-top:20px;}
+  .oc-rhead{display:flex;justify-content:space-between;font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;}
+  .oc-rhead b{color:var(--ink);font-weight:600;}
+  .oc-rhead .g{color:var(--green-bright);}
+  .oc-rl{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;}
+  .oc-node{position:relative;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1.5px solid;font-size:17px;background:#0b1a36;}
+  .oc-node.o{color:var(--amber);border-color:rgba(255,200,118,.7);box-shadow:0 0 22px rgba(255,200,118,.3);}
+  .oc-node.d{color:var(--green-bright);border-color:rgba(63,203,126,.7);box-shadow:0 0 22px rgba(63,203,126,.3);}
+  .oc-node.d.ping::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green-bright);animation:ocRing 2.4s ease-out infinite;}
+  .oc-node.dim{opacity:.55;border-style:dashed;}
+  @media(max-width:900px){.oc{grid-template-columns:1fr 1fr;grid-template-areas:"pu del" "meta meta" "act act";gap:18px;}.oc-tk.p{grid-area:pu;}.oc-tk.d{grid-area:del;}.oc-meta{grid-area:meta;}.oc-act{grid-area:act;align-items:flex-start;}.oc-rhead{flex-wrap:wrap;gap:4px 14px;}}
   .toast-stack{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:10px;}
   /* Real bug found 2026-09-06: this sat BELOW #urgentQueueOverlay (z-index 6000) — harmless while
      the two never appeared together, but now that a ?focus= deep link auto-triggers the real send
@@ -2344,6 +2416,8 @@ const OC_ICO = {
   check: '<svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   arrow: '<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   clock: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  up: '<svg class="i" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  down: '<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
 };
 // customs city per order (the customs agency of the customer, else of the offer — same order as "Share with customs"); undefined = still looking, false = none on file
 let orderCustomsCity = {};
@@ -2402,6 +2476,25 @@ function ocDateBlock(o){
   const cls = o.load_status === 'delivered' ? 'done' : ocIsSoon(o) ? 'soon' : '';
   return `<div><div class="oc-dt ${cls}"><small>${dt.toLocaleDateString('en-US', { month: 'short' })}</small><b>${dt.getDate()}</b><small>${dt.toLocaleDateString('en-US', { weekday: 'short' })}</small></div><span class="oc-rel ${ocIsSoon(o) ? 'soon' : ''}">${escapeHtml(ocRelative(o))}</span></div>`;
 }
+// ===== Pick-up box (left) and Delivery box (right) of every card (owner 2026-11-20, approved mock-up "A") =====
+function ocDay(s){ return s ? String(s).slice(0, 10) : ''; }
+function ocPickupDay(o){ return ocDay(o.pickup_date); }
+// the day the load reaches the border: delivered = the day it was delivered; otherwise the pick-up day + 2 calendar days, a Saturday or Sunday rolls to Monday (the approved arrival rule)
+function ocDeliveryDay(o){
+  if (o.load_status === 'delivered' && o.delivered_at) return ocDay(o.delivered_at);
+  const p = ocPickupDay(o); if (!p) return '';
+  const d = new Date(p + 'T00:00:00'); d.setDate(d.getDate() + 2);
+  const w = d.getDay(); if (w === 6) d.setDate(d.getDate() + 2); else if (w === 0) d.setDate(d.getDate() + 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function ocFmtDay(d){ return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''; }
+function ocRelDay(d){ if (!d) return ''; const n = ocDaysFromToday(d); return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n < 0 ? Math.abs(n) + 'd ago' : 'in ' + n + ' days'; }
+function ocDaysBetween(a, b){ return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000); }
+function ocBox(label, icon, d, cls, rel, flag){
+  if (!d) return `<div class="oc-box ${cls}"><div class="k">${icon} ${label}</div><div class="m">No</div><div class="d">—</div><div class="w">date</div></div>`;
+  const dt = new Date(d + 'T00:00:00');
+  return `<div class="oc-box ${cls}"><div class="k">${icon} ${label}</div><div class="m">${dt.toLocaleDateString('en-US', { month: 'short' })}</div><div class="d">${dt.getDate()}</div><div class="w">${dt.toLocaleDateString('en-US', { weekday: 'short' })}</div>${rel ? `<span class="r">${escapeHtml(rel)}</span>` : ''}${flag ? `<span class="oc-flag">${flag}</span>` : ''}</div>`;
+}
 // hover on the plant: the pick-up city; once delivered it says Delivered, the border and the day
 function ocPlantHover(o){
   const city = ocPickupCity(o), d = ocDate(o), when = d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : '';
@@ -2420,6 +2513,8 @@ function ocRail(steps){
 function renderOrderRow(o, attentionOrderNumbers){
   const { nextLabel, nextActionEntry, allDone, isUrgent, railSteps, stepNumber, totalSteps } = renderUnifiedTimeline(o, attentionOrderNumbers);
   const delivered = o.load_status === 'delivered';
+  const onRoad = !delivered && o.load_status === 'picked_up'; // the load left the plant: the card says ON ROAD, blinking
+  const plantDelivers = ocPlantDelivers(o);
   const stageIdx = LOAD_STAGES.findIndex(s => s.key === (o.load_status || 'pending_pickup'));
   const pct = delivered ? 100 : stageIdx <= 0 ? 8 : 55;
   const city = ocPickupCity(o);
@@ -2431,19 +2526,43 @@ function renderOrderRow(o, attentionOrderNumbers){
     : '';
   const head = delivered ? `<span class="oc-done">${OC_ICO.check} Delivered</span>` : (btn || `<span class="oc-done">${OC_ICO.check} All caught up</span>`);
   const sub = nextActionEntry ? `Step ${stepNumber} of ${totalSteps} · ${escapeHtml(nextLabel)}` : 'all steps done';
-  return `<div class="oc" data-order="${escapeHtml(o.order_number)}">
-    <div>${ocDateBlock(o)}</div>
+
+  const pu = ocPickupDay(o), de = ocDeliveryDay(o);
+  const total = pu && de ? ocDaysBetween(pu, de) : 0;
+  const dayN = total > 0 ? Math.min(total, Math.max(1, 1 - ocDaysFromToday(pu))) : 0;
+  const shade = plantDelivers && !delivered && !onRoad;
+  const puCls = delivered || onRoad ? 'green' : shade ? 'shade' : ocIsSoon(o) ? 'amber pulse' : '';
+  const puRel = delivered || onRoad ? 'Picked up' : shade ? '' : ocRelDay(pu);
+  const deCls = delivered ? 'green' : onRoad ? 'amber pulse' : '';
+  const deRel = delivered ? 'Delivered' : ocRelDay(de);
+  const pill = delivered ? `<span class="oc-pill ok">${OC_ICO.check} DELIVERED</span>`
+    : onRoad ? '<span class="oc-pill road"><i></i>ON ROAD</span>'
+    : plantDelivers ? '<span class="oc-pill plant">PLANT DELIVERS</span>'
+    : '<span class="oc-pill wait"><i></i>WAITING PICKUP</span>';
+  const left = delivered || onRoad ? 'Left' : plantDelivers ? 'Plant picks up' : 'Pickup';
+  const mid = onRoad && total > 0 ? `<span class="g">Day ${dayN} of ${total}</span>` : delivered && total > 0 ? `<span class="g">${total} days</span>` : '<span></span>';
+  const right = delivered ? 'Delivered' : plantDelivers ? 'At border' : 'Arrives';
+  const trCls = delivered ? 'ok' : onRoad ? 'go' : shade ? 'dim' : 'wait';
+  const fillCls = delivered ? 'full' : onRoad ? 'mv' : shade ? 'hide' : '';
+  const puCity = plantDelivers
+    ? `<div class="oc-city plant"><div class="t">${OC_ICO.truck}<b>Delivered at border</b></div><small>${escapeHtml(o.plant_name || '—')}</small></div>`
+    : `<div class="oc-city"><div class="t">${OC_ICO.pin}<b>${escapeHtml(city || 'City not set')}</b></div><small>${escapeHtml(o.plant_name || '—')}</small></div>`;
+  const deCity = `<div class="oc-city"><div class="t">${OC_ICO.shield}<b>${escapeHtml(borderTxt)}</b></div><small>${escapeHtml(delivered ? 'Delivered · ' + (orderCustomsName[o.order_number] || 'customs') : (orderCustomsName[o.order_number] || 'Customs'))}</small></div>`;
+  return `<div class="oc ${onRoad ? 'live' : ''}" data-order="${escapeHtml(o.order_number)}">
+    <div class="oc-tk p">${ocBox('PICKUP', OC_ICO.up, pu, puCls, puRel, shade ? 'DEL. BORDER' : '')}${puCity}</div>
     <div class="oc-meta"><span class="on" onclick="openOrderDetail('${o.order_number}')" title="View order">${escapeHtml(o.order_number)}</span>
-      <h3 onclick="openOrderDetail('${o.order_number}')" title="View order">${escapeHtml(o.customer_name || '—')}</h3>
+      <h3 onclick="openOrderDetail('${o.order_number}')" title="View order">${escapeHtml(o.customer_name || '—')} ${pill}</h3>
       <div class="sub">${escapeHtml(productName || '—')} · ${ocPlantHover(o)}</div>
       <div class="oc-route">
-        ${ocPlantDelivers(o)
-          ? `<div class="oc-stop p"><div class="dot">${OC_ICO.truck}</div><div><b>Delivered at border</b><small>${escapeHtml(ocShortDay(o) || o.plant_name || '—')}</small></div></div>`
-          : `<div class="oc-stop p"><div class="dot">${OC_ICO.pin}</div><div><b>${escapeHtml(city || 'City not set')}</b><small>${escapeHtml(o.plant_name || '—')}</small></div></div>`}
-        <div class="oc-lane"><div class="fill" style="width:${pct}%"></div><div class="tr ${delivered ? 'ok' : ''}" style="left:${pct}%">${delivered ? OC_ICO.check : OC_ICO.truck}</div></div>
-        <div class="oc-stop c"><div class="dot">${OC_ICO.shield}</div><div><b>${escapeHtml(borderTxt)}</b><small>${escapeHtml(delivered ? 'Delivered · ' + (orderCustomsName[o.order_number] || 'customs') : (orderCustomsName[o.order_number] || 'Customs'))}</small></div></div>
+        <div class="oc-rhead"><span>${left} ${pu ? '<b>' + escapeHtml(ocFmtDay(pu)) + '</b>' : ''}</span>${mid}<span>${right} ${de ? '<b>' + escapeHtml(ocFmtDay(de)) + '</b>' : ''}</span></div>
+        <div class="oc-rl">
+          <div class="oc-node o ${shade ? 'dim' : ''}">${shade ? OC_ICO.truck : OC_ICO.pin}</div>
+          <div class="oc-lane"><div class="fill ${fillCls}" style="width:${pct}%"></div><div class="tr ${trCls}" style="left:${pct}%"><div class="b">${delivered ? OC_ICO.check : OC_ICO.truck}</div></div></div>
+          <div class="oc-node d ${onRoad ? 'ping' : ''}">${OC_ICO.shield}</div>
+        </div>
       </div></div>
     <div class="oc-act">${head}${delivered && btn ? btn : ''}<small>${sub}</small>${ocRail(railSteps)}</div>
+    <div class="oc-tk d">${ocBox('DELIVERY', OC_ICO.down, de, deCls, deRel, '')}${deCity}</div>
   </div>`;
 }
 
