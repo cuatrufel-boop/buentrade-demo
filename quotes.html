@@ -14,6 +14,9 @@
 <link rel="manifest" href="/manifest.json">
 <script src="js/price-lock.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<link rel="preconnect" href="https://oqotaxmacwueiutdxgkk.supabase.co" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -1556,7 +1559,7 @@
 
 <!-- ============ LOGIN GATE (same Firebase project/login as the Trading Tool) ============ -->
 <style>
-  #authGate{position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#123A6B 100%);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+  #authGate{position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#123A6B 100%);z-index:9999;display:none;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
   .auth-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:32px 30px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
   .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px;}
   .auth-logo .word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#0B2545;}
@@ -1661,19 +1664,19 @@ auth.onAuthStateChanged(user => {
   const gate = document.getElementById('authGate');
   const app = document.getElementById('appContent');
   if (user && user.emailVerified) {
-    gate.style.display = 'none';
+    gate.style.display = 'none'; try{ localStorage.setItem('btSignedIn','1'); }catch(e){}
     app.style.display = 'block';
     document.getElementById('userBadge').textContent = user.email;
     if (!rqAuthLoaded) { rqAuthLoaded = true; loadQuotesPage(); }
   } else {
-    gate.style.display = 'flex';
+    gate.style.display = 'flex'; try{ localStorage.removeItem('btSignedIn'); }catch(e){}
     app.style.display = 'none';
   }
 });
 </script>
 <!-- ============ END LOGIN GATE ============ -->
 
-<div id="appContent" style="display:none;">
+<div id="appContent" style="display:none;"><script>try{ if (localStorage.getItem('btSignedIn') === '1') document.getElementById('appContent').style.display = 'block'; }catch(e){}</script>
 <header>
   <div class="top-row">
     <a href="dashboard.html" style="position:absolute;left:32px;top:50%;transform:translateY(-50%);text-align:center;text-decoration:none;" title="Go to Dashboard"><div class="brand-word">Buen<span>Trade</span><div style="font-size:14px;letter-spacing:0.1em;color:rgba(255,255,255,.75);margin-top:5px;"><b style="font-weight:800;color:var(--blue-bright);">O</b>perating <b style="font-weight:800;color:var(--blue-bright);">S</b>ystem</div></div></a>
