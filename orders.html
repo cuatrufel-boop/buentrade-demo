@@ -3992,13 +3992,17 @@ async function shareFO(orderNumber){
     let url;
     try { url = await uploadOrderPdf(b.doc, b.filename); } catch(e){ await btAlert('Upload error: ' + e.message); continue; }
     orderDocsFileCache.delete(orderNumber);
-    const subject = `FO-BT-${btNum(orderNumber)} — ${b.composed.pick_up_city || b.fo.origin || '—'} → ${b.composed.customs_broker || b.fo.destination || '—'}`;
+    // FO SEND (owner 2026-11-21, new 12-step flow: his greeting, sentences and closing; "correcto, en bold pu appointment"): the subject keeps the pick-up city -> customs agency, the lines and the customs block stay, the pick-up appointment request stays (owner 2026-11-17) with "pick-up appointment" in bold.
+    const foPlantName = String((b.composed.pick_up_lines || [])[0] || b.fo.origin || '').trim();
+    const foCarrierName = String((b.carrier && b.carrier.name) || '').trim();
+    const subject = `FO-BT-${btNum(orderNumber)} | Freight Order – Pick-Up at ${foPlantName} — ${b.composed.pick_up_city || b.fo.origin || '—'} → ${b.composed.customs_broker || b.fo.destination || '—'}`;
     // We deliver (the carrier is ours): the customs agency's data (address, contact, phone…) goes to the carrier — js/customs-block.js, owner 2026-11-04.
-    const body = BTCustomsBlock.appendCustoms(`Please find the Freight Order FO-BT-${btNum(orderNumber)} attached.\n\n`
-      + `Please let us know as soon as you have the pick-up appointment. Without an appointment we cannot pick up the product.\n\n` // owner 2026-11-17: the carrier tells us the moment it has the pick-up appointment
+    const body = BTCustomsBlock.appendCustoms(`Hi${foCarrierName ? ' ' + foCarrierName : ''} team,\n\nPlease find attached the Freight Order for Shipment FO-BT-${btNum(orderNumber)} picking up at ${foPlantName}.\n\n`
       + `Pick-up: ${b.fo.origin || '—'}\n`
       + `Delivery: ${(BTCustomsBlock.agencyOfFO(b.composed) || {}).name || b.fo.destination || '—'}\n` // when the customs agency block follows it carries the address, contact and e-mail: the line does not repeat them (owner 2026-11-13)
-      + `Agreed Rate: $${(b.composed.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, BTCustomsBlock.agencyOfFO(b.composed));
+      + `Agreed Rate: $${(b.composed.rate || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, BTCustomsBlock.agencyOfFO(b.composed))
+      + `\n\nPlease let us know as soon as you have the **pick-up appointment**. Without an appointment we cannot pick up the product.` // owner 2026-11-17: the carrier tells us the moment it has the pick-up appointment
+      + `\n\nKindly confirm receipt of this load tender. We will share the release number as soon as it is issued.\n\nBest regards,`;
     try {
       await sendEmailApi('logistics', emails, subject, body, [pdfAttachment(b.doc, b.filename)], null);
       showToast('FO sent', emails.join(', '));
