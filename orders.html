@@ -88,12 +88,12 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .table-scroll{overflow-x:auto;}
   /* ===== Orders route cards (owner 2026-11-20, approved mock-up "B") ===== */
   .oc-list{display:grid;gap:16px;}
-  .oc{position:relative;display:grid;grid-template-columns:112px 1fr 112px;gap:22px;align-items:center;padding:16px 24px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:0 24px 60px -24px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .3s,box-shadow .3s;}
+  .oc{position:relative;display:grid;grid-template-columns:112px minmax(0,1fr) 112px;gap:22px;align-items:center;padding:16px 24px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:0 24px 60px -24px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .3s,box-shadow .3s;}
   .oc:hover{border-color:rgba(90,170,255,.45);}
   .oc::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(90,170,255,.16),transparent 70%);}
   .oc:hover::before{opacity:1;}
   .oc:hover{z-index:30;}
-  .oc>*{position:relative;}
+  .oc>*{position:relative;min-width:0;}
   .oc-dt{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:62px;padding:8px 6px;border-radius:12px;border:1.5px solid rgba(90,170,255,.35);background:rgba(90,170,255,.07);font-family:'IBM Plex Mono',monospace;}
   .oc-dt small{font-size:10.5px;letter-spacing:.1em;color:var(--ink-soft);text-transform:uppercase;}
   .oc-dt b{font:700 22px 'Space Grotesk',sans-serif;line-height:1.05;}
@@ -189,10 +189,10 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-box.shade .d{color:rgba(255,255,255,.55);text-shadow:none;}
   .oc-flag{position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);white-space:nowrap;font:600 8.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#0A2547;background:linear-gradient(90deg,#FFC876,#FFE2AE);border-radius:8px 8px 0 0;padding:2px 8px 1px;box-shadow:0 0 18px rgba(255,200,118,.6);}
   .oc-city{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:100%;}
-  .oc-city .t{display:flex;align-items:center;gap:6px;}
-  .oc-city b{font:500 12px Inter,sans-serif;line-height:1.2;white-space:nowrap;}
-  .oc-city.plant b{white-space:normal;}
-  .oc-city small{max-width:112px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .oc-city{width:100%;}
+  .oc-city .t{display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;}
+  .oc-city b{font:500 12px Inter,sans-serif;line-height:1.2;min-width:0;overflow-wrap:anywhere;}
+  .oc-city small{max-width:112px;}
   .oc-city .t svg{font-size:15px;color:var(--amber);}
   .oc-tk.d .oc-city .t svg{color:var(--green-bright);}
   .oc-city.plant .t svg{color:var(--ink-soft);}
@@ -205,7 +205,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-pill.wait i{animation:ocDot 2.4s infinite;}
   .oc-pill.plant{color:var(--amber);border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.09);}
   .oc-pill.ok{color:var(--green-bright);border-color:rgba(63,203,126,.5);background:rgba(63,203,126,.1);}
-  .oc-route{display:block;margin-top:12px;}
+  .oc-route{display:block;margin-top:14px;}
   .oc-rhead{display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;}
   .oc-rhead b{color:rgba(255,255,255,.88);font-weight:500;}
   .oc-rhead .g{color:var(--green-bright);}
@@ -215,7 +215,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-node.d{color:var(--green-bright);border-color:rgba(63,203,126,.7);box-shadow:0 0 22px rgba(63,203,126,.3);}
   .oc-node.d.ping::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green-bright);animation:ocRing 2.4s ease-out infinite;}
   .oc-node.dim{opacity:.55;border-style:dashed;}
-  @media(max-width:900px){.oc{grid-template-columns:1fr 1fr;grid-template-areas:"pu del" "meta meta";gap:18px;}.oc-tk.p{grid-area:pu;}.oc-tk.d{grid-area:del;}.oc-meta{grid-area:meta;}.oc-rhead{flex-wrap:wrap;gap:4px 14px;}}
+  @media(max-width:900px){.oc{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"pu del" "meta meta";gap:18px;}.oc-tk.p{grid-area:pu;}.oc-tk.d{grid-area:del;}.oc-meta{grid-area:meta;}.oc-rhead{flex-wrap:wrap;gap:4px 14px;}}
   .toast-stack{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:10px;}
   /* Real bug found 2026-09-06: this sat BELOW #urgentQueueOverlay (z-index 6000) — harmless while
      the two never appeared together, but now that a ?focus= deep link auto-triggers the real send
@@ -562,6 +562,70 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
      page still layers on top of it, same stacking order as before.  */
   #orderDetailOverlay{display:none;position:fixed;inset:0;background:repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 26px) fixed,linear-gradient(180deg, #0E3D8F 0%, #0A2547 18%, #111A2C 45%, #0A0E17 100%) fixed;z-index:6200;flex-direction:column;}
   #orderDetailBox{flex:1;min-height:0;overflow-y:auto;padding:22px clamp(16px, 4vw, 48px) 48px;max-width:1040px;width:100%;margin:0 auto;box-sizing:border-box;}
+  /* ===== Order detail = Journey (owner 2026-11-21, approved mock-up "2 · Journey") ===== */
+  #orderDetailBox{max-width:1180px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent;}
+  #orderDetailBox::-webkit-scrollbar{width:8px;}
+  #orderDetailBox::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:8px;}
+  #orderDetailBox::-webkit-scrollbar-track{background:transparent;}
+  .oj{display:grid;grid-template-columns:300px minmax(0,1fr);gap:26px;align-items:start;}
+  .oj-side{position:sticky;top:0;display:flex;flex-direction:column;gap:14px;min-width:0;}
+  .oj-card{border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.05);padding:16px;}
+  .oj-ring{position:relative;width:150px;height:150px;margin:6px auto 12px;}
+  .oj-ring svg{width:150px;height:150px;transform:rotate(-90deg);fill:none;stroke-width:9;}
+  .oj-ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .oj-ring .c b{font:700 34px 'Space Grotesk',sans-serif;}
+  .oj-k{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.4);text-transform:uppercase;}
+  .oj-next{text-align:center;margin-bottom:10px;}
+  .oj-next b{display:block;font:700 19px 'Space Grotesk',sans-serif;}
+  .oj-fact{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;}
+  .oj-fact span:first-child{color:var(--ink-soft);}
+  .oj-fact b{text-align:right;font-weight:600;}
+  .oj-legend{display:flex;gap:12px;flex-wrap:wrap;font:500 10.5px 'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .oj-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;}
+  .oj-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;padding:12px 20px;border-radius:13px;font:700 14px Inter,sans-serif;color:#04101f;background:linear-gradient(90deg,#5AAAFF,#7CE0FF);box-shadow:0 12px 30px -10px rgba(90,170,255,.9),inset 0 1px 0 rgba(255,255,255,.5);transition:.18s;position:relative;overflow:hidden;cursor:pointer;}
+  .oj-cta:hover{transform:translateY(-2px);}
+  .oj-cta.wide{width:100%;}
+  .oj-cta::after{content:"";position:absolute;top:0;bottom:0;width:50%;left:-70%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);animation:ojShine 3.2s infinite;}
+  @keyframes ojShine{0%,60%{left:-70%;}100%{left:140%;}}
+  .oj-cta.urgent{background:linear-gradient(90deg,#FFC876,#FFE0A8);box-shadow:0 12px 30px -10px rgba(255,200,118,.9),inset 0 1px 0 rgba(255,255,255,.5);}
+  .oj-ghost{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink-soft);padding:8px 14px;border-radius:11px;font:600 12.5px Inter,sans-serif;cursor:pointer;}
+  .oj-ghost:hover{color:#fff;border-color:var(--blue-bright);}
+  .oj-spine{position:relative;padding-left:44px;min-width:0;}
+  .oj-spine::before{content:"";position:absolute;left:19px;top:10px;bottom:10px;width:3px;border-radius:3px;background:rgba(255,255,255,.1);}
+  .oj-fillbar{position:absolute;left:19px;top:10px;width:3px;border-radius:3px;background:linear-gradient(180deg,#3FCB7E,#5AAAFF);box-shadow:0 0 14px rgba(90,170,255,.7);}
+  .oj-pg{margin:6px 0 12px;display:flex;align-items:center;gap:12px;}
+  .oj-pg b{font:700 13px 'Space Grotesk',sans-serif;letter-spacing:.04em;text-transform:uppercase;}
+  .oj-pg span{flex:1;height:1px;background:var(--line);}
+  .oj-pg em{font:500 11px 'IBM Plex Mono',monospace;font-style:normal;color:var(--ink-soft);}
+  .oj-step{position:relative;margin-bottom:10px;}
+  .oj-nd{position:absolute;left:-44px;top:10px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:#0b1a36;border:2px solid;z-index:2;}
+  .oj-nd svg{width:17px;height:17px;}
+  .oj-step.done .oj-nd{color:#3FCB7E;border-color:#3FCB7E;}
+  .oj-step.now .oj-nd{color:#5AAAFF;border-color:#5AAAFF;animation:ojPulse 1.8s infinite;box-shadow:0 0 22px rgba(90,170,255,.6);}
+  .oj-step.now.urgent .oj-nd{color:var(--amber);border-color:var(--amber);box-shadow:0 0 22px rgba(255,200,118,.6);}
+  .oj-step.wait .oj-nd{color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.2);border-style:dashed;}
+  @keyframes ojPulse{0%{box-shadow:0 0 0 0 rgba(90,170,255,.55);}100%{box-shadow:0 0 0 14px rgba(90,170,255,0);}}
+  .oj-jc{border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);overflow:hidden;}
+  .oj-step.now .oj-jc{border-color:rgba(90,170,255,.7);background:linear-gradient(120deg,rgba(90,170,255,.16),rgba(90,170,255,.03));box-shadow:0 16px 40px -20px rgba(90,170,255,.9);}
+  .oj-step.now.urgent .oj-jc{border-color:rgba(255,200,118,.7);background:linear-gradient(120deg,rgba(255,200,118,.14),rgba(255,200,118,.02));}
+  .oj-jh{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;flex-wrap:wrap;}
+  .oj-jh .nm{font:600 15px Inter,sans-serif;}
+  .oj-jh .dt{font:500 11px 'IBM Plex Mono',monospace;color:var(--ink-soft);margin-left:auto;}
+  .oj-jh .cv{color:rgba(255,255,255,.4);transition:.2s;display:flex;}
+  .oj-jh .cv svg{width:16px;height:16px;}
+  .oj-step.open .cv{transform:rotate(180deg);}
+  .oj-jb{display:none;padding:0 16px 16px;flex-direction:column;gap:10px;align-items:flex-start;}
+  .oj-step.open .oj-jb{display:flex;}
+  .oj-jb .doc-row{width:100%;}
+  .oj-note{font-size:12.5px;color:var(--ink-soft);}
+  .oj-chip{display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid;}
+  .oj-chip.done{color:#3FCB7E;border-color:rgba(63,203,126,.5);background:rgba(63,203,126,.1);}
+  .oj-chip.now{color:#5AAAFF;border-color:rgba(90,170,255,.6);background:rgba(90,170,255,.12);}
+  .oj-chip.now.urgent{color:var(--amber);border-color:rgba(255,200,118,.6);background:rgba(255,200,118,.1);}
+  .oj-chip.wait{color:rgba(255,255,255,.4);border-color:var(--line);background:rgba(255,255,255,.03);}
+  .oj-chip i{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .oj-chip.now i{animation:ocDot 1.2s infinite;}
+  @media(max-width:900px){.oj{grid-template-columns:minmax(0,1fr);}.oj-side{position:static;}}
   /* Real ask 2026-09-16: "SEARCH unificado diseno buentrade" — glass-pill search shipped on
      Products/Quotes/Plants/Offers (see plants.html's own comment on this exact block), scoped
      "st-" for this page. Real ask 2026-09-18 ("new plant tiene diseno buentrade hazlo en...
@@ -1608,6 +1672,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       // Payment (3 independently-computed copies of the same decision).
       onClickRaw: realOnClick || null,
       actionTitle: isNext ? `Mark ${s.label}` : (isPendingPickupConfirm ? `Confirm w/ ${confirmTarget}` : ''),
+      dateStr,
+      info: realOnClick ? '' : infoMsg,
       lineDone: i < stageIdx,
       actionableNow: isNext && !deliveredBlocked,
       raised,
@@ -1644,6 +1710,9 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       // Real ask 2026-09-21: see mainEntry's own onClickRaw comment — same reasoning, same field.
       onClickRaw: state === 'now' ? (st.onClick || null) : null,
       actionTitle: state === 'now' ? st.label : '',
+      dateStr,
+      info: st.waitReason || '',
+      redo: state === 'done' ? (st.onClick || '') : '',
       lineDone: st.done,
       actionableNow: state === 'now',
       raised: !!st.raised,
@@ -1870,6 +1939,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     nextActionEntry: blinkIdx >= 0 ? entries[blinkIdx] : null,
     // the route card's one-line rail (owner 2026-11-20): every step, done / current / waiting, from the SAME entries and blinkIdx as the timeline
     railSteps: entries.map((e, i) => ({ label: e.label, done: !!e.lineDone, current: i === blinkIdx })),
+    // the order detail (Journey): every step with its state, date, the reason it waits, and what clicking it does
+    journey: entries.map((e, i) => ({ label: e.label, icon: e.icon, done: !!e.lineDone, now: i === blinkIdx, dateStr: e.dateStr || '', info: e.info || '', onClickRaw: e.onClickRaw || null, actionTitle: e.actionTitle || '', redo: e.redo || '' })),
     stepNumber: blinkIdx >= 0 ? blinkIdx + 1 : totalSteps,
     totalSteps,
     allDone: doneSteps === totalSteps,
@@ -2203,8 +2274,7 @@ function renderSignatureEvidenceRow(o){
 // Real ask 2026-09-21: "despliegue de docs quitalo dejalos mostrando" — no more collapse/expand,
 // this panel always renders; "siempre algo bonito centrado bien organizados" — same real rows,
 // same actions, just laid out as a centered 2-column grid instead of one long stacked list.
-function renderOrderDocsPanel(o, nextActionLabel){
-  let body;
+function orderDocRows(o, nextActionLabel){
   {
     const files = orderDocsFileCache.get(o.order_number) || [];
     const findFiles = prefix => files.filter(f => f.name.startsWith(prefix));
@@ -2332,18 +2402,32 @@ function renderOrderDocsPanel(o, nextActionLabel){
       : '<div class="doc-row-empty doc-row-span">No pickup documents yet.</div>';
     // The plant's proforma / prepay invoices, filed from its reply (owner 2026-11-19: everything is kept on the order).
     const proformaHtml = (o.proforma_invoices || []).map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${escapeHtml(d.filename)}</a><span class="doc-row-status sent">Proforma received</span></div>`).join('');
-    body = `<div class="docs-panel-grid">
-      ${dateRow}
-      ${renderTradeDocRow('PO (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing)}
-      ${renderTradeDocRow('SO (Customer)', o.so_sent_at, soFiles, soActions, soActionsWhenMissing)}
-      ${o.has_freight_order ? renderTradeDocRow('FO (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing) : ''}
-      ${paymentRow}
-      ${renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions)}
-      ${renderSignatureEvidenceRow(o)}
-      ${proformaHtml}
-      ${pickupDocsHtml}
-    </div>`;
+    return {
+      date: dateRow,
+      po: renderTradeDocRow('PO (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing),
+      so: renderTradeDocRow('SO (Customer)', o.so_sent_at, soFiles, soActions, soActionsWhenMissing),
+      fo: o.has_freight_order ? renderTradeDocRow('FO (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing) : '',
+      payment: paymentRow,
+      invoice: renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions),
+      signature: renderSignatureEvidenceRow(o),
+      proforma: proformaHtml,
+      pickup: pickupDocsHtml,
+    };
   }
+}
+function renderOrderDocsPanel(o, nextActionLabel){
+  const r = orderDocRows(o, nextActionLabel);
+  const body = `<div class="docs-panel-grid">
+      ${r.date}
+      ${r.po}
+      ${r.so}
+      ${r.fo}
+      ${r.payment}
+      ${r.invoice}
+      ${r.signature}
+      ${r.proforma}
+      ${r.pickup}
+    </div>`;
   return `<div class="docs-panel-heading">${DOC_ICON} Documents</div>${body}`;
 }
 
@@ -2442,6 +2526,7 @@ function ocCrossing(city){
 }
 // under the crossing the card says the agency's SHORT name ("Integrity", "Portus", "Palos Garza"), never the long one; no short name on file = its full name
 function ocAgencyLabel(short, full){ return String(short || full || '').trim(); }
+function ocPlantShort(o){ return String(o.plant_name || '').trim().split(/\s+/)[0] || '—'; }
 function ocPickupCity(o){ return String((o.pickup_location && o.pickup_location.location_name) || '').trim(); }
 // the plant delivers the load to the border itself (DAP: no carrier booked, no pick-up place): there is no pick-up city, the card says "Delivered at border" and the day (owner 2026-11-20)
 function ocPlantDelivers(o){ return !o.has_freight_order && !ocPickupCity(o); }
@@ -2531,8 +2616,6 @@ function renderOrderRow(o, attentionOrderNumbers){
   // the card only shows the load; every action (next step, stage, documents) is done from inside the order — owner 2026-11-20
 
   const pu = ocPickupDay(o), de = ocDeliveryDay(o);
-  const total = pu && de ? ocDaysBetween(pu, de) : 0;
-  const dayN = total > 0 ? Math.min(total, Math.max(1, 1 - ocDaysFromToday(pu))) : 0;
   const shade = plantDelivers && !delivered && !onRoad;
   const puCls = delivered || onRoad ? 'green' : shade ? 'shade' : ocIsSoon(o) ? 'amber pulse' : '';
   const puRel = delivered || onRoad ? 'Picked up' : shade ? '' : ocRelDay(pu);
@@ -2542,22 +2625,19 @@ function renderOrderRow(o, attentionOrderNumbers){
     : onRoad ? '<span class="oc-pill road"><i></i>ON ROAD</span>'
     : plantDelivers ? '<span class="oc-pill plant">PLANT DELIVERS</span>'
     : '<span class="oc-pill wait"><i></i>WAITING PICKUP</span>';
-  const left = delivered || onRoad ? 'Left' : plantDelivers ? 'Plant picks up' : 'Pickup';
-  const mid = onRoad && total > 0 ? `<span class="g">Day ${dayN} of ${total}</span>` : delivered && total > 0 ? `<span class="g">${total} days</span>` : '<span></span>';
-  const right = delivered ? 'Delivered' : plantDelivers ? 'At border' : 'Arrives';
   const trCls = delivered ? 'ok' : onRoad ? 'go' : shade ? 'dim' : 'wait';
   const fillCls = delivered ? 'full' : onRoad ? 'mv' : shade ? 'hide' : '';
+  // under the pick-up box: the city and the plant's short name; a plant-delivered load has no city, the DEL. BORDER notice on the box says it
   const puCity = plantDelivers
-    ? `<div class="oc-city plant"><div class="t">${OC_ICO.truck}<b>Delivered at border</b></div><small>${escapeHtml(o.plant_name || '—')}</small></div>`
-    : `<div class="oc-city"><div class="t">${OC_ICO.pin}<b>${escapeHtml(city || 'City not set')}</b></div><small>${escapeHtml(o.plant_name || '—')}</small></div>`;
+    ? `<div class="oc-city plant"><small>${escapeHtml(ocPlantShort(o))}</small></div>`
+    : `<div class="oc-city"><div class="t">${OC_ICO.pin}<b>${escapeHtml(city || 'City not set')}</b></div><small>${escapeHtml(ocPlantShort(o))}</small></div>`;
   const deCity = `<div class="oc-city"><div class="t">${OC_ICO.shield}<b>${escapeHtml(borderTxt)}</b></div><small>${escapeHtml(delivered ? 'Delivered · ' + (orderCustomsName[o.order_number] || 'customs') : (orderCustomsName[o.order_number] || 'Customs'))}</small></div>`;
   return `<div class="oc ${onRoad ? 'live' : ''}" data-order="${escapeHtml(o.order_number)}">
     <div class="oc-tk p">${ocBox('PICKUP', OC_ICO.up, pu, puCls, puRel, shade ? 'DEL. BORDER' : '')}${puCity}</div>
     <div class="oc-meta"><span class="on" onclick="openOrderDetail('${o.order_number}')" title="View order">${escapeHtml(o.order_number)}</span>
       <h3 onclick="openOrderDetail('${o.order_number}')" title="View order">${escapeHtml(o.customer_name || '—')} ${pill}</h3>
-      <div class="sub">${escapeHtml(productName || '—')} · ${ocPlantHover(o)}</div>
+      <div class="sub">${escapeHtml(productName || '—')}</div>
       <div class="oc-route">
-        <div class="oc-rhead"><span>${left} ${pu ? '<b>' + escapeHtml(ocFmtDay(pu)) + '</b>' : ''}</span>${mid}<span>${right} ${de ? '<b>' + escapeHtml(ocFmtDay(de)) + '</b>' : ''}</span></div>
         <div class="oc-rl">
           <div class="oc-node o ${shade ? 'dim' : ''}">${shade ? OC_ICO.truck : OC_ICO.pin}</div>
           <div class="oc-lane"><div class="fill ${fillCls}" style="width:${pct}%"></div><div class="tr ${trCls}" style="left:${pct}%"><div class="b">${delivered ? OC_ICO.check : OC_ICO.truck}</div></div></div>
@@ -2603,7 +2683,77 @@ ocLoadCustomsCache();
 
 // The exact content that used to render inline for every order at once — unchanged, just extracted
 // so it can be built for one order on demand (openOrderDetail) instead of all of them always.
-function renderOrderCardBody(o, attentionOrderNumbers){
+// ===== Order detail = Journey (owner 2026-11-21, approved mock-up "2 · Journey") =====
+// every step in its phase, on one vertical line; the next step is open with its button; each step carries its own document / buttons (the same rows the Documents panel used to hold).
+const journeyOpen = new Map(); // order_number -> Set of step indexes opened by hand
+function toggleJourneyStep(orderNumber, i){
+  const set = journeyOpen.get(orderNumber) || new Set();
+  set.has(i) ? set.delete(i) : set.add(i);
+  journeyOpen.set(orderNumber, set);
+  refreshOpenOrderDetail();
+}
+const JOURNEY_PHASES = [
+  { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
+  { name: 'Payment & Release', labels: ['Plant status', 'Pay Plant', 'Release #', 'Send Release #'] },
+  { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Customs docs', 'Sent to customs', 'Delivered'] },
+  { name: 'Closing', labels: ['Invoice', 'Signature'] },
+];
+function renderJourney(o, attentionOrderNumbers){
+  const tl = renderUnifiedTimeline(o, attentionOrderNumbers);
+  const steps = tl.journey;
+  const rows = orderDocRows(o, tl.nextActionEntry ? tl.nextActionEntry.label : null);
+  const total = steps.length, done = steps.filter(x => x.done).length;
+  const pct = total ? done / total : 0;
+  const urgent = !!tl.isUrgent;
+  const pendingDocs = o.pending_pickup_documents || [];
+  const sendCustomsBtn = pendingDocs.length
+    ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:6px;" onclick="shareCustoms('${o.order_number}')">${CLIP_ICON} ${pendingDocs.length} doc${pendingDocs.length === 1 ? '' : 's'} — Send to Customs</button>`
+    : '';
+  // the plant-status / payment / release row sits in the first of its steps that is not done yet
+  const PAY = ['Plant status', 'Pay Plant', 'Release #', 'Send Release #'];
+  let payIdx = steps.findIndex(x => PAY.includes(x.label) && !x.done);
+  if (payIdx < 0) payIdx = steps.findIndex(x => x.label === 'Pay Plant');
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date, 'Customs docs': rows.pickup, 'Sent to customs': sendCustomsBtn };
+  const opened = journeyOpen.get(o.order_number) || new Set();
+  const R = 66, C = 2 * Math.PI * R;
+  const nx = tl.nextActionEntry;
+  const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || nx.label)} →</button>` : '';
+  let spine = '';
+  JOURNEY_PHASES.forEach(ph => {
+    const idxs = steps.map((x, i) => i).filter(i => ph.labels.includes(steps[i].label));
+    if (!idxs.length) return;
+    spine += `<div class="oj-pg"><b>${ph.name}</b><span></span><em>${idxs.filter(i => steps[i].done).length}/${idxs.length}</em></div>`;
+    idxs.forEach(i => {
+      const x = steps[i];
+      const z = x.done ? 'done' : x.now ? 'now' : 'wait';
+      const isOpen = z === 'now' || opened.has(i);
+      let inner = own[x.label] || '';
+      if (i === payIdx) inner += rows.payment;
+      if (x.label === 'Pay Plant') inner += rows.proforma;
+      if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
+      if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || x.label)} →</button>`;
+      if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
+      if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml(x.label)}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
+      const chip = z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
+      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml(x.label)}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
+    });
+  });
+  const pu = ocPickupDay(o), de = ocDeliveryDay(o);
+  const carrier = o.carrier && o.carrier.name ? `<div class="oj-fact"><span>Carrier</span><b>${escapeHtml(o.carrier.name)}</b></div>` : '';
+  const qt = o.sent_offer_id ? `<div class="oj-fact"><span>Quote</span><button class="oj-ghost" style="padding:4px 12px;" onclick="openOrderQT('${o.order_number}')" title="Open QT">QT</button></div>` : '';
+  return `<div class="oj">
+    <div class="oj-side">
+      <div class="oj-card"><div class="oj-ring"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="${R}" stroke="rgba(255,255,255,.1)"/><circle cx="75" cy="75" r="${R}" stroke="#5AAAFF" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/></svg><div class="c"><b>${Math.round(pct * 100)}%</b><span class="oj-k">${done} of ${total}</span></div></div>
+        <div class="oj-next"><div class="oj-k">Next</div><b>${nx ? escapeHtml(nx.label) : 'All done'}</b></div>${nextBtn}</div>
+      <div class="oj-card"><div class="oj-fact" style="border-top:0;padding-top:0"><span>Product</span><b>${escapeHtml(fullProductLabel(o) || '—')}</b></div><div class="oj-fact"><span>Plant</span><b>${escapeHtml(o.plant_name || '—')}</b></div>${carrier}<div class="oj-fact"><span>Pickup</span><b>${pu ? escapeHtml(ocFmtDay(pu)) : '—'}</b></div><div class="oj-fact"><span>Delivery</span><b>${de ? escapeHtml(ocFmtDay(de)) : '—'}</b></div>${qt}</div>
+      <div class="oj-legend"><span><i style="background:#3FCB7E"></i>done</span><span><i style="background:#5AAAFF"></i>next</span><span><i style="background:rgba(255,255,255,.3)"></i>waiting</span></div>
+    </div>
+    <div class="oj-spine"><div class="oj-fillbar" style="height:calc((100% - 20px) * ${pct.toFixed(3)})"></div>${spine}</div>
+  </div>`;
+}
+
+// the classic detail body (kept; the order detail now shows the Journey above)
+function renderOrderCardBodyClassic(o, attentionOrderNumbers){
   const { html: unifiedTimelineHtml, nextLabel, nextActionEntry, allDone, pendingCount, isUrgent } = renderUnifiedTimeline(o, attentionOrderNumbers);
   // Real ask 2026-09-21: "un solo flujo... una sola pagina" — ONE prominent, real button for
   // whatever's next, built directly from nextActionEntry (the exact same computed entry that
@@ -2663,6 +2813,8 @@ function renderOrderCardBody(o, attentionOrderNumbers){
   `;
 }
 
+function renderOrderCardBody(o, attentionOrderNumbers){ return renderJourney(o, attentionOrderNumbers); }
+
 // Real ask 2026-09-08: "si tu le das click en un boton te salga grande y puedas ver que estas
 // haciendo" — opens the full detail (everything renderOrderCardBody builds) big, in its own modal.
 async function openOrderDetail(orderNumber){
@@ -2673,12 +2825,14 @@ async function openOrderDetail(orderNumber){
   document.getElementById('orderDetailTitle').innerHTML = `<span class="order-num" style="font-size:18px;">${escapeHtml(o.order_number)}</span> <span class="muted" style="font-weight:600;">— ${escapeHtml(o.customer_name || '')}</span>`;
   document.getElementById('orderDetailBody').innerHTML = renderOrderCardBody(o, attentionOrderNumbers);
   document.getElementById('orderDetailOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
   await ensureOrderDocsFiles(orderNumber);
   refreshOpenOrderDetail();
 }
 function closeOrderDetail(){
   openOrderNumber = null;
   document.getElementById('orderDetailOverlay').style.display = 'none';
+  document.body.style.overflow = '';
 }
 function refreshOpenOrderDetail(attentionOrderNumbers){
   if (!openOrderNumber) return;

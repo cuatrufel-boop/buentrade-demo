@@ -49,6 +49,8 @@
       // a "from … to …" pair of date boxes wraps instead of running off the screen (Pay & Receive's Delivered from / to)
       'span[style*="inline-flex"][style*="white-space:nowrap"]{flex-wrap:wrap !important;white-space:normal !important;}' +
       'input[type=date]{min-width:0;max-width:100%;}' +
+      // the From → To date box (Offers, Pay & Receive) wrapped inside the screen on the narrowest phones (320 px: it ran 12 px past the edge and made the whole page slide sideways)
+      'html body .bt-range{flex-wrap:wrap !important;height:auto !important;max-width:100% !important;row-gap:2px !important;padding:4px 10px !important;}' +
       // a row of tabs wraps onto a second line instead of running past the card (Plants: Profile · Products & Prices · Locations · Pending · History)
       '.tab-row{flex-wrap:wrap !important;gap:4px !important;}' +
       '.tab-btn{flex:1 1 auto !important;}' +
@@ -86,7 +88,11 @@
       'table.bt-stack tr > td[data-first]{padding-left:14px !important;padding-bottom:10px !important;}' + 'table.bt-stack .pr-product{max-width:none !important;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;}' +
       'table.bt-stack tr > td[colspan]{display:block;text-align:left !important;}' +
       'table.bt-stack tr > td:empty{display:none;}' +
-    '}';
+    '}' +
+    // the narrowest phones (320 px): the stat cards drop their icon so the amount and its label fit ("$2,550,296 PIPELINE VALUE" was cut)
+    '@media (max-width:360px){.stat-icon{display:none !important;}.stat-card{padding:10px !important;}' +
+    // the Pickup / Delivery boxes of an Orders card: tighter letters so the dates fit the half-width box
+    '.oc-box .k,.oc-box .m,.oc-box .w,.oc-box .r{letter-spacing:.02em !important;white-space:normal !important;}.oc-box .d{font-size:22px !important;}.oc{padding:16px 12px !important;gap:10px !important;}.oc-box{padding:6px 3px 7px !important;}}';
   document.head.appendChild(css);
 
   // Phones: a wide table that isn't already inside a sideways-scrolling box gets one, so the table scrolls
