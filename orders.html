@@ -2470,7 +2470,7 @@ async function loadCustomsCities(){
   const next = {};
   orders.forEach(o => { if (!(o.order_number in agencyOf)) return; const a = agencyOf[o.order_number]; next[o.order_number] = a ? (customsAgencyCity[a] === undefined ? undefined : ocCrossing(customsAgencyCity[a])) : false; });
   orderCustomsCity = { ...orderCustomsCity, ...next };
-  orders.forEach(o => { const a = agencyOf[o.order_number]; const lab = a && ocAgencyLabel(customsAgencyShort[a], customsAgencyName[a]); if (lab) orderCustomsName[o.order_number] = lab; });
+  orders.forEach(o => { const a = agencyOf[o.order_number]; const lab = a && ocAgencyLabel(customsAgencyShort[a], customsAgencyName[a]); if (lab) orderCustomsName[o.order_number] = lab; else if (o.order_number in agencyOf) delete orderCustomsName[o.order_number]; });
   try { localStorage.setItem('btOrdersCustoms', JSON.stringify({ city: orderCustomsCity, name: orderCustomsName })); } catch (e) { /* no storage: it is simply read again */ }
   renderStatusOrders();
 }

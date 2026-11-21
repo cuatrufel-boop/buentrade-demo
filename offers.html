@@ -784,6 +784,8 @@ async function loadOffers(){
   // Grouped by customer first — when a customer calls in with a bid, that's what you already
   // know and search by, not the plant or when it was sent.
   let data;
+  // the plants' logos are asked at the SAME time as the offers, never after them (owner 2026-11-20: "no puede haber nada lento": Offers took 8 s because the second call waited for the first)
+  const plantsAsked = Object.keys(offerPlantsById).length ? null : callApi('plants-search', {}).catch(() => null);
   try {
     data = (await callApi('sent-offers-search', {
       sent_from: from ? from + 'T00:00:00' : null,
@@ -806,7 +808,7 @@ async function loadOffers(){
   // Same plant-avatar logo used in Pending Quotes — fetched once here since sent_offers itself
   // only stores the plant's name/id, not its logo.
   if (!Object.keys(offerPlantsById).length){
-    const plantRows = (await callApi('plants-search', {})).results || [];
+    const plantRows = ((plantsAsked ? await plantsAsked : await callApi('plants-search', {})) || {}).results || [];
     plantRows.forEach(p => { offerPlantsById[p.id] = p; });
   }
   renderOffers();
