@@ -1420,6 +1420,13 @@ function factoringDocsAllowPayment(o){
   if (!o || !(o.financing && o.financing.financing_method === 'summar')) return true;
   return !!(o.factoring_docs_sent_at || o.summar_payment_sent_at || o.plant_paid_at);
 }
+// Owner 2026-11-21 (new 12-step flow): the names of the steps as he dictated them. Only what is SHOWN changes; the internal labels (the keys the phases, the Next Action and the payment rows match on) stay as they were.
+const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release 2 Carrier', 'Pick up': 'PU 2 Client', 'Sent to customs': 'Docs to border', Delivered: 'Create Invoice', Invoice: 'Invoice client', Signature: 'Sign & Close' };
+// The places that SHOW a name call it as `(typeof stepName === 'function' ? stepName : (l => l))(label, o)`: a page piece that is read on its own (the protected tests build the render functions alone) keeps the original label.
+function stepName(label, o){
+  if (label === 'Pay Plant' && o && o.financing && o.financing.financing_method === 'summar') return 'Pay 2 Factoring';
+  return STEP_NAMES[label] || label;
+}
 async function plantStatusGate(o){
   if (plantStatusAllowsPayment(o)) return true;
   await btAlert(`${o.order_number}: confirm the plant's load status first — ask the plant (Plant status step), and record its confirmation here. Then you can pay.`);
@@ -1582,9 +1589,9 @@ function renderMilestoneTimeline(o){
     const dateStr = st.date ? fmtDateStr(String(st.date).slice(0, 10)) : '';
     const line = i < stops.length - 1 ? `<div class="mstop-line ${st.done ? 'done' : ''}"></div>` : '';
     return `<div class="mstop m-${state}">
-      <button type="button" class="mstop-btn" ${clickable ? `onclick="${st.onClick}"` : 'disabled'} title="${escapeHtml(st.label)}">${st.icon}</button>
+      <button type="button" class="mstop-btn" ${clickable ? `onclick="${st.onClick}"` : 'disabled'} title="${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(st.label, o))}">${st.icon}</button>
       ${line}
-      <div class="mstop-label">${escapeHtml(st.label)}</div>
+      <div class="mstop-label">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(st.label, o))}</div>
       ${dateStr ? `<div class="mstop-date">${dateStr}</div>` : ''}
     </div>`;
   }).join('');
@@ -1689,13 +1696,13 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     // — same raised treatment as FO, same curved connectors on both sides.
     const raised = s.key === 'picked_up' || s.key === 'delivered';
     return {
-      html: `<div class="u-main ${cls}${actionableClass}${raised ? ' raised' : ''}{{BLINK}}"${onclickAttr} title="${titleAttr}"><div class="u-main-icon">${STEP_ICONS[s.key]}</div><div class="u-main-label">${displayLabel}</div>${dateHtml}</div>`,
+      html: `<div class="u-main ${cls}${actionableClass}${raised ? ' raised' : ''}{{BLINK}}"${onclickAttr} title="${titleAttr}"><div class="u-main-icon">${STEP_ICONS[s.key]}</div><div class="u-main-label">${(typeof stepName === 'function' ? stepName : (l => l))(displayLabel, o)}</div>${dateHtml}</div>`,
       // Real ask 2026-09-21: "un solo flujo" — the prominent Next Action card (renderOrderCardBody)
       // reads this same onClickRaw/actionTitle instead of re-deriving its own copy, so it can never
       // drift from what this circle itself does — exactly the class of bug found live with Plant
       // Payment (3 independently-computed copies of the same decision).
       onClickRaw: realOnClick || null,
-      actionTitle: isNext ? `Mark ${s.label}` : (isPendingPickupConfirm ? `Confirm w/ ${confirmTarget}` : ''),
+      actionTitle: isNext ? (typeof stepName === 'function' ? stepName : (l => l))(s.label, o) : (isPendingPickupConfirm ? `Confirm w/ ${confirmTarget}` : ''),
       dateStr,
       info: realOnClick ? '' : infoMsg,
       lineDone: i < stageIdx,
@@ -1730,10 +1737,10 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     const raisedClass = st.raised ? ' raised' : '';
     const urgentClass = st.urgent ? ' urgent' : '';
     return {
-      html: `<div class="u-mini ${state}${raisedClass}${urgentClass}{{BLINK}}"><button type="button" class="u-mini-btn" ${clickable ? `onclick="${effectiveOnClick}"` : 'disabled'} title="${escapeHtml(st.label)}">${st.icon}</button><div class="u-mini-label">${escapeHtml(st.label)}</div>${dateStr ? `<div class="u-mini-date">${dateStr}</div>` : ''}</div>`,
+      html: `<div class="u-mini ${state}${raisedClass}${urgentClass}{{BLINK}}"><button type="button" class="u-mini-btn" ${clickable ? `onclick="${effectiveOnClick}"` : 'disabled'} title="${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(st.label, o))}">${st.icon}</button><div class="u-mini-label">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(st.label, o))}</div>${dateStr ? `<div class="u-mini-date">${dateStr}</div>` : ''}</div>`,
       // Real ask 2026-09-21: see mainEntry's own onClickRaw comment — same reasoning, same field.
       onClickRaw: state === 'now' ? (st.onClick || null) : null,
-      actionTitle: state === 'now' ? st.label : '',
+      actionTitle: state === 'now' ? (typeof stepName === 'function' ? stepName : (l => l))(st.label, o) : '',
       dateStr,
       info: st.waitReason || '',
       redo: state === 'done' ? (st.onClick || '') : '',
@@ -1951,7 +1958,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       const cls = s.state === 'done' ? ' done' : s.state === 'current' ? ' current' : '';
       const currentColor = attentionOrderNumbers.has(o.order_number) ? 'var(--amber)' : 'var(--blue-bright)';
       const style = s.state === 'current' ? ` style="border-color:${currentColor};color:${currentColor};"` : '';
-      const node = `<div class="c-node${cls}"${style} title="${escapeHtml(s.e.label)}">${s.e.icon}</div>`;
+      const node = `<div class="c-node${cls}"${style} title="${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(s.e.label, o))}">${s.e.icon}</div>`;
       const line = i < slice.length - 1 ? `<div class="c-line${s.state === 'done' ? ' done' : ''}"></div>` : '';
       return node + line;
     }).join('');
@@ -2639,7 +2646,7 @@ function ocPlantHover(o){
   return `<span class="oc-plant">${escapeHtml(o.plant_name || '—')}<div class="oc-pop"><div class="k">Pick-up city</div><div class="v">${OC_ICO.pin} ${escapeHtml(city || 'Not set yet')}</div>${when ? `<div class="s">${OC_ICO.clock} ${escapeHtml(when)} · ${escapeHtml(ocRelative(o))}</div>` : ''}</div></span>`;
 }
 function ocRail(steps){
-  return `<div class="oc-rail">${steps.map((s, i) => (i ? `<u class="${steps[i - 1].done ? 'd' : ''}"></u>` : '') + `<i class="${s.done ? 'd' : s.current ? 'c' : ''}" data-t="${escapeHtml(s.label)}"></i>`).join('')}</div>`;
+  return `<div class="oc-rail">${steps.map((s, i) => (i ? `<u class="${steps[i - 1].done ? 'd' : ''}"></u>` : '') + `<i class="${s.done ? 'd' : s.current ? 'c' : ''}" data-t="${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(s.label))}"></i>`).join('')}</div>`;
 }
 function renderOrderRow(o, attentionOrderNumbers){
   const delivered = o.load_status === 'delivered';
@@ -2755,7 +2762,7 @@ function renderJourney(o, attentionOrderNumbers){
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   const nx = tl.nextActionEntry;
-  const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || nx.label)} →</button>` : '';
+  const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(nx.label, o))} →</button>` : '';
   let spine = '';
   JOURNEY_PHASES.forEach(ph => {
     const idxs = steps.map((x, i) => i).filter(i => ph.labels.includes(steps[i].label));
@@ -2769,11 +2776,11 @@ function renderJourney(o, attentionOrderNumbers){
       if (i === payIdx) inner += rows.payment;
       if (x.label === 'Pay Plant') inner += rows.proforma;
       if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
-      if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || x.label)} →</button>`;
+      if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
-      if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml(x.label)}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
+      if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
       const chip = z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
-      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml(x.label)}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
+      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
   });
   const pu = ocPickupDay(o), de = ocDeliveryDay(o);
@@ -2782,7 +2789,7 @@ function renderJourney(o, attentionOrderNumbers){
   return `<div class="oj">
     <div class="oj-side">
       <div class="oj-card"><div class="oj-ring"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="${R}" stroke="rgba(255,255,255,.1)"/><circle cx="75" cy="75" r="${R}" stroke="#5AAAFF" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/></svg><div class="c"><b>${Math.round(pct * 100)}%</b><span class="oj-k">${done} of ${total}</span></div></div>
-        <div class="oj-next"><div class="oj-k">Next</div><b>${nx ? escapeHtml(nx.label) : 'All done'}</b></div>${nextBtn}</div>
+        <div class="oj-next"><div class="oj-k">Next</div><b>${nx ? escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nx.label, o)) : 'All done'}</b></div>${nextBtn}</div>
       <div class="oj-card"><div class="oj-fact" style="border-top:0;padding-top:0"><span>Product</span><b>${escapeHtml(fullProductLabel(o) || '—')}</b></div><div class="oj-fact"><span>Plant</span><b>${escapeHtml(o.plant_name || '—')}</b></div>${carrier}<div class="oj-fact"><span>Pickup</span><b>${pu ? escapeHtml(ocFmtDay(pu)) : '—'}</b></div><div class="oj-fact"><span>Delivery</span><b>${de ? escapeHtml(ocFmtDay(de)) : '—'}</b></div>${qt}</div>
       <div class="oj-legend"><span><i style="background:#3FCB7E"></i>done</span><span><i style="background:#5AAAFF"></i>next</span><span><i style="background:rgba(255,255,255,.3)"></i>waiting</span></div>
     </div>
@@ -2805,9 +2812,9 @@ function renderOrderCardBodyClassic(o, attentionOrderNumbers){
         <div class="load-next-action-icon">${nextActionEntry.icon}</div>
         <div class="load-next-action-text">
           <div class="load-next-action-eyebrow">Next Action</div>
-          <div class="load-next-action-label">${escapeHtml(nextActionEntry.label)}</div>
+          <div class="load-next-action-label">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nextActionEntry.label, o))}</div>
         </div>
-        <button class="wa-btn" onclick="${nextActionEntry.onClickRaw}">${escapeHtml(nextActionEntry.actionTitle || nextActionEntry.label)} →</button>
+        <button class="wa-btn" onclick="${nextActionEntry.onClickRaw}">${escapeHtml(nextActionEntry.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(nextActionEntry.label, o))} →</button>
       </div>`
     : '';
 
