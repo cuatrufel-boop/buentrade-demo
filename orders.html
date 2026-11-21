@@ -885,6 +885,24 @@ auth.onAuthStateChanged(user => {
   </div>
 </div>
 
+<!-- Owner 2026-11-21, step 4 "Docs 2 Factoring": the PO and the SO go by themselves; the trader adds the client's confirmation (photo, screenshot or PDF) from the phone or the computer, then sends. -->
+<div id="factoringDocsOverlay" class="email-modal-overlay" style="display:none;">
+  <div class="email-modal-box" style="max-width:460px;">
+    <h3>Docs 2 Factoring</h3>
+    <div class="email-modal-from" id="factoringDocsIntro"></div>
+    <div style="background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.7;color:var(--ink-soft);margin:14px 0 10px;">
+      <b style="color:var(--ink);">Goes to Summar:</b> the Purchase Order, the Sales Order and the client's confirmation that he buys the load.
+    </div>
+    <div id="factoringDocsFiles" style="font-size:12.5px;line-height:1.8;color:var(--ink);margin-bottom:6px;"></div>
+    <input type="file" id="factoringDocsInput" accept="image/*,.pdf,application/pdf" multiple style="display:none;" onchange="addFactoringDocsFiles(this)">
+    <div class="email-modal-actions">
+      <button class="btn secondary" onclick="closeFactoringDocsOverlay()">Cancel</button>
+      <button class="btn secondary" onclick="document.getElementById('factoringDocsInput').click()">Add client confirmation</button>
+      <button class="wa-btn" id="factoringDocsSend" onclick="sendFactoringDocs()">Send to Summar</button>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
   <h1>Orders</h1>
 
@@ -1396,6 +1414,12 @@ async function askPlantStatusClick(orderNumber){
 function plantStatusAllowsPayment(o){
   return !!(o && (o.pickup_status_confirmed_at || o.plant_paid_at || o.summar_payment_sent_at));
 }
+// Owner 2026-11-21 (new 12-step flow, step 4 "Docs 2 Factoring"): for an order financed by Summar, the PO, the SO and the client's confirmation go to Summar BEFORE the payment to Summar opens.
+// An order already sent to Summar or already paid never goes back to waiting; an order not financed by Summar is not touched.
+function factoringDocsAllowPayment(o){
+  if (!o || !(o.financing && o.financing.financing_method === 'summar')) return true;
+  return !!(o.factoring_docs_sent_at || o.summar_payment_sent_at || o.plant_paid_at);
+}
 async function plantStatusGate(o){
   if (plantStatusAllowsPayment(o)) return true;
   await btAlert(`${o.order_number}: confirm the plant's load status first — ask the plant (Plant status step), and record its confirmation here. Then you can pay.`);
@@ -1744,10 +1768,19 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   // confirmation (clicking the step again once asked); Pay Plant opens after (plantStatusAllowsPayment: a payment already under way never goes back to waiting).
   // Owner 2026-11-19: "nunca confirmé que había mandado email y sale como delivered" — the step is done ONLY when he recorded the plant's confirmation; a payment already under way without any status
   // request (e.g. 1002, paid before this step existed) no longer shows it as done — the step is simply not part of that order's line.
+  // Owner 2026-11-21 (new 12-step flow, step 4): "Docs 2 Factoring" — the PO, the SO and the client's confirmation to Summar; only for orders financed by Summar that have not been paid or sent to Summar yet (or that already did it).
+  if (isSummarFinancedTimeline && (o.factoring_docs_sent_at || !(o.plant_paid_at || o.summar_payment_sent_at))){
+    entries.push(miniEntry({ icon: '✉', label: 'Docs 2 Factoring', done: !!o.factoring_docs_sent_at, date: o.factoring_docs_sent_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: `sendFactoringDocsClick('${o.order_number}')` }));
+  }
   if (o.pickup_status_sent_at || o.pickup_status_confirmed_at || !(o.plant_paid_at || o.summar_payment_sent_at)){
     entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: !!o.pickup_status_confirmed_at, date: o.pickup_status_confirmed_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: o.pickup_status_sent_at ? `confirmPlantStatusClick('${o.order_number}')` : `askPlantStatusClick('${o.order_number}')` }));
   }
   entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: !docBeforePaymentDone || !plantStatusAllowsPayment(o), waitReason: !docBeforePaymentDone ? docBeforePaymentReason : 'The plant must confirm the load status first.', onClick: payPlantOnClick }));
+  // Owner 2026-11-21 (step 4): a Summar order whose documents have not gone to Summar yet waits here too (the line above stays as the owner approved it on 2026-11-19).
+  if (!factoringDocsAllowPayment(o) && docBeforePaymentDone && plantStatusAllowsPayment(o)){
+    entries.pop();
+    entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: true, waitReason: 'Send the documents to Summar first.', onClick: payPlantOnClick }));
+  }
   // Real gap found 2026-09-07: "revisa todo... faltan mas cosas" — recordReleaseNumber/
   // sendReleaseNumberToCarrier only lived inside the collapsed Documentos panel, invisible on the
   // main flow this whole rebuild exists to show at a glance. Two real milestones now, same as every
@@ -1857,7 +1890,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   // reads that same order, no new sequence invented.
   const PHASE_DEFS = [
     { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
-    { name: 'Payment & Release', labels: ['Pay Plant', 'Release #', 'Send Release #'] },
+    { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Pay Plant', 'Release #', 'Send Release #'] },
     { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Customs docs', 'Sent to customs', 'Delivered'] },
     { name: 'Closing', labels: ['Invoice', 'Signature'] },
   ];
@@ -2075,6 +2108,8 @@ function computeAttentionItems(){
               : `<button class="wa-btn" onclick="showSummarPaymentBreakdown('${o.order_number}')">Pay via Summar</button>`)
           : `<button class="wa-btn" onclick="payPlantClick('${o.order_number}')">Confirm Payment Sent</button>`;
         // Owner 2026-11-19: it shows once the plant confirmed the load status (until then the items above ask for it).
+        // Owner 2026-11-21 (step 4): a Summar order whose documents have not gone to Summar yet is not asked to pay.
+        if (factoringDocsAllowPayment(o))
         if (plantStatusAllowsPayment(o)) items.push({ orderNumber: label, order_number: o.order_number, text: `Pay the plant — ${productName}`, btn: payBtnHtml });
       }
     }
@@ -2347,7 +2382,10 @@ function orderDocRows(o, nextActionLabel){
         : docRowBtn('Ask Plant Status', `askPlantStatusClick('${o.order_number}')`) + docRowBtn('Did You Send It?', `confirmPlantStatusSentClick('${o.order_number}')`);
       paymentStatus = o.pickup_status_sent_at ? 'Waiting for the plant to confirm the load status' : 'Waiting on the plant status';
     } else if (isSummarFinanced && !o.plant_paid_at){
-      if (!o.summar_payment_sent_at){
+      if (!factoringDocsAllowPayment(o)){
+        paymentBtn = docRowBtn('Docs 2 Factoring', `sendFactoringDocsClick('${o.order_number}')`);
+        paymentStatus = 'Send the documents to Summar first';
+      } else if (!o.summar_payment_sent_at){
         paymentBtn = docRowBtn('Pay via Summar', `showSummarPaymentBreakdown('${o.order_number}')`);
         paymentStatus = 'Not paid — via Summar';
       } else {
@@ -2380,7 +2418,7 @@ function orderDocRows(o, nextActionLabel){
     // one row covers all 3 sub-states as the order progresses) — suppressed only while that's true,
     // same reasoning as PO/SO/FO above. The final "Release #: XXX" state already shows no button
     // once past all three, so nothing to suppress there.
-    const paymentActionIsNextAction = ['Pay Plant', 'Release #', 'Send Release #'].includes(nextActionLabel);
+    const paymentActionIsNextAction = ['Docs 2 Factoring', 'Pay Plant', 'Release #', 'Send Release #'].includes(nextActionLabel);
     // Real bug found live 2026-09-21 ("se sale del cuadro"): this row can carry up to 3 buttons at
     // once (Record Release # + Resend + Save Payments Contact) — half a grid column is never
     // enough room, so its status text got pushed outside the card. Full width, same as the
@@ -2694,7 +2732,7 @@ function toggleJourneyStep(orderNumber, i){
 }
 const JOURNEY_PHASES = [
   { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
-  { name: 'Payment & Release', labels: ['Plant status', 'Pay Plant', 'Release #', 'Send Release #'] },
+  { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Plant status', 'Pay Plant', 'Release #', 'Send Release #'] },
   { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Customs docs', 'Sent to customs', 'Delivered'] },
   { name: 'Closing', labels: ['Invoice', 'Signature'] },
 ];
@@ -3119,6 +3157,97 @@ async function recordSummarConfirmation(orderNumber){
   catch (e) { await btAlert('Could not record the confirmation: ' + e.message); return; }
   showToast('Summar payment confirmed', 'You can now request the Release Number.');
   await loadStatusOrders();
+}
+
+// ============ DOCS 2 FACTORING (owner 2026-11-21, step 4 of the new 12-step flow) ============
+// The PO and the SO are built as always; the client's confirmation (what the client wrote or signed to say he buys the load) is a photo, a screenshot or a PDF the trader adds from the
+// phone or the computer. Several pictures become ONE pdf, Sales_Confirmation_BT-….pdf. The e-mail goes through the same preview-before-send window as every other document.
+let factoringDocsOrderNumber = null;
+let factoringDocsFiles = [];
+function sendFactoringDocsClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  if (!(o.financing && o.financing.financing_method === 'summar')){ btAlert(`${orderNumber} is not financed with Summar.`); return; }
+  factoringDocsOrderNumber = orderNumber;
+  factoringDocsFiles = [];
+  document.getElementById('factoringDocsIntro').textContent = `${orderNumber} — ${fullProductLabel(o)} — ${o.plant_name}`;
+  renderFactoringDocsFiles();
+  document.getElementById('factoringDocsOverlay').style.display = 'flex';
+}
+function closeFactoringDocsOverlay(){
+  document.getElementById('factoringDocsOverlay').style.display = 'none';
+  factoringDocsOrderNumber = null;
+  factoringDocsFiles = [];
+}
+function renderFactoringDocsFiles(){
+  const box = document.getElementById('factoringDocsFiles');
+  box.innerHTML = factoringDocsFiles.length
+    ? factoringDocsFiles.map((f, i) => `<div>📎 ${escapeHtml(f.name)} <a href="#" onclick="removeFactoringDocsFile(${i});return false;" style="color:var(--ink-soft);text-decoration:none;" title="Remove">✕</a></div>`).join('')
+    : `<div style="color:var(--ink-soft);">No client confirmation added yet.</div>`;
+  const btn = document.getElementById('factoringDocsSend');
+  btn.style.opacity = factoringDocsFiles.length ? '1' : '.5';
+}
+function addFactoringDocsFiles(input){
+  factoringDocsFiles = factoringDocsFiles.concat(Array.from(input.files || []));
+  input.value = '';
+  renderFactoringDocsFiles();
+}
+function removeFactoringDocsFile(i){
+  factoringDocsFiles.splice(i, 1);
+  renderFactoringDocsFiles();
+}
+function readFileAsDataUrl(file){
+  return new Promise((resolve, reject) => { const r = new FileReader(); r.onloadend = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file); });
+}
+function loadImageElement(src){
+  return new Promise((resolve, reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = () => reject(new Error('unreadable image')); im.src = src; });
+}
+// Pictures -> one pdf (a page per picture, as wide as the picture); PDFs go as they are; a picture the browser cannot read goes as the original file. One file: Sales_Confirmation_BT-….pdf; several: -1, -2, …
+async function factoringConfirmationAttachments(orderNumber, files){
+  const base = `Sales_Confirmation_BT-${btNum(orderNumber)}`;
+  const parts = [];
+  const images = files.filter(f => /^image\//.test(f.type));
+  const others = files.filter(f => !/^image\//.test(f.type));
+  let pdf = null;
+  for (const f of images){
+    try {
+      const img = await loadImageElement(await readFileAsDataUrl(f));
+      const scale = Math.min(1, 1600 / img.width);
+      const cw = Math.round(img.width * scale), ch = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas'); canvas.width = cw; canvas.height = ch;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch); ctx.drawImage(img, 0, 0, cw, ch);
+      const pw = 595, ph = Math.round(595 * ch / cw), orientation = ph >= pw ? 'p' : 'l';
+      if (!pdf) pdf = new window.jspdf.jsPDF({ unit: 'pt', format: [pw, ph], orientation }); else pdf.addPage([pw, ph], orientation);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, pw, ph);
+    } catch (e) { others.push(f); }
+  }
+  if (pdf) parts.push({ content: pdf.output('datauristring').split(',')[1], contentType: 'application/pdf' });
+  for (const f of others) parts.push({ content: await readFileAsBase64(f), contentType: f.type || 'application/octet-stream', ext: (f.name.match(/\.[A-Za-z0-9]+$/) || [''])[0] });
+  return parts.map((x, i) => ({ filename: `${base}${parts.length > 1 ? '-' + (i + 1) : ''}${x.ext || (x.contentType === 'application/pdf' ? '.pdf' : '')}`, content: x.content, contentType: x.contentType }));
+}
+async function sendFactoringDocs(){
+  const orderNumber = factoringDocsOrderNumber;
+  if (!orderNumber) return;
+  if (!factoringDocsFiles.length){ await btAlert("Add the client's confirmation first: a photo, a screenshot or a PDF."); return; }
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  let poBuilt, soBuilt, confirmation;
+  try { poBuilt = await buildPODoc(orderNumber); soBuilt = await buildSODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
+  try { confirmation = await factoringConfirmationAttachments(orderNumber, factoringDocsFiles); } catch(e){ await btAlert('The confirmation could not be read: ' + e.message); return; }
+  const attachments = [pdfAttachment(poBuilt.doc, `PO-BT-${btNum(orderNumber)}.pdf`), pdfAttachment(soBuilt.doc, `SO-BT-${btNum(orderNumber)}.pdf`), ...confirmation];
+  const orderId = `BT-${btNum(orderNumber)}`;
+  const subject = `${orderId} | Factoring Documents & Financial Breakdown – ${o.customer_name || ''}`;
+  const body = `Hi Summar team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\nLet us know once everything is reviewed on your end.\n\nBest regards,`;
+  try {
+    await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, attachments, null);
+    showToast('Sent to Summar', SUMMAR_EMAIL);
+    await markDocSent(orderNumber, 'factoring_docs');
+    closeFactoringDocsOverlay();
+    await loadStatusOrders();
+  } catch(e){
+    if (e.cancelled) return;
+    showToast('Automatic send failed', e.message, true);
+  }
 }
 
 // Real ask 2026-09-20: "deberia ir a la persona correcta del location no solo a la vendedora de la
