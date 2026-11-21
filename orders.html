@@ -25,7 +25,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy:#0A2547;
@@ -88,7 +88,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .table-scroll{overflow-x:auto;}
   /* ===== Orders route cards (owner 2026-11-20, approved mock-up "B") ===== */
   .oc-list{display:grid;gap:16px;}
-  .oc{position:relative;display:grid;grid-template-columns:132px 1fr auto 132px;gap:26px;align-items:center;padding:26px 28px;border:1.5px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:0 24px 60px -24px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .3s,box-shadow .3s;}
+  .oc{position:relative;display:grid;grid-template-columns:132px 1fr 132px;gap:26px;align-items:center;padding:26px 28px;border:1.5px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:0 24px 60px -24px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .3s,box-shadow .3s;}
   .oc:hover{border-color:rgba(90,170,255,.45);}
   .oc::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(90,170,255,.16),transparent 70%);}
   .oc:hover::before{opacity:1;}
@@ -206,8 +206,8 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-pill.plant{color:var(--amber);border-color:rgba(255,200,118,.55);background:rgba(255,200,118,.09);}
   .oc-pill.ok{color:var(--green-bright);border-color:rgba(63,203,126,.5);background:rgba(63,203,126,.1);}
   .oc-route{display:block;margin-top:20px;}
-  .oc-rhead{display:flex;justify-content:space-between;font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;}
-  .oc-rhead b{color:var(--ink);font-weight:600;}
+  .oc-rhead{display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;}
+  .oc-rhead b{color:rgba(255,255,255,.88);font-weight:500;}
   .oc-rhead .g{color:var(--green-bright);}
   .oc-rl{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;}
   .oc-node{position:relative;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1.5px solid;font-size:17px;background:#0b1a36;}
@@ -215,7 +215,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oc-node.d{color:var(--green-bright);border-color:rgba(63,203,126,.7);box-shadow:0 0 22px rgba(63,203,126,.3);}
   .oc-node.d.ping::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green-bright);animation:ocRing 2.4s ease-out infinite;}
   .oc-node.dim{opacity:.55;border-style:dashed;}
-  @media(max-width:900px){.oc{grid-template-columns:1fr 1fr;grid-template-areas:"pu del" "meta meta" "act act";gap:18px;}.oc-tk.p{grid-area:pu;}.oc-tk.d{grid-area:del;}.oc-meta{grid-area:meta;}.oc-act{grid-area:act;align-items:flex-start;}.oc-rhead{flex-wrap:wrap;gap:4px 14px;}}
+  @media(max-width:900px){.oc{grid-template-columns:1fr 1fr;grid-template-areas:"pu del" "meta meta";gap:18px;}.oc-tk.p{grid-area:pu;}.oc-tk.d{grid-area:del;}.oc-meta{grid-area:meta;}.oc-rhead{flex-wrap:wrap;gap:4px 14px;}}
   .toast-stack{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:10px;}
   /* Real bug found 2026-09-06: this sat BELOW #urgentQueueOverlay (z-index 6000) — harmless while
      the two never appeared together, but now that a ?focus= deep link auto-triggers the real send
@@ -2511,7 +2511,6 @@ function ocRail(steps){
   return `<div class="oc-rail">${steps.map((s, i) => (i ? `<u class="${steps[i - 1].done ? 'd' : ''}"></u>` : '') + `<i class="${s.done ? 'd' : s.current ? 'c' : ''}" data-t="${escapeHtml(s.label)}"></i>`).join('')}</div>`;
 }
 function renderOrderRow(o, attentionOrderNumbers){
-  const { nextLabel, nextActionEntry, allDone, isUrgent, railSteps, stepNumber, totalSteps } = renderUnifiedTimeline(o, attentionOrderNumbers);
   const delivered = o.load_status === 'delivered';
   const onRoad = !delivered && o.load_status === 'picked_up'; // the load left the plant: the card says ON ROAD, blinking
   const plantDelivers = ocPlantDelivers(o);
@@ -2521,11 +2520,7 @@ function renderOrderRow(o, attentionOrderNumbers){
   const border = orderCustomsCity[o.order_number];
   const borderTxt = border || (border === false ? 'No customs agency yet' : '…');
   const productName = fullProductLabel(o);
-  const btn = nextActionEntry
-    ? `<button class="oc-btn ${isUrgent ? 'a' : 'b'}" onclick="${nextActionEntry.onClickRaw}">${escapeHtml(nextActionEntry.actionTitle || nextActionEntry.label)} ${OC_ICO.arrow}</button>`
-    : '';
-  const head = delivered ? `<span class="oc-done">${OC_ICO.check} Delivered</span>` : (btn || `<span class="oc-done">${OC_ICO.check} All caught up</span>`);
-  const sub = nextActionEntry ? `Step ${stepNumber} of ${totalSteps} · ${escapeHtml(nextLabel)}` : 'all steps done';
+  // the card only shows the load; every action (next step, stage, documents) is done from inside the order — owner 2026-11-20
 
   const pu = ocPickupDay(o), de = ocDeliveryDay(o);
   const total = pu && de ? ocDaysBetween(pu, de) : 0;
@@ -2561,7 +2556,6 @@ function renderOrderRow(o, attentionOrderNumbers){
           <div class="oc-node d ${onRoad ? 'ping' : ''}">${OC_ICO.shield}</div>
         </div>
       </div></div>
-    <div class="oc-act">${head}${delivered && btn ? btn : ''}<small>${sub}</small>${ocRail(railSteps)}</div>
     <div class="oc-tk d">${ocBox('DELIVERY', OC_ICO.down, de, deCls, deRel, '')}${deCity}</div>
   </div>`;
 }

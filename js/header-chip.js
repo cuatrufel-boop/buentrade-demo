@@ -25,7 +25,8 @@
       'header .top-row{min-height:40px;}' +
       // the brand link, whatever its address — Netlify rewrites "dashboard.html" to "/dashboard" when it publishes
       'header .top-row > a{left:0 !important;}' +
-      '#userChip{right:16px !important;top:19px !important;bottom:auto !important;}' +
+      // the account chip (view-as, bell, notifications, avatar, log out) is wider than the room beside the brand: on its own line under it, right-aligned (owner 2026-11-20: it ran over "Operating System")
+      '#userChip{position:static !important;right:auto !important;top:auto !important;bottom:auto !important;margin:8px 0 0 auto !important;width:fit-content;max-width:100%;}' +
       '.nav-row{padding-left:0;padding-right:0;margin-top:10px;gap:2px 0;}' +
       '.nav-pill{font-size:13.5px;padding:6px 9px;}' +
       'input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px !important;}' +
