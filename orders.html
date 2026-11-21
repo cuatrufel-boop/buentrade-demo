@@ -3463,10 +3463,36 @@ async function editPickupDateClick(orderNumber){
 function releaseNumberMessage(o){
   return `Hi, here's the release number for order PO-BT-${btNum(o.order_number)} — ${fullProductLabel(o)}: ${o.release_number}. Please use it for pickup. Thank you!`;
 }
+// RELEASE 2 CARRIER (owner 2026-11-21, step 6 of the new 12-step flow): his e-mail to the carrier with the release number, copying the person of the pick-up location (the plant's logistics and scheduling contact).
+// Returns true when the e-mail window handled it (sent or cancelled); false when there is no e-mail path (the carrier or the pick-up person has no e-mail): the WhatsApp send below then runs exactly as it always did.
+async function sendReleaseNumberByEmail(o){
+  const carrierEmails = collectEmails(o.carrier);
+  const loc = o.pickup_location || {};
+  const copyEmails = String(loc.email || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+  if (!carrierEmails.length || !copyEmails.length) return false;
+  const orderId = `FO-BT-${btNum(o.order_number)}`;
+  const plantName = String(o.plant_name || '').trim();
+  const place = String(loc.address || loc.location_name || '').trim();
+  const carrierName = String((o.carrier && o.carrier.name) || '').trim();
+  const subject = `${orderId} | Release Number & Pick-Up Appointment – ${plantName}`;
+  const body = `Hi${carrierName ? ' ' + carrierName : ''} team,\n\nPlease find below the release details for Order ${orderId}:\n\n* Release Number: ${o.release_number}\n* Pick-Up Location: ${plantName}${place ? ' – ' + place : ''}\n\n`
+    + `We have copied ${plantName}'s logistics and scheduling team on this email. Kindly coordinate with them, confirm the scheduled pick-up date and time, and, if possible, share the tracking link for this shipment.\n\nBest regards,`;
+  try {
+    await sendEmailApi('logistics', carrierEmails, subject, body, [], (o.carrier && o.carrier.phone) ? { phone: o.carrier.phone, message: releaseNumberMessage(o) } : null, copyEmails);
+    showToast('Release number sent', carrierEmails.join(', '));
+    await markDocSent(o.order_number, 'release_number');
+    await loadStatusOrders();
+  } catch (e) {
+    if (e.cancelled) return true;
+    showToast('Automatic send failed', e.message, true);
+  }
+  return true;
+}
 async function sendReleaseNumberToCarrier(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   if (!o.release_number){ await btAlert('No release number recorded yet for this order.'); return; }
+  if (await sendReleaseNumberByEmail(o)) return;
   const phone = o.carrier && o.carrier.phone;
   if (!phone){ await btAlert('No carrier phone on file to send the release number.'); return; }
   const sent = await bcWaOpenAndConfirm(phone, releaseNumberMessage(o), (o.carrier && o.carrier.name) || 'the carrier');
