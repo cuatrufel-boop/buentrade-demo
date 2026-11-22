@@ -2806,7 +2806,8 @@ function renderJourney(o, attentionOrderNumbers){
     ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:6px;" onclick="shareCustoms('${o.order_number}')">${CLIP_ICON} ${pendingDocs.length} doc${pendingDocs.length === 1 ? '' : 's'} — Send to Customs</button>`
     : '';
   // the plant-status / payment / release row sits in the first of its steps that is not done yet
-  const PAY = ['Plant status', 'Pay Plant', 'Send Release #'];
+  // Owner 2026-11-22 (audit): the payment row belongs to Plant status / Pay 2 Factoring only; once paid it must never land inside Release 2 Carrier.
+  const PAY = ['Plant status', 'Pay Plant'];
   let payIdx = steps.findIndex(x => PAY.includes(x.label) && !x.done);
   if (payIdx < 0) payIdx = steps.findIndex(x => x.label === 'Pay Plant');
   // the plant's order number is written by hand only when the mail reader did not get it: in Release 2 Carrier, or in Confirm PU for a load without a carrier of ours
