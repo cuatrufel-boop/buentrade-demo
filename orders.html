@@ -1828,12 +1828,11 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     releaseNumberUrgent = daysUntilPickup <= 1;
   }
   // Owner 2026-11-21: the plant answers our PO with its own order number (read by the mail reader, or written here) BEFORE any payment; it does not wait for the payment and it does not hold any other step back.
-  entries.push(miniEntry({ icon: '#', label: 'Release #', done: !!o.release_number, date: null, wait: !o.po_sent_at, waitReason: 'Send the PO first.', onClick: `recordReleaseNumber('${o.order_number}')`, raised: true, urgent: releaseNumberUrgent }));
-  if (o.carrier && o.carrier.phone) entries.push(miniEntry({ icon: STEP_ICONS.picked_up, label: 'Send Release #', done: !!o.release_number_sent_at, date: o.release_number_sent_at, wait: !o.release_number, waitReason: 'Record the release number first.', onClick: `sendReleaseNumberToCarrier('${o.order_number}')` }));
+  // Owner 2026-11-22: only the 12 steps he dictated are on the list. "Release #" is gone: the plant's order number is read from its reply by the mail reader and sits inside Release 2 Carrier (written by hand there only if the reader did not get it).
+  if (o.carrier && o.carrier.phone) entries.push(miniEntry({ icon: STEP_ICONS.picked_up, label: 'Send Release #', done: !!o.release_number_sent_at, date: o.release_number_sent_at, wait: !o.release_number, waitReason: "Waiting for the plant's reply with its order number (it is read automatically).", onClick: `sendReleaseNumberToCarrier('${o.order_number}')`, urgent: releaseNumberUrgent }));
   const confirmIdx = entries.length;
   entries.push(mainEntry('pending_pickup'));
   entries.push(mainEntry('picked_up'));
-  entries.push(miniEntry({ icon: CLIP_ICON, label: 'Customs docs', done: hasAnyPickupDoc, date: null, wait: stageIdx < pickedUpIdx, waitReason: 'Mark the load Picked Up first.', onClick: `requestCustomsDocsClick('${o.order_number}')` }));
   entries.push(miniEntry({ icon: CUSTOMS_ICON, label: 'Sent to customs', done: !!o.customs_sent_at, date: o.customs_sent_at, wait: !pendingCustoms && !o.customs_sent_at, waitReason: 'No pickup documents have arrived yet.', onClick: `shareCustoms('${o.order_number}')`, raised: true }));
   const deliveredIdxInEntries = entries.length;
   entries.push(mainEntry('delivered'));
@@ -1923,8 +1922,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   // reads that same order, no new sequence invented.
   const PHASE_DEFS = [
     { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
-    { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Pay Plant', 'Release #', 'Send Release #'] },
-    { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Customs docs', 'Sent to customs', 'Delivered'] },
+    { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Pay Plant', 'Send Release #'] },
+    { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Sent to customs', 'Delivered'] },
     { name: 'Closing', labels: ['Invoice', 'Signature'] },
   ];
   const phaseSlices = PHASE_DEFS.map(def => entries.map((e, i) => i).filter(i => def.labels.includes(entries[i].label)));
@@ -2461,7 +2460,7 @@ function orderDocRows(o, nextActionLabel){
     // one row covers all 3 sub-states as the order progresses) — suppressed only while that's true,
     // same reasoning as PO/SO/FO above. The final "Release #: XXX" state already shows no button
     // once past all three, so nothing to suppress there.
-    const paymentActionIsNextAction = ['Docs 2 Factoring', 'Pay Plant', 'Release #', 'Send Release #'].includes(nextActionLabel);
+    const paymentActionIsNextAction = ['Docs 2 Factoring', 'Pay Plant', 'Send Release #'].includes(nextActionLabel);
     // Real bug found live 2026-09-21 ("se sale del cuadro"): this row can carry up to 3 buttons at
     // once (Record Release # + Resend + Save Payments Contact) — half a grid column is never
     // enough room, so its status text got pushed outside the card. Full width, same as the
@@ -2791,8 +2790,8 @@ function toggleJourneyPhase(orderNumber, pi){
 }
 const JOURNEY_PHASES = [
   { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
-  { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Plant status', 'Pay Plant', 'Release #', 'Send Release #'] },
-  { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Customs docs', 'Sent to customs', 'Delivered'] },
+  { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Plant status', 'Pay Plant', 'Send Release #'] },
+  { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Sent to customs', 'Delivered'] },
   { name: 'Closing', labels: ['Invoice', 'Signature'] },
 ];
 function renderJourney(o, attentionOrderNumbers){
@@ -2807,10 +2806,14 @@ function renderJourney(o, attentionOrderNumbers){
     ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:6px;" onclick="shareCustoms('${o.order_number}')">${CLIP_ICON} ${pendingDocs.length} doc${pendingDocs.length === 1 ? '' : 's'} — Send to Customs</button>`
     : '';
   // the plant-status / payment / release row sits in the first of its steps that is not done yet
-  const PAY = ['Plant status', 'Pay Plant', 'Release #', 'Send Release #'];
+  const PAY = ['Plant status', 'Pay Plant', 'Send Release #'];
   let payIdx = steps.findIndex(x => PAY.includes(x.label) && !x.done);
   if (payIdx < 0) payIdx = steps.findIndex(x => x.label === 'Pay Plant');
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date, 'Customs docs': rows.pickup, 'Sent to customs': sendCustomsBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Release #': rows.plantOrder, 'Send Release #': rows.appointment };
+  // the plant's order number is written by hand only when the mail reader did not get it: in Release 2 Carrier, or in Confirm PU for a load without a carrier of ours
+  const hasCarrierPhone = !!(o.carrier && o.carrier.phone);
+  const recordRelBtn = !o.release_number ? `<button class="oj-ghost" onclick="recordReleaseNumber('${o.order_number}')">Record the plant's order number</button>` : '';
+  const requestAgainBtn = o.picked_up_at && !pendingDocs.length && !o.customs_sent_at ? `<button class="oj-ghost" onclick="requestCustomsDocsClick('${o.order_number}')">Ask for the documents again</button>` : '';
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   const nx = tl.nextActionEntry;
