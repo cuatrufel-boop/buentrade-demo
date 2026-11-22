@@ -1183,7 +1183,7 @@ async function loadStatusOrders(){
     freight: o.freight_origin ? { origin: o.freight_origin } : null,
     carrier: o.carrier_provider_id ? { phone: o.carrier_phone, name: o.carrier_name, email: o.carrier_email } : null,
     plant: {
-      whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email, email_cc: o.plant_email_cc,
+      whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email, email_cc: o.plant_email_cc, docs_emails: o.plant_docs_emails,
       payments_contact_name: o.plant_payments_contact_name, payments_email: o.plant_payments_email, payments_whatsapp: o.plant_payments_whatsapp,
     },
     plant_id: o.plant_id,
@@ -3138,7 +3138,8 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
 async function requestPickupDocsOnPickup(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o || !o.plant) return;
-  const to = collectEmails(o.plant);
+  // the plant's sales contact and its DOCUMENTS contacts (not its CC list: those get the PO and the price requests) — owner 2026-11-22
+  const to = [...new Set([String(o.plant.email || '').trim(), ...String(o.plant.docs_emails || '').split(/[,;\s]+/).map(e => e.trim())].filter(Boolean))];
   if (!to.length) return;
   const cc = o.carrier ? collectEmails(o.carrier) : [];
   const waPhone = String(o.plant.whatsapp || o.plant.phone || '').replace(/\D/g, '');
