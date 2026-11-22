@@ -1173,7 +1173,7 @@ async function loadStatusOrders(){
     freight: o.freight_origin ? { origin: o.freight_origin } : null,
     carrier: o.carrier_provider_id ? { phone: o.carrier_phone, name: o.carrier_name, email: o.carrier_email } : null,
     plant: {
-      whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email,
+      whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email, email_cc: o.plant_email_cc,
       payments_contact_name: o.plant_payments_contact_name, payments_email: o.plant_payments_email, payments_whatsapp: o.plant_payments_whatsapp,
     },
     plant_id: o.plant_id,
@@ -1276,7 +1276,7 @@ function fullProductLabelEs(o){
   return o.product_spec_es || (cp ? cp.name : null) || o.product_name_es || fullProductLabel(o);
 }
 function requestCustomsDocsMessage(o){
-  const docsLine = o.docs_on ? 'label photos, Bill of Lading, packing list, and USDA papers' : 'label photos, Bill of Lading, and packing list';
+  const docsLine = o.docs_on ? 'label photos, Bill of Lading, slaughter letter, packing list, and USDA papers' : 'label photos, Bill of Lading, slaughter letter, and packing list';
   return `Hi, for order PO-BT-${btNum(o.order_number)} — ${fullProductLabel(o)}, please send us: ${docsLine}. Thank you.`;
 }
 function requestCustomsDocsSubject(orderNumber){
@@ -2176,7 +2176,7 @@ function computeAttentionItems(){
         btn: `<button class="wa-btn outline" onclick="resendPaymentEmail('${o.order_number}')">Resend Release Number Request</button>` });
     }
     if (stage === 'picked_up' && !(o.pending_pickup_documents && o.pending_pickup_documents.length)){
-      const docsLine = o.docs_on ? 'label photos, Bill of Lading, packing list, and USDA papers' : 'label photos, Bill of Lading, and packing list';
+      const docsLine = o.docs_on ? 'label photos, Bill of Lading, slaughter letter, packing list, and USDA papers' : 'label photos, Bill of Lading, slaughter letter, and packing list';
       items.push({ orderNumber: label, order_number: o.order_number, text: `Request pickup documents (${docsLine}) — ${productName}`,
         btn: pickupBtns(`Hi, for order PO-BT-${btNum(o.order_number)} — ${productName}, please send us: ${docsLine}. Thank you.`, `PO-BT-${btNum(o.order_number)} — Pickup documents needed`) });
     }
@@ -3097,6 +3097,28 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   catch (e) { await btAlert('Error updating status: ' + e.message); return; }
 
   await loadStatusOrders();
+  // Owner 2026-11-22: the moment the pick-up is confirmed, the documents are asked for (the Pick up button sends that e-mail).
+  if (newStatus === 'picked_up' && typeof requestPickupDocsOnPickup === 'function') await requestPickupDocsOnPickup(orderNumber);
+}
+// PICK UP -> THE DOCUMENTS ARE ASKED FOR AT ONCE (owner 2026-11-22: "inmediatamente después de que confirmamos pickup debe salir ese correo, a los involucrados, en este caso Andrew y Kristi; el botón de picked up manda ese correo
+// pidiendo esos docs; adicionalmente puede llegar del carrier"). The e-mail goes to every e-mail the plant has on file (its sales contact and its other contacts), copying the carrier when one is booked, through the usual preview
+// window (WhatsApp offered after it). The documents that come back — from the plant or from the carrier — are read by the mail reader and filed on the order. No e-mail on file: nothing opens (the Customs docs step is still there).
+async function requestPickupDocsOnPickup(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o || !o.plant) return;
+  const to = collectEmails(o.plant);
+  if (!to.length) return;
+  const cc = o.carrier ? collectEmails(o.carrier) : [];
+  const waPhone = String(o.plant.whatsapp || o.plant.phone || '').replace(/\D/g, '');
+  const subject = requestCustomsDocsSubject(orderNumber);
+  const body = requestCustomsDocsMessage(o);
+  try {
+    await sendEmailApi('logistics', to, subject, body, [], waPhone ? { phone: waPhone, message: body } : null, cc);
+    showToast('Documents requested from the plant', to.join(', '));
+  } catch (e) {
+    if (e.cancelled) return;
+    showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true, gmailFallbackLinkHtml(to, subject, body));
+  }
 }
 
 // Real correction 2026-09-06: "despues del pago de la carga el sistema debe enviar un email a un
