@@ -597,6 +597,16 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-pg b{font:700 13px 'Space Grotesk',sans-serif;letter-spacing:.04em;text-transform:uppercase;}
   .oj-pg span{flex:1;height:1px;background:var(--line);}
   .oj-pg em{font:500 11px 'IBM Plex Mono',monospace;font-style:normal;color:var(--ink-soft);}
+  .oj-pg{cursor:pointer;min-width:0;}
+  .oj-pg b{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .oj-pg span{min-width:4px;}
+  .oj-pg em,.oj-pg .oj-pg-cv{flex:none;}
+  @media (max-width:420px){.oj-pg{gap:8px;}}
+  .oj-pg .oj-pg-cv{font-style:normal;color:var(--ink-soft);font-size:12px;width:12px;text-align:center;}
+  .oj-pg.has-now b{color:#5AAAFF;}
+  .oj-pg-now{text-decoration:none;font:600 12px 'Space Grotesk',sans-serif;color:#5AAAFF;border:1px solid rgba(90,170,255,.6);background:rgba(90,170,255,.12);border-radius:12px;padding:3px 10px;animation:ocDot 1.2s infinite;flex:0 1 auto;min-width:0;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .oj-pg-now.urgent{color:var(--amber);border-color:rgba(255,200,118,.6);background:rgba(255,200,118,.1);}
+  .oj-step.pc{display:none;}
   .oj-step{position:relative;margin-bottom:10px;}
   .oj-nd{position:absolute;left:-44px;top:10px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:#0b1a36;border:2px solid;z-index:2;}
   .oj-nd svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
@@ -2474,6 +2484,8 @@ function orderDocRows(o, nextActionLabel){
     // The plant's proforma / prepay invoices, filed from its reply (owner 2026-11-19: everything is kept on the order).
     // The client's confirmation that he buys the load (owner 2026-11-21, step 4): kept on the order with who it came from.
     const salesConfirmationHtml = (o.received_documents || []).filter(d => d.kind === 'sales_confirmation').map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">Sales Confirmation</a><span class="doc-row-status sent">from ${escapeHtml(d.from_name || d.from_party || '—')}</span></div>`).join('');
+    // The other documents kept on the order (owner 2026-11-22), each inside its own step with who it came from: the bank receipt in Pay 2 Factoring, the plant's order confirmation in Release #, the carrier's appointment in Release 2 Carrier.
+    const receivedDocsOf = (kind, label) => (o.received_documents || []).filter(d => d.kind === kind).map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${label}</a><span class="doc-row-status sent">from ${escapeHtml(d.from_name || d.from_party || '—')}</span></div>`).join('');
     const proformaHtml = (o.proforma_invoices || []).map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${escapeHtml(d.filename)}</a><span class="doc-row-status sent">Proforma received</span></div>`).join('');
     return {
       date: dateRow,
@@ -2485,6 +2497,9 @@ function orderDocRows(o, nextActionLabel){
       signature: renderSignatureEvidenceRow(o),
       proforma: proformaHtml,
       salesConfirmation: salesConfirmationHtml,
+      bankReceipt: receivedDocsOf('bank_receipt', 'Bank receipt'),
+      plantOrder: receivedDocsOf('plant_order_confirmation', "Plant's order confirmation"),
+      appointment: receivedDocsOf('pickup_appointment', 'Pickup appointment'),
       pickup: pickupDocsHtml,
     };
   }
@@ -2766,6 +2781,14 @@ function toggleJourneyStep(orderNumber, i){
   journeyOpen.set(orderNumber, set);
   refreshOpenOrderDetail();
 }
+// Owner 2026-11-22: "no despliegues todo cuando entro por default; déjalo cerrado Documentation, Logistics, Closing; blinking el doc que está pendiente". The phases are closed every time an order is opened; a click opens one.
+const journeyPhaseOpen = new Map(); // order_number -> Set of phase indexes opened by hand
+function toggleJourneyPhase(orderNumber, pi){
+  const set = journeyPhaseOpen.get(orderNumber) || new Set();
+  set.has(pi) ? set.delete(pi) : set.add(pi);
+  journeyPhaseOpen.set(orderNumber, set);
+  refreshOpenOrderDetail();
+}
 const JOURNEY_PHASES = [
   { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
   { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Plant status', 'Pay Plant', 'Release #', 'Send Release #'] },
@@ -2787,29 +2810,33 @@ function renderJourney(o, attentionOrderNumbers){
   const PAY = ['Plant status', 'Pay Plant', 'Release #', 'Send Release #'];
   let payIdx = steps.findIndex(x => PAY.includes(x.label) && !x.done);
   if (payIdx < 0) payIdx = steps.findIndex(x => x.label === 'Pay Plant');
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date, 'Customs docs': rows.pickup, 'Sent to customs': sendCustomsBtn, 'Docs 2 Factoring': rows.salesConfirmation };
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date, 'Customs docs': rows.pickup, 'Sent to customs': sendCustomsBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Release #': rows.plantOrder, 'Send Release #': rows.appointment };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   const nx = tl.nextActionEntry;
   const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(nx.label, o))} →</button>` : '';
   let spine = '';
-  JOURNEY_PHASES.forEach(ph => {
+  const phaseOpenSet = journeyPhaseOpen.get(o.order_number) || new Set();
+  JOURNEY_PHASES.forEach((ph, pi) => {
     const idxs = steps.map((x, i) => i).filter(i => ph.labels.includes(steps[i].label));
     if (!idxs.length) return;
-    spine += `<div class="oj-pg"><b>${ph.name}</b><span></span><em>${idxs.filter(i => steps[i].done).length}/${idxs.length}</em></div>`;
+    const isPhaseOpen = phaseOpenSet.has(pi);
+    const nowIdx = idxs.find(i => steps[i].now);
+    const pendingName = nowIdx != null && !isPhaseOpen ? `<u class="oj-pg-now ${urgent ? 'urgent' : ''}">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(steps[nowIdx].label, o))}</u>` : '';
+    spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done).length}/${idxs.length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
     idxs.forEach(i => {
       const x = steps[i];
       const z = x.done ? 'done' : x.now ? 'now' : 'wait';
       const isOpen = z === 'now' || opened.has(i);
       let inner = own[x.label] || '';
       if (i === payIdx) inner += rows.payment;
-      if (x.label === 'Pay Plant') inner += rows.proforma;
+      if (x.label === 'Pay Plant') inner += rows.proforma + (rows.bankReceipt || '');
       if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
       if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
       if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
       const chip = z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
-      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
+      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
   });
   const pu = ocPickupDay(o), de = ocDeliveryDay(o);
@@ -2892,6 +2919,7 @@ function renderOrderCardBody(o, attentionOrderNumbers){ return renderJourney(o, 
 // Real ask 2026-09-08: "si tu le das click en un boton te salga grande y puedas ver que estas
 // haciendo" — opens the full detail (everything renderOrderCardBody builds) big, in its own modal.
 async function openOrderDetail(orderNumber){
+  journeyPhaseOpen.delete(orderNumber); // every phase starts closed (owner 2026-11-22)
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   openOrderNumber = orderNumber;
