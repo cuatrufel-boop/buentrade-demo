@@ -1817,7 +1817,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     const daysUntilPickup = Math.round((pickup.getTime() - today0.getTime()) / 86400000);
     releaseNumberUrgent = daysUntilPickup <= 1;
   }
-  entries.push(miniEntry({ icon: '#', label: 'Release #', done: !!o.release_number, date: null, wait: !o.plant_paid_at, waitReason: 'Confirm the plant payment first.', onClick: `recordReleaseNumber('${o.order_number}')`, raised: true, urgent: releaseNumberUrgent }));
+  // Owner 2026-11-21: the plant answers our PO with its own order number (read by the mail reader, or written here) BEFORE any payment; it does not wait for the payment and it does not hold any other step back.
+  entries.push(miniEntry({ icon: '#', label: 'Release #', done: !!o.release_number, date: null, wait: !o.po_sent_at, waitReason: 'Send the PO first.', onClick: `recordReleaseNumber('${o.order_number}')`, raised: true, urgent: releaseNumberUrgent }));
   if (o.carrier && o.carrier.phone) entries.push(miniEntry({ icon: STEP_ICONS.picked_up, label: 'Send Release #', done: !!o.release_number_sent_at, date: o.release_number_sent_at, wait: !o.release_number, waitReason: 'Record the release number first.', onClick: `sendReleaseNumberToCarrier('${o.order_number}')` }));
   const confirmIdx = entries.length;
   entries.push(mainEntry('pending_pickup'));
@@ -2151,6 +2152,11 @@ function computeAttentionItems(){
         items.push({ orderNumber: label, order_number: o.order_number, text: `Waiting for the plant to confirm the load status — ${productName}`,
           btn: `<button class="wa-btn" onclick="confirmPlantStatusClick('${o.order_number}')">Plant Confirmed</button> <button class="wa-btn outline" onclick="askPlantStatusClick('${o.order_number}')">Ask Again</button>` });
       }
+    }
+    // Owner 2026-11-21: the plant's order number arrived -> send it to the carrier AT ONCE (the carrier needs it to get the pick-up appointment); no payment needed, nothing else waits for it.
+    if (stage === 'pending_pickup' && o.release_number && !o.release_number_sent_at && o.carrier && o.carrier.phone){
+      items.push({ orderNumber: label, order_number: o.order_number, text: `Send the release number to the carrier so it can get the pick-up appointment — ${productName}`,
+        btn: `<button class="wa-btn" onclick="sendReleaseNumberToCarrier('${o.order_number}')">Release 2 Carrier</button>` });
     }
     if (stage === 'pending_pickup' && o.plant_paid_at && !o.release_number){
       // Same escalation as the timeline's own Release # icon and shipment-alerts-poll's server
