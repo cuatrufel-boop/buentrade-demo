@@ -4465,16 +4465,31 @@ async function shareCustoms(orderNumber){
       attachments.push({ filename: doc.filename, content: base64 });
     } catch(e){ /* one file failing to fetch never blocks the others */ }
   }
+  // The plant's proforma invoice (filed from its reply) goes with the documents (owner 2026-11-21, step 9: BOL, Slaughter Letter and Proforma Invoice).
+  for (const d of (shipment.proforma_invoices || [])){
+    try {
+      const res = await fetch(d.storage_url);
+      const blob = await res.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      attachments.push({ filename: d.filename || `Proforma_Invoice_BT-${btNum(orderNumber)}.pdf`, content: base64 });
+    } catch(e){ /* one file failing to fetch never blocks the others */ }
+  }
   if (!attachments.length){ await btAlert('Could not load the received documents.'); return; }
 
   const customerName = shipment.customer_name || '';
-  const subject = `${customerName} — BT-${btNum(orderNumber)} — BuenTrade`;
+  // DOCS TO BORDER (owner 2026-11-21, step 9 of the new 12-step flow): his subject, greeting, sentences and closing; the Docs / No Docs line of 2026-11-17 stays.
+  const subject = `BT-${btNum(orderNumber)} | Crossing Instructions & Documents – ${customerName}`;
   // owner 2026-11-17: "desde el principio sabemos quién trae docs y quién no … al final debemos confirmarle a la aduana si tiene que hacer docs o no". Known from the start: the plant's Docs default (Seaboard = always Docs), the sale's Docs / No Docs
   // (purchase_orders.docs_on, handed over by shipments-search as docs_on). Unknown (no PO): nothing is said, never guessed.
   const docsLine = shipment.docs_on === true ? 'This load comes WITH its documents from the plant.' : shipment.docs_on === false ? 'This load comes WITHOUT documents: please prepare them.' : '';
-  const body = `Hi,\n\nPlease find attached the documents for our customer, ${customerName}, regarding order BT-${btNum(orderNumber)}.\n\n`
+  const body = `Hi${agency && agency.name ? ' ' + agency.name : ''} team,\n\nPlease find attached the BOL, Slaughter Letter, and Proforma Invoice for Order BT-${btNum(orderNumber)}, consigned to ${customerName}.\n\n`
     + (docsLine ? `${docsLine}\n\n` : '')
-    + `Please confirm receipt of the documents and that you have everything needed on your end for the shipment. We will proceed accordingly.\n\nThank you,`;
+    + `Kindly proceed with the crossing paperwork and let us know once the shipment is cleared.\n\nBest regards,`;
   const waPhoneCustoms = agency && (agency.whatsapp || agency.phone);
   const waMessageCustoms = `Orden BT-${btNum(orderNumber)}\nHi BT-${btNum(orderNumber)}. I'm sending you the documents here as well.${docsLine ? ' ' + docsLine : ''} Please confirm you have received them and that everything is in order on your end. We'll proceed accordingly. Thank you!`;
   try {

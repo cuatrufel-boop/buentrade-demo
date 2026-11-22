@@ -418,6 +418,39 @@ function btTypedResolve(ok){
   btTypedResolveFn = null;
 }
 
+// A whole number the trader types (owner 2026-11-21, step 11: the real box count from the customs document). Resolves the number (1 or more), or null when he cancels.
+let btNumberResolveFn = null;
+function btPromptNumber(message, initial){
+  if (!document.getElementById('btNumberOverlay')){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+<div id="btNumberOverlay" class="email-modal-overlay" style="display:none;z-index:9000;">
+  <div class="email-modal-box" style="max-width:420px;">
+    <div id="btNumberMessage" style="font-size:13.5px;color:var(--ink);line-height:1.5;white-space:pre-wrap;"></div>
+    <input id="btNumberInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter')btNumberResolve(true)" style="width:100%;box-sizing:border-box;margin-top:12px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);font-size:15px;">
+    <div class="email-modal-actions" style="justify-content:flex-end;gap:10px;margin-top:18px;">
+      <button class="btn secondary" onclick="btNumberResolve(false)">Cancel</button>
+      <button class="btn" onclick="btNumberResolve(true)">OK</button>
+    </div>
+  </div>
+</div>`;
+    document.body.appendChild(wrap.firstElementChild);
+  }
+  document.getElementById('btNumberMessage').textContent = message;
+  const input = document.getElementById('btNumberInput');
+  input.value = initial || '';
+  document.getElementById('btNumberOverlay').style.display = 'flex';
+  setTimeout(() => input.focus(), 50);
+  return new Promise(resolve => { btNumberResolveFn = resolve; });
+}
+function btNumberResolve(ok){
+  const n = parseInt(document.getElementById('btNumberInput').value, 10);
+  if (ok && !(n >= 1)){ document.getElementById('btNumberInput').focus(); return; }
+  document.getElementById('btNumberOverlay').style.display = 'none';
+  if (btNumberResolveFn) btNumberResolveFn(ok ? n : null);
+  btNumberResolveFn = null;
+}
+
 // opts: { fromAlias, to, subject, text, attachments, waInfo, cc, fromDisplay, title }
 // The real send now happens inside bcOpenEmailModal itself (see the real ask quoted there) — this
 // just unwraps its { cancelled | sent | failed } result into the same throw/return contract every

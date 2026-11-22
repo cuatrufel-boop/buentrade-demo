@@ -2752,6 +2752,12 @@ async function createAndShareInvoice(){
   const ccEmails = paymentsEmails.length ? generalEmails : [];
   if (!emails.length){ msgEl.textContent = 'Este cliente no tiene correo en archivo.'; return; }
 
+  // Owner 2026-11-21, step 11: the real box count is written down here, at the end, with the document the customs agency sent after the inspection (it is not in the QT and changes no number).
+  let shipmentRow = null;
+  try { shipmentRow = ((await callApi('shipments-search', { order_number: orderNumber, limit: 1 })).results || [])[0] || null; } catch (e) {}
+  const realBoxes = await btPromptNumber(`Real box count from the customs document — ${orderNumber}`, shipmentRow && shipmentRow.real_boxes);
+  if (!realBoxes){ msgEl.textContent = ''; return; }
+
   let issueRes;
   try { issueRes = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber }); }
   catch (e) { msgEl.textContent = 'Error creando el link de firma: ' + e.message; return; }
@@ -2766,18 +2772,25 @@ async function createAndShareInvoice(){
   catch (e) { msgEl.textContent = 'Error subiendo el PDF: ' + e.message; return; }
 
   const contact = customer && customer.contact_name ? negoFirstName(customer.contact_name) : '';
-  const subject = `INV-BT-${btNum(orderNumber)} — INVOICE`;
-  const body = `Hola ${contact},\n\nAdjuntamos la factura INV-BT-${btNum(orderNumber)}, firma aquí: ${signLink} para su confirmación.\n\n`
-    + `Gracias por tu preferencia y confianza.\n\nSaludos,\nBuentrade Team`;
+  // INVOICE CLIENT (owner 2026-11-21, step 11): his texts (js/invoice-pdf.js) — real boxes, real net weight and the total of this invoice.
+  const inv = composed.invoice;
+  const facts = { number: `INV-BT-${btNum(orderNumber)}`, contact, boxes: realBoxes, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
+  const { subject, body } = bcInvoiceClientEmail(facts);
   const waPhone = customer && (customer.payments_contact_whatsapp || customer.payments_contact_phone || customer.whatsapp || customer.phone);
-  // Real ask 2026-09-15: exact copy from the user — no "firma"/"link" wording, the WhatsApp card
-  // preview (see sign-invoice.html's Open Graph tags) already says "Confirmar" on its own.
-  const waMessage = `Hola${contact ? ' ' + contact : ''}! Esta es la factura INV-BT-${btNum(orderNumber)}. Confírmala en cuanto puedas. ${signLink} Un Abrazo & Saludos!`;
+  const waMessage = bcInvoiceClientWhatsApp(facts);
+  // The customs agency gets the invoice too (its own e-mail): the customer's agency, else the offer's, the same order as everywhere else.
+  let customsCtx = null;
+  try {
+    const agencyId = (customer && customer.customs_agency_provider_id) || negoOffer.customs_agency_provider_id || null;
+    const agency = agencyId ? ((await callApi('providers-search', { id: agencyId })).results || [])[0] : null;
+    const agencyEmails = agency ? [...new Set([agency.email, ...String(agency.email_cc || '').split(',')].map(x => (x || '').trim()).filter(Boolean))] : [];
+    if (agencyEmails.length) customsCtx = { emails: agencyEmails, name: agency.name, ...bcInvoiceCustomsEmail({ ...facts, agencyName: agency.name }) };
+  } catch (e) { /* no customs button then; the client's send is never blocked by it */ }
 
   msgEl.textContent = '';
   // Real ask 2026-09-12: same preview-before-send screen PO/SO/FO already have — this used to
   // send straight through with no look at the real PDF first.
-  openInvoiceDocPreview({ orderNumber, doc, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: customer && (customer.trade_name || customer.name) });
+  openInvoiceDocPreview({ orderNumber, doc, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: customer && (customer.trade_name || customer.name), boxes: realBoxes, customs: customsCtx });
 }
 
 let invoicePreviewCtx = null;
@@ -2796,9 +2809,22 @@ function gmailComposeUrl(emails, subject, body){
 async function markInvoiceSentFallback(){
   const ctx = invoicePreviewCtx;
   if (!ctx) return;
-  await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice' });
+  await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
   const msgEl = document.getElementById('invoiceMsg');
   if (msgEl) msgEl.innerHTML = 'Invoice marked sent — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
+}
+// The same invoice to the customs agency (owner 2026-11-21, step 11): its own e-mail, in English, from logistics@; sending it records nothing (the invoice counts as sent when the client has it).
+async function sendInvoicePreviewCustoms(){
+  const ctx = invoicePreviewCtx;
+  if (!ctx || !ctx.customs) return;
+  const msgEl = document.getElementById('invoiceMsg');
+  try {
+    await sendEmailApi('logistics', ctx.customs.emails, ctx.customs.subject, ctx.customs.body, [pdfAttachment(ctx.doc, ctx.filename)], null);
+    msgEl.textContent = `Invoice sent to customs (${ctx.customs.emails.join(', ')}).`;
+  } catch (e) {
+    if (e.cancelled) return;
+    msgEl.textContent = 'The invoice could not be sent to customs: ' + e.message;
+  }
 }
 async function sendInvoicePreviewEmail(){
   const ctx = invoicePreviewCtx;
@@ -2808,7 +2834,7 @@ async function sendInvoicePreviewEmail(){
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (sendInvoicePreviewWhatsApp), so no waInfo here.
     await sendEmailApi('offers', ctx.emails, ctx.subject, ctx.body, [pdfAttachment(ctx.doc, ctx.filename)], null, ctx.ccEmails);
-    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice' });
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
     closeDocPreview();
     // Collections module (2026-09-08): "el flujo debe llevarme a collections" — the order now has
     // an invoice, so it just became a real Collections item; give the trader the direct link
@@ -2834,7 +2860,7 @@ async function sendInvoicePreviewWhatsApp(){
   const sentInv = await bcWaOpenAndConfirm(ctx.waPhone, ctx.waMessage, ctx.customerName || 'the customer');
   if (!sentInv) return; // the invoice counts as sent only when the trader says he sent it on WhatsApp
   try {
-    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice' });
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
     document.getElementById('invoiceMsg').innerHTML = 'Invoice sent — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
   } catch (e) { /* best-effort — the WhatsApp send itself already went out above regardless */ }
 }
@@ -2854,6 +2880,7 @@ function openInvoiceDocPreview(ctx){
   document.getElementById('docPreviewActions').innerHTML = `
     <button style="${secondaryBtnStyle}" onclick="invoicePreviewCtx.doc.save(invoicePreviewCtx.filename)">${DOWNLOAD_ICON}Download</button>
     <button style="${secondaryBtnStyle}" onclick="sendInvoicePreviewEmail()">${EMAIL_ICON}Email</button>
+    ${ctx.customs ? `<button style="${secondaryBtnStyle}" onclick="sendInvoicePreviewCustoms()">${EMAIL_ICON}Customs</button>` : ''}
     ${ctx.waPhone ? `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;" onclick="sendInvoicePreviewWhatsApp()">${WA_ICON}WhatsApp</button>` : ''}`;
   document.getElementById('docPreviewOverlay').style.display = 'flex';
 }

@@ -7,6 +7,46 @@
 const INVOICE_WIRE = ['Summar Financial LLC', '2299 SW 27th Ave.', 'Miami, FL 33145', 'Bank of America', 'Account number: 0036 6939 6990', 'ABA 026009593', 'SWIFT: BOFAUS3N', 'Summar Financial LLC c/o Buentrade LLC'];
 const INVOICE_TERMS = "This Invoice is issued by BuenTrade LLC. By signing in acknowledgment, the Customer confirms receipt of the merchandise described under the terms stated herein and accepts the outstanding balance and payment due date. The product is delivered as described, subject to standard industry tolerances in weight and count. Any discrepancy must be reported to BuenTrade LLC in writing within 24 hours of signing this invoice.";
 
+// INVOICE CLIENT (owner 2026-11-21, step 11 of the new 12-step flow): the e-mail and the WhatsApp to the client and the e-mail to the customs agency, his texts. f = { number: 'INV-BT-2026-1002', contact, boxes, weight, unit ('kg' or 'lbs'),
+// total, pesos, signLink, clientName, agencyName }. The wire instructions printed on the invoice are written in the client's e-mail too, so nobody has to look for them in the PDF.
+function bcInvoiceMoney(n, pesos){ return (pesos ? 'MX$' : '$') + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function bcInvoiceClientEmail(f){
+  return {
+    subject: `${f.number} | Tu Factura Definitiva y firma de recibo`,
+    body: [
+      `Hola${f.contact ? ' ' + f.contact : ''},`, '',
+      `Te compartimos adjunta la Factura Definitiva de tu Orden ${f.number}, emitida con los datos reales verificados en cruce:`, '',
+      `* Total cajas: ${f.boxes}`,
+      `* Peso neto real: ${Number(f.weight || 0).toLocaleString('en-US')} ${f.unit === 'kg' ? 'kg' : 'lbs'}`,
+      `* Total a pagar: ${bcInvoiceMoney(f.total, f.pesos)}`, '',
+      'WIRE INSTRUCTIONS', ...INVOICE_WIRE, '',
+      'Para completar el cierre de entrega, por favor regálanos tu firma de recibido en esta liga:', '',
+      `👉 ${f.signLink}`, '',
+      'Quedamos a tus órdenes para cualquier consulta.', '',
+      'Saludos,',
+    ].join('\n'),
+  };
+}
+function bcInvoiceClientWhatsApp(f){
+  return [
+    `Hola${f.contact ? ' ' + f.contact : ''}, te saludamos de BuenTrade 🤝.`, '',
+    `Te enviamos por correo la Factura Definitiva de tu Orden ${f.number} (${f.boxes} cajas | ${bcInvoiceMoney(f.total, f.pesos)}).`, '',
+    'Para cerrar la entrega, por favor regálanos tu firma de recibido en esta liga:',
+    `👉 ${f.signLink}`, '',
+    'Quedamos a tus órdenes. ¡Muchas gracias!',
+  ].join('\n');
+}
+function bcInvoiceCustomsEmail(f){
+  return {
+    subject: `${f.number} | Final Commercial Invoice – ${f.clientName}`,
+    body: [
+      `Hi${f.agencyName ? ' ' + f.agencyName : ''} team,`, '',
+      `Please find attached the Final Commercial Invoice for Order ${f.number} (${f.clientName}), updated with the confirmed crossing weights and box count.`, '',
+      'Best regards,',
+    ].join('\n'),
+  };
+}
+
 // inv = document.invoice of orders-compose-so; signature = { dataUrl, name, at } once the customer signed (at = when, default now), else null.
 function bcRenderInvoice(inv, orderNumber, signature){
   const num = 'INV-BT-' + String(orderNumber || '').replace(/^BT-/, '');
