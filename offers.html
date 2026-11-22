@@ -1868,7 +1868,7 @@ async function sharePO(orderNumber){
     + `Unit Cost: $${(po.purchase_price || 0).toFixed(4)}\n`
     + `Total: $${(po.total_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n`
     + `Pick-up / Delivery Date: ${fmtDatesList(po.delivery_dates)}`, built.composed.customs_agency)
-    + `\n\nKindly confirm receipt and share the order confirmation once available.\n\nBest regards,`;
+    + `\n\nKindly confirm receipt and share the order confirmation and the proforma invoice once available.\n\nBest regards,`;
   try {
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (waCardPO), so no waInfo here to avoid a duplicate inside the
