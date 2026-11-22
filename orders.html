@@ -2153,6 +2153,11 @@ function computeAttentionItems(){
           btn: `<button class="wa-btn" onclick="confirmPlantStatusClick('${o.order_number}')">Plant Confirmed</button> <button class="wa-btn outline" onclick="askPlantStatusClick('${o.order_number}')">Ask Again</button>` });
       }
     }
+    // Owner 2026-11-21: the plant's proforma arrived on a Summar order whose documents have not gone to Summar -> one e-mail to Summar with the PO, the SO, the client's confirmation and the proforma, now (nothing else waits for it).
+    if (stage === 'pending_pickup' && o.financing && o.financing.financing_method === 'summar' && !o.factoring_docs_sent_at && !o.summar_payment_sent_at && !o.plant_paid_at && (o.proforma_invoices || []).length){
+      items.push({ orderNumber: label, order_number: o.order_number, text: `The plant's proforma arrived — send the documents to Summar — ${productName}`,
+        btn: `<button class="wa-btn" onclick="sendFactoringDocsClick('${o.order_number}')">Docs 2 Factoring</button>` });
+    }
     // Owner 2026-11-21: the plant's order number arrived -> send it to the carrier AT ONCE (the carrier needs it to get the pick-up appointment); no payment needed, nothing else waits for it.
     if (stage === 'pending_pickup' && o.release_number && !o.release_number_sent_at && o.carrier && o.carrier.phone){
       items.push({ orderNumber: label, order_number: o.order_number, text: `Send the release number to the carrier so it can get the pick-up appointment — ${productName}`,
@@ -3264,6 +3269,8 @@ function sendFactoringDocsClick(orderNumber){
   factoringDocsOrderNumber = orderNumber;
   // what is already on the order (given by the owner, with who it came from) goes in by itself; more can be added
   factoringDocsFiles = (o.received_documents || []).filter(d => d.kind === 'sales_confirmation').map(d => ({ name: d.file_name, type: 'application/pdf', stored: true, url: d.storage_url }));
+  // the plant's proforma (its proof that it sold us this load) goes in by itself, so Summar gets ONE e-mail with the PO, the SO, the client's confirmation and the proforma
+  (o.proforma_invoices || []).forEach(d => factoringDocsFiles.push({ name: d.filename, type: 'application/pdf', stored: true, url: d.storage_url, plantProof: true }));
   document.getElementById('factoringDocsIntro').textContent = `${orderNumber} — ${fullProductLabel(o)} — ${o.plant_name}`;
   renderFactoringDocsFiles();
   document.getElementById('factoringDocsOverlay').style.display = 'flex';
@@ -3329,10 +3336,17 @@ async function sendFactoringDocs(){
   if (!factoringDocsFiles.length){ await btAlert("Add the client's confirmation first: a photo, a screenshot or a PDF."); return; }
   const o = findStatusOrder(orderNumber);
   if (!o) return;
-  let poBuilt, soBuilt, confirmation;
+  const clientFiles = factoringDocsFiles.filter(f => !f.plantProof);
+  const plantProofFiles = factoringDocsFiles.filter(f => f.plantProof);
+  if (!clientFiles.length){ await btAlert("Add the client's confirmation first: a photo, a screenshot or a PDF."); return; }
+  let poBuilt, soBuilt, confirmation, plantProof;
   try { poBuilt = await buildPODoc(orderNumber); soBuilt = await buildSODoc(orderNumber); } catch(e){ await btAlert(e.message); return; }
-  try { confirmation = await factoringConfirmationAttachments(orderNumber, factoringDocsFiles); } catch(e){ await btAlert('The confirmation could not be read: ' + e.message); return; }
-  const attachments = [pdfAttachment(poBuilt.doc, `PO-BT-${btNum(orderNumber)}.pdf`), pdfAttachment(soBuilt.doc, `SO-BT-${btNum(orderNumber)}.pdf`), ...confirmation];
+  try {
+    confirmation = await factoringConfirmationAttachments(orderNumber, clientFiles);
+    plantProof = [];
+    for (const f of plantProofFiles) plantProof.push({ filename: f.name, content: await readUrlAsBase64(f.url), contentType: 'application/pdf' });
+  } catch(e){ await btAlert('The confirmation could not be read: ' + e.message); return; }
+  const attachments = [pdfAttachment(poBuilt.doc, `PO-BT-${btNum(orderNumber)}.pdf`), pdfAttachment(soBuilt.doc, `SO-BT-${btNum(orderNumber)}.pdf`), ...confirmation, ...plantProof];
   const orderId = `BT-${btNum(orderNumber)}`;
   const subject = `${orderId} | Factoring Documents & Financial Breakdown – ${o.customer_name || ''}`;
   const body = `Dear Summar Team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\nLet us know once everything is reviewed on your end.\n\nBest regards,`;
