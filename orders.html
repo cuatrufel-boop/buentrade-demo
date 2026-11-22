@@ -903,6 +903,21 @@ auth.onAuthStateChanged(user => {
   </div>
 </div>
 
+<!-- Owner 2026-11-21, steps 7-8: what is real about the pick-up, written down before the customer is told. -->
+<div id="pickupCaptureOverlay" class="email-modal-overlay" style="display:none;">
+  <div class="email-modal-box" style="max-width:420px;">
+    <h3>PU 2 Client</h3>
+    <div class="email-modal-from" id="pickupCaptureIntro"></div>
+    <div class="email-modal-field"><label>Pick-up date</label><input type="date" id="pickupCapPu" onchange="pickupCapPuChanged()"></div>
+    <div class="email-modal-field"><label>Estimated crossing</label><input type="date" id="pickupCapCross"></div>
+    <div class="email-modal-field"><label>Live tracking link (optional)</label><input type="url" id="pickupCapLink" placeholder="https://"></div>
+    <div class="email-modal-actions">
+      <button class="btn secondary" onclick="pickupCaptureDone(false)">Cancel</button>
+      <button class="wa-btn" onclick="pickupCaptureDone(true)">Continue</button>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
   <h1>Orders</h1>
 
@@ -2940,12 +2955,66 @@ async function askPlantWhatsApp(orderNumber){
 // stage transition itself (shipments-update-status) still fires — advanceLoadStatus below only
 // skips the notification when no STAGE_* entry exists for a status, per its own `if (bodyFn &&
 // subjFn)` guard.
+// What the "picked up" message says (owner 2026-11-21, steps 7-8): the real pick-up day, the estimated crossing, the tracking link if there is one, the customs agency of the load.
+function puMessageData(o){
+  const c = (o && o.pu_capture) || {};
+  const pu = c.puDate || new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  return {
+    pu: fmtDateStr(pu),
+    crossing: fmtDateStr(c.crossing || pickupBorderDate(pu)),
+    link: String(c.link || '').trim(),
+    customs: String((o && orderCustomsName[o.order_number]) || '').trim() || 'la aduana',
+  };
+}
+// The day a load that picked up on `pu` (YYYY-MM-DD) reaches the border: two calendar days later, a Saturday or Sunday rolls to Monday (the same rule the FO and the Status tab use).
+function pickupBorderDate(pu){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(pu || ''));
+  if (!m) return '';
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 2));
+  const w = d.getUTCDay();
+  if (w === 6) d.setUTCDate(d.getUTCDate() + 2); else if (w === 0) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+function pickupCaptureNote(c){
+  return `Pick-up ${c.puDate} · Crossing ${c.crossing}${c.link ? ' · Tracking ' + c.link : ''}`;
+}
+// CONFIRM PU / PU 2 CLIENT (owner 2026-11-21, steps 7-8): before the customer's message the trader writes down what is real — the pick-up day, the estimated crossing and, if the carrier gave one, the live tracking link. It goes into the
+// message and into the load's history. Answers {puDate, crossing, link}, or null when he cancels (nothing is sent and the load stays where it was).
+let pickupCaptureResolve = null;
+function askPickupCapture(o){
+  document.getElementById('pickupCaptureIntro').textContent = `${o.order_number} — ${fullProductLabel(o)} — ${o.plant_name}`;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  document.getElementById('pickupCapPu').value = today;
+  document.getElementById('pickupCapCross').value = pickupBorderDate(today);
+  document.getElementById('pickupCapLink').value = '';
+  document.getElementById('pickupCaptureOverlay').style.display = 'flex';
+  return new Promise(resolve => { pickupCaptureResolve = resolve; });
+}
+function pickupCapPuChanged(){
+  document.getElementById('pickupCapCross').value = pickupBorderDate(document.getElementById('pickupCapPu').value);
+}
+async function pickupCaptureDone(ok){
+  if (!pickupCaptureResolve) return;
+  let result = null;
+  if (ok){
+    const puDate = document.getElementById('pickupCapPu').value;
+    const crossing = document.getElementById('pickupCapCross').value;
+    const link = document.getElementById('pickupCapLink').value.trim();
+    if (!puDate || !crossing){ await btAlert('Write the pick-up date and the estimated crossing date.'); return; }
+    if (link && !/^https?:\/\//i.test(link)){ await btAlert('The tracking link must start with https://'); return; }
+    result = { puDate, crossing, link };
+  }
+  document.getElementById('pickupCaptureOverlay').style.display = 'none';
+  const resolve = pickupCaptureResolve; pickupCaptureResolve = null;
+  resolve(result);
+}
 const STAGE_EMAIL_BODY_ES = {
-  picked_up: (o, contact) => `Hola ${contact},\n\n🚚 Te confirmamos que tu carga de ${fullProductLabelEs(o)} ya fue recogida en planta y se encuentra en camino.\n\nTe mantendremos informado sobre cualquier actualización durante el tránsito. Si necesitas algo mientras tanto, quedamos atentos.\n\n¡Gracias por tu confianza!\n\nSaludos,\nBuentrade Team`,
+  // PU 2 Client (owner 2026-11-21, step 8 of the new 12-step flow): his text. The live-tracking line appears only when a link was given; without one it is left out completely.
+  picked_up: (o, contact) => { const d = puMessageData(o); return `Hola ${contact},\n\nTe avisamos que tu carga de la Orden SO-BT-${btNum(o.order_number)} ya recogió en planta y va en camino a ${d.customs}.\n\n* Fecha de recolección: ${d.pu}\n* Cruce estimado: ${d.crossing}\n${d.link ? `* Mírala en vivo en esta liga: ${d.link}\n` : ''}\nTe avisamos en cuanto llegue a ${d.customs}.\n\nSaludos,`; },
   delivered: (o, contact) => `Hola ${contact},\n\n🚚 Te confirmamos que tu carga de ${fullProductLabelEs(o)} fue entregada con éxito.\n\nUn Abrazo y gracias por tu confianza!\n\nSaludos,\nBuentrade Team`,
 };
 const STAGE_WHATSAPP_ES = {
-  picked_up: (o, contact) => `Hola ${contact}! 🚚 Tu carga de ${fullProductLabelEs(o)} ya fue recogida en planta y va en camino. Cualquier cosa me avisas — ¡Abrazo!`,
+  picked_up: (o, contact) => { const d = puMessageData(o); return `Hola ${contact}, te saludamos de BuenTrade 🚚.\n\nTe avisamos que tu carga de la Orden SO-BT-${btNum(o.order_number)} ya recogió en planta y va en camino a ${d.customs}.\n\n📅 Recolección: ${d.pu}\n🌎 Cruce estimado: ${d.crossing}\n${d.link ? `📍 Mírala en vivo en esta liga: ${d.link}\n` : ''}\nTe avisamos en cuanto llegue a ${d.customs}.`; },
   delivered: (o, contact) => `Hola ${contact}! ✅ Tu carga SO-BT-${btNum(o.order_number)} de ${fullProductLabelEs(o)} fue entregada con éxito.`,
 };
 // Real fix 2026-09-20: subject used the raw stored order_number (already carries a "BT-" prefix
@@ -2953,7 +3022,7 @@ const STAGE_WHATSAPP_ES = {
 // this shipment by the SO number on the Sales Order they already received, confirmed live against
 // a real order (see project_approved_email_whatsapp_copy_table for the frozen copy this belongs to).
 const STAGE_SUBJECTS_ES = {
-  picked_up: o => `SO-BT-${btNum(o.order_number)} — Tu carga va en camino`,
+  picked_up: o => `SO-BT-${btNum(o.order_number)} | Tu carga ya recogió en planta`,
   delivered: o => `SO-BT-${btNum(o.order_number)} — Carga entregada con Éxito`,
 };
 
@@ -2967,6 +3036,14 @@ const STAGE_SUBJECTS_ES = {
 async function advanceLoadStatus(orderNumber, newStatus, notes){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
+  // Steps 7-8 (owner 2026-11-21): the pick-up is written down first; cancelling it leaves the load exactly where it was.
+  let puCapture = null;
+  if (newStatus === 'picked_up' && typeof askPickupCapture === 'function'){
+    puCapture = await askPickupCapture(o);
+    if (!puCapture) return;
+    notes = pickupCaptureNote(puCapture) + (notes ? ' — ' + notes : '');
+  }
+  const oMsg = puCapture ? Object.assign({}, o, { pu_capture: puCapture }) : o;
 
   // Owner 2026-11-19: "se movió a delivered porque yo abrí el correo, después lo cerré y el sistema piensa que sí se mandó… no me preguntó después si mandé o no". The stage used to change BEFORE the
   // customer's message was even opened, so closing the preview left the load moved. Now the message comes first, and the stage moves ONLY when it really went out, or when he says "Yes, sent" after
@@ -2988,7 +3065,7 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
         // broker alias — for a message TO THE CUSTOMER. SO and the Invoice already send customer-
         // facing mail from 'offers' (see FROM_ADDRESSES: "customers deal with Offers"); this one
         // had drifted to the wrong department.
-        await sendEmailApi('offers', emails, subjFn(o), bodyFn(o, contact), [], { phone, message: waFn(o, contact) });
+        await sendEmailApi('offers', emails, subjFn(oMsg), bodyFn(oMsg, contact), [], { phone, message: waFn(oMsg, contact) });
         showToast('Customer notified', emails.join(', '));
       } catch (e){
         if (e.cancelled){
