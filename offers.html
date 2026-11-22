@@ -1933,7 +1933,7 @@ async function shareSO(orderNumber){
     + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`
     + `\n\nPor favor confírmanos de recibido. Quedamos a tus órdenes para cualquier duda.\n\nSaludos,`;
   try {
-    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
+    await sendEmailApi('logistics', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19); from logistics@ (owner 2026-11-22: his spec says From logistics@ in every step)
     showToast('SO sent', emails.join(', '));
     markDocSent(orderNumber, 'so');
   } catch(e){

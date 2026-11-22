@@ -2833,7 +2833,7 @@ async function sendInvoicePreviewEmail(){
   try {
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (sendInvoicePreviewWhatsApp), so no waInfo here.
-    await sendEmailApi('offers', ctx.emails, ctx.subject, ctx.body, [pdfAttachment(ctx.doc, ctx.filename)], null, ctx.ccEmails);
+    await sendEmailApi('logistics', ctx.emails, ctx.subject, ctx.body, [pdfAttachment(ctx.doc, ctx.filename)], null, ctx.ccEmails); // Invoice client goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
     await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
     closeDocPreview();
     // Collections module (2026-09-08): "el flujo debe llevarme a collections" — the order now has

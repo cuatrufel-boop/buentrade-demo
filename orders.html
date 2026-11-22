@@ -3110,7 +3110,7 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
         // broker alias — for a message TO THE CUSTOMER. SO and the Invoice already send customer-
         // facing mail from 'offers' (see FROM_ADDRESSES: "customers deal with Offers"); this one
         // had drifted to the wrong department.
-        await sendEmailApi('offers', emails, subjFn(oMsg), bodyFn(oMsg, contact), [], { phone, message: waFn(oMsg, contact) });
+        await sendEmailApi(newStatus === 'picked_up' ? 'logistics' : 'offers', emails, subjFn(oMsg), bodyFn(oMsg, contact), [], { phone, message: waFn(oMsg, contact) }); // PU 2 Client goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
         showToast('Customer notified', emails.join(', '));
       } catch (e){
         if (e.cancelled){
@@ -3404,7 +3404,7 @@ async function sendFactoringDocs(){
   const subject = `${orderId} | Factoring Documents & Financial Breakdown – ${o.customer_name || ''}`;
   const body = `Dear Summar Team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\nLet us know once everything is reviewed on your end.\n\nBest regards,`;
   try {
-    await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, attachments, null);
+    await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, attachments, null); // Docs 2 Factoring goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
     showToast('Sent to Summar', SUMMAR_EMAIL);
     await markDocSent(orderNumber, 'factoring_docs');
     closeFactoringDocsOverlay();
@@ -4265,7 +4265,7 @@ async function shareSO(orderNumber){
     + `Entrega estimada: ${fmtDateStr(built.composed.sales_order.delivery_date) || 'TBD'}`
     + `\n\nPor favor confírmanos de recibido. Quedamos a tus órdenes para cualquier duda.\n\nSaludos,`;
   try {
-    await sendEmailApi('offers', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19)
+    await sendEmailApi('logistics', emails, subject, body, [pdfAttachment(built.doc, filename)], null, await bcSummarCopy(callApi, orderNumber)); // paid with Summar: copy achavez (owner 2026-11-19); from logistics@ (owner 2026-11-22: his spec says From logistics@ in every step)
     showToast('SO sent', emails.join(', '));
     await markDocSent(orderNumber, 'so');
     await loadStatusOrders();
@@ -4469,7 +4469,7 @@ async function resendInvoiceEmail(orderNumber, fileUrl, filename){
     body = `Hola ${contact},\n\nAdjuntamos nuevamente la factura INV-BT-${btNum(orderNumber)}.\n\nGracias por tu preferencia y confianza.\n\nSaludos,\nBuentrade Team`;
   }
   try {
-    await sendEmailApi('offers', emails, subject, body, [{ filename, content: base64 }], null, ccEmails);
+    await sendEmailApi('logistics', emails, subject, body, [{ filename, content: base64 }], null, ccEmails); // Invoice client goes from logistics@ (owner 2026-11-22)
     showToast('Invoice sent', emails.join(', '));
     await markDocSent(orderNumber, 'invoice');
     await loadStatusOrders();
