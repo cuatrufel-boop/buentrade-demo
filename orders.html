@@ -1570,7 +1570,8 @@ function renderMilestoneTimeline(o){
   const pickedUpIdx = LOAD_STAGES.findIndex(s => s.key === 'picked_up');
   const deliveredIdx = LOAD_STAGES.findIndex(s => s.key === 'delivered');
   const hasAnyPickupDoc = (o.pickup_documents || []).length > 0;
-  const pendingCustoms = (o.pending_pickup_documents || []).length > 0;
+  // documents to send to customs: the plant's pick-up documents, or (no carrier of ours: the plant delivers to the border) the plant's confirmation of the load (owner 2026-11-23)
+  const pendingCustoms = (o.pending_pickup_documents || []).length > 0 || (!(o.carrier && o.carrier.name) && (o.received_documents || []).some(d => d.kind === 'plant_order_confirmation'));
 
   // { icon, label, done, date, onClick } — onClick only set when the milestone is actually
   // clickable right now (state 'now'); done/wait render as plain status, not fake buttons.
@@ -1616,7 +1617,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   const pickedUpIdx = LOAD_STAGES.findIndex(s => s.key === 'picked_up');
   const deliveredIdx = LOAD_STAGES.findIndex(s => s.key === 'delivered');
   const hasAnyPickupDoc = (o.pickup_documents || []).length > 0;
-  const pendingCustoms = (o.pending_pickup_documents || []).length > 0;
+  // documents to send to customs: the plant's pick-up documents, or (no carrier of ours: the plant delivers to the border) the plant's confirmation of the load (owner 2026-11-23)
+  const pendingCustoms = (o.pending_pickup_documents || []).length > 0 || (!(o.carrier && o.carrier.name) && (o.received_documents || []).some(d => d.kind === 'plant_order_confirmation'));
 
   function mainEntry(stageKey){
     const i = LOAD_STAGES.findIndex(s => s.key === stageKey);
