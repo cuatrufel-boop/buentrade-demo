@@ -5964,6 +5964,7 @@ function rqSearchTok(q, w){
   if (q.length < 3) return null;
   if (w.startsWith(q)) return { s: 80, t: 'prefix' };
   if (w.includes(q)) return { s: 55, t: 'sub' };
+  if (q.length >= 5 && w.length === q.length && /[oa]$/.test(q) && /[oa]$/.test(w) && q.slice(0, -1) === w.slice(0, -1)) return { s: 75, t: 'prefix' }; // Spanish gender: congelada = congelado (owner 2026-11-23)
   if (q.length >= 5){
     const d = rqSearchLev(q, w);
     if (d <= (q.length >= 8 ? 2 : 1)) return { s: 40 - d * 5, t: 'fuzzy' };
@@ -5973,13 +5974,18 @@ function rqSearchTok(q, w){
 }
 function rqSearchIndex(){
   const c = rqSearchIndex.cache;
-  if (c && c.src === products && c.n === products.length) return c.rows;
+  const links = typeof rqAllPlantProductRows !== 'undefined' ? rqAllPlantProductRows : [];
+  if (c && c.src === products && c.n === products.length && c.links === links) return c.rows;
+  // The plant that has the product is part of what he types ("trompa Tyson", "pechuga sin hueso Sanderson", owner 2026-11-23): its name is one more word of the product, never a reason to lose it.
+  const plantWords = new Map();
+  links.forEach(r => { if (r.plant && r.product_id) { const a = plantWords.get(r.product_id) || []; rqSearchWords(r.plant.name).forEach(x => { if (!a.includes(x)) a.push(x); }); plantWords.set(r.product_id, a); } });
   const rows = products.map(p => {
     const words = [];
     [[p.full_name_en, 1], [p.name_en, 1.05], [p.name, 1.05], [p.full_name_es, .9]].forEach(([t, w]) => rqSearchWords(t).forEach(x => words.push([x, w])));
+    (plantWords.get(p.id) || []).forEach(x => words.push([x, .9]));
     return { p, words, legacy: [p.full_name_en, p.full_name_es, p.name, p.name_en].map(rqNormalizeSearchText) };
   });
-  rqSearchIndex.cache = { src: products, n: products.length, rows };
+  rqSearchIndex.cache = { src: products, n: products.length, links, rows };
   return rows;
 }
 // -> { qts (the typed words), strict (found, best first), fuzzy (close matches: a typo away, at most 6) }
