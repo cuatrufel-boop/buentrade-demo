@@ -2796,7 +2796,18 @@ const JOURNEY_PHASES = [
 ];
 function renderJourney(o, attentionOrderNumbers){
   const tl = renderUnifiedTimeline(o, attentionOrderNumbers);
-  const steps = tl.journey;
+  let steps = tl.journey;
+  // Owner 2026-11-22 (audit): "Plant status" is not one of his 12 steps. Asking the plant for the load status and recording its answer (the gate before paying) happens INSIDE Pay 2 Factoring / Pay Plant:
+  // while the status is pending, the pay step carries that action; once recorded, the pay step carries the payment. Nothing of the gate is removed (the same functions, the same rule).
+  const psAt = steps.findIndex(x => x.label === 'Plant status');
+  if (psAt >= 0){
+    const ps = steps[psAt], payAt = steps.findIndex(x => x.label === 'Pay Plant');
+    steps = steps.filter((x, i) => i !== psAt);
+    if (payAt >= 0 && !ps.done){
+      const k = steps.findIndex(x => x.label === 'Pay Plant');
+      steps[k] = { ...steps[k], now: ps.now || steps[k].now, onClickRaw: ps.now ? ps.onClickRaw : steps[k].onClickRaw, actionTitle: ps.now ? ps.actionTitle : steps[k].actionTitle, info: steps[k].info || ps.info };
+    }
+  }
   const rows = orderDocRows(o, tl.nextActionEntry ? tl.nextActionEntry.label : null);
   const total = steps.length, done = steps.filter(x => x.done).length;
   const pct = total ? done / total : 0;
@@ -2807,7 +2818,7 @@ function renderJourney(o, attentionOrderNumbers){
     : '';
   // the plant-status / payment / release row sits in the first of its steps that is not done yet
   // Owner 2026-11-22 (audit): the payment row belongs to Plant status / Pay 2 Factoring only; once paid it must never land inside Release 2 Carrier.
-  const PAY = ['Plant status', 'Pay Plant'];
+  const PAY = ['Pay Plant'];
   let payIdx = steps.findIndex(x => PAY.includes(x.label) && !x.done);
   if (payIdx < 0) payIdx = steps.findIndex(x => x.label === 'Pay Plant');
   // the plant's order number is written by hand only when the mail reader did not get it: in Release 2 Carrier, or in Confirm PU for a load without a carrier of ours
@@ -2817,7 +2828,7 @@ function renderJourney(o, attentionOrderNumbers){
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
-  const nx = tl.nextActionEntry;
+  const nx = tl.nextActionEntry && tl.nextActionEntry.label === 'Plant status' ? { ...tl.nextActionEntry, label: 'Pay Plant' } : tl.nextActionEntry; // the plant-status action is shown as part of the pay step (owner 2026-11-22)
   const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(nx.label, o))} →</button>` : '';
   let spine = '';
   const phaseOpenSet = journeyPhaseOpen.get(o.order_number) || new Set();
