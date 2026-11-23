@@ -2808,8 +2808,15 @@ function renderJourney(o, attentionOrderNumbers){
       steps[k] = { ...steps[k], now: ps.now || steps[k].now, onClickRaw: ps.now ? ps.onClickRaw : steps[k].onClickRaw, actionTitle: ps.now ? ps.actionTitle : steps[k].actionTitle, info: steps[k].info || ps.info };
     }
   }
+  // Owner 2026-11-21 (step 3): "FO Send (FOB only, else N/A)". A load with no freight order of ours and no carrier booked (the plant delivers) shows the step as N/A: it is not counted, nothing is asked of it.
+  if (!o.has_freight_order && !(o.carrier && o.carrier.name)){
+    const soAt = steps.findIndex(x => x.label === 'SO');
+    if (soAt >= 0 && !steps.some(x => x.label === 'FO')){
+      steps = steps.slice(); steps.splice(soAt + 1, 0, { label: 'FO', icon: '–', done: false, now: false, na: true, dateStr: '', info: '', onClickRaw: null, actionTitle: '', redo: '' });
+    }
+  }
   const rows = orderDocRows(o, tl.nextActionEntry ? tl.nextActionEntry.label : null);
-  const total = steps.length, done = steps.filter(x => x.done).length;
+  const total = steps.filter(x => !x.na).length, done = steps.filter(x => x.done && !x.na).length;
   const pct = total ? done / total : 0;
   const urgent = !!tl.isUrgent;
   const pendingDocs = o.pending_pickup_documents || [];
@@ -2838,7 +2845,7 @@ function renderJourney(o, attentionOrderNumbers){
     const isPhaseOpen = phaseOpenSet.has(pi);
     const nowIdx = idxs.find(i => steps[i].now);
     const pendingName = nowIdx != null && !isPhaseOpen ? `<u class="oj-pg-now ${urgent ? 'urgent' : ''}">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(steps[nowIdx].label, o))}</u>` : '';
-    spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done).length}/${idxs.length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
+    spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done && !steps[i].na).length}/${idxs.filter(i => !steps[i].na).length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
     idxs.forEach(i => {
       const x = steps[i];
       const z = x.done ? 'done' : x.now ? 'now' : 'wait';
@@ -2846,11 +2853,12 @@ function renderJourney(o, attentionOrderNumbers){
       let inner = own[x.label] || '';
       if (i === payIdx) inner += rows.payment;
       if (x.label === 'Pay Plant') inner += rows.proforma + (rows.bankReceipt || '');
-      if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
+      if (x.na) inner = `<div class="oj-note">N/A — this load has no freight order of ours.</div>`;
+      else if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
       if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
       if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
-      const chip = z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
+      const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
       spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
   });
