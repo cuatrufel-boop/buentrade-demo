@@ -4103,6 +4103,7 @@ function rqBrandSearch(v){ rqBrandQ = v; rqBrandQFocus = true; rqRenderSheet(); 
 const RQ_BRAND_LIST = true; // false = the old plants list + Send panel (kept in rqRenderRequestView)
 function rqBrandListHtml(x){
   const { pid, sheet, sendRows, stale, pending, order, marked, isPes, mailIco, waIco, askN, remindN, addHtml, hints, selN, canSend, emailOk, waOk, noEmail, noWa } = x;
+  const sentRows = x.sentRows || []; // the plants whose price EVERY marked customer already has: not a line to send, but never missing from the screen - they are listed in "Already sent" (owner 2026-11-23: "donde esta la trompa tyson")
   const money = n => '$' + Number(n).toFixed(4) + '/lb';
   const sub = t => `<span class="muted" style="display:block;font-size:11px;">${t}</span>`;
   // EVERY brand of a product lists the SAME customers — all who buy it (owner 2026-11-15: "el mismo producto siempre va a los mismos clientes… no puede salir unos sí otros no"); the ones who already have THIS brand's price are marked ✓ and are not sent it again
@@ -4183,7 +4184,7 @@ function rqBrandListHtml(x){
   const foldHead = 'cursor:pointer;font:700 12px \'IBM Plex Mono\',monospace;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.6);padding:14px 4px;';
   const sentLines = [];
   try { // the fold is a convenience: whatever happens to it, the list above is exactly what it was
-    sendRows.filter(r => !r.stale).forEach(r => {
+    sendRows.concat(sentRows.filter(r => !sendRows.includes(r))).filter(r => !r.stale).forEach(r => {
       const who = order.filter(c => r.sentTo.some(y => y.id === c.id)).map(c => { const d = ((rqSheetState.sentByCustomer[c.id] || {})[r.plant.id + '|' + r.pid]) || ''; return escapeHtml(String(c.trade_name).trim()) + (d ? ` <span class="muted">(${escapeHtml(rqFmtDate(String(d).slice(0, 10)))})</span>` : ''); });
       if (who.length) sentLines.push({ n: who.length, html: `<tr class="rq-sheet-dim"><td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b></td><td colspan="4" style="text-align:left;">${who.join(' · ')}</td></tr>` });
     });
@@ -4409,7 +4410,7 @@ function rqRenderRequestView(rows){
       <input id="rq_req_add_q" type="text" placeholder="Search a customer…" value="${escapeHtml(rqReqAddQ)}" oninput="rqReqAddInput(this)" style="max-width:220px;padding:6px 12px;border-radius:20px;border:1.5px solid rgba(90,170,255,.4);background:rgba(255,255,255,.05);color:#fff;font-size:12.5px;">
       ${rqAllCustomersCache ? (hits.length ? hits.map(c => `<button type="button" class="chip" onclick="rqReqAddCustomer('${c.id}')">${nm(c)}</button>`).join('') : '<span class="muted" style="font-size:12px;">No other customer matches.</span>') : '<span class="muted" style="font-size:12px;">Loading…</span>'}
     </div>`; })() : '');
-  rqSetMsgOriginHtml(el, RQ_BRAND_LIST ? rqBrandListHtml({ pid, sheet, sendRows, stale, pending: pending.concat(priced.filter(r => r.na).map(r => ({ ...r, kind: 'na' }))), order, marked: rqReqSel.ids, isPes, mailIco, waIco, askN: askNeedsTop ? askN : 0, remindN: remindIds.length, remindIds, addHtml, hints: hintsHtml, selN, canSend, emailOk, waOk, noEmail, noWa }) : html);
+  rqSetMsgOriginHtml(el, RQ_BRAND_LIST ? rqBrandListHtml({ pid, sheet, sendRows, sentRows, stale, pending: pending.concat(priced.filter(r => r.na).map(r => ({ ...r, kind: 'na' }))), order, marked: rqReqSel.ids, isPes, mailIco, waIco, askN: askNeedsTop ? askN : 0, remindN: remindIds.length, remindIds, addHtml, hints: hintsHtml, selN, canSend, emailOk, waOk, noEmail, noWa }) : html);
   { const ft = document.getElementById('rq_focus_title'); if (ft) ft.textContent = rqProductName(pid); } // the product name sits in the header row of the focus screen (back · name · who asked)
   if (RQ_BRAND_LIST){ el.querySelectorAll(':scope > .rq-picked').forEach(n => n.remove()); if (rqPickedPids.length > 1) el.insertAdjacentHTML('afterbegin', rqPickedChipsHtml()); } // the picked products, above the one in front (the list itself is only rewritten when it changed)
   if (RQ_BRAND_LIST){ rqRenderWaiting(); rqLoadWaiting(); } // the prices waiting for a match for THIS product (owner 2026-11-10), under the chips; the bar is drawn on its own, so the list above is not rewritten
