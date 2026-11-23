@@ -1645,12 +1645,14 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     // from racing ahead of them (moved here from Unloading once that stage was removed — see
     // [[project_order_lifecycle_and_alerting_spec]]).
     const deliveredBlocked = s.key === 'delivered' && !o.customs_sent_at;
+    // PU 2 Client (step 8) comes after Confirm PU (step 7): the load cannot be marked picked up before the pick-up was captured, so the Pick up button never blinks ahead of it (owner 2026-11-21, "sentido común al flujo")
+    const waitsForConfirm = s.key === 'picked_up' && i === stageIdx + 1 && !o.pu_confirmed_at;
     const realOnClick = isPendingPickupConfirm
       ? `confirmPickupReadyClick('${o.order_number}')`
-      : (isNext && !deliveredBlocked)
+      : (isNext && !deliveredBlocked && !waitsForConfirm)
       ? (s.key === 'delivered' ? `markDeliveredWithSignature('${o.order_number}')` : `advanceLoadStatus('${o.order_number}','${s.key}')`)
       : '';
-    const actionableClass = ((isNext && !deliveredBlocked) || isPendingPickupConfirm) ? ' actionable' + (isUrgent ? ' urgent' : '') : '';
+    const actionableClass = ((isNext && !deliveredBlocked && !waitsForConfirm) || isPendingPickupConfirm) ? ' actionable' + (isUrgent ? ' urgent' : '') : '';
     // Real correction 2026-09-07: "solo necesitamos una fecha... por que siempre quieres hablar de
     // cargas tarde" — showing the scheduled pickup_date on Pending Pickup AT THE SAME TIME the real
     // picked_up_at date shows on the next node read as an on-time/late comparison the user does not
@@ -1684,6 +1686,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     let infoMsg = '';
     if (!realOnClick){
       if (s.key === 'pending_pickup' && i === stageIdx && !confirmPrereqDone) infoMsg = confirmBlockedReason;
+      else if (waitsForConfirm && isNext) infoMsg = confirmPrereqDone ? 'Confirm the pick-up first.' : confirmBlockedReason;
       else if (deliveredBlocked && isNext) infoMsg = 'Send the pickup documents to customs first.';
       else if (i <= stageIdx) infoMsg = dateStr ? `${displayLabel}: ${dateStr}` : `${displayLabel} already reached.`;
       else infoMsg = `Complete the earlier steps first.`;
@@ -1709,7 +1712,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       dateStr,
       info: realOnClick ? '' : infoMsg,
       lineDone: i < stageIdx || puConfirmed,
-      actionableNow: (isNext && !deliveredBlocked) || isPendingPickupConfirm,
+      reached: s.key !== 'pending_pickup' && i <= stageIdx, // Pick up and Create Invoice are done in the Journey once the load reached them (the classic line keeps its own rule)
+      actionableNow: (isNext && !deliveredBlocked && !waitsForConfirm) || isPendingPickupConfirm,
       raised,
       label: displayLabel,
       icon: STEP_ICONS[s.key],
@@ -1983,7 +1987,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     // the route card's one-line rail (owner 2026-11-20): every step, done / current / waiting, from the SAME entries and blinkIdx as the timeline
     railSteps: entries.map((e, i) => ({ label: e.label, done: !!e.lineDone, current: i === blinkIdx })),
     // the order detail (Journey): every step with its state, date, the reason it waits, and what clicking it does
-    journey: entries.map((e, i) => ({ label: e.label, icon: e.icon, done: !!e.lineDone, now: i === blinkIdx, dateStr: e.dateStr || '', info: e.info || '', onClickRaw: e.onClickRaw || null, actionTitle: e.actionTitle || '', redo: e.redo || '' })),
+    journey: entries.map((e, i) => ({ label: e.label, icon: e.icon, done: !!(e.lineDone || e.reached), now: i === blinkIdx, dateStr: e.dateStr || '', info: e.info || '', onClickRaw: e.onClickRaw || null, actionTitle: e.actionTitle || '', redo: e.redo || '' })),
     stepNumber: blinkIdx >= 0 ? blinkIdx + 1 : totalSteps,
     totalSteps,
     allDone: doneSteps === totalSteps,
@@ -2828,6 +2832,8 @@ function renderJourney(o, attentionOrderNumbers){
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': puCaptureHtml + rows.date + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
+  // nothing to press yet but something still pending: the Next card says what it is waiting for, never "All done" (owner 2026-11-21, "sentido común al flujo")
+  const nxWait = !tl.nextActionEntry ? steps.find(x => !x.done && !x.na) : null;
   const nx = tl.nextActionEntry && tl.nextActionEntry.label === 'Plant status' ? { ...tl.nextActionEntry, label: 'Pay Plant' } : tl.nextActionEntry; // the plant-status action is shown as part of the pay step (owner 2026-11-22)
   const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(nx.label, o))} →</button>` : '';
   let spine = '';
@@ -2862,7 +2868,7 @@ function renderJourney(o, attentionOrderNumbers){
   return `<div class="oj">
     <div class="oj-side">
       <div class="oj-card"><div class="oj-ring"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="${R}" stroke="rgba(255,255,255,.1)"/><circle cx="75" cy="75" r="${R}" stroke="#5AAAFF" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/></svg><div class="c"><b>${Math.round(pct * 100)}%</b><span class="oj-k">${done} of ${total}</span></div></div>
-        <div class="oj-next"><div class="oj-k">Next</div><b>${nx ? escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nx.label, o)) : 'All done'}</b></div>${nextBtn}</div>
+        <div class="oj-next"><div class="oj-k">Next</div><b>${nx ? escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nx.label, o)) : nxWait ? escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nxWait.label, o)) : 'All done'}</b>${nxWait && nxWait.info ? `<div class="oj-note">Waiting — ${escapeHtml(nxWait.info)}</div>` : ''}</div>${nextBtn}</div>
       <div class="oj-card"><div class="oj-fact" style="border-top:0;padding-top:0"><span>Product</span><b>${escapeHtml(fullProductLabel(o) || '—')}</b></div><div class="oj-fact"><span>Plant</span><b>${escapeHtml(o.plant_name || '—')}</b></div>${carrier}<div class="oj-fact"><span>Pickup</span><b>${pu ? escapeHtml(ocFmtDay(pu)) : '—'}</b></div><div class="oj-fact"><span>Delivery</span><b>${de ? escapeHtml(ocFmtDay(de)) : '—'}</b></div>${qt}</div>
       <div class="oj-legend"><span><i style="background:#3FCB7E"></i>done</span><span><i style="background:#5AAAFF"></i>next</span><span><i style="background:rgba(255,255,255,.3)"></i>waiting</span></div>
     </div>
