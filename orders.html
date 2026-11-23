@@ -2810,6 +2810,11 @@ function renderJourney(o, attentionOrderNumbers){
       steps = steps.slice(); steps.splice(soAt + 1, 0, { label: 'FO', icon: '–', done: false, now: false, na: true, dateStr: '', info: '', onClickRaw: null, actionTitle: '', redo: '' });
     }
   }
+  // Owner 2026-11-23: "si carrier no hay… (cuando es delivered border)": a load with no carrier of ours has no Release 2 Carrier; the step shows as N/A, not counted, right after the payment (the plant's order number is written in Confirm PU, as before).
+  if (!(o.carrier && o.carrier.name) && !steps.some(x => x.label === 'Send Release #')){
+    const at = steps.findIndex(x => x.label === 'Pay Plant');
+    if (at >= 0){ steps = steps.slice(); steps.splice(at + 1, 0, { label: 'Send Release #', icon: '–', done: false, now: false, na: true, dateStr: '', info: '', onClickRaw: null, actionTitle: '', redo: '' }); }
+  }
   const rows = orderDocRows(o, tl.nextActionEntry ? tl.nextActionEntry.label : null);
   const total = steps.filter(x => !x.na).length, done = steps.filter(x => x.done && !x.na).length;
   const pct = total ? done / total : 0;
@@ -2853,7 +2858,7 @@ function renderJourney(o, attentionOrderNumbers){
       let inner = own[x.label] || '';
       if (i === payIdx) inner += rows.payment;
       if (x.label === 'Pay Plant') inner += rows.proforma + (rows.bankReceipt || '');
-      if (x.na) inner = `<div class="oj-note">N/A — this load has no freight order of ours.</div>`;
+      if (x.na) inner = `<div class="oj-note">N/A — this load has no ${x.label === 'FO' ? 'freight order' : 'carrier'} of ours.</div>`;
       else if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
       if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
@@ -4605,7 +4610,9 @@ async function shareCustoms(orderNumber){
   if (!emails.length){ await btAlert('This customs agency has no email on file.'); return; }
 
   const pending = shipment.pending_pickup_documents || [];
-  if (!pending.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
+  // Owner 2026-11-23: "la planta manda una confirmación de la carga que hay que mandar a aduana, pero si carrier no hay (delivered border)": a load with no carrier of ours (the plant delivers to the border) sends the plant's confirmation of the load to customs too.
+  const plantConfirmations = !shipment.carrier_name ? (shipment.received_documents || []).filter(d => d.kind === 'plant_order_confirmation' && d.storage_url) : [];
+  if (!pending.length && !plantConfirmations.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
 
   const attachments = [];
   for (const doc of pending){
@@ -4619,6 +4626,19 @@ async function shareCustoms(orderNumber){
         reader.readAsDataURL(blob);
       });
       attachments.push({ filename: doc.filename, content: base64 });
+    } catch(e){ /* one file failing to fetch never blocks the others */ }
+  }
+  for (const d of plantConfirmations){
+    try {
+      const res = await fetch(d.storage_url);
+      const blob = await res.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      attachments.push({ filename: d.file_name || `Plant_Order_Confirmation_BT-${btNum(orderNumber)}.txt`, content: base64 });
     } catch(e){ /* one file failing to fetch never blocks the others */ }
   }
   // The plant's proforma invoice (filed from its reply) goes with the documents (owner 2026-11-21, step 9: BOL, Slaughter Letter and Proforma Invoice).
@@ -4651,7 +4671,7 @@ async function shareCustoms(orderNumber){
   try {
     await sendEmailApi('logistics', emails, subject, body, attachments, { phone: waPhoneCustoms, message: waMessageCustoms });
     showToast('Documents resent to customs', emails.join(', '));
-    await callApi('shipment-pickup-documents-mark-forwarded', { actor: currentActor(), document_ids: pending.map(d => d.id) });
+    if (pending.length) await callApi('shipment-pickup-documents-mark-forwarded', { actor: currentActor(), document_ids: pending.map(d => d.id) });
     await markDocSent(orderNumber, 'customs');
     await loadStatusOrders();
   } catch(e){
