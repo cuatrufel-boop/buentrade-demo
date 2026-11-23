@@ -608,6 +608,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-pg-now.urgent{color:var(--amber);border-color:rgba(255,200,118,.6);background:rgba(255,200,118,.1);}
   .oj-step.pc{display:none;}
   /* Owner 2026-11-23: Documentation (PO / SO / FO) side by side; the body (file, eye, Resend, sent time) is always visible in each card. */
+  .oj-hz:not(.open){display:none;}
   .oj-hz{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;position:relative;margin-bottom:10px;align-items:start;}
   .oj-hz::before{content:"";position:absolute;left:15px;right:15px;top:14px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);}
   .oj-hz .oj-step{margin-bottom:0;}
@@ -2866,9 +2867,9 @@ function renderJourney(o, attentionOrderNumbers){
     const isPhaseOpen = phaseOpenSet.has(pi);
     const nowIdx = idxs.find(i => steps[i].now);
     const pendingName = nowIdx != null && !isPhaseOpen ? `<u class="oj-pg-now ${urgent ? 'urgent' : ''}">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(steps[nowIdx].label, o))}</u>` : '';
-    spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done && !steps[i].na).length}/${idxs.filter(i => !steps[i].na).length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
+    spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name === 'Documentation' ? 'Orders' : ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done && !steps[i].na).length}/${idxs.filter(i => !steps[i].na).length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
     const hz = ph.name === 'Documentation'; // owner 2026-11-23: PO / SO / FO side by side, not stacked
-    if (hz) spine += '<div class="oj-hz">';
+    if (hz) spine += `<div class="oj-hz${isPhaseOpen ? ' open' : ''}">`;
     idxs.forEach(i => {
       const x = steps[i];
       const z = x.done ? 'done' : x.now ? 'now' : 'wait';
