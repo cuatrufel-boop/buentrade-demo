@@ -2852,7 +2852,7 @@ function renderJourney(o, attentionOrderNumbers){
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
       if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
       inner += sendHistoryHtml(o, x.label);
-      const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
+      const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? `<span class="oj-chip done">✓ ${x.label === 'Signature' ? 'Closed' : 'Done'}</span>` : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
       spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
   });
