@@ -4018,6 +4018,8 @@ let rqReqReadyIds = []; // the marked customers who can be sent NOW (a USD price
 let rqUrlPreselect = null; // { pid, cid } from Today's Go → : only that customer starts marked for that product
 let rqPreselectScrolled = false;
 const rqReqOld = new Set(); // plant|product keys of EXPIRED prices the trader chose to send anyway (the date stays on the row)
+const rqReqResendKeys = new Set(); // plant|product keys the trader chose to send AGAIN to customers who already have them (owner 2026-11-23: "puedo mandar cuantas veces quiera a un cliente")
+function rqReqSendAgain(key){ rqReqResendKeys.add(key); rqRenderSheet(); }
 function rqToggleReqOld(key){ if (rqReqOld.has(key)) rqReqOld.delete(key); else rqReqOld.add(key); rqRenderSheet(); }
 // The Send panel lists EVERYONE who buys the product (user 2026-10-12: "cuando viene del dashboard no saca los clientes que compran… no me dio más opciones como Don Timo y
 // Carnytek"): coming from Today only that customer is marked, the other buyers are right there to tap — or all at once — and ANY customer (also one who does not buy it yet)
@@ -4125,7 +4127,7 @@ function rqBrandListHtml(x){
   let readyLines = 0;
   const sorted = sendRows.slice().sort((a, b) => (!!(a.calc && !a.proposed) - !!(b.calc && !b.proposed)));
   sorted.forEach(r => {
-    const lacks = c => !r.sentTo.some(y => y.id === c.id);
+    const lacks = c => (typeof rqReqResendKeys !== 'undefined' && rqReqResendKeys.has(r.key)) || !r.sentTo.some(y => y.id === c.id);
     const usdT = order.filter(c => !isPes(c) && lacks(c));
     const pesT = order.filter(c => isPes(c) && lacks(c));
     const ready = !!(r.calc && r.confirmed && !r.proposed);
@@ -4186,7 +4188,7 @@ function rqBrandListHtml(x){
   try { // the fold is a convenience: whatever happens to it, the list above is exactly what it was
     sendRows.concat(sentRows.filter(r => !sendRows.includes(r))).filter(r => !r.stale).forEach(r => {
       const who = order.filter(c => r.sentTo.some(y => y.id === c.id)).map(c => { const d = ((rqSheetState.sentByCustomer[c.id] || {})[r.plant.id + '|' + r.pid]) || ''; return escapeHtml(String(c.trade_name).trim()) + (d ? ` <span class="muted">(${escapeHtml(rqFmtDate(String(d).slice(0, 10)))})</span>` : ''); });
-      if (who.length) sentLines.push({ n: who.length, html: `<tr class="rq-sheet-dim"><td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b></td><td colspan="4" style="text-align:left;">${who.join(' · ')}</td></tr>` });
+      if (who.length) sentLines.push({ n: who.length, html: `<tr class="rq-sheet-dim"><td style="min-width:170px;"><b>${escapeHtml(r.plant.name.trim())}</b></td><td colspan="3" style="text-align:left;">${who.join(' · ')}</td><td><button type="button" class="pkg-trigger-btn" style="margin-left:0;" title="Send this price again — to the same customers or any other" onclick="rqReqSendAgain('${r.key}')">Send again</button></td></tr>` });
     });
   } catch (e) { sentLines.length = 0; }
   const sentN = sentLines.reduce((t, l) => t + l.n, 0);
@@ -4261,12 +4263,13 @@ function rqRenderRequestView(rows){
     const only = fromTodayCid ? (lacking.includes(fromTodayCid) ? [fromTodayCid] : lacking) : lacking;
     rqReqSel = { key: rqSheetKey(), ids: new Set(only) };
     // a different set of products is a fresh send: nothing from the last one (expired prices "send anyway", the open "add customer" box, the re-send marks) carries over
-    rqReqOld.clear(); rqReqAddOpen = false; rqReqAddQ = ''; rqReqResendIds = [];
+    rqReqOld.clear(); rqReqAddOpen = false; rqReqAddQ = ''; rqReqResendIds = []; rqReqResendKeys.clear();
   }
   if (RQ_BRAND_LIST) rqReqSel.ids = new Set([...rqReqSel.ids, ...rqBrandRecipients(pid).filter(c => !hasAll(c)).map(c => c.id)]); // the list has a line for every customer who lacks a price: they are all ready to receive it (no marking step)
   // A price is "sent" for the people it is going to: when customers are marked to receive it, it counts as sent only if EVERY one of them already has it (user 2026-10-13: Tyson's Inner went to Aqua Terra on
   // Oct 12 and never to Don Timo; with Don Timo marked the panel said "Nothing priced and waiting to go out" because it only looked at the first customer who asked). Nobody marked: as before.
   const hasIt = r => {
+    if (typeof rqReqResendKeys !== 'undefined' && rqReqResendKeys.has(r.key)) return false; // sent again on purpose: it is a line to send like any other
     const marked = rqReqSel.ids && rqReqSel.key === rqSheetKey() ? owners.filter(c => rqReqSel.ids.has(c.id)) : [];
     if (marked.length) return marked.every(c => r.sentTo.some(x => x.id === c.id));
     return primary ? r.sentTo.some(c => c.id === primary.id) : (owners.length > 0 && r.sentTo.length === owners.length);
@@ -4847,6 +4850,7 @@ async function rqBrandSend(channel, key, customerId){
   const requestedPricesReady = !!(requestedCurrencyOk && requestedCustomers.every(c => rqPesosConfirmation(one.plant.id, one.pid, c.id)));
   const customers = customerId
     ? (requestedPricesReady ? requestedCustomers : []) // a pesos CITY line carries only its named MXN customers after every recipient has the valid confirmation for this plant × product
+    : (typeof rqReqResendKeys !== 'undefined' && rqReqResendKeys.has(one.key)) ? owners.filter(c => !rqIsPesosCustomer(c)) // sent AGAIN on purpose: every customer of the line, also the ones who have it
     : owners.filter(c => !rqIsPesosCustomer(c) && !one.sentTo.some(x => x.id === c.id));
   // the other buyers of the product (owner 2026-11-03: "si entro solo a una planta no me da la opción de mandar a todos los clientes que compran el producto"): with a customer chosen at the start the line is his; the rest
   // who still lack this brand are offered here, one question, and join the send when the trader says yes

@@ -607,6 +607,18 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-pg-now{text-decoration:none;font:600 12px 'Space Grotesk',sans-serif;color:#5AAAFF;border:1px solid rgba(90,170,255,.6);background:rgba(90,170,255,.12);border-radius:12px;padding:3px 10px;animation:ocDot 1.2s infinite;flex:0 1 auto;min-width:0;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .oj-pg-now.urgent{color:var(--amber);border-color:rgba(255,200,118,.6);background:rgba(255,200,118,.1);}
   .oj-step.pc{display:none;}
+  /* Owner 2026-11-23: Documentation (PO / SO / FO) side by side; the body (file, eye, Resend, sent time) is always visible in each card. */
+  .oj-hz{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;position:relative;margin-bottom:10px;align-items:start;}
+  .oj-hz::before{content:"";position:absolute;left:15px;right:15px;top:14px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);}
+  .oj-hz .oj-step{margin-bottom:0;}
+  .oj-step.hz .oj-nd{position:static;width:30px;height:30px;margin:0 0 8px;font-size:14px;}
+  .oj-step.hz .oj-jh{cursor:default;gap:8px;padding:12px 14px;}
+  .oj-step.hz .cv{display:none;}
+  .oj-step.hz .oj-jb{display:flex;padding:0 14px 14px;}
+  .oj-step.hz .oj-jb .doc-row{gap:8px;padding:10px 12px;}
+  .oj-step.hz .doc-row-label{flex-basis:100%;}
+  .oj-step.hz .doc-row-status{margin-left:0;flex-basis:100%;white-space:normal;}
+  @media(max-width:700px){.oj-hz{grid-template-columns:minmax(0,1fr);}.oj-hz::before{display:none;}}
   .oj-step{position:relative;margin-bottom:10px;}
   .oj-nd{position:absolute;left:-44px;top:10px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:#0b1a36;border:2px solid;z-index:2;}
   .oj-nd svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
@@ -2301,7 +2313,7 @@ async function ensureOrderDocsFiles(orderNumber){
 
 // Real correction 2026-09-07: "quitar el boton de view en docs y poner el nombre con link" — the
 // document's own name is now the link to open it, instead of the name plus a separate "View" link.
-function renderTradeDocRow(label, sentAt, matchedFiles, actionsHtml, actionsWhenMissing){
+function renderTradeDocRow(label, sentAt, matchedFiles, actionsHtml, actionsWhenMissing, resendHtml){
   if (!matchedFiles.length) return `<div class="doc-row"><span class="doc-row-label">${label}</span>${actionsWhenMissing || ''}<span class="doc-row-status">Not generated</span></div>`;
   // Real correction 2026-09-07: "palabra plant y customer no van con link" — only the doc type
   // itself (PO/SO/FO/Invoice) is the clickable link; the "(Plant)"/"(Customer)"/"(Carrier)"
@@ -2311,7 +2323,7 @@ function renderTradeDocRow(label, sentAt, matchedFiles, actionsHtml, actionsWhen
   const qualifier = parenIdx === -1 ? '' : ' ' + label.slice(parenIdx);
   const labelLink = `<span class="doc-row-label"><a href="${matchedFiles[0].url}" target="_blank" rel="noopener" class="doc-row-link">${base}</a>${qualifier}</span>`;
   const when = sentAt ? new Date(sentAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
-  return `<div class="doc-row">${labelLink}${actionsHtml || ''}<span class="doc-row-status${sentAt ? ' sent' : ''}">${sentAt ? 'Sent ' + when : 'Generated, not sent'}</span></div>`;
+  return `<div class="doc-row">${labelLink}${actionsHtml || ''}${resendHtml || ''}<span class="doc-row-status${sentAt ? ' sent' : ''}">${sentAt ? 'Sent ' + when : 'Generated, not sent'}</span></div>`;
 }
 
 // Real ask 2026-09-15: "hay que agregar esto en los docs de esa carga como evidencia en caso de
@@ -2359,6 +2371,8 @@ function orderDocRows(o, nextActionLabel){
     // the real preview (Download/Email/WhatsApp all live inside it, see openDocPreview) instead of
     // two separate icon buttons that each skipped it.
     const previewBtn = (kind, orderNumber) => `<button class="btn secondary" style="padding:6px 10px;" onclick="openDocPreview('${kind}','${orderNumber}')" title="Preview & send">${PREVIEW_ICON}</button>`;
+    // Owner 2026-11-23: PO / SO / FO each carry a Resend button. It opens the same preview-and-send screen as the eye (Email / WhatsApp inside), so a resend uses the approved send paths and nothing new is sent behind it.
+    const resendDocBtn = (kind, orderNumber) => `<button class="btn secondary doc-row-btn" onclick="openDocPreview('${kind}','${orderNumber}')" title="Resend ${kind}">↻ Resend</button>`;
     const poActions = previewBtn('PO', o.order_number);
     const soActions = previewBtn('SO', o.order_number);
     const foActions = previewBtn('FO', o.order_number);
@@ -2473,9 +2487,9 @@ function orderDocRows(o, nextActionLabel){
     const proformaHtml = (o.proforma_invoices || []).map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${escapeHtml(d.filename)}</a><span class="doc-row-status sent">Proforma received</span></div>`).join('');
     return {
       date: dateRow,
-      po: renderTradeDocRow('PO (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing),
-      so: renderTradeDocRow('SO (Customer)', o.so_sent_at, soFiles, soActions, soActionsWhenMissing),
-      fo: o.has_freight_order ? renderTradeDocRow('FO (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing) : '',
+      po: renderTradeDocRow('PO (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing, resendDocBtn('PO', o.order_number)),
+      so: renderTradeDocRow('SO (Customer)', o.so_sent_at, soFiles, soActions, soActionsWhenMissing, resendDocBtn('SO', o.order_number)),
+      fo: o.has_freight_order ? renderTradeDocRow('FO (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing, resendDocBtn('FO', o.order_number)) : '',
       payment: paymentRow,
       invoice: renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions),
       signature: renderSignatureEvidenceRow(o),
@@ -2853,6 +2867,8 @@ function renderJourney(o, attentionOrderNumbers){
     const nowIdx = idxs.find(i => steps[i].now);
     const pendingName = nowIdx != null && !isPhaseOpen ? `<u class="oj-pg-now ${urgent ? 'urgent' : ''}">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(steps[nowIdx].label, o))}</u>` : '';
     spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done && !steps[i].na).length}/${idxs.filter(i => !steps[i].na).length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
+    const hz = ph.name === 'Documentation'; // owner 2026-11-23: PO / SO / FO side by side, not stacked
+    if (hz) spine += '<div class="oj-hz">';
     idxs.forEach(i => {
       const x = steps[i];
       const z = x.done ? 'done' : x.now ? 'now' : 'wait';
@@ -2867,8 +2883,9 @@ function renderJourney(o, attentionOrderNumbers){
       if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
       inner += sendHistoryHtml(o, x.label);
       const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? `<span class="oj-chip done">✓ ${x.label === 'Signature' ? 'Closed' : 'Done'}</span>` : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
-      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
+      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz ? ' hz' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
+    if (hz) spine += '</div>';
   });
   const pu = ocPickupDay(o), de = ocDeliveryDay(o);
   const carrier = o.carrier && o.carrier.name ? `<div class="oj-fact"><span>Carrier</span><b>${escapeHtml(o.carrier.name)}</b></div>` : '';
