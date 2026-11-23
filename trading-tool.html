@@ -257,6 +257,8 @@
     font-family:'IBM Plex Mono',monospace; color:var(--ink); background:transparent; text-align:center;
   }
   input[disabled]{color:var(--ink-soft); background:rgba(255,255,255,.03);}
+  /* The send-email window (To / CC / Subject) is typed in: the calculator's borderless, centered mono field above must not flatten it into plain text (owner 2026-11-23: 'esta cerrado') */
+  #emailModalOverlay .email-modal-field input[type=text]{border:1.5px solid var(--line); padding:8px 10px; height:auto; font-size:13.5px; font-family:inherit; background:var(--card); text-align:left;}
 
   input[type=number]::-webkit-outer-spin-button,
   input[type=number]::-webkit-inner-spin-button{
