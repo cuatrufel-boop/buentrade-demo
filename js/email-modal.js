@@ -434,12 +434,15 @@ function btTypedResolve(ok){
 
 // A whole number the trader types (owner 2026-11-21, step 11: the real box count from the customs document). Resolves the number (1 or more), or null when he cancels.
 let btNumberResolveFn = null;
+let btNumberChoice = null; // when the prompt offers choices (opts.choices = [[value, label, message], ...]) this is the one picked on OK
 function btPromptNumber(message, initial){
+  const opts = arguments[2]; // optional { choices: [[value, label, message], ...] }
   if (!document.getElementById('btNumberOverlay')){
     const wrap = document.createElement('div');
     wrap.innerHTML = `
 <div id="btNumberOverlay" class="email-modal-overlay" style="display:none;z-index:9000;">
   <div class="email-modal-box" style="max-width:420px;">
+    <div id="btNumberChoices" style="display:none;gap:10px;margin-bottom:12px;"></div>
     <div id="btNumberMessage" style="font-size:13.5px;color:var(--ink);line-height:1.5;white-space:pre-wrap;"></div>
     <input id="btNumberInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter')btNumberResolve(true)" style="width:100%;box-sizing:border-box;margin-top:12px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);font-size:15px;">
     <div class="email-modal-actions" style="justify-content:flex-end;gap:10px;margin-top:18px;">
@@ -451,6 +454,23 @@ function btPromptNumber(message, initial){
     document.body.appendChild(wrap.firstElementChild);
   }
   document.getElementById('btNumberMessage').textContent = message;
+  const choices = (opts && opts.choices) || null;
+  const choicesEl = document.getElementById('btNumberChoices');
+  btNumberChoice = choices ? choices[0][0] : null;
+  choicesEl.style.display = choices ? 'flex' : 'none';
+  choicesEl.innerHTML = '';
+  (choices || []).forEach(([value, label, msg]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn secondary'; b.textContent = label; b.dataset.value = value;
+    b.onclick = () => {
+      btNumberChoice = value;
+      document.getElementById('btNumberMessage').textContent = msg || message;
+      choicesEl.querySelectorAll('button').forEach(x => x.classList.toggle('secondary', x !== b));
+      document.getElementById('btNumberInput').focus();
+    };
+    choicesEl.appendChild(b);
+  });
+  if (choices){ choicesEl.firstChild.classList.remove('secondary'); document.getElementById('btNumberMessage').textContent = choices[0][2] || message; }
   const input = document.getElementById('btNumberInput');
   input.value = initial || '';
   document.getElementById('btNumberOverlay').style.display = 'flex';

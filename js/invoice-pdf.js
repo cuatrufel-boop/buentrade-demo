@@ -16,7 +16,7 @@ function bcInvoiceClientEmail(f){
     body: [
       `Hola${f.contact ? ' ' + f.contact : ''},`, '',
       `Te compartimos adjunta la Factura Definitiva de tu Orden ${f.number}, emitida con los datos reales verificados en cruce:`, '',
-      `* Total cajas: ${f.boxes}`,
+      `* Total ${f.countKind === 'combos' ? 'combos' : 'cajas'}: ${f.boxes}`,
       `* Peso neto real: ${Number(f.weight || 0).toLocaleString('en-US')} ${f.unit === 'kg' ? 'kg' : 'lbs'}`,
       `* Total a pagar: ${bcInvoiceMoney(f.total, f.pesos)}`, '',
       'WIRE INSTRUCTIONS', ...INVOICE_WIRE, '',
@@ -30,7 +30,7 @@ function bcInvoiceClientEmail(f){
 function bcInvoiceClientWhatsApp(f){
   return [
     `Hola${f.contact ? ' ' + f.contact : ''}, te saludamos de BuenTrade 🤝.`, '',
-    `Te enviamos por correo la Factura Definitiva de tu Orden ${f.number} (${f.boxes} cajas | ${bcInvoiceMoney(f.total, f.pesos)}).`, '',
+    `Te enviamos por correo la Factura Definitiva de tu Orden ${f.number} (${f.boxes} ${f.countKind === 'combos' ? 'combos' : 'cajas'} | ${bcInvoiceMoney(f.total, f.pesos)}).`, '',
     'Para cerrar la entrega, por favor regálanos tu firma de recibido en esta liga:',
     `👉 ${f.signLink}`, '',
     'Quedamos a tus órdenes. ¡Muchas gracias!',
@@ -79,14 +79,15 @@ function bcRenderInvoice(inv, orderNumber, signature){
   ], rowLook);
 
   const li = inv.line_item;
+  const hasCount = Number(li.count) >= 1; // the real boxes (or combos) of the customs document, once the invoice was created (owner 2026-11-23)
   doc.autoTable({
     startY: Math.max(yLeft, yRight) + 8,
-    head: [['Item Description', pesos ? 'Qty KG' : 'Qty LBS', pesos ? 'MXN / KG' : 'USD / LBS', 'Amount']],
-    body: [[(li.description || '') + (li.brand ? '\nBrand: ' + li.brand : ''), Number(li.weight || 0).toLocaleString('en-US'), (pesos ? 'MX$' : '$') + Number(li.price || 0).toFixed(pesos ? 2 : 4), money(li.total)]],
+    head: [['Item Description', ...(hasCount ? [li.count_kind === 'combos' ? 'Combos' : 'Boxes'] : []), pesos ? 'Qty KG' : 'Qty LBS', pesos ? 'MXN / KG' : 'USD / LBS', 'Amount']],
+    body: [[(li.description || '') + (li.brand ? '\nBrand: ' + li.brand : ''), ...(hasCount ? [Number(li.count).toLocaleString('en-US')] : []), Number(li.weight || 0).toLocaleString('en-US'), (pesos ? 'MX$' : '$') + Number(li.price || 0).toFixed(pesos ? 2 : 4), money(li.total)]],
     theme: 'grid',
     headStyles: { fillColor: [30, 106, 219], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
     styles: { fontSize: 10.5, cellPadding: { top: 9, bottom: 9, left: 7, right: 7 } },
-    columnStyles: { 1: { cellWidth: 72 }, 2: { cellWidth: 78 }, 3: { cellWidth: 100, halign: 'right' } },
+    columnStyles: hasCount ? { 1: { cellWidth: 56 }, 2: { cellWidth: 72 }, 3: { cellWidth: 78 }, 4: { cellWidth: 100, halign: 'right' } } : { 1: { cellWidth: 72 }, 2: { cellWidth: 78 }, 3: { cellWidth: 100, halign: 'right' } },
     margin: { left: 40, right: 40 },
   });
 
