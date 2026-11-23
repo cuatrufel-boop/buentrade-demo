@@ -1190,6 +1190,7 @@ async function loadStatusOrders(){
     pickup_location: o.pickup_location || null,
     customer: {
       contact_name: o.customer_contact_name, whatsapp: o.customer_whatsapp, phone: o.customer_phone, email: o.customer_email, email_cc: o.customer_email_cc, payment_days: o.customer_payment_days,
+      logistics_contact_name: o.customer_logistics_contact_name, logistics_contact_email: o.customer_logistics_email, logistics_contact_whatsapp: o.customer_logistics_whatsapp,
       payments_contact_name: o.customer_payments_contact_name, payments_contact_email: o.customer_payments_email, payments_contact_whatsapp: o.customer_payments_whatsapp, payments_contact_phone: o.customer_payments_phone,
     },
     catalogProduct: o.product_id ? { name: o.catalog_product_name, name_en: o.catalog_product_name_en, photo_url: o.catalog_product_photo_url } : null,
@@ -3098,6 +3099,19 @@ const STAGE_SUBJECTS_ES = {
 // second one is exactly the shape browsers silently block as an unrequested popup, which is why
 // "el email no sale" while WhatsApp still opened. One order, one preview, trader confirms, it
 // sends for real (email) with WhatsApp as the same optional second button every other send has.
+// EVERYBODY OF A CUSTOMER (owner 2026-11-23: "los status de la orden, si salió, si recogió, etc., deben ir a todos"): the status of a load goes to every contact of the customer — the buyer(s), the buyers by protein, the person of logistics and the person of payments —
+// by e-mail to all of them, and by WhatsApp to each number. Buyer first, so the e-mail window's own WhatsApp button keeps pointing at him. Whoever is blocked by the owner's rule (Andes, MBG) is never reached.
+async function customerEveryone(o){
+  let c = o.customer || {};
+  try { if (o.customer_id){ const r = ((await callApi('customers-search', { ids: [o.customer_id] })).results || [])[0]; if (r) c = r; } }
+  catch (e) { console.warn('customerEveryone: could not load the whole customer (the buyer is used):', e.message); }
+  const emails = [...new Set([...collectCustomerEmails(c), c.logistics_contact_email, c.payments_contact_email].map(e => String(e || '').trim()).filter(Boolean))];
+  const people = [{ name: c.contact_name, phone: c.whatsapp || c.phone }, ...(c.contacts || []).map(k => ({ name: k.contact_name, phone: k.whatsapp || k.phone })),
+    { name: c.logistics_contact_name, phone: c.logistics_contact_whatsapp }, { name: c.payments_contact_name, phone: c.payments_contact_whatsapp || c.payments_contact_phone }];
+  const seen = new Set(), phones = [];
+  for (const p of people){ const d = String(p.phone || '').replace(/\D/g, ''); if (d.length < 8 || seen.has(d)) continue; seen.add(d); phones.push({ name: String(p.name || '').trim(), phone: String(p.phone).trim() }); }
+  return { emails, phones };
+}
 async function advanceLoadStatus(orderNumber, newStatus, notes){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
@@ -3118,8 +3132,9 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   const subjFn = STAGE_SUBJECTS_ES[newStatus];
   if (bodyFn && subjFn){
     const contact = (o.customer && o.customer.contact_name) ? o.customer.contact_name.split(' ')[0] : o.customer_name;
-    const emails = o.customer ? collectCustomerEmails(o.customer) : [];
-    const phone = (o.customer && (o.customer.whatsapp || o.customer.phone)) || '';
+    const everyone = typeof customerEveryone === 'function' ? await customerEveryone(o) : null; // the status goes to everybody of the customer (owner 2026-11-23)
+    const emails = everyone ? everyone.emails : (o.customer ? collectCustomerEmails(o.customer) : []);
+    const phone = everyone && everyone.phones.length ? everyone.phones[0].phone : (o.customer && (o.customer.whatsapp || o.customer.phone)) || '';
     const stageLabel = (LOAD_STAGES.find(s => s.key === newStatus) || {}).label || newStatus;
     if (!emails.length){
       const told = await btConfirm(`${o.customer_name} has no email on file. Did you let the customer know the load is ${stageLabel} another way (WhatsApp, phone)?`, 'Yes, sent', 'Not sent');
@@ -3132,6 +3147,13 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
         // had drifted to the wrong department.
         await sendEmailApi(newStatus === 'picked_up' ? 'logistics' : 'offers', emails, subjFn(oMsg), bodyFn(oMsg, contact), [], { phone, message: waFn(oMsg, contact) }); // PU 2 Client goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
         showToast('Customer notified', emails.join(', '));
+        // the other people of the customer who have a WhatsApp (logistics, payments, other buyers) get it too, one by one, each by his own name; never to a customer the owner blocked (Andes, MBG)
+        if (everyone && !/andes|mbg/i.test(`${o.customer_name || ''} ${emails.join(' ')}`)){
+          for (const p of everyone.phones.slice(1)){
+            const first = p.name.split(' ')[0] || contact;
+            await bcConfirmWaSend(p.phone, waFn(oMsg, first), null, { label: p.name || p.phone });
+          }
+        }
       } catch (e){
         if (e.cancelled){
           const told = await btConfirm(`Did you send the "${stageLabel}" message to ${o.customer_name} (for example by WhatsApp)?`, 'Yes, sent', 'Not sent');

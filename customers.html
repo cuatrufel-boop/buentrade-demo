@@ -584,6 +584,12 @@ auth.onAuthStateChanged(user => {
         <div><label class="view-label">Payments Email</label><span id="v_payments_contact_email">—</span></div>
         <div><label class="view-label">Payments WhatsApp</label><span id="v_payments_contact_phone">—</span></div>
       </div>
+      <div class="section-title">Logistics contact</div>
+      <div class="grid3" style="row-gap:10px;">
+        <div><label class="view-label">Logistics Contact</label><span id="v_logistics_contact_name">—</span></div>
+        <div><label class="view-label">Logistics Email</label><span id="v_logistics_contact_email">—</span></div>
+        <div><label class="view-label">Logistics WhatsApp</label><span id="v_logistics_contact_whatsapp">—</span></div>
+      </div>
       <div class="section-title">Buyers by protein</div>
       <div id="v_protein_contacts" style="font-size:13.5px;line-height:1.7;">—</div>
       <div class="section-title">Commercial profile</div>
@@ -718,6 +724,19 @@ auth.onAuthStateChanged(user => {
                 <div class="field"><label>Payments contact WhatsApp</label><input id="payments_contact_whatsapp" oninput="updateCustomerProfile()"></div>
               </div>
             </div>
+            <div class="field kcheck">
+              <label>
+                <input type="checkbox" id="logisticsContactDifferent" onchange="toggleLogisticsContact();updateCustomerProfile()" style="width:auto;">
+                Logistics contact (follows the load) is different from the buyer
+              </label>
+            </div>
+            <div id="logisticsContactBlock" style="display:none;">
+              <div class="kgrid k3">
+                <div class="field"><label>Logistics contact name</label><input id="logistics_contact_name" oninput="updateCustomerProfile()"></div>
+                <div class="field"><label>Logistics contact email</label><input type="email" id="logistics_contact_email" oninput="updateCustomerProfile()"></div>
+                <div class="field"><label>Logistics contact WhatsApp</label><input id="logistics_contact_whatsapp" oninput="updateCustomerProfile()"></div>
+              </div>
+            </div>
           </div>
           <div class="profile-panel kcard">
             <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5M17 5a3.5 3.5 0 010 7M22 20c-.4-2.5-1.8-4-4-4.6"/></svg></span>Buyers by protein</div>
@@ -764,6 +783,7 @@ auth.onAuthStateChanged(user => {
         <div class="profile-row"><span class="view-label">CC Emails</span><span class="profile-row-value" id="cv_email_cc">—</span></div>
         <div class="profile-row"><span class="view-label">Website</span><span class="profile-row-value" id="cv_website">—</span></div>
         <div class="profile-row"><span class="view-label">Payments Contact</span><span class="profile-row-value" id="cv_payments_contact">—</span></div>
+        <div class="profile-row"><span class="view-label">Logistics Contact</span><span class="profile-row-value" id="cv_logistics_contact">—</span></div>
       </div>
     </div>
 
@@ -830,6 +850,7 @@ function openForm(customer){
   const fields = ['custId','trade_name','legal_name','country_id','state','city','address','postal_code','contact_name',
     'contact_role','email','email_cc','website',
     'payments_contact_name','payments_contact_email','payments_contact_whatsapp',
+    'logistics_contact_name','logistics_contact_email','logistics_contact_whatsapp',
     'business_type_id','preferred_currency','usual_delivery_type',
     'usual_destination','usual_incoterm_id','usual_incoterm_place','payment_method','customs_agency_provider_id','preferred_exchange_rate_mode','credit_limit'];
   fields.forEach(f => document.getElementById(f).value = '');
@@ -839,6 +860,7 @@ function openForm(customer){
   document.getElementById('payment_days').value = '';
   document.getElementById('payment_terms_type').value = '';
   document.getElementById('paymentsContactDifferent').checked = false;
+  document.getElementById('logisticsContactDifferent').checked = false;
   // Collections module (2026-09-08): "cada cliente va a tener unos dias de credito 30 dias para
   // empezar todos los clientes" — every NEW customer starts on Credit 30 days by default (still
   // fully editable before saving); an existing customer being edited keeps showing its own real
@@ -873,6 +895,10 @@ function openForm(customer){
     const hasPaymentsContact = ['payments_contact_name','payments_contact_email','payments_contact_phone','payments_contact_whatsapp']
       .some(f => customer[f]);
     document.getElementById('paymentsContactDifferent').checked = hasPaymentsContact;
+    document.getElementById('logistics_contact_name').value = customer.logistics_contact_name || '';
+    document.getElementById('logistics_contact_email').value = customer.logistics_contact_email || '';
+    document.getElementById('logistics_contact_whatsapp').value = customer.logistics_contact_whatsapp || '';
+    document.getElementById('logisticsContactDifferent').checked = !!(customer.logistics_contact_name || customer.logistics_contact_email || customer.logistics_contact_whatsapp);
   }
   // Real bug found live 2026-09-18 (products.html/plants.html): every .value = above is set
   // programmatically, which never fires 'change' — the bt-select widget's visible label
@@ -930,6 +956,9 @@ function updateCustomerProfile(){
        document.getElementById('payments_contact_whatsapp').value]
         .filter(Boolean).join(' · ')
     : 'Same as buyer');
+  setV('cv_logistics_contact', document.getElementById('logisticsContactDifferent').checked
+    ? [document.getElementById('logistics_contact_name').value, document.getElementById('logistics_contact_email').value, document.getElementById('logistics_contact_whatsapp').value].filter(Boolean).join(' · ')
+    : 'Same as buyer');
   if (window.btPassport) btPassport.refreshAll();
 }
 
@@ -955,6 +984,14 @@ function togglePaymentDaysInput(){
   if (!isCredit) document.getElementById('payment_days').value = '';
 }
 
+function toggleLogisticsContact(){
+  const show = document.getElementById('logisticsContactDifferent').checked;
+  document.getElementById('logisticsContactBlock').style.display = show ? 'block' : 'none';
+  if (!show){
+    ['logistics_contact_name','logistics_contact_email','logistics_contact_whatsapp']
+      .forEach(f => document.getElementById(f).value = '');
+  }
+}
 function togglePaymentsContact(){
   const show = document.getElementById('paymentsContactDifferent').checked;
   document.getElementById('paymentsContactBlock').style.display = show ? 'block' : 'none';
@@ -1796,6 +1833,9 @@ function viewCustomer(id){
   document.getElementById('v_payments_contact_name').textContent = c.payments_contact_name || '—';
   document.getElementById('v_payments_contact_email').textContent = c.payments_contact_email || '—';
   document.getElementById('v_payments_contact_phone').textContent = c.payments_contact_whatsapp || c.payments_contact_phone || '—';
+  document.getElementById('v_logistics_contact_name').textContent = c.logistics_contact_name || '—';
+  document.getElementById('v_logistics_contact_email').textContent = c.logistics_contact_email || '—';
+  document.getElementById('v_logistics_contact_whatsapp').textContent = c.logistics_contact_whatsapp || '—';
   document.getElementById('v_protein_contacts').innerHTML = proteinContactsHtml(c.contacts);
   const biz = businessTypes.find(x => x.id === c.business_type_id);
   document.getElementById('v_business_type').innerHTML = biz ? `${escapeHtml(biz.name_en)}${biz.name_es ? `<span style="display:block;font-size:11.5px;color:var(--ink-soft);">${escapeHtml(biz.name_es)}</span>` : ''}` : '—';
@@ -1886,7 +1926,7 @@ function openViewWhatsApp(){
 
 async function saveCustomer(forceOverride){
   // a number pasted the way people paste it ("+52 662 123 4567", "044 662…", "521 662…") is fixed before anything is checked; a real problem is said plainly (js/contact-validation.js)
-  const phoneProblem = bcFixPhoneInputs('whatsapp_code', 'whatsapp_number', '+52') || bcFixFullPhoneInput('payments_contact_whatsapp', document.getElementById('whatsapp_code').value || '+52', [...document.getElementById('whatsapp_code').options].map(o => o.value));
+  const phoneProblem = bcFixPhoneInputs('whatsapp_code', 'whatsapp_number', '+52') || bcFixFullPhoneInput('payments_contact_whatsapp', document.getElementById('whatsapp_code').value || '+52', [...document.getElementById('whatsapp_code').options].map(o => o.value)) || bcFixFullPhoneInput('logistics_contact_whatsapp', document.getElementById('whatsapp_code').value || '+52', [...document.getElementById('whatsapp_code').options].map(o => o.value));
   if (phoneProblem){ document.getElementById('formMsg').textContent = phoneProblem; return; }
   const id = document.getElementById('custId').value;
   const currencyVal = document.getElementById('preferred_currency').value;
@@ -1912,6 +1952,9 @@ async function saveCustomer(forceOverride){
     payments_contact_email: document.getElementById('payments_contact_email').value || null,
     payments_contact_phone: document.getElementById('payments_contact_whatsapp').value || null,
     payments_contact_whatsapp: document.getElementById('payments_contact_whatsapp').value || null,
+    logistics_contact_name: document.getElementById('logistics_contact_name').value || null,
+    logistics_contact_email: document.getElementById('logistics_contact_email').value || null,
+    logistics_contact_whatsapp: document.getElementById('logistics_contact_whatsapp').value || null,
     business_type_id: document.getElementById('business_type_id').value || null,
     preferred_currency_id: (currencyVal && currencyVal !== 'other') ? currencyVal : null,
     usual_delivery_type: document.getElementById('usual_delivery_type').value || null,
@@ -1952,6 +1995,14 @@ async function saveCustomer(forceOverride){
   }
   if (document.getElementById('payments_contact_email').value && !bcIsValidEmail(document.getElementById('payments_contact_email').value)){
     document.getElementById('formMsg').textContent = 'Payments contact email doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('logistics_contact_email').value && !bcIsValidEmail(document.getElementById('logistics_contact_email').value)){
+    document.getElementById('formMsg').textContent = 'Logistics contact email doesn\'t look valid — check for a typo.';
+    return;
+  }
+  if (document.getElementById('logistics_contact_whatsapp').value && !bcIsValidFullPhone(document.getElementById('logistics_contact_whatsapp').value)){
+    document.getElementById('formMsg').textContent = 'Logistics contact WhatsApp must include the country code, e.g. +52 6621234567.';
     return;
   }
   if (document.getElementById('whatsapp_number').value && !bcIsValidPhoneDigits(document.getElementById('whatsapp_number').value)){
