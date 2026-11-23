@@ -655,12 +655,17 @@ auth.onAuthStateChanged(user => {
             <div class="field kcheck">
               <label>
                 <input type="checkbox" id="proteinContactsOn" onchange="toggleProteinContacts()" style="width:auto;">
-                This company has more buyers (one for chicken, another for beef and pork… or several buyers for everything)
+                This company has more buyers
               </label>
               <div id="proteinContactsHint" style="display:none;font-size:12px;color:var(--ink-soft);margin-top:4px;">Save the customer first, then add its other buyers.</div>
             </div>
             <div id="proteinContactsBlock" style="display:none;">
-              <div class="view-label" style="margin:2px 0 8px;">A protein goes to the buyers who have it (one or several). A buyer with no protein is one more buyer for everything: he is copied with the buyer above.</div>
+              <div class="field kcheck">
+                <label><input type="radio" name="buyerMode" id="buyerModeAll" value="all" checked onchange="setBuyerMode()" style="width:auto;"> Several buyers for ALL proteins — every buyer gets everything (they are copied with the main buyer)</label>
+              </div>
+              <div class="field kcheck">
+                <label><input type="radio" name="buyerMode" id="buyerModeProtein" value="protein" onchange="setBuyerMode()" style="width:auto;"> One buyer per protein — each protein goes to its own buyer; a protein with no buyer goes to the main buyer</label>
+              </div>
               <div id="proteinContactRows"></div>
               <button type="button" class="btn secondary small" onclick="addProteinContactRow()">+ Add buyer</button>
             </div>
@@ -1008,8 +1013,17 @@ function togglePaymentsContact(){
 let proteinCategories = [];
 let proteinRowN = 0;
 function proteinName(id){ const c = proteinCategories.find(x => x.id === id); return c ? (c.name_en || c.name) : ''; }
+// the two ways a company has more buyers (owner 2026-11-23: "a veces más de un comprador de TODAS las proteínas, a veces un comprador por proteína"): 'all' = several buyers for all proteins (nobody has a protein),
+// 'protein' = one buyer per protein (everybody has proteins, each protein only once). It is read from the saved buyers: if any has a protein it is 'protein'.
+function buyerMode(){ return document.getElementById('buyerModeProtein').checked ? 'protein' : 'all'; }
+function setBuyerMode(){
+  const protein = buyerMode() === 'protein';
+  document.querySelectorAll('#proteinContactRows .pc-chips').forEach(el => { el.style.display = protein ? '' : 'none'; });
+  if (!protein) document.querySelectorAll('#proteinContactRows .pc-chips input[type=checkbox]').forEach(x => { x.checked = false; }); // "for all proteins": nobody keeps a protein
+}
 function loadProteinContactsForm(customer){
   const editing = !!(customer && customer.id), list = editing ? (customer.contacts || []) : [];
+  document.getElementById(list.some(c => (c.category_ids || []).length) ? 'buyerModeProtein' : 'buyerModeAll').checked = true;
   const toggle = document.getElementById('proteinContactsOn');
   toggle.disabled = !editing;
   document.getElementById('proteinContactsHint').style.display = editing ? 'none' : 'block';
@@ -1033,7 +1047,7 @@ function addProteinContactRow(c){
       <div class="field"><label>WhatsApp</label><input class="pc-wa" id="pcwa_${n}" placeholder="+52 6621234567" value="${escapeHtml(c.whatsapp || '')}"></div>
       <div class="field"><label>Email</label><input class="pc-email" type="email" value="${escapeHtml(c.email || '')}"></div>
     </div>
-    <div class="pc-cats">${proteinCategories.map(k => `<label class="pc-cat"><input type="checkbox" value="${k.id}" ${(c.category_ids || []).includes(k.id) ? 'checked' : ''}> ${escapeHtml(k.name_en || k.name)}</label>`).join('')}
+    <div class="pc-cats"><span class="pc-chips" style="${buyerMode() === 'protein' ? '' : 'display:none;'}">${proteinCategories.map(k => `<label class="pc-cat"><input type="checkbox" value="${k.id}" ${(c.category_ids || []).includes(k.id) ? 'checked' : ''}> ${escapeHtml(k.name_en || k.name)}</label>`).join('')}</span>
       <button type="button" class="btn secondary small pc-remove" onclick="this.closest('.pc-row').remove()">Remove</button></div>`;
   document.getElementById('proteinContactRows').appendChild(row);
 }
@@ -1041,14 +1055,18 @@ function readProteinContacts(){
   if (!document.getElementById('proteinContactsOn').checked) return [];
   return [...document.querySelectorAll('#proteinContactRows .pc-row')].map(r => ({
     contact_name: r.querySelector('.pc-name').value.trim(), whatsapp: r.querySelector('.pc-wa').value.trim() || null, email: r.querySelector('.pc-email').value.trim() || null,
-    category_ids: [...r.querySelectorAll('.pc-cats input[type=checkbox]:checked')].map(x => x.value),
+    category_ids: buyerMode() === 'protein' ? [...r.querySelectorAll('.pc-cats input[type=checkbox]:checked')].map(x => x.value) : [],
   })).filter(c => c.contact_name || c.whatsapp || c.email || c.category_ids.length);
 }
 // one problem, said plainly, or '' when the buyers are fine
 function proteinContactsProblem(list){
   const seen = new Set();
   for (const c of list){
-    if (!c.contact_name) return 'Each buyer by protein needs a name.';
+    if (!c.contact_name) return 'Each buyer needs a name.';
+    if (buyerMode() === 'protein'){
+      if (!c.category_ids.length) return c.contact_name + ': choose at least one protein (or switch to "Several buyers for ALL proteins").';
+      for (const id of c.category_ids){ if (seen.has(id)) return proteinName(id) + ' is on two buyers: with "One buyer per protein" a protein can have only one. For several buyers on everything, choose "Several buyers for ALL proteins".'; seen.add(id); }
+    }
     if (c.email && !bcIsValidEmail(c.email)) return c.contact_name + ': the email doesn\'t look valid.';
     if (c.whatsapp && !bcIsValidFullPhone(c.whatsapp)) return c.contact_name + ': WhatsApp must include the country code, e.g. +52 6621234567.';
   }
