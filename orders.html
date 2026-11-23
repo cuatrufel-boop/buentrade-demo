@@ -3302,6 +3302,7 @@ async function sendPaymentToSummar(orderNumber){
     await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, [{ filename: file.name, content: base64, contentType: file.type }], null);
     showToast('Sent to Summar', SUMMAR_EMAIL);
     await markDocSent(orderNumber, 'summar_payment');
+    await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');
     closeSummarPaymentOverlay();
     await loadStatusOrders();
   } catch(e) {
@@ -3420,6 +3421,7 @@ async function sendFactoringDocs(){
     await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, attachments, null); // Docs 2 Factoring goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
     showToast('Sent to Summar', SUMMAR_EMAIL);
     await markDocSent(orderNumber, 'factoring_docs');
+    for (const f of clientFiles) if (!f.stored) await keepReceivedFile(orderNumber, 'sales_confirmation', f, 'client', o.customer_name || '');
     closeFactoringDocsOverlay();
     await loadStatusOrders();
   } catch(e){
@@ -3508,6 +3510,7 @@ async function confirmPlantPaymentSent(orderNumber){
   }
   try { await callApi('shipments-mark-plant-paid', { actor: currentActor(), order_number: orderNumber }); }
   catch (e) { await btAlert('The email was sent, but the payment could not be marked: ' + e.message); }
+  await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');
   showToast('Payment confirmed', 'The confirmation was sent to the plant — you can now request the release number.');
   await loadStatusOrders();
 }
@@ -3563,6 +3566,7 @@ async function confirmPlantPaymentWhatsApp(orderNumber){
   if (!sentPay){ showToast('Not marked as paid', 'The payment is marked only after you confirm the WhatsApp went out.', true); return; }
   try { await callApi('shipments-mark-plant-paid', { actor: currentActor(), order_number: orderNumber }); }
   catch (e) { await btAlert('Could not mark the payment: ' + e.message); return; }
+  await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');
   showToast('Payment confirmed', 'The confirmation was shared with the plant — you can now request the release number.');
   await loadStatusOrders();
 }
@@ -3846,6 +3850,13 @@ function pdfAttachment(doc, filename){
 
 // Same tracking write as offers.html's sharePO/shareSO/shareFO — best-effort only, the email
 // already went out successfully by the time this runs.
+// A document that comes from somebody else and is used in a step (the client's confirmation, the bank receipt) is kept on the order with who it came from (owner 2026-11-22). Never blocks the step: a failure only warns.
+async function keepReceivedFile(orderNumber, kind, file, fromParty, fromName){
+  try {
+    const file_base64 = file.stored ? await readUrlAsBase64(file.url) : await readFileAsBase64(file);
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'received_file', kind, file_name: file.name, file_base64, content_type: file.type || null, from_party: fromParty, from_name: fromName || null });
+  } catch (e) { console.warn('keepReceivedFile failed (the step itself went through):', e.message); }
+}
 async function markDocSent(orderNumber, docType){
   try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: docType }); }
   catch (e) { console.warn('markDocSent failed (send itself succeeded):', e.message); }
