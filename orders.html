@@ -3834,6 +3834,10 @@ async function markDeliveredWithSignature(orderNumber){
   if (!o) return;
   if (!o.sent_offer_id){ await btAlert('This order has no linked offer — cannot open Real Costs.'); return; }
   await openTTOverlay(o.sent_offer_id, `Factura — ${orderNumber}`);
+  // Owner 2026-11-23 (order 1002 went on without his confirming the invoice): "el sistema no puede dejar pasar sin confirmar". Closing the QT is not a confirmation: the load is marked Delivered (and the collections clock starts)
+  // ONLY when the trader says so; otherwise it stays exactly where it was.
+  const yes = await btConfirm(`${orderNumber}: confirm the load was delivered? This starts the invoice and the collection clock.`, 'Yes, delivered', 'Not yet');
+  if (!yes){ showToast('Not confirmed', `${orderNumber} stays where it was.`); return; }
   await advanceLoadStatus(orderNumber, 'delivered');
 }
 
