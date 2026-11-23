@@ -3286,19 +3286,29 @@ function closeSummarPaymentOverlay(){
 // (the same one the direct payment goes to), copying BuenTrade; the plant answers with proforma, release number and, on FOB loads, the pick-up
 // appointment, and the mail reader takes it from there. The amount is still summarWireAmount — what BuenTrade owes Summar, nothing else changes.
 // Exact wording approved by the owner 2026-11-19.
-function summarPaymentEmailContent(orderNumber, plantName, product, wireAmount, plantPaymentsEmails, pickupAppointment){
-  const subject = `Payment Sent — Order BT-${btNum(orderNumber)} — ${plantName} / ${product}`;
-  const body = `Dear Summar Team,\n\nAttached is our payment confirmation for the order below.\n\n`
-    + `Order: BT-${btNum(orderNumber)}\n`
-    + `Plant: ${plantName}\n`
-    + `Product: ${product}\n`
-    + `Amount: $${wireAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\n`
-    + `Once you have paid ${plantName}, please send your payment confirmation to ${plantPaymentsEmails.join(', ')}, copying us. ${plantName} will then reply with:\n`
-    + `- Proforma invoice\n`
-    + `- Release number\n`
-    + (pickupAppointment ? `- Pick-up appointment\n` : '')
-    + `\nPlease keep us copied on their reply.\n\nThank you,\nBuenTrade`;
+function summarPaymentEmailContent(orderNumber, plantName, clientName, plantPaymentsEmails, withBankingInstructions){
+  // PAY 2 FACTORING (owner 2026-11-21, step 5, his text word for word): an answer in the thread of Docs 2 Factoring — same subject with "Re: " — with the Grove Bank receipt and the plant's banking instructions.
+  // The clause about the banking instructions is there only when the plant has them on file (they are added plant by plant as the plants send them), so the e-mail never says something is attached when it is not.
+  const orderId = `BT-${btNum(orderNumber)}`;
+  const subject = `Re: ${orderId} | Factoring Documents & Financial Breakdown – ${clientName}`;
+  const body = `Hi Summar team,\n\nFollowing up on Order ${orderId}, please find attached the Grove Bank payment receipt${withBankingInstructions ? ` along with ${plantName}'s banking instructions` : ''}.\n\n`
+    + `Could you please forward the payment receipt directly to ${plantName} (${plantPaymentsEmails.join(', ')}) keeping BuenTrade in CC, and request the Release Number and Proforma Invoice?\n\n`
+    + `Thank you in advance for your support.\n\nBest regards,`;
   return { subject, body };
+}
+// The plant's banking instructions on file (plants.html > Documents > Banking instructions), ready to attach. None on file, or the lookup failing: nothing is attached and the e-mail does not mention them.
+async function plantBankingInstructionsFiles(plantId, plantName){
+  if (!plantId) return [];
+  try {
+    const docs = ((await callApi('plant-documents-search', { plant_id: plantId })).results || []).filter(d => d.kind === 'banking_instructions' && d.download_url);
+    const safeName = String(plantName || 'Plant').trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const out = [];
+    for (let k = 0; k < docs.length; k++){
+      const ext = (String(docs[k].file_name || '').match(/\.[A-Za-z0-9]+$/) || [''])[0];
+      out.push({ filename: `Banking_Instructions_${safeName}${docs.length > 1 ? '-' + (k + 1) : ''}${ext}`, content: await readUrlAsBase64(docs[k].download_url), contentType: docs[k].content_type || 'application/octet-stream' });
+    }
+    return out;
+  } catch (e) { console.warn('plantBankingInstructionsFiles failed (the e-mail goes without them):', e.message); return []; }
 }
 // Sends BuenTrade's payment confirmation to Summar (achavez@summar.com) — same preview-before-send send path as every other document in this file.
 async function sendPaymentToSummar(orderNumber){
@@ -3327,11 +3337,11 @@ async function sendPaymentToSummar(orderNumber){
   let base64;
   try { base64 = await readFileAsBase64(file); }
   catch (e) { await btAlert('No se pudo leer el archivo: ' + e.message); return; }
-  // A load with our own carrier booked is FOB: only then does the plant also owe the pick-up appointment.
-  const isFob = !!(o.carrier && (o.carrier.name || o.carrier.email || o.carrier.phone));
-  const { subject, body } = summarPaymentEmailContent(orderNumber, String(o.plant_name || '').trim(), soProductName, wireAmount, plantPaymentsEmails, isFob);
+  const bankingFiles = await plantBankingInstructionsFiles(o.plant_id, o.plant_name);
+  const { subject, body } = summarPaymentEmailContent(orderNumber, String(o.plant_name || '').trim(), String(o.customer_name || '').trim(), plantPaymentsEmails, bankingFiles.length > 0);
+  const receiptExt = (String(file.name || '').match(/\.[A-Za-z0-9]+$/) || [''])[0];
   try {
-    await sendEmailApi('purchasing', [SUMMAR_EMAIL], subject, body, [{ filename: file.name, content: base64, contentType: file.type }], null);
+    await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, [{ filename: `Grove_Bank_Receipt_BT-${btNum(orderNumber)}${receiptExt}`, content: base64, contentType: file.type }, ...bankingFiles], null); // from logistics@ as his spec says (owner 2026-11-21, step 5)
     showToast('Sent to Summar', SUMMAR_EMAIL);
     await markDocSent(orderNumber, 'summar_payment');
     await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');

@@ -794,11 +794,12 @@ auth.onAuthStateChanged(user => {
             <button type="button" class="btn secondary" onclick="document.getElementById('plantDocFileInput').click()">Choose File</button>
             <span id="plantDocFileName" style="font-size:13px;color:var(--ink-soft);">No file chosen</span>
             <input type="file" id="plantDocFileInput" style="display:none;" onchange="document.getElementById('plantDocFileName').textContent = this.files[0] ? this.files[0].name : 'No file chosen';">
+            <select id="plantDocKind" title="Banking instructions go with the payment to Summar"><option value="">Document</option><option value="banking_instructions">Banking instructions</option></select>
             <button class="btn" onclick="uploadPlantDocument()">Upload</button>
           </div>
           <div id="plantDocMsg" style="font-size:12.5px;margin-bottom:10px;"></div>
           <table>
-            <thead><tr><th>File</th><th>Uploaded</th><th></th></tr></thead>
+            <thead><tr><th>File</th><th>Type</th><th>Uploaded</th><th></th></tr></thead>
             <tbody id="plantDocRows"></tbody>
           </table>
           <div id="plantDocsEmpty" class="empty" style="display:none;">No documents attached for this plant yet.</div>
@@ -2409,6 +2410,7 @@ function renderPlantDocuments(){
   document.getElementById('plantDocsEmpty').style.display = plantDocuments.length ? 'none' : 'block';
   tbody.innerHTML = plantDocuments.map(d => `<tr>
     <td><a href="${escapeHtml(d.download_url)}" target="_blank" rel="noopener" style="color:var(--blue);">${escapeHtml(d.file_name)}</a></td>
+    <td>${d.kind === 'banking_instructions' ? 'Banking instructions' : 'Document'}</td>
     <td>${new Date(d.created_at).toLocaleDateString()}</td>
     <td class="row-actions"><button class="btn danger" onclick="deletePlantDocument('${d.id}')">×</button></td>
   </tr>`).join('');
@@ -2432,6 +2434,7 @@ function uploadPlantDocument(){
       await callApi('plant-documents-upload', {
         actor: currentActor(), plant_id: currentPlantId,
         file_name: file.name, file_base64: base64, content_type: file.type || null,
+        kind: document.getElementById('plantDocKind').value || null,
         idempotency_key: idempotencyKey,
       });
     } catch (e) {
