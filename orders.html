@@ -1478,7 +1478,7 @@ async function confirmPlantStatusSentClick(orderNumber){
   const plantName = String(o.plant_name || 'the plant').trim();
   const yes = await btConfirm(`Did you send the load-status request to ${plantName} for ${orderNumber}?`, 'Yes, I sent it', 'No, not sent');
   if (!yes){ showToast('Not recorded', 'Nothing was marked as sent.'); return; }
-  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'pickup_status' }); }
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'pickup_status', sends: (typeof bcTakeSends === 'function' ? bcTakeSends(orderNumber) : undefined) }); }
   catch (e) { await btAlert('Could not record it: ' + e.message); return; }
   showToast('Status request recorded as sent', plantName);
   await loadStatusOrders();
@@ -2794,6 +2794,18 @@ const JOURNEY_PHASES = [
   { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Sent to customs', 'Delivered'] },
   { name: 'Closing', labels: ['Invoice', 'Signature'] },
 ];
+// THE HISTORY OF WHAT WENT OUT, inside the step it belongs to (owner 2026-11-21): date and hour (Miami), channel, From, To, CC, status. The newest five of each step.
+const SEND_STEP_OF = { po: 'PO', so: 'SO', fo: 'FO', factoring_docs: 'Docs 2 Factoring', summar_payment: 'Pay Plant', plant_payment: 'Pay Plant', pickup_status: 'Pay Plant', release_number: 'Send Release #',
+  picked_up: 'Pick up', pickup_docs_request: 'Pick up', customs: 'Sent to customs', invoice: 'Invoice' };
+function sendHistoryHtml(o, label){
+  const rows = (o.send_log || []).filter(g => SEND_STEP_OF[g.step] === label).slice(-5);
+  if (!rows.length) return '';
+  const when = (t) => new Date(t).toLocaleString('en-US', { timeZone: 'America/New_York', month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return rows.map(g => {
+    const parts = [when(g.sent_at), g.channel === 'whatsapp' ? 'WhatsApp' : 'E-mail', g.from_address ? 'from ' + g.from_address : '', g.to_addresses ? 'to ' + g.to_addresses : '', g.cc_addresses ? 'cc ' + g.cc_addresses : '', g.status].filter(Boolean);
+    return `<div class="oj-note">${escapeHtml(parts.join(' · '))}</div>`;
+  }).join('');
+}
 function renderJourney(o, attentionOrderNumbers){
   const tl = renderUnifiedTimeline(o, attentionOrderNumbers);
   let steps = tl.journey;
@@ -2858,6 +2870,7 @@ function renderJourney(o, attentionOrderNumbers){
       if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
       if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
+      inner += sendHistoryHtml(o, x.label);
       const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? '<span class="oj-chip done">✓ Done</span>' : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
       spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
@@ -3146,6 +3159,7 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
 
   try { await callApi('shipments-update-status', { actor: currentActor(), shipment_id: o.id, status: newStatus, notes: notes || null }); }
   catch (e) { await btAlert('Error updating status: ' + e.message); return; }
+  if (typeof logSends === 'function') await logSends(orderNumber, newStatus); // the pick-up notice goes into the history of its step
 
   await loadStatusOrders();
   // Owner 2026-11-22: the moment the pick-up is confirmed, the documents are asked for (the Pick up button sends that e-mail).
@@ -3167,6 +3181,7 @@ async function requestPickupDocsOnPickup(orderNumber){
   try {
     await sendEmailApi('logistics', to, subject, body, [], waPhone ? { phone: waPhone, message: body } : null, cc);
     showToast('Documents requested from the plant', to.join(', '));
+    if (typeof logSends === 'function') await logSends(orderNumber, 'pickup_docs_request');
   } catch (e) {
     if (e.cancelled) return;
     showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true, gmailFallbackLinkHtml(to, subject, body));
@@ -3518,6 +3533,7 @@ async function confirmPlantPaymentSent(orderNumber){
   }
   try { await callApi('shipments-mark-plant-paid', { actor: currentActor(), order_number: orderNumber }); }
   catch (e) { await btAlert('The email was sent, but the payment could not be marked: ' + e.message); }
+  if (typeof logSends === 'function') await logSends(orderNumber, 'plant_payment');
   await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');
   showToast('Payment confirmed', 'The confirmation was sent to the plant — you can now request the release number.');
   await loadStatusOrders();
@@ -3574,6 +3590,7 @@ async function confirmPlantPaymentWhatsApp(orderNumber){
   if (!sentPay){ showToast('Not marked as paid', 'The payment is marked only after you confirm the WhatsApp went out.', true); return; }
   try { await callApi('shipments-mark-plant-paid', { actor: currentActor(), order_number: orderNumber }); }
   catch (e) { await btAlert('Could not mark the payment: ' + e.message); return; }
+  if (typeof logSends === 'function') await logSends(orderNumber, 'plant_payment');
   await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');
   showToast('Payment confirmed', 'The confirmation was shared with the plant — you can now request the release number.');
   await loadStatusOrders();
@@ -3865,8 +3882,15 @@ async function keepReceivedFile(orderNumber, kind, file, fromParty, fromName){
     await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'received_file', kind, file_name: file.name, file_base64, content_type: file.type || null, from_party: fromParty, from_name: fromName || null });
   } catch (e) { console.warn('keepReceivedFile failed (the step itself went through):', e.message); }
 }
+// The sends that no document milestone covers (the customer's pick-up notice, the request for the documents, the payment to the plant) are written into the history under the step they belong to. Never blocks anything.
+async function logSends(orderNumber, step){
+  const sends = bcTakeSends(orderNumber);
+  if (!sends.length) return;
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'send_log', step, sends }); }
+  catch (e) { console.warn('logSends failed (the send itself went out):', e.message); }
+}
 async function markDocSent(orderNumber, docType){
-  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: docType }); }
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: docType, sends: bcTakeSends(orderNumber) }); }
   catch (e) { console.warn('markDocSent failed (send itself succeeded):', e.message); }
 }
 

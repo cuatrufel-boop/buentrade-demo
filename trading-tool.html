@@ -2809,7 +2809,7 @@ function gmailComposeUrl(emails, subject, body){
 async function markInvoiceSentFallback(){
   const ctx = invoicePreviewCtx;
   if (!ctx) return;
-  await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
+  await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined, sends: bcTakeSends(ctx.orderNumber) });
   const msgEl = document.getElementById('invoiceMsg');
   if (msgEl) msgEl.innerHTML = 'Invoice marked sent — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
 }
@@ -2834,7 +2834,7 @@ async function sendInvoicePreviewEmail(){
     // Real ask 2026-09-14: "un solo boton de whatsapp por pantalla" — this preview already has its
     // own standalone WhatsApp button (sendInvoicePreviewWhatsApp), so no waInfo here.
     await sendEmailApi('logistics', ctx.emails, ctx.subject, ctx.body, [pdfAttachment(ctx.doc, ctx.filename)], null, ctx.ccEmails); // Invoice client goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
-    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined, sends: bcTakeSends(ctx.orderNumber) });
     closeDocPreview();
     // Collections module (2026-09-08): "el flujo debe llevarme a collections" — the order now has
     // an invoice, so it just became a real Collections item; give the trader the direct link
@@ -2860,7 +2860,7 @@ async function sendInvoicePreviewWhatsApp(){
   const sentInv = await bcWaOpenAndConfirm(ctx.waPhone, ctx.waMessage, ctx.customerName || 'the customer');
   if (!sentInv) return; // the invoice counts as sent only when the trader says he sent it on WhatsApp
   try {
-    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined });
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined, sends: bcTakeSends(ctx.orderNumber) });
     document.getElementById('invoiceMsg').innerHTML = 'Invoice sent — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
   } catch (e) { /* best-effort — the WhatsApp send itself already went out above regardless */ }
 }

@@ -16,6 +16,19 @@
 // logic, and the actual fetch to the backend move here. Each file's sendEmailApi becomes a thin
 // wrapper wiring its own existing positional args into bcSendEmailApi's one shared implementation.
 
+// THE HISTORY OF WHAT WENT OUT (owner 2026-11-21): every real send (an e-mail that left, a WhatsApp the trader confirmed) is noted here, and the page hands it to the server with the document it just marked as sent
+// (bcTakeSends). Only what mentions that order in its subject / message is handed over, and only what is under two minutes old, so a send of another order or an older one is never written on the wrong step.
+let bcSendLog = [];
+function bcNoteSend(s){
+  bcSendLog = bcSendLog.filter(x => Date.now() - x.at < 120000);
+  bcSendLog.push(Object.assign({ at: Date.now(), ref: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random() }, s));
+}
+function bcTakeSends(orderNumber){
+  const tail = String(orderNumber || '').replace(/^BT-/, '');
+  const mine = bcSendLog.filter(x => Date.now() - x.at < 120000 && tail && String(x.subject || '').includes(tail));
+  bcSendLog = bcSendLog.filter(x => !mine.includes(x));
+  return mine.map(x => ({ channel: x.channel, from: x.from, to: x.to, cc: x.cc, subject: x.subject, ref: x.ref }));
+}
 const BC_EMAIL_SIGNATURE = '\n\n--\nBuenTrade — GOOD TRADE. GOOD BUSINESS.\nBuenTrade LLC\n1525 N Park Dr, Suite 104, Weston, FL 33326\n+1 754-248-1016 · buentradegroup.com';
 
 let bcEmailModalResolve = null;
@@ -184,6 +197,7 @@ async function emailModalConfirm(){
     return; // stays open — trader can fix and retry, or Cancel to fall back to Gmail
   }
 
+  bcNoteSend({ channel: 'email', from: opts.fromAlias ? opts.fromAlias + '@buentradegroup.com' : '', to: finalTo, cc: finalCc, subject });
   // Sent — lock the compose fields, show confirmation, and only now offer WhatsApp as the next
   // optional step (or close outright when there's nothing to offer).
   ['emailModalTo', 'emailModalCc', 'emailModalSubject', 'emailModalBody'].forEach(id => document.getElementById(id).disabled = true);
@@ -336,13 +350,13 @@ function bcWaWaitSent(label){
 }
 function bcWaOpenAndConfirm(phone, message, label){
   window.open('https://wa.me/' + String(phone || '').replace(/\D/g, '') + '?text=' + encodeURIComponent(message), '_blank');
-  return bcWaWaitSent(label || phone);
+  return bcWaWaitSent(label || phone).then(sent => { if (sent) bcNoteSend({ channel: 'whatsapp', to: [phone], subject: String(message || '') }); return sent; });
 }
 // Returns a promise: true = the trader confirmed he sent it; false = he did not. opts.ask === false: nothing depends on it, no question (a follow-up after an email that already went).
 function bcConfirmWaSend(phone, message, filename, opts){
   opts = opts || {};
   const label = opts.label || phone;
-  const go = () => opts.ask === false ? (window.open('https://wa.me/' + String(phone).replace(/\D/g, '') + '?text=' + encodeURIComponent(message), '_blank'), Promise.resolve(true)) : bcWaOpenAndConfirm(phone, message, label);
+  const go = () => opts.ask === false ? (window.open('https://wa.me/' + String(phone).replace(/\D/g, '') + '?text=' + encodeURIComponent(message), '_blank'), bcNoteSend({ channel: 'whatsapp', to: [phone], subject: String(message || '') }), Promise.resolve(true)) : bcWaOpenAndConfirm(phone, message, label);
   if (!filename) return go();
   bcEnsureWaAttachModal();
   return new Promise(resolve => {

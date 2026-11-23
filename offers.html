@@ -1892,7 +1892,7 @@ async function sharePO(orderNumber){
 // successfully by the time this runs, so a failure here (network blip, etc.) must never look like
 // the send itself failed — it just means the readiness check won't see this one as sent yet.
 async function markDocSent(orderNumber, docType){
-  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: docType }); }
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: docType, sends: bcTakeSends(orderNumber) }); }
   catch (e) { console.warn('markDocSent failed (send itself succeeded):', e.message); }
 }
 
