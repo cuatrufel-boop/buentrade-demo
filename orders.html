@@ -3069,14 +3069,13 @@ async function pickupCaptureDone(ok){
   const resolve = pickupCaptureResolve; pickupCaptureResolve = null;
   resolve(result);
 }
+// CREATE INVOICE sends NO message (owner 2026-11-21, steps 7, 10 and 12 are internal; "nada de lo viejo"): the old "carga entregada con éxito" notice to the customer is gone — what the customer gets after delivery is the final invoice with its signature link (Invoice client).
 const STAGE_EMAIL_BODY_ES = {
   // PU 2 Client (owner 2026-11-21, step 8 of the new 12-step flow): his text. The live-tracking line appears only when a link was given; without one it is left out completely.
   picked_up: (o, contact) => { const d = puMessageData(o); return `Hola ${contact},\n\nTe avisamos que tu carga de la Orden SO-BT-${btNum(o.order_number)} ya recogió en planta y va en camino a ${d.customs}.\n\n* Fecha de recolección: ${d.pu}\n* Cruce estimado: ${d.crossing}\n${d.link ? `* Mírala en vivo en esta liga: ${d.link}\n` : ''}\nTe avisamos en cuanto llegue a ${d.customs}.\n\nSaludos,`; },
-  delivered: (o, contact) => `Hola ${contact},\n\n🚚 Te confirmamos que tu carga de ${fullProductLabelEs(o)} fue entregada con éxito.\n\nUn Abrazo y gracias por tu confianza!\n\nSaludos,\nBuentrade Team`,
 };
 const STAGE_WHATSAPP_ES = {
   picked_up: (o, contact) => { const d = puMessageData(o); return `Hola ${contact}, te saludamos de BuenTrade 🚚.\n\nTe avisamos que tu carga de la Orden SO-BT-${btNum(o.order_number)} ya recogió en planta y va en camino a ${d.customs}.\n\n📅 Recolección: ${d.pu}\n🌎 Cruce estimado: ${d.crossing}\n${d.link ? `📍 Mírala en vivo en esta liga: ${d.link}\n` : ''}\nTe avisamos en cuanto llegue a ${d.customs}.`; },
-  delivered: (o, contact) => `Hola ${contact}! ✅ Tu carga SO-BT-${btNum(o.order_number)} de ${fullProductLabelEs(o)} fue entregada con éxito.`,
 };
 // Real fix 2026-09-20: subject used the raw stored order_number (already carries a "BT-" prefix
 // baked in, e.g. "BT-2026-1002") with no document-type prefix — the customer only ever recognizes
@@ -3084,7 +3083,6 @@ const STAGE_WHATSAPP_ES = {
 // a real order (see project_approved_email_whatsapp_copy_table for the frozen copy this belongs to).
 const STAGE_SUBJECTS_ES = {
   picked_up: o => `SO-BT-${btNum(o.order_number)} | Tu carga ya recogió en planta`,
-  delivered: o => `SO-BT-${btNum(o.order_number)} — Carga entregada con Éxito`,
 };
 
 // Real correction 2026-09-07, explicit and repeated: every notification that leaves BuenTrade
