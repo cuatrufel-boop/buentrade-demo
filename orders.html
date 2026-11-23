@@ -916,7 +916,7 @@ auth.onAuthStateChanged(user => {
 <!-- Owner 2026-11-21, steps 7-8: what is real about the pick-up, written down before the customer is told. -->
 <div id="pickupCaptureOverlay" class="email-modal-overlay" style="display:none;">
   <div class="email-modal-box" style="max-width:420px;">
-    <h3>PU 2 Client</h3>
+    <h3 id="pickupCaptureTitle">PU 2 Client</h3>
     <div class="email-modal-from" id="pickupCaptureIntro"></div>
     <div class="email-modal-field"><label>Pick-up date</label><input type="date" id="pickupCapPu" onchange="pickupCapPuChanged()"></div>
     <div class="email-modal-field"><label>Estimated crossing</label><input type="date" id="pickupCapCross"></div>
@@ -1363,42 +1363,18 @@ function confirmLoadEmailBody(orderNumber, productName, locationName, releaseNum
 // The old WhatsApp check-in (statusCheckMessage) is folded in as the SAME email modal's WhatsApp
 // button (openEmailModal's waInfo) rather than removed — approved copy, still available with one
 // click, never a second separate action to take.
+// CONFIRM PU (owner 2026-11-21, step 7: "Confirm PU = captura interna"): it no longer e-mails the plant asking for the appointment (the Release 2 Carrier e-mail already asks the carrier to coordinate the date and time with the
+// plant's scheduling team and to share the tracking link). The trader writes down what is real — the pick-up day, the estimated crossing and, if the carrier gave one, the live tracking link — and it is kept on the load. Nothing is sent
+// here; that capture is what PU 2 Client (the Pick up button) sends to the customer.
 async function confirmPickupReadyClick(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
-  const hasCarrier = !!(o.carrier && o.carrier.phone);
-  const waPhone = (hasCarrier ? o.carrier.phone : (o.plant.whatsapp || o.plant.phone) || '').replace(/\D/g, '');
-
-  const location = await resolvePickupLocationForOrder(o, orderNumber);
-  if (location === undefined) return; // trader cancelled the location picker, or saving it failed
-
-  const toEmail = (location && location.email) || o.plant.email || null;
-  if (!toEmail){
-    // Neither the resolved location nor the plant has an email on file at all — same fallback the
-    // old version always had, never a dead end for the trader.
-    if (hasCarrier) askFleteroWhatsApp(orderNumber);
-    else if (o.plant && (o.plant.whatsapp || o.plant.phone)) askPlantWhatsApp(orderNumber);
-    else await btAlert('No carrier/plant phone or email on file to confirm pickup.');
-    return;
-  }
-
-  const locationLabel = (location && location.location_name) || o.plant_name || 'the plant';
-  const subject = confirmLoadEmailSubject(orderNumber, locationLabel);
-  const body = confirmLoadEmailBody(orderNumber, fullProductLabel(o), locationLabel, o.release_number);
-  const cc = (hasCarrier && o.carrier.email) ? [o.carrier.email] : [];
-  const waInfo = waPhone ? { phone: waPhone, message: statusCheckMessage(o) } : null;
-
-  try {
-    await sendEmailApi('logistics', [toEmail], subject, body, [], waInfo, cc);
-    showToast('Pick-up appointment requested', toEmail);
-  } catch (e) {
-    if (e.cancelled) return;
-    // No doc_type passed — this isn't a PO/SO/FO/customs/invoice document (no VALID_DOC_TYPES
-    // entry fits, and there's nothing to mark "sent" on the shipment for it), same as the old
-    // WhatsApp-only version never tracked a "sent" timestamp for this action either.
-    showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true,
-      gmailFallbackLinkHtml([toEmail], subject, body));
-  }
+  const capture = await askPickupCapture(o, 'Confirm PU');
+  if (!capture) return;
+  try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'pu_confirmed', pu: capture }); }
+  catch (e) { await btAlert('Could not record the pick-up: ' + e.message); return; }
+  showToast('Pick-up confirmed', `${orderNumber} — ${fmtDateStr(capture.puDate)}`);
+  await loadStatusOrders();
 }
 // Owner 2026-11-19: three days before pick-up the plant is asked for the status of the load ("tres dias antes de la recogida… correo a la planta pidiendo el status en ingles…
 // copiando a carrier"), always with HIS approval: "nada automatico, ese correo debe salirme para yo aprobar y anadir a quien quiera". The email opens in the usual preview
@@ -1644,7 +1620,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   function mainEntry(stageKey){
     const i = LOAD_STAGES.findIndex(s => s.key === stageKey);
     const s = LOAD_STAGES[i];
-    const cls = i < stageIdx ? 'done' : (i === stageIdx ? 'current' : '');
+    const puConfirmed = s.key === 'pending_pickup' && !!o.pu_confirmed_at; // Confirm PU is done once the pick-up was captured (owner 2026-11-21, step 7)
+    const cls = (i < stageIdx || puConfirmed) ? 'done' : (i === stageIdx ? 'current' : '');
     const isNext = i === stageIdx + 1;
     const isUrgent = isNext && attentionOrderNumbers.has(o.order_number);
     // Real correction 2026-09-07 (final): "preguntas estupidas has lo que digo" — no more separate
@@ -1660,7 +1637,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     // hands (sent to them if one's booked, just recorded otherwise) before you can confirm the load.
     const confirmPrereqDone = hasCarrier ? !!o.release_number_sent_at : !!o.release_number;
     const confirmBlockedReason = hasCarrier ? 'Send the release number to the carrier first.' : 'Record the release number first.';
-    const isPendingPickupConfirm = s.key === 'pending_pickup' && i === stageIdx && canConfirm && confirmPrereqDone;
+    const isPendingPickupConfirm = s.key === 'pending_pickup' && i === stageIdx && !o.pu_confirmed_at && confirmPrereqDone;
     // Real bug found live 2026-09-14: "me dejo clickear en unloading" — the physical stage had no
     // gate at all tied to Customs docs/Sent to customs actually being done first; clicking it just
     // fired advanceLoadStatus regardless. Same "no puede pasar de una a otra" rule the mini-entries
@@ -1686,7 +1663,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     // load picks up from without a click. Falls back to the FOB date when no location is resolved
     // yet — the same real "no debe poderse escoger manualmente hasta decidir al final" case where
     // showing a date is still informative but a location genuinely isn't decided yet.
-    if (s.key === 'pending_pickup') dateStr = (i === stageIdx)
+    if (s.key === 'pending_pickup' && o.pu_confirmed_at && o.pu_capture && o.pu_capture.puDate) dateStr = fmtDateStr(o.pu_capture.puDate);
+    else if (s.key === 'pending_pickup') dateStr = (i === stageIdx)
       ? (o.pickup_location ? o.pickup_location.location_name : (o.pickup_date ? `FOB ${fmtDateStr(o.pickup_date)}` : ''))
       : '';
     else if (s.key === 'picked_up') dateStr = o.picked_up_at ? fmtDateStr(o.picked_up_at.slice(0, 10)) : (i === stageIdx + 1 ? fmtDateStr(o.pickup_date) : '');
@@ -1727,11 +1705,11 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       // drift from what this circle itself does — exactly the class of bug found live with Plant
       // Payment (3 independently-computed copies of the same decision).
       onClickRaw: realOnClick || null,
-      actionTitle: isNext ? (typeof stepName === 'function' ? stepName : (l => l))(s.label, o) : (isPendingPickupConfirm ? `Confirm w/ ${confirmTarget}` : ''),
+      actionTitle: (isNext || isPendingPickupConfirm) ? (typeof stepName === 'function' ? stepName : (l => l))(s.label, o) : '',
       dateStr,
       info: realOnClick ? '' : infoMsg,
-      lineDone: i < stageIdx,
-      actionableNow: isNext && !deliveredBlocked,
+      lineDone: i < stageIdx || puConfirmed,
+      actionableNow: (isNext && !deliveredBlocked) || isPendingPickupConfirm,
       raised,
       label: displayLabel,
       icon: STEP_ICONS[s.key],
@@ -2844,7 +2822,10 @@ function renderJourney(o, attentionOrderNumbers){
   const hasCarrierPhone = !!(o.carrier && o.carrier.phone);
   const recordRelBtn = !o.release_number ? `<button class="oj-ghost" onclick="recordReleaseNumber('${o.order_number}')">Record the plant's order number</button>` : '';
   const requestAgainBtn = o.picked_up_at && !pendingDocs.length && !o.customs_sent_at ? `<button class="oj-ghost" onclick="requestCustomsDocsClick('${o.order_number}')">Ask for the documents again</button>` : '';
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': rows.date + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
+  // what the trader captured in Confirm PU (owner 2026-11-21, step 7): the pick-up day, the estimated crossing and the live tracking link, kept on the load
+  const pc = (o.pu_confirmed_at && o.pu_capture) || null;
+  const puCaptureHtml = pc ? `<div class="oj-note">Pick-up ${escapeHtml(fmtDateStr(pc.puDate))} · Crossing ${escapeHtml(fmtDateStr(pc.crossing))}${pc.link ? ' · Tracking <a href="' + escapeHtml(pc.link) + '" target="_blank" rel="noopener" style="color:var(--blue);">' + escapeHtml(pc.link) + '</a>' : ''}</div>` : '';
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': puCaptureHtml + rows.date + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   const nx = tl.nextActionEntry && tl.nextActionEntry.label === 'Plant status' ? { ...tl.nextActionEntry, label: 'Pay Plant' } : tl.nextActionEntry; // the plant-status action is shown as part of the pay step (owner 2026-11-22)
@@ -3059,12 +3040,14 @@ function pickupCaptureNote(c){
 // CONFIRM PU / PU 2 CLIENT (owner 2026-11-21, steps 7-8): before the customer's message the trader writes down what is real — the pick-up day, the estimated crossing and, if the carrier gave one, the live tracking link. It goes into the
 // message and into the load's history. Answers {puDate, crossing, link}, or null when he cancels (nothing is sent and the load stays where it was).
 let pickupCaptureResolve = null;
-function askPickupCapture(o){
+function askPickupCapture(o, title){
+  document.getElementById('pickupCaptureTitle').textContent = title || 'PU 2 Client';
   document.getElementById('pickupCaptureIntro').textContent = `${o.order_number} — ${fullProductLabel(o)} — ${o.plant_name}`;
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-  document.getElementById('pickupCapPu').value = today;
-  document.getElementById('pickupCapCross').value = pickupBorderDate(today);
-  document.getElementById('pickupCapLink').value = '';
+  const kept = (o && o.pu_capture) || {};
+  document.getElementById('pickupCapPu').value = kept.puDate || today;
+  document.getElementById('pickupCapCross').value = kept.crossing || pickupBorderDate(today);
+  document.getElementById('pickupCapLink').value = kept.link || '';
   document.getElementById('pickupCaptureOverlay').style.display = 'flex';
   return new Promise(resolve => { pickupCaptureResolve = resolve; });
 }
@@ -3117,7 +3100,7 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   // Steps 7-8 (owner 2026-11-21): the pick-up is written down first; cancelling it leaves the load exactly where it was.
   let puCapture = null;
   if (newStatus === 'picked_up' && typeof askPickupCapture === 'function'){
-    puCapture = await askPickupCapture(o);
+    puCapture = (o.pu_confirmed_at && o.pu_capture) ? o.pu_capture : await askPickupCapture(o); // Confirm PU already captured it (owner 2026-11-21, steps 7-8)
     if (!puCapture) return;
     notes = pickupCaptureNote(puCapture) + (notes ? ' — ' + notes : '');
   }
