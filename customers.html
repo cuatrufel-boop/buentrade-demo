@@ -590,7 +590,7 @@ auth.onAuthStateChanged(user => {
         <div><label class="view-label">Logistics Email</label><span id="v_logistics_contact_email">—</span></div>
         <div><label class="view-label">Logistics WhatsApp</label><span id="v_logistics_contact_whatsapp">—</span></div>
       </div>
-      <div class="section-title">Buyers by protein</div>
+      <div class="section-title">Buyers</div>
       <div id="v_protein_contacts" style="font-size:13.5px;line-height:1.7;">—</div>
       <div class="section-title">Commercial profile</div>
       <div class="grid3" style="row-gap:10px;">
@@ -739,16 +739,16 @@ auth.onAuthStateChanged(user => {
             </div>
           </div>
           <div class="profile-panel kcard">
-            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5M17 5a3.5 3.5 0 010 7M22 20c-.4-2.5-1.8-4-4-4.6"/></svg></span>Buyers by protein</div>
+            <div class="section-title ksh"><span class="kic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5 7-5s6.2 1.5 7 5M17 5a3.5 3.5 0 010 7M22 20c-.4-2.5-1.8-4-4-4.6"/></svg></span>Buyers</div>
             <div class="field kcheck">
               <label>
                 <input type="checkbox" id="proteinContactsOn" onchange="toggleProteinContacts()" style="width:auto;">
-                This company has other buyers by protein (one for chicken, another for beef and pork…)
+                This company has more buyers (one for chicken, another for beef and pork… or several buyers for everything)
               </label>
-              <div id="proteinContactsHint" style="display:none;font-size:12px;color:var(--ink-soft);margin-top:4px;">Save the customer first, then add its buyers by protein.</div>
+              <div id="proteinContactsHint" style="display:none;font-size:12px;color:var(--ink-soft);margin-top:4px;">Save the customer first, then add its other buyers.</div>
             </div>
             <div id="proteinContactsBlock" style="display:none;">
-              <div class="view-label" style="margin:2px 0 8px;">A protein with a buyer goes to that buyer only. The rest go to the buyer above.</div>
+              <div class="view-label" style="margin:2px 0 8px;">A protein with a buyer goes to that buyer only. A buyer with no protein is one more buyer for everything: he is copied with the buyer above.</div>
               <div id="proteinContactRows"></div>
               <button type="button" class="btn secondary small" onclick="addProteinContactRow()">+ Add buyer</button>
             </div>
@@ -1047,7 +1047,6 @@ function proteinContactsProblem(list){
   const seen = new Set();
   for (const c of list){
     if (!c.contact_name) return 'Each buyer by protein needs a name.';
-    if (!c.category_ids.length) return c.contact_name + ': choose at least one protein.';
     for (const id of c.category_ids){ if (seen.has(id)) return proteinName(id) + ' is on two buyers: a protein can have only one.'; seen.add(id); }
     if (c.email && !bcIsValidEmail(c.email)) return c.contact_name + ': the email doesn\'t look valid.';
     if (c.whatsapp && !bcIsValidFullPhone(c.whatsapp)) return c.contact_name + ': WhatsApp must include the country code, e.g. +52 6621234567.';
@@ -1056,7 +1055,7 @@ function proteinContactsProblem(list){
 }
 function proteinContactsHtml(list){
   if (!list || !list.length) return '<span style="color:var(--ink-soft);">None — everything goes to the buyer above.</span>';
-  return list.map(c => `<div><b>${escapeHtml(c.contact_name)}</b> — ${(c.category_ids || []).map(proteinName).filter(Boolean).map(escapeHtml).join(', ') || '—'}<span style="color:var(--ink-soft);"> · ${escapeHtml(c.whatsapp || c.phone || '')}${c.email ? ' · ' + escapeHtml(c.email) : ''}</span></div>`).join('');
+  return list.map(c => `<div><b>${escapeHtml(c.contact_name)}</b> — ${(c.category_ids || []).map(proteinName).filter(Boolean).map(escapeHtml).join(', ') || 'everything'}<span style="color:var(--ink-soft);"> · ${escapeHtml(c.whatsapp || c.phone || '')}${c.email ? ' · ' + escapeHtml(c.email) : ''}</span></div>`).join('');
 }
 
 // Border = USD, Delivered Mexico = MXN (BUENTRADE Trading OS rule).

@@ -9,7 +9,15 @@ function btCustomerContact(customer, categoryId){
   const pick = (o) => ({ contact_name: (o && o.contact_name) || null, contact_role: (o && o.contact_role) || null, whatsapp: (o && o.whatsapp) || null, phone: (o && o.phone) || null, email: (o && o.email) || null, email_cc: (o && o.email_cc) || null });
   const list = customer && Array.isArray(customer.contacts) ? customer.contacts : [];
   const hit = categoryId ? list.find(c => Array.isArray(c.category_ids) && c.category_ids.includes(categoryId)) : null;
-  return hit ? Object.assign(pick(hit), { by_protein: true }) : Object.assign(pick(customer), { by_protein: false });
+  if (hit) return Object.assign(pick(hit), { by_protein: true });
+  // no buyer for this protein: the main contact, and the other buyers of the company who have no protein (owner 2026-11-23: several buyers per customer) are copied on the e-mail
+  const main = pick(customer);
+  const extra = list.filter(c => !(Array.isArray(c.category_ids) && c.category_ids.length) && c.email).map(c => String(c.email).trim());
+  if (extra.length){
+    const have = String(main.email_cc || '').split(',').map(e => e.trim()).filter(Boolean);
+    main.email_cc = [...new Set([...have, ...extra.filter(e => e.toLowerCase() !== String(main.email || '').trim().toLowerCase())])].join(', ') || null;
+  }
+  return Object.assign(main, { by_protein: false });
 }
 function btCustomerFor(customer, categoryId){
   if (!customer) return customer;
