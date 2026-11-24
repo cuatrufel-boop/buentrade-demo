@@ -609,9 +609,10 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-step.pc{display:none;}
   /* Owner 2026-11-23: Documentation (PO / SO / FO) side by side; the body (file, eye, Resend, sent time) is always visible in each card. */
   .oj-hz:not(.open){display:none;}
-  .oj-hz{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;position:relative;margin-bottom:10px;align-items:start;}
+  .oj-hz{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;position:relative;margin-bottom:10px;align-items:stretch;}
   .oj-hz::before{content:"";position:absolute;left:15px;right:15px;top:14px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);}
-  .oj-hz .oj-step{margin-bottom:0;}
+  .oj-hz .oj-step{margin-bottom:0;display:flex;flex-direction:column;}
+  .oj-step.hz .oj-jc{flex:1;}
   .oj-step.hz .oj-nd{position:static;width:30px;height:30px;margin:0 0 8px;font-size:14px;}
   .oj-step.hz .oj-jh{cursor:default;gap:8px;padding:12px 14px;}
   .oj-step.hz .cv{display:none;}
@@ -632,7 +633,9 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-step.now .oj-jc{border-color:rgba(90,170,255,.7);background:linear-gradient(120deg,rgba(90,170,255,.16),rgba(90,170,255,.03));box-shadow:0 16px 40px -20px rgba(90,170,255,.9);}
   .oj-step.now.urgent .oj-jc{border-color:rgba(255,200,118,.7);background:linear-gradient(120deg,rgba(255,200,118,.14),rgba(255,200,118,.02));}
   .oj-jh{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;flex-wrap:wrap;}
-  .oj-jh .nm{font:600 15px Inter,sans-serif;}
+  .oj-jh .nm,.oj-jh .nm-full{font:600 15px Inter,sans-serif;}
+  .oj-step.hz .nm{display:none;}
+  .oj-step.hz .nm-full{order:-1;} /* the Orders cards show the full name (nm-full); the short step name stays in the markup */
   .oj-jh .dt{font:500 11px 'IBM Plex Mono',monospace;color:var(--ink-soft);margin-left:auto;}
   .oj-jh .cv{color:rgba(255,255,255,.4);transition:.2s;display:flex;}
   .oj-jh .cv svg{width:16px;height:16px;}
@@ -2315,7 +2318,7 @@ async function ensureOrderDocsFiles(orderNumber){
 // Real correction 2026-09-07: "quitar el boton de view en docs y poner el nombre con link" — the
 // document's own name is now the link to open it, instead of the name plus a separate "View" link.
 function renderTradeDocRow(label, sentAt, matchedFiles, actionsHtml, actionsWhenMissing, resendHtml){
-  if (!matchedFiles.length) return `<div class="doc-row"><span class="doc-row-label">${label}</span>${actionsWhenMissing || ''}<span class="doc-row-status">Not generated</span></div>`;
+  if (!matchedFiles.length) return `<div class="doc-row"><span class="doc-row-label">${label}</span>${actionsWhenMissing || ''}${sentAt ? (resendHtml || '') : ''}<span class="doc-row-status">Not generated</span></div>`;
   // Real correction 2026-09-07: "palabra plant y customer no van con link" — only the doc type
   // itself (PO/SO/FO/Invoice) is the clickable link; the "(Plant)"/"(Customer)"/"(Carrier)"
   // qualifier stays plain text next to it, not part of the link.
@@ -2488,9 +2491,9 @@ function orderDocRows(o, nextActionLabel){
     const proformaHtml = (o.proforma_invoices || []).map(d => `<div class="doc-row doc-row-span"><a href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" class="doc-row-label doc-row-link">${escapeHtml(d.filename)}</a><span class="doc-row-status sent">Proforma received</span></div>`).join('');
     return {
       date: dateRow,
-      po: renderTradeDocRow('PO (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing, resendDocBtn('PO', o.order_number)),
-      so: renderTradeDocRow('SO (Customer)', o.so_sent_at, soFiles, soActions, soActionsWhenMissing, resendDocBtn('SO', o.order_number)),
-      fo: o.has_freight_order ? renderTradeDocRow('FO (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing, resendDocBtn('FO', o.order_number)) : '',
+      po: renderTradeDocRow('Purchase Order (Plant)', o.po_sent_at, poFiles, poActions, poActionsWhenMissing, resendDocBtn('PO', o.order_number)),
+      so: renderTradeDocRow('Sales Order (Customer)', o.so_sent_at, soFiles, soActions, soActionsWhenMissing, resendDocBtn('SO', o.order_number)),
+      fo: o.has_freight_order ? renderTradeDocRow('Freight Order (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing, resendDocBtn('FO', o.order_number)) : '',
       payment: paymentRow,
       invoice: renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions),
       signature: renderSignatureEvidenceRow(o),
@@ -2629,7 +2632,9 @@ function ocDaysFromToday(d){
   return Math.round((new Date(d + 'T00:00:00').getTime() - t.getTime()) / 86400000);
 }
 function ocCompare(a, b){
-  const da = a.load_status === 'delivered' ? 1 : 0, db = b.load_status === 'delivered' ? 1 : 0;
+  // Owner 2026-11-23: "si nareci no ha cerrado por qué quedó abajo. siempre conservar orden de fecha": only a CLOSED order (delivered and signed) goes to the bottom; a delivered one that is not closed keeps its place by date.
+  const closed = o => o.load_status === 'delivered' && !!o.invoice_signed_at;
+  const da = closed(a) ? 1 : 0, db = closed(b) ? 1 : 0;
   if (da !== db) return da - db;
   const xa = ocDate(a), xb = ocDate(b);
   if (xa && xb) return xa < xb ? -1 : xa > xb ? 1 : 0;
@@ -2806,6 +2811,7 @@ function sendHistoryHtml(o, label){
     return `<div class="oj-note">${escapeHtml(parts.join(' · '))}</div>`;
   }).join('');
 }
+const HZ_TITLES = { PO: 'Purchase Order', SO: 'Sales Order', FO: 'Freight Order' }; // owner 2026-11-23: the Orders cards carry the full names, not PO / SO / FO
 function renderJourney(o, attentionOrderNumbers){
   const tl = renderUnifiedTimeline(o, attentionOrderNumbers);
   let steps = tl.journey;
@@ -2882,9 +2888,9 @@ function renderJourney(o, attentionOrderNumbers){
       if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
       if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
-      inner += sendHistoryHtml(o, x.label);
+      if (!hz) inner += sendHistoryHtml(o, x.label); // the Orders cards (owner 2026-11-23) show no history lines; every send stays kept in order_send_log
       const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? `<span class="oj-chip done">✓ ${x.label === 'Signature' ? 'Closed' : 'Done'}</span>` : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
-      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz ? ' hz' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
+      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz ? ' hz' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${hz && HZ_TITLES[x.label] ? `<span class="nm-full">${HZ_TITLES[x.label]}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
     });
     if (hz) spine += '</div>';
   });
