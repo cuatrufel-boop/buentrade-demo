@@ -3027,7 +3027,8 @@ function renderJourney(o, attentionOrderNumbers){
     : (o.carrier_picked_up_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at))}</div>` : '') + puEyes
       + (o.carrier_picked_up_at ? '' // owner 2026-11-25: "quita esto" — no "Carrier loaded · N doc" line; the hour and the eyes say it
         : o.pickup_link_sent_at ? `<div class="oj-note">Link sent ${escapeHtml(miamiTime(o.pickup_link_sent_at))}${o.pickup_link_opened_at ? ' · opened' : ''}</div>` : '')
-      + puUpload + (o.pu_confirmed_at && !o.picked_up_at ? `<button class="oj-ghost" onclick="event.stopPropagation();advanceLoadStatus('${o.order_number}','picked_up')">Mark picked up</button>` : ''); // by hand: the cube sends the link, these two add the papers and mark the pick-up
+      + puUpload + (o.pu_confirmed_at && !o.picked_up_at ? `<button class="oj-ghost" onclick="event.stopPropagation();advanceLoadStatus('${o.order_number}','picked_up')">Mark picked up</button>` : '') // by hand: the cube sends the link, these two add the papers and mark the pick-up
+      + (o.picked_up_at ? `<button class="oj-ghost" onclick="event.stopPropagation();resendPickupNoticeClick('${o.order_number}')">Tell the customer</button><button class="oj-ghost" onclick="event.stopPropagation();requestPickupDocsOnPickup('${o.order_number}')">Ask the plant for docs</button>` : ''); // by hand, once picked up (owner 2026-11-25: "todo lo automatico se debe poder hacer manual"): tell the customer again and ask the plant for the documents, never moving the stage
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
@@ -3409,6 +3410,27 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   await loadStatusOrders();
   // Owner 2026-11-22: the moment the pick-up is confirmed, the documents are asked for (the Pick up button sends that e-mail).
   if (newStatus === 'picked_up' && typeof requestPickupDocsOnPickup === 'function') await requestPickupDocsOnPickup(orderNumber);
+}
+// BY HAND, FROM THE PICKUP CUBE (owner 2026-11-25: "no puedo ver ni avisar al cliente ni pedir docs a la planta… todo lo automatico se debe poder hacer manual"): the same approved pick-up message to the customer (same preview, same From, same
+// people), without touching the stage — the load is already picked up. The plant's documents are asked for with requestPickupDocsOnPickup (the other button of the cube).
+async function resendPickupNoticeClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const bodyFn = STAGE_EMAIL_BODY_ES.picked_up, waFn = STAGE_WHATSAPP_ES.picked_up, subjFn = STAGE_SUBJECTS_ES.picked_up;
+  if (!bodyFn || !subjFn) return;
+  const contact = (o.customer && o.customer.contact_name) ? o.customer.contact_name.split(' ')[0] : o.customer_name;
+  const everyone = typeof customerEveryone === 'function' ? await customerEveryone(o) : null;
+  const emails = everyone ? everyone.emails : (o.customer ? collectCustomerEmails(o.customer) : []);
+  const phone = everyone && everyone.phones.length ? everyone.phones[0].phone : (o.customer && (o.customer.whatsapp || o.customer.phone)) || '';
+  if (/andes|mbg/i.test(`${o.customer_name || ''} ${emails.join(' ')}`)){ await btAlert('This customer is blocked for automatic messages (owner rule).'); return; }
+  if (!emails.length){ await btAlert(`${o.customer_name} has no email on file.`); return; }
+  try {
+    await sendEmailApi('logistics', emails, subjFn(o), bodyFn(o, contact), [], { phone, message: waFn(o, contact) });
+    showToast('Customer notified', emails.join(', '));
+    if (typeof logSends === 'function') await logSends(orderNumber, 'picked_up');
+  } catch (e) {
+    if (!e.cancelled) await btAlert('Could not send the notification: ' + e.message);
+  }
 }
 // PICK UP -> THE DOCUMENTS ARE ASKED FOR AT ONCE (owner 2026-11-22: "inmediatamente después de que confirmamos pickup debe salir ese correo, a los involucrados, en este caso Andrew y Kristi; el botón de picked up manda ese correo
 // pidiendo esos docs; adicionalmente puede llegar del carrier"). The e-mail goes to every e-mail the plant has on file (its sales contact and its other contacts), copying the carrier when one is booked, through the usual preview
