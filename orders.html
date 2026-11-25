@@ -640,6 +640,7 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .fd-bar .oj-send:hover{background:#12294f;box-shadow:0 0 22px rgba(90,170,255,.85);} .fd-bar .oj-send:hover .oj-send-go{background:none;transform:translateX(2px);box-shadow:none;}
   .fd-bar::after{content:attr(data-tip);position:absolute;right:42px;top:50%;transform:translateY(-50%);white-space:nowrap;font:600 11px Inter,sans-serif;color:#fff;background:#0b1a36;border:1px solid rgba(90,170,255,.6);border-radius:8px;padding:4px 9px;opacity:0;pointer-events:none;transition:opacity .15s;}
   .fd-bar:hover::after{opacity:1;}
+  .cube-tip{position:relative;} .cube-tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Inter,sans-serif;color:#fff;background:#0b1a36;border:1px solid rgba(90,170,255,.6);border-radius:8px;padding:4px 9px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:5;} .cube-tip:hover::after{opacity:1;}
   .oj-hz.hz4 .oj-step.hz .oj-jh{flex-direction:column;align-items:center;text-align:center;} .oj-hz.hz4 .oj-step.hz .oj-jh .dt{margin:0;}
   .oj-hz.hz4 .oj-step.hz .oj-jb{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;} .oj-hz.hz4 .oj-step.hz .oj-jb .doc-row{align-self:stretch;}
   .oj-hz.hz4 .oj-step.hz .oj-jh .nm-full{flex:none;display:flex;align-items:center;justify-content:center;text-align:center;} .oj-hz.hz4-top .oj-step.hz .oj-jh .nm-full{min-height:2.5em;} .oj-hz.hz4 .oj-step.hz .pay-amt{font-size:15px;line-height:1.15;margin:0 0 4px;}
@@ -3021,7 +3022,13 @@ function renderJourney(o, attentionOrderNumbers){
   // the carrier (or he, by hand) uploaded, what happened with the link, and the by-hand buttons: Upload (he adds the papers himself) and Mark picked up
   const puDocs = (o.pickup_documents || []).filter(d => d.source !== 'plant' && d.storage_url);
   const miamiTime = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
-  const puEyes = puDocs.length ? `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${puDocs.map(d => `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(d.filename || 'Pick-up document')}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`).join('')}</div>` : '';
+  // the WhatsApp logo beside the eyes (owner 2026-11-25: "dame un logo de whatsapp al lado del ojo que si me paro arriba diga carrier"): it sends the carrier the pick-up link, the same action as touching the cube
+  // TWO green WhatsApp buttons beside the eyes, nothing else in the cube (owner 2026-11-25: "pon dos botones uno para enviar a carrier y otro enviar a cliente verdes asi no enredamos todo"): Carrier sends him the pick-up link, Customer sends the approved pick-up notice; same actions as touching the cube, always available (by hand)
+  const waGreen = 'padding:6px 10px;color:#4ADE80 !important;border-color:rgba(74,222,128,.55) !important;background:rgba(74,222,128,.14) !important;';
+  const waBtn = (who, act) => `<button class="btn secondary cube-tip" style="${waGreen}" data-tip="${who}" aria-label="${who}" onclick="event.stopPropagation();${act}">${WA_ICON}</button>`;
+  const puWaCarrier = waBtn('Carrier', `sendPickupLinkClick('${o.order_number}')`)
+    + waBtn('Customer', o.picked_up_at ? `resendPickupNoticeClick('${o.order_number}')` : `advanceLoadStatus('${o.order_number}','picked_up')`);
+  const puEyes = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${puDocs.map(d => `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(d.filename || 'Pick-up document')}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`).join('')}${puWaCarrier}</div>`;
   const puUpload = !o.customs_sent_at ? `<label class="btn secondary doc-row-btn" style="align-self:center;" title="Upload the pick-up documents" onclick="event.stopPropagation()">↑ Upload<input type="file" multiple accept="image/*,.pdf,application/pdf" style="display:none;" onchange="uploadPickupDocuments('${o.order_number}',this)"></label>` : '';
   const pickupCubeHtml = !(o.carrier && o.carrier.phone) ? ''
     : (o.carrier_picked_up_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at))}</div>` : '') + puEyes
@@ -3076,7 +3083,7 @@ function renderJourney(o, attentionOrderNumbers){
       // CONFIRM PU BY HAND AT ANY TIME (owner 2026-11-24/25, G96: "se puede hacer manualmente dando click en ella y poniendo la data"): the e-mail reader fills it and it stops blinking, but touching the cube always opens the capture (day, time, address) — while it waits (even before the Release e-mail went out) AND once it is done (the reader or he filled it: the data shows prefilled to correct it; owner 2026-11-25 "estamos haciendo todas las pruebas en la orden 1002", whose Confirm PU is already done). It blinks only when it is the next step.
       const docsByHand = cube && x.label === 'Sent to customs' && !x.na && uploadPickupBtn ? `var i=this.querySelector('input[type=file]');if(i)i.click();` : ''; // by hand: touching Docs to border while the plant's documents have not arrived opens the upload
       const confirmPuByHand = cube && x.label === 'Confirm PU' && !x.na && !(z === 'now' && x.onClickRaw) ? `confirmPickupReadyClick('${o.order_number}')` : '';
-      const pickupByHand = cube && x.label === 'Pick up' && !x.na && o.carrier && o.carrier.phone && !(z === 'now' && x.onClickRaw) ? (o.picked_up_at ? `resendPickupNoticeClick('${o.order_number}')` : o.carrier_picked_up_at ? `advanceLoadStatus('${o.order_number}','picked_up')` : `sendPickupLinkClick('${o.order_number}')`) : ''; // by hand (owner 2026-11-25: "todos los cubos llenan solos pero debo poder mandar manualmente también"): touching it at any time (before the hour, with the link out, even done) opens the WhatsApp with the link; "Mark picked up" inside it marks the pick-up
+      const pickupByHand = cube && x.label === 'Pick up' && !x.na && o.carrier && o.carrier.phone && !(z === 'now' && x.onClickRaw) ? (!o.carrier_picked_up_at ? `sendPickupLinkClick('${o.order_number}')` : o.picked_up_at ? `resendPickupNoticeClick('${o.order_number}')` : `advanceLoadStatus('${o.order_number}','picked_up')`) : ''; // by hand, ALWAYS in the flow's order (owner 2026-11-25 "cuando terminemos todo el flujo asi debe funcionar", tested on 1002): until the carrier has loaded, touching sends HIM the link, even if the load was already marked picked up; after he loaded, it is the customer's WhatsApp (owner 2026-11-25: "todos los cubos llenan solos pero debo poder mandar manualmente también"): touching it at any time (before the hour, with the link out, even done) opens the WhatsApp with the link; "Mark picked up" inside it marks the pick-up
       const cubeAct = cube && z === 'now' && !x.na && x.onClickRaw ? x.onClickRaw : ''; // the cube IS the action, like Release # and Wire Factoring: it blinks while it is the next step and touching it does it (owner 2026-11-24: "ponmelo blinking y con esas opciones, porque le doy y eso no esta haciendo nada")
       (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}${cubeAct ? ' blinkcard' : ''}"${cubeAct ? ` role="button" tabindex="0" style="cursor:pointer;" title="${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}" onclick="${cubeAct}"` : confirmPuByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Confirm PU" onclick="${confirmPuByHand}"` : pickupByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="${o.carrier_picked_up_at ? 'Tell the customer' : 'Send the pick-up link to the carrier'}" onclick="${pickupByHand}"` : docsByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Upload the pick-up documents" onclick="${docsByHand}"` : ''}><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
     });
@@ -3252,9 +3259,15 @@ function puMessageData(o){
   return {
     pu: fmtDateStr(pu),
     crossing: fmtDateStr(c.crossing || pickupBorderDate(pu)),
+    puEs: fmtDateEsShort(pu), crossingEs: fmtDateEsShort(c.crossing || pickupBorderDate(pu)), // "20 nov 2026" for the customer's WhatsApp
     link: String(c.link || '').trim(),
+    trip: String((o && o.trip_link) || '').trim(), // BuenTrade's own trip page for the customer (the carrier's live link rides inside it)
     customs: String((o && orderCustomsName[o.order_number]) || '').trim() || 'la aduana',
   };
+}
+function fmtDateEsShort(iso){ // 2026-11-20 -> "20 nov 2026"
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? `${+m[3]} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][+m[2] - 1]} ${m[1]}` : '';
 }
 // The day a load that picked up on `pu` (YYYY-MM-DD) reaches the border: two calendar days later, a Saturday or Sunday rolls to Monday (the same rule the FO and the Status tab use).
 function pickupBorderDate(pu){
@@ -3318,7 +3331,8 @@ const STAGE_EMAIL_BODY_ES = {
   picked_up: (o, contact) => { const d = puMessageData(o); return `Hola ${contact},\n\nTe avisamos que tu carga de la Orden SO-BT-${btNum(o.order_number)} ya recogió en planta y va en camino a ${d.customs}.\n\n* Fecha de recolección: ${d.pu}\n* Cruce estimado: ${d.crossing}\n${d.link ? `* Mírala en vivo en esta liga: ${d.link}\n` : ''}\nTe avisamos en cuanto llegue a ${d.customs}.\n\nSaludos,`; },
 };
 const STAGE_WHATSAPP_ES = {
-  picked_up: (o, contact) => { const d = puMessageData(o); return `Hola ${contact}, te saludamos de BuenTrade 🚚.\n\nTe avisamos que tu carga de la Orden SO-BT-${btNum(o.order_number)} ya recogió en planta y va en camino a ${d.customs}.\n\n📅 Recolección: ${d.pu}\n🌎 Cruce estimado: ${d.crossing}\n${d.link ? `📍 Mírala en vivo en esta liga: ${d.link}\n` : ''}\nTe avisamos en cuanto llegue a ${d.customs}.`; },
+  // his words (owner 2026-11-25, dictated): the pick-up notice to the customer by WhatsApp; the tracking line only when the carrier brought a link; his "(emoji)" for that line is ➡ (no new-plane emoji: they showed as � in his WhatsApp)
+  picked_up: (o, contact) => { const d = puMessageData(o); const link = d.trip || d.link; return `Hola ${contact},\n\n✅ Vamos en camino a frontera con Nuestra orden SO-BT-${btNum(o.order_number)}.\n\n▪ Origen: ${d.puEs}\n\n▪ Destino: ${d.crossingEs}\n\n${link ? `➡ Síguela aquí: ${link}\n\n` : ''}Te avisamos en cuanto lleguemos a ${d.customs}.`; },
 };
 // Real fix 2026-09-20: subject used the raw stored order_number (already carries a "BT-" prefix
 // baked in, e.g. "BT-2026-1002") with no document-type prefix — the customer only ever recognizes
@@ -3421,7 +3435,18 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   if (newStatus === 'picked_up' && typeof requestPickupDocsOnPickup === 'function') await requestPickupDocsOnPickup(orderNumber);
 }
 // the pick-up WhatsApp to everybody of the customer (the buyer first, nobody twice), each by his own name, one at a time: WhatsApp opens and he presses Send. Returns true when at least one was sent, false when none, null when there is nobody to send to.
+// the customer's trip page link (/c/<code>): made once per load by the server; if it cannot be made the message goes with the carrier's own live link when there is one, never blocked
+async function ensureTripLink(o){
+  if (!o) return '';
+  if (o.trip_link) return o.trip_link;
+  try {
+    const r = await callApi('orders-invoice-signature', { action: 'trip_issue', actor: currentActor(), order_number: o.order_number });
+    if (r && r.short_code) o.trip_link = `https://buentradegroup.com/c/${r.short_code}`;
+  } catch (e) { /* the message still goes */ }
+  return o.trip_link || '';
+}
 async function sendPickupWhatsapps(o, oMsg, waFn){
+  if (typeof ensureTripLink === 'function'){ const tl = await ensureTripLink(oMsg); if (tl && oMsg !== o) o.trip_link = tl; }
   const everyone = typeof customerEveryone === 'function' ? await customerEveryone(o) : null;
   const phones = everyone ? everyone.phones : ((o.customer && (o.customer.whatsapp || o.customer.phone)) ? [{ name: (o.customer.contact_name || ''), phone: o.customer.whatsapp || o.customer.phone }] : []);
   const emails = everyone ? everyone.emails : [];
