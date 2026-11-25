@@ -1225,7 +1225,7 @@ async function loadStatusOrders(){
     ...o,
     load_status: o.status,
     freight: o.freight_origin ? { origin: o.freight_origin } : null,
-    carrier: o.carrier_provider_id ? { phone: o.carrier_phone, name: o.carrier_name, email: o.carrier_email } : null,
+    carrier: o.carrier_provider_id ? { phone: o.carrier_phone, name: o.carrier_name, email: o.carrier_email, contact_name: o.carrier_contact_name } : null,
     plant: {
       whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email, email_cc: o.plant_email_cc, docs_emails: o.plant_docs_emails, appointments_emails: o.plant_appointments_emails,
       payments_contact_name: o.plant_payments_contact_name, payments_email: o.plant_payments_email, payments_whatsapp: o.plant_payments_whatsapp,
@@ -1432,8 +1432,13 @@ function pickupMomentReached(o){
   return nowMiami >= `${String(c.puDate).slice(0, 10)}T${t}`;
 }
 function pickupLinkMessage(o, link){
-  const c = o.pu_capture || {};
-  return `Hi, pick-up for order PO-BT-${btNum(o.order_number)} is on ${fmtDateStr(String(c.puDate || '').slice(0, 10))}${c.puTime ? ' at ' + fmtTimeHM(c.puTime) : ''}. Please upload the documents and tap Picked up here: ${link} Thank you!`;
+  const c = o.pu_capture || {}, car = o.carrier || {};
+  // the carrier's contact by his first name (owner 2026-11-25: "Hi… nombre del carrier"), else the company's name
+  const name = String(car.contact_name || '').trim().split(/\s+/)[0] || String(car.name || '').trim();
+  const day = String(c.puDate || '').slice(0, 10), today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const when = [day && day !== today ? fmtDateStr(day) : '', c.puTime ? fmtTimeHM(c.puTime) : (day === today ? 'today' : '')].filter(Boolean).join(' ');
+  // his words (owner 2026-11-25): "Upload all docs & tap picked up"
+  return `Hi${name ? ' ' + name : ''}, BuenTrade 🚚 PO-BT-${btNum(o.order_number)}, pick-up${when ? ' ' + when : ''}. Upload all docs & tap picked up: ${link}`;
 }
 async function sendPickupLinkClick(orderNumber){
   const o = findStatusOrder(orderNumber);
