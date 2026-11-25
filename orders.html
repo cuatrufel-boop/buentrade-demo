@@ -1420,6 +1420,35 @@ async function confirmPickupReadyClick(orderNumber){
   catch (e) { await btAlert('Could not record the pick-up: ' + e.message); return; }
   showToast('Pick-up confirmed', `${orderNumber} — ${fmtDateStr(capture.puDate)}`);
   await loadStatusOrders();
+  await sendAppointmentToCarrier(orderNumber, capture);
+}
+// APPOINTMENT BY HAND -> E-MAIL TO THE CARRIER (owner 2026-11-25: "el cubo de appointments se limenta con lo que lee de respuesta, pero el manual debe enviar en un mensaje a carrier confirmando datos" · "coge el de carrier adaptalo a confirmacion de appointment a carrier"):
+// his Paso 6 e-mail to the carrier (Hi {carrier} team, "Please find below…", bullets, tracking-link sentence, Best regards) adapted to confirm the appointment. TO the carrier, CC the plant's appointments contact and the seller (as the Release e-mail),
+// in the usual preview (nothing leaves until he presses Send). Only the hand path sends it; what the reader fills never does. The appointment itself is already saved before this opens.
+async function sendAppointmentToCarrier(orderNumber, capture){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const carrierEmails = collectEmails(o.carrier);
+  if (!carrierEmails.length){ showToast('Appointment saved', 'No carrier e-mail on file — nothing was sent to the carrier', true); return; }
+  const loc = o.pickup_location || {};
+  const split = v => String(v || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+  const toLower = new Set(carrierEmails.map(e => e.toLowerCase()));
+  const ccEmails = [...new Set([...split(o.plant_appointments_email || (o.plant && o.plant.appointments_emails) || loc.email), ...split(o.plant && o.plant.email)])].filter(e => !toLower.has(e.toLowerCase()));
+  const orderId = `PO-BT-${btNum(orderNumber)}`;
+  const plantName = String(o.plant_name || '').trim();
+  const carrierName = String((o.carrier && o.carrier.name) || '').trim();
+  const place = String(capture.address || loc.address || loc.location_name || '').trim();
+  const subject = `${orderId} | Pick-Up Appointment Confirmation`;
+  const body = `Hi${carrierName ? ' ' + carrierName : ''} team,\n\nPlease find below the confirmed pick-up appointment for Order ${orderId}:\n\n* Pick-Up Date: ${fmtDateStr(capture.puDate)}\n`
+    + (capture.puTime ? `* Pick-Up Time: ${capture.puTime}\n` : '')
+    + `* Pick-Up Location: ${plantName}${place ? ' – ' + place : ''}\n\nKindly confirm receipt and, if possible, share the tracking link for this shipment.\n\nBest regards,`;
+  try {
+    await sendEmailApi('logistics', carrierEmails, subject, body, [], null, ccEmails);
+    showToast('Appointment sent to carrier', carrierEmails.join(', '));
+  } catch (e) {
+    if (e.cancelled) return;
+    showToast('Automatic send failed', e.message, true);
+  }
 }
 // Owner 2026-11-19: three days before pick-up the plant is asked for the status of the load ("tres dias antes de la recogida… correo a la planta pidiendo el status en ingles…
 // copiando a carrier"), always with HIS approval: "nada automatico, ese correo debe salirme para yo aprobar y anadir a quien quiera". The email opens in the usual preview
