@@ -1422,6 +1422,35 @@ async function confirmPickupReadyClick(orderNumber){
   await loadStatusOrders();
   await sendAppointmentToCarrier(orderNumber, capture);
 }
+// THE CARRIER'S PICK-UP PAGE (owner 2026-11-25: "a la hora de recogida… por whatsapp… que la persona pueda subir en el cel y dar recogida" · "me blinkea a mi para yo activarla en el OS"): the hour of the appointment is Miami time (the day and the time of
+// Appointment); with no time written the day itself counts from its start. Nothing is sent by itself: the Pickup cube blinks at that hour, touching it opens the WhatsApp to the carrier with the link, and he presses Send.
+function pickupMomentReached(o){
+  const c = o && o.pu_capture;
+  if (!c || !c.puDate) return false;
+  const nowMiami = new Date().toLocaleString('sv-SE', { timeZone: 'America/New_York' }).slice(0, 16).replace(' ', 'T');
+  const t = /^\d{1,2}:\d{2}/.test(String(c.puTime || '')) ? String(c.puTime).padStart(5, '0').slice(0, 5) : '00:00';
+  return nowMiami >= `${String(c.puDate).slice(0, 10)}T${t}`;
+}
+function pickupLinkMessage(o, link){
+  const c = o.pu_capture || {};
+  return `Hi, pick-up for order PO-BT-${btNum(o.order_number)} is on ${fmtDateStr(String(c.puDate || '').slice(0, 10))}${c.puTime ? ' at ' + fmtTimeHM(c.puTime) : ''}. Please upload the documents and tap Picked up here: ${link} Thank you!`;
+}
+async function sendPickupLinkClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const phone = o.carrier && o.carrier.phone;
+  if (!phone){ await btAlert('No carrier phone on file to send the pick-up link.'); return; }
+  let issued;
+  try { issued = await callApi('orders-invoice-signature', { action: 'pickup_issue', actor: currentActor(), order_number: orderNumber }); }
+  catch (e) { await btAlert('Could not make the pick-up link: ' + e.message); return; }
+  const link = `https://buentradegroup.com/g/${issued.short_code}`;
+  const sent = await bcWaOpenAndConfirm(phone, pickupLinkMessage(o, link), (o.carrier && o.carrier.name) || 'the carrier');
+  if (!sent) return; // the link counts as sent only when he says he sent it
+  try { await callApi('orders-invoice-signature', { action: 'pickup_link_sent', actor: currentActor(), order_number: orderNumber }); }
+  catch (e) { await btAlert('Could not record that the link was sent: ' + e.message); return; }
+  showToast('Pick-up link sent', (o.carrier && o.carrier.name) || orderNumber);
+  await loadStatusOrders();
+}
 // APPOINTMENT BY HAND -> E-MAIL TO THE CARRIER (owner 2026-11-25: "el cubo de appointments se limenta con lo que lee de respuesta, pero el manual debe enviar en un mensaje a carrier confirmando datos" · "coge el de carrier adaptalo a confirmacion de appointment a carrier"):
 // his Paso 6 e-mail to the carrier (Hi {carrier} team, "Please find below…", bullets, tracking-link sentence, Best regards) adapted to confirm the appointment. TO the carrier, CC the plant's appointments contact and the seller (as the Release e-mail),
 // in the usual preview (nothing leaves until he presses Send). Only the hand path sends it; what the reader fills never does. The appointment itself is already saved before this opens.
@@ -1736,12 +1765,20 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     const deliveredBlocked = s.key === 'delivered' && !o.customs_sent_at;
     // PU 2 Client (step 8) comes after Confirm PU (step 7): the load cannot be marked picked up before the pick-up was captured, so the Pick up button never blinks ahead of it (owner 2026-11-21, "sentido común al flujo")
     const waitsForConfirm = s.key === 'picked_up' && i === stageIdx + 1 && !o.pu_confirmed_at;
+    // THE CARRIER'S PICK-UP PAGE (owner 2026-11-25: "a la hora de recogida… que la persona pueda subir en el cel y dar recogida"): with a carrier of ours and the Appointment done, Pickup blinks only (a) at the hour of the appointment, to SEND the carrier
+    // the WhatsApp link, and (b) once the carrier tapped "Picked up", to notify the customer (the same approved message, the same preview). In between it does not blink; touching it still marks it by hand.
+    const puLink = s.key === 'picked_up' && isNext && !!o.pu_confirmed_at && !!(o.carrier && o.carrier.phone) && typeof pickupMomentReached === 'function';
+    const puLoaded = puLink && !!o.carrier_picked_up_at;
+    const puSendNow = puLink && !puLoaded && !o.pickup_link_sent_at && pickupMomentReached(o);
+    const puHold = puLink && !puLoaded && !puSendNow;
     const realOnClick = isPendingPickupConfirm
       ? `confirmPickupReadyClick('${o.order_number}')`
+      : puSendNow ? `sendPickupLinkClick('${o.order_number}')`
+      : puHold ? ''
       : (isNext && !deliveredBlocked && !waitsForConfirm)
       ? (s.key === 'delivered' ? `markDeliveredWithSignature('${o.order_number}')` : `advanceLoadStatus('${o.order_number}','${s.key}')`)
       : '';
-    const actionableClass = ((isNext && !deliveredBlocked && !waitsForConfirm) || isPendingPickupConfirm) ? ' actionable' + (isUrgent ? ' urgent' : '') : '';
+    const actionableClass = ((isNext && !deliveredBlocked && !waitsForConfirm && !puHold) || isPendingPickupConfirm) ? ' actionable' + (isUrgent ? ' urgent' : '') : '';
     // Real correction 2026-09-07: "solo necesitamos una fecha... por que siempre quieres hablar de
     // cargas tarde" — showing the scheduled pickup_date on Pending Pickup AT THE SAME TIME the real
     // picked_up_at date shows on the next node read as an on-time/late comparison the user does not
@@ -1775,6 +1812,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     let infoMsg = '';
     if (!realOnClick){
       if (s.key === 'pending_pickup' && i === stageIdx && !confirmPrereqDone) infoMsg = confirmBlockedReason;
+      else if (puHold) infoMsg = o.pickup_link_sent_at ? 'The pick-up link was sent: waiting for the carrier to tap Picked up (or mark it by hand).' : 'The pick-up link goes to the carrier at the hour of the appointment.';
       else if (waitsForConfirm && isNext) infoMsg = confirmPrereqDone ? 'Confirm the pick-up first.' : confirmBlockedReason;
       else if (deliveredBlocked && isNext) infoMsg = 'Send the pickup documents to customs first.';
       else if (i <= stageIdx) infoMsg = dateStr ? `${displayLabel}: ${dateStr}` : `${displayLabel} already reached.`;
@@ -1797,12 +1835,12 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       // drift from what this circle itself does — exactly the class of bug found live with Plant
       // Payment (3 independently-computed copies of the same decision).
       onClickRaw: realOnClick || null,
-      actionTitle: (isNext || isPendingPickupConfirm) ? (typeof stepName === 'function' ? stepName : (l => l))(displayLabel, o) : '', // the Next card says Confirm PU, never the old "Pending Pickup" (owner 2026-11-24)
+      actionTitle: puSendNow ? 'Send the pick-up link to the carrier' : puLoaded ? 'Carrier loaded: notify the customer' : (isNext || isPendingPickupConfirm) ? (typeof stepName === 'function' ? stepName : (l => l))(displayLabel, o) : '', // the Next card says Confirm PU, never the old "Pending Pickup" (owner 2026-11-24)
       dateStr,
       info: realOnClick ? '' : infoMsg,
       lineDone: i < stageIdx || puConfirmed,
       reached: s.key !== 'pending_pickup' && i <= stageIdx, // Pick up and Create Invoice are done in the Journey once the load reached them (the classic line keeps its own rule)
-      actionableNow: (isNext && !deliveredBlocked && !waitsForConfirm) || isPendingPickupConfirm,
+      actionableNow: (isNext && !deliveredBlocked && !waitsForConfirm && !puHold) || isPendingPickupConfirm,
       raised,
       label: displayLabel,
       icon: STEP_ICONS[s.key],
@@ -2974,7 +3012,14 @@ function renderJourney(o, attentionOrderNumbers){
   const puApptDoc = (o.received_documents || []).filter(d => d.kind === 'pickup_appointment')[0]; // the proof of the appointment: one eye in this cube
   const puAddress = pc ? String(pc.address || (o.pickup_location && o.pickup_location.address) || '').trim() : '';
   const puCaptureHtml = pc ? `${pc.puTime ? `<div class="pay-amt">${escapeHtml(fmtTimeHM(pc.puTime))}</div>` : ''}${puApptDoc ? `<div class="doc-row" data-keep="1" style="justify-content:center;"><a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(puApptDoc.storage_url)}" target="_blank" rel="noopener" title="Pickup appointment ${escapeHtml(fmtDateStr(String(puApptDoc.created_at || '').slice(0, 10)))}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a></div>` : ''}${puAddress ? `<div class="oj-note" style="font-size:10.5px;line-height:1.25;text-align:center;margin:4px 0 0;">${escapeHtml(puAddress)}</div>` : ''}${pc.crossing || pc.link ? `<div class="oj-note">${pc.crossing ? 'Crossing ' + escapeHtml(fmtDateStr(pc.crossing)) : ''}${pc.crossing && pc.link ? ' · ' : ''}${pc.link ? 'Tracking <a href="' + escapeHtml(pc.link) + '" target="_blank" rel="noopener" style="color:var(--blue);">' + escapeHtml(pc.link) + '</a>' : ''}</div>` : ''}` : '';
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
+  // the Pickup cube with the carrier's page (owner 2026-11-25): what the carrier did, and the link again if it was sent
+  const puCarrierDocs = (o.pickup_documents || []).filter(d => d.source === 'carrier').length;
+  const miamiTime = iso => new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+  const pickupCubeHtml = !(o.pu_confirmed_at && o.carrier && o.carrier.phone) ? ''
+    : o.carrier_picked_up_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at))}</div><div class="oj-note">Carrier loaded${puCarrierDocs ? ' · ' + puCarrierDocs + ' doc' + (puCarrierDocs === 1 ? '' : 's') : ''}</div>`
+    : o.pickup_link_sent_at ? `<div class="oj-note">Link sent ${escapeHtml(miamiTime(o.pickup_link_sent_at))}${o.pickup_link_opened_at ? ' · opened' : ''}</div><button class="oj-ghost" onclick="event.stopPropagation();sendPickupLinkClick('${o.order_number}')">Send link again</button>`
+    : '';
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   // nothing to press yet but something still pending: the Next card says what it is waiting for, never "All done" (owner 2026-11-21, "sentido común al flujo")
@@ -3022,8 +3067,9 @@ function renderJourney(o, attentionOrderNumbers){
       // CONFIRM PU BY HAND AT ANY TIME (owner 2026-11-24/25, G96: "se puede hacer manualmente dando click en ella y poniendo la data"): the e-mail reader fills it and it stops blinking, but touching the cube always opens the capture (day, time, address) — while it waits (even before the Release e-mail went out) AND once it is done (the reader or he filled it: the data shows prefilled to correct it; owner 2026-11-25 "estamos haciendo todas las pruebas en la orden 1002", whose Confirm PU is already done). It blinks only when it is the next step.
       const docsByHand = cube && x.label === 'Sent to customs' && !x.na && uploadPickupBtn ? `var i=this.querySelector('input[type=file]');if(i)i.click();` : ''; // by hand: touching Docs to border while the plant's documents have not arrived opens the upload
       const confirmPuByHand = cube && x.label === 'Confirm PU' && !x.na && !(z === 'now' && x.onClickRaw) ? `confirmPickupReadyClick('${o.order_number}')` : '';
+      const pickupByHand = cube && x.label === 'Pick up' && !x.na && z === 'wait' && o.pu_confirmed_at && !o.picked_up_at ? `advanceLoadStatus('${o.order_number}','picked_up')` : ''; // by hand (G96): while it does not blink (before the hour, or the link is out) touching it still marks the pick-up
       const cubeAct = cube && z === 'now' && !x.na && x.onClickRaw ? x.onClickRaw : ''; // the cube IS the action, like Release # and Wire Factoring: it blinks while it is the next step and touching it does it (owner 2026-11-24: "ponmelo blinking y con esas opciones, porque le doy y eso no esta haciendo nada")
-      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}${cubeAct ? ' blinkcard' : ''}"${cubeAct ? ` role="button" tabindex="0" style="cursor:pointer;" title="${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}" onclick="${cubeAct}"` : confirmPuByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Confirm PU" onclick="${confirmPuByHand}"` : docsByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Upload the pick-up documents" onclick="${docsByHand}"` : ''}><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
+      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}${cubeAct ? ' blinkcard' : ''}"${cubeAct ? ` role="button" tabindex="0" style="cursor:pointer;" title="${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}" onclick="${cubeAct}"` : confirmPuByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Confirm PU" onclick="${confirmPuByHand}"` : pickupByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Mark the pick-up by hand" onclick="${pickupByHand}"` : docsByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Upload the pick-up documents" onclick="${docsByHand}"` : ''}><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
     });
     if (hzDoc) spine += '</div>';
   });
