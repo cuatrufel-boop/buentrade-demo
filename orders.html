@@ -1437,8 +1437,8 @@ function pickupLinkMessage(o, link){
   const name = String(car.contact_name || '').trim().split(/\s+/)[0] || String(car.name || '').trim();
   const day = String(c.puDate || '').slice(0, 10), today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const when = [day && day !== today ? fmtDateStr(day) : '', c.puTime ? fmtTimeHM(c.puTime) : (day === today ? 'today' : '')].filter(Boolean).join(' ');
-  // his words (owner 2026-11-25): "Upload all docs & tap picked up"
-  return `Hi${name ? ' ' + name : ''}, BuenTrade 🚚 PO-BT-${btNum(o.order_number)}, pick-up${when ? ' ' + when : ''}. Upload all docs & tap picked up: ${link}`;
+  // his words, as he wrote them (owner 2026-11-25): "Hi Felipe, 🚚 PO-BT-2026-1002, pick-up 5:00 PM. Please Upload all docs & tap picked up: <link>"
+  return `Hi${name ? ' ' + name : ''}, 🚚 PO-BT-${btNum(o.order_number)}, pick-up${when ? ' ' + when : ''}. Please Upload all docs & tap picked up: ${link}`;
 }
 async function sendPickupLinkClick(orderNumber){
   const o = findStatusOrder(orderNumber);
