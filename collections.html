@@ -974,7 +974,7 @@ function stageLabel(L){
   if (L.invoice_sent_at) return { t: 'Invoiced', cls: 'active' };
   if (L.delivered_at || L.status === 'delivered') return { t: 'Delivered', cls: 'active' };
   if (L.picked_up_at) return { t: 'Picked Up', cls: 'active' };
-  return { t: 'Confirm PU', cls: 'active' };
+  return { t: 'Appointment', cls: 'active' }; // the name he chose 2026-11-25 (was Confirm PU)
 }
 // Each carrier / customs agency has its own payment term (Logistics profile, or set right in the
 // flow). Not set yet → carrier 30 days, customs cash, and the flow asks to set it.
