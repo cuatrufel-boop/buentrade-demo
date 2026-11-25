@@ -3265,9 +3265,9 @@ function puMessageData(o){
     customs: String((o && orderCustomsName[o.order_number]) || '').trim() || 'la aduana',
   };
 }
-function fmtDateEsShort(iso){ // 2026-11-20 -> "20 nov 2026"
+function fmtDateEsShort(iso){ // 2026-11-20 -> "20 nov" (no year: his phone cut the longer date, owner 2026-11-25)
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
-  return m ? `${+m[3]} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][+m[2] - 1]} ${m[1]}` : '';
+  return m ? `${+m[3]} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][+m[2] - 1]}` : '';
 }
 // The day a load that picked up on `pu` (YYYY-MM-DD) reaches the border: two calendar days later, a Saturday or Sunday rolls to Monday (the same rule the FO and the Status tab use).
 function pickupBorderDate(pu){
@@ -3332,7 +3332,7 @@ const STAGE_EMAIL_BODY_ES = {
 };
 const STAGE_WHATSAPP_ES = {
   // his words (owner 2026-11-25, dictated): the pick-up notice to the customer by WhatsApp; the tracking line only when the carrier brought a link; his "(emoji)" for that line is ➡ (no new-plane emoji: they showed as � in his WhatsApp)
-  picked_up: (o, contact) => { const d = puMessageData(o); const link = d.trip || d.link; return `Hola ${contact},\n\n✅ Vamos en camino a frontera con Nuestra orden SO-BT-${btNum(o.order_number)}.\n\n▪ Origen: ${d.puEs}\n\n▪ Destino: ${d.crossingEs}\n\n${link ? `➡ Síguela aquí: ${link}\n\n` : ''}Te avisamos en cuanto lleguemos a ${d.customs}.`; },
+  picked_up: (o, contact) => { const d = puMessageData(o); const link = d.trip || d.link; return `Hola ${contact},\n\n✅ Vamos en camino a frontera con Nuestra orden\nSO-BT-${btNum(o.order_number)}.\n\n▪ Origen: ${d.puEs}\n▪ Destino: ${d.crossingEs}\n\n${link ? `➡ Síguela aquí: ${link}\n\n` : ''}Te avisamos en cuanto lleguemos a ${d.customs}.`; },
 };
 // Real fix 2026-09-20: subject used the raw stored order_number (already carries a "BT-" prefix
 // baked in, e.g. "BT-2026-1002") with no document-type prefix — the customer only ever recognizes
