@@ -3027,8 +3027,7 @@ function renderJourney(o, attentionOrderNumbers){
     : (o.carrier_picked_up_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at))}</div>` : '') + puEyes
       + (o.carrier_picked_up_at ? '' // owner 2026-11-25: "quita esto" — no "Carrier loaded · N doc" line; the hour and the eyes say it
         : o.pickup_link_sent_at ? `<div class="oj-note">Link sent ${escapeHtml(miamiTime(o.pickup_link_sent_at))}${o.pickup_link_opened_at ? ' · opened' : ''}</div>` : '')
-      + puUpload + (o.pu_confirmed_at && !o.picked_up_at ? `<button class="oj-ghost" onclick="event.stopPropagation();advanceLoadStatus('${o.order_number}','picked_up')">Mark picked up</button>` : '') // by hand: the cube sends the link, these two add the papers and mark the pick-up
-      + (o.picked_up_at ? `<div data-keep="1" style="display:flex;flex-direction:column;gap:6px;width:100%;box-sizing:border-box;padding:0 22px;"><button class="oj-ghost" style="width:100%;padding:7px 6px;font-size:12px;white-space:nowrap;" onclick="event.stopPropagation();resendPickupNoticeClick('${o.order_number}')">Tell the customer</button><button class="oj-ghost" style="width:100%;padding:7px 6px;font-size:12px;white-space:nowrap;" onclick="event.stopPropagation();requestPickupDocsOnPickup('${o.order_number}')">Ask the plant for docs</button></div>` : ''); // by hand, once picked up (owner 2026-11-25: "todo lo automatico se debe poder hacer manual"): tell the customer again and ask the plant for the documents, never moving the stage
+      + puUpload + (o.pu_confirmed_at && !o.picked_up_at ? `<button class="oj-ghost" onclick="event.stopPropagation();advanceLoadStatus('${o.order_number}','picked_up')">Mark picked up</button>` : ''); // by hand: the cube sends the link, ↑ Upload adds the papers, Mark picked up marks it; once the carrier loaded, touching the cube is the customer's WhatsApp (owner 2026-11-25)
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
@@ -3077,9 +3076,9 @@ function renderJourney(o, attentionOrderNumbers){
       // CONFIRM PU BY HAND AT ANY TIME (owner 2026-11-24/25, G96: "se puede hacer manualmente dando click en ella y poniendo la data"): the e-mail reader fills it and it stops blinking, but touching the cube always opens the capture (day, time, address) — while it waits (even before the Release e-mail went out) AND once it is done (the reader or he filled it: the data shows prefilled to correct it; owner 2026-11-25 "estamos haciendo todas las pruebas en la orden 1002", whose Confirm PU is already done). It blinks only when it is the next step.
       const docsByHand = cube && x.label === 'Sent to customs' && !x.na && uploadPickupBtn ? `var i=this.querySelector('input[type=file]');if(i)i.click();` : ''; // by hand: touching Docs to border while the plant's documents have not arrived opens the upload
       const confirmPuByHand = cube && x.label === 'Confirm PU' && !x.na && !(z === 'now' && x.onClickRaw) ? `confirmPickupReadyClick('${o.order_number}')` : '';
-      const pickupByHand = cube && x.label === 'Pick up' && !x.na && o.carrier && o.carrier.phone && !(z === 'now' && x.onClickRaw) ? `sendPickupLinkClick('${o.order_number}')` : ''; // by hand (owner 2026-11-25: "todos los cubos llenan solos pero debo poder mandar manualmente también"): touching it at any time (before the hour, with the link out, even done) opens the WhatsApp with the link; "Mark picked up" inside it marks the pick-up
+      const pickupByHand = cube && x.label === 'Pick up' && !x.na && o.carrier && o.carrier.phone && !(z === 'now' && x.onClickRaw) ? (o.picked_up_at ? `resendPickupNoticeClick('${o.order_number}')` : o.carrier_picked_up_at ? `advanceLoadStatus('${o.order_number}','picked_up')` : `sendPickupLinkClick('${o.order_number}')`) : ''; // by hand (owner 2026-11-25: "todos los cubos llenan solos pero debo poder mandar manualmente también"): touching it at any time (before the hour, with the link out, even done) opens the WhatsApp with the link; "Mark picked up" inside it marks the pick-up
       const cubeAct = cube && z === 'now' && !x.na && x.onClickRaw ? x.onClickRaw : ''; // the cube IS the action, like Release # and Wire Factoring: it blinks while it is the next step and touching it does it (owner 2026-11-24: "ponmelo blinking y con esas opciones, porque le doy y eso no esta haciendo nada")
-      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}${cubeAct ? ' blinkcard' : ''}"${cubeAct ? ` role="button" tabindex="0" style="cursor:pointer;" title="${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}" onclick="${cubeAct}"` : confirmPuByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Confirm PU" onclick="${confirmPuByHand}"` : pickupByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Send the pick-up link to the carrier" onclick="${pickupByHand}"` : docsByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Upload the pick-up documents" onclick="${docsByHand}"` : ''}><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
+      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}${cubeAct ? ' blinkcard' : ''}"${cubeAct ? ` role="button" tabindex="0" style="cursor:pointer;" title="${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}" onclick="${cubeAct}"` : confirmPuByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Confirm PU" onclick="${confirmPuByHand}"` : pickupByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="${o.carrier_picked_up_at ? 'Tell the customer' : 'Send the pick-up link to the carrier'}" onclick="${pickupByHand}"` : docsByHand ? ` role="button" tabindex="0" style="cursor:pointer;" title="Upload the pick-up documents" onclick="${docsByHand}"` : ''}><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
     });
     if (hzDoc) spine += '</div>';
   });
@@ -3367,7 +3366,17 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   const bodyFn = STAGE_EMAIL_BODY_ES[newStatus];
   const waFn = STAGE_WHATSAPP_ES[newStatus];
   const subjFn = STAGE_SUBJECTS_ES[newStatus];
-  if (bodyFn && subjFn){
+  if (newStatus === 'picked_up' && waFn){
+    // the pick-up notice goes ONLY by WhatsApp, to each involved person of the customer, one by one (owner 2026-11-25: "la comunicacion por whatsapp para el cliente es por whatsapp"); never to a customer the owner blocked (Andes, MBG)
+    const sent = await sendPickupWhatsapps(o, oMsg, waFn);
+    if (sent === null){
+      const told = await btConfirm(`${o.customer_name} has no WhatsApp on file. Did you let the customer know the load is on its way another way (phone, e-mail)?`, 'Yes, sent', 'Not sent');
+      if (!told){ showToast('Stage not changed', `${orderNumber} stays where it was.`); return; }
+    } else if (!sent){
+      const told = await btConfirm(`Did you send the pick-up message to ${o.customer_name} by WhatsApp?`, 'Yes, sent', 'Not sent');
+      if (!told){ showToast('Stage not changed', `${orderNumber} stays where it was.`); return; }
+    }
+  } else if (bodyFn && subjFn){
     const contact = (o.customer && o.customer.contact_name) ? o.customer.contact_name.split(' ')[0] : o.customer_name;
     const everyone = typeof customerEveryone === 'function' ? await customerEveryone(o) : null; // the status goes to everybody of the customer (owner 2026-11-23)
     const emails = everyone ? everyone.emails : (o.customer ? collectCustomerEmails(o.customer) : []);
@@ -3411,26 +3420,26 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   // Owner 2026-11-22: the moment the pick-up is confirmed, the documents are asked for (the Pick up button sends that e-mail).
   if (newStatus === 'picked_up' && typeof requestPickupDocsOnPickup === 'function') await requestPickupDocsOnPickup(orderNumber);
 }
-// BY HAND, FROM THE PICKUP CUBE (owner 2026-11-25: "no puedo ver ni avisar al cliente ni pedir docs a la planta… todo lo automatico se debe poder hacer manual"): the same approved pick-up message to the customer (same preview, same From, same
-// people), without touching the stage — the load is already picked up. The plant's documents are asked for with requestPickupDocsOnPickup (the other button of the cube).
+// the pick-up WhatsApp to everybody of the customer (the buyer first, nobody twice), each by his own name, one at a time: WhatsApp opens and he presses Send. Returns true when at least one was sent, false when none, null when there is nobody to send to.
+async function sendPickupWhatsapps(o, oMsg, waFn){
+  const everyone = typeof customerEveryone === 'function' ? await customerEveryone(o) : null;
+  const phones = everyone ? everyone.phones : ((o.customer && (o.customer.whatsapp || o.customer.phone)) ? [{ name: (o.customer.contact_name || ''), phone: o.customer.whatsapp || o.customer.phone }] : []);
+  const emails = everyone ? everyone.emails : [];
+  if (/andes|mbg/i.test(`${o.customer_name || ''} ${emails.join(' ')}`) || !phones.length) return null;
+  let any = false;
+  for (const p of phones){
+    const first = String(p.name || '').split(' ')[0] || ((o.customer && o.customer.contact_name) ? o.customer.contact_name.split(' ')[0] : o.customer_name);
+    if (await bcConfirmWaSend(p.phone, waFn(oMsg, first), null, { label: p.name || p.phone })) any = true;
+  }
+  return any;
+}
+// BY HAND, FROM THE PICKUP CUBE (owner 2026-11-25: "todo lo automatico se debe poder hacer manual"): the same approved pick-up WhatsApp to the customer, again, without touching the stage — the load is already picked up.
 async function resendPickupNoticeClick(orderNumber){
   const o = findStatusOrder(orderNumber);
-  if (!o) return;
-  const bodyFn = STAGE_EMAIL_BODY_ES.picked_up, waFn = STAGE_WHATSAPP_ES.picked_up, subjFn = STAGE_SUBJECTS_ES.picked_up;
-  if (!bodyFn || !subjFn) return;
-  const contact = (o.customer && o.customer.contact_name) ? o.customer.contact_name.split(' ')[0] : o.customer_name;
-  const everyone = typeof customerEveryone === 'function' ? await customerEveryone(o) : null;
-  const emails = everyone ? everyone.emails : (o.customer ? collectCustomerEmails(o.customer) : []);
-  const phone = everyone && everyone.phones.length ? everyone.phones[0].phone : (o.customer && (o.customer.whatsapp || o.customer.phone)) || '';
-  if (/andes|mbg/i.test(`${o.customer_name || ''} ${emails.join(' ')}`)){ await btAlert('This customer is blocked for automatic messages (owner rule).'); return; }
-  if (!emails.length){ await btAlert(`${o.customer_name} has no email on file.`); return; }
-  try {
-    await sendEmailApi('logistics', emails, subjFn(o), bodyFn(o, contact), [], { phone, message: waFn(o, contact) });
-    showToast('Customer notified', emails.join(', '));
-    if (typeof logSends === 'function') await logSends(orderNumber, 'picked_up');
-  } catch (e) {
-    if (!e.cancelled) await btAlert('Could not send the notification: ' + e.message);
-  }
+  if (!o || !STAGE_WHATSAPP_ES.picked_up) return;
+  const sent = await sendPickupWhatsapps(o, o, STAGE_WHATSAPP_ES.picked_up);
+  if (sent === null) await btAlert(`${o.customer_name} has no WhatsApp on file (or is blocked for automatic messages).`);
+  else if (sent && typeof logSends === 'function') await logSends(orderNumber, 'picked_up');
 }
 // PICK UP -> THE DOCUMENTS ARE ASKED FOR AT ONCE (owner 2026-11-22: "inmediatamente después de que confirmamos pickup debe salir ese correo, a los involucrados, en este caso Andrew y Kristi; el botón de picked up manda ese correo
 // pidiendo esos docs; adicionalmente puede llegar del carrier"). The e-mail goes to every e-mail the plant has on file (its sales contact and its other contacts), copying the carrier when one is booked, through the usual preview
