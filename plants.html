@@ -776,6 +776,7 @@ auth.onAuthStateChanged(user => {
             <div class="profile-row"><span class="view-label">Payments Contact</span><span class="profile-row-value" id="pv_payments_contact">—</span></div>
             <div class="profile-row span2"><span class="view-label">CC Emails</span><span class="profile-row-value" id="pv_email_cc">—</span></div>
             <div class="profile-row span2"><span class="view-label">Documents Emails</span><span class="profile-row-value" id="pv_docs_emails">—</span></div>
+            <div class="profile-row span2"><span class="view-label">Pick-up Appointments Emails</span><span class="profile-row-value" id="pv_appointments_emails">—</span></div>
           </div>
         </div>
 
@@ -846,6 +847,7 @@ auth.onAuthStateChanged(user => {
                   <div class="field kwide"><label>Website</label><input id="pe_website"></div>
                   <div class="field kwide"><label>CC Emails (comma-separated)</label><input id="pe_email_cc" placeholder="ops@plant.com, billing@plant.com"></div>
                   <div class="field kwide"><label>Documents Emails (BOL, slaughter letter — comma-separated)</label><input id="pe_docs_emails" placeholder="docs@plant.com"></div>
+                  <div class="field kwide"><label>Pick-up Appointments Emails (comma-separated)</label><input id="pe_appointments_emails" placeholder="appointments@plant.com"></div>
                 </div>
               </div>
               <!-- Real correction 2026-09-06: "en todas las plantas es una persona distinta a la que
@@ -2330,7 +2332,7 @@ async function trySaveGeneric(fn, payload, msgElId, retryFn, forceOverride){
   }
 }
 
-const PROFILE_FIELDS = ['country_id','city','address','contact_name','email','email_cc','docs_emails','payments_contact_name','payments_email','website','required_documentation','notes','internal_notes'];
+const PROFILE_FIELDS = ['country_id','city','address','contact_name','email','email_cc','docs_emails','appointments_emails','payments_contact_name','payments_email','website','required_documentation','notes','internal_notes'];
 
 // Real ask 2026-09-06: "esta notificacion de pending matches es fea... dame algo mejor" — the
 // list-row badge now jumps straight to the plant's own Pending Matches tab instead of just naming
@@ -3093,6 +3095,7 @@ function renderProfileView(plant){
     ? [plant.payments_contact_name, plant.payments_email].filter(Boolean).join(' — ') : '—';
   document.getElementById('pv_email_cc').textContent = plant.email_cc ? plant.email_cc.split(',').map(e => e.trim()).filter(Boolean).join(', ') : '—'; // the plant's other contacts: CC of every price request
   document.getElementById('pv_docs_emails').textContent = plant.docs_emails ? plant.docs_emails.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean).join(', ') : '—'; // who sends the BOL and the slaughter letter: asked for them when the load is picked up
+  document.getElementById('pv_appointments_emails').textContent = plant.appointments_emails ? plant.appointments_emails.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean).join(', ') : '—'; // who schedules the pick-up: the release number e-mail goes to them (owner 2026-11-24)
   document.getElementById('pv_website').textContent = plant.website || '—';
   document.getElementById('pv_payment_terms').textContent = plant.payment_terms || '—';
   document.getElementById('pv_required_documentation').textContent = plant.required_documentation || '—';

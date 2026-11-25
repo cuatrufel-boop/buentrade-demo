@@ -661,18 +661,18 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-flow .fd-send{grid-column:1 / -1;margin:0;} @media(max-width:900px){.oj-flow .oj-step.hz::before{display:none;}}
   /* EVERYTHING IN ONE SCREEN, no scroll (owner 2026-11-24: "todo cabe en una pantalla sin necesidad de scroll"): on a computer the Workflow is compact — smaller circles, cubes and left cards — so the twelve cubes and the order card fit together */
   @media (min-width:901px){
-    #orderDetailBox{padding-top:12px;padding-bottom:12px;}
+    #orderDetailBox{padding-top:6px;padding-bottom:6px;}
     #orderDetailBox{display:flex;flex-direction:column;} #orderDetailBody{flex:1;display:flex;flex-direction:column;} #orderDetailBox .oj{margin:auto 0;} /* centred in the screen, grows with its height (owner 2026-11-24: "muy arriba desproporcionado puedes agrandar y centrar sin scroll") */
-    #orderDetailBox .oj-hz.hz4 .oj-step.hz .nm-full{font-size:clamp(13.5px,calc(100vh / 44),17px);} #orderDetailBox .oj-ring{width:clamp(92px,calc((100vh - 360px) / 2.6),140px);height:clamp(92px,calc((100vh - 360px) / 2.6),140px);} #orderDetailBox .oj-ring svg{width:100%;height:100%;}
+    #orderDetailBox .oj-hz.hz4 .oj-step.hz .nm-full{font-size:clamp(13.5px,calc(100vh / 44),17px);} #orderDetailBox .oj-ring{width:clamp(84px,calc((100vh - 410px) / 2.6),140px);height:clamp(84px,calc((100vh - 410px) / 2.6),140px);} #orderDetailBox .oj-ring svg{width:100%;height:100%;}
     #orderDetailBox .oj{gap:18px;grid-template-columns:260px minmax(0,1fr);} #orderDetailBox .oj-side{gap:8px;} #orderDetailBox .oj-card{padding:10px 14px;border-radius:16px;}
     #orderDetailBox .oj-ring{margin:0 auto 4px;} #orderDetailBox .oj-ring .c b{font-size:22px;} #orderDetailBox .oj-next{margin-bottom:6px;} #orderDetailBox .oj-next b{font-size:15px;}
     #orderDetailBox .oj-cta.wide{padding:8px 14px;font-size:13px;} #orderDetailBox .oj-fact{padding:4px 0;font-size:12px;} #orderDetailBox .oj-route{height:30px;} #orderDetailBox .oj-legend{margin-top:0;}
-    #orderDetailBox .oj-hz{gap:8px;margin-bottom:6px;} #orderDetailBox .oj-hz::before{top:11px;} #orderDetailBox .oj-flow .oj-step.hz::before{top:11px;}
-    #orderDetailBox .oj-step.hz .oj-nd{width:24px;height:24px;margin:0 0 4px;font-size:12px;} #orderDetailBox .oj-step.hz .oj-nd svg{width:13px;height:13px;}
+    #orderDetailBox .oj-hz{gap:8px;margin-bottom:3px;} #orderDetailBox .oj-hz::before{top:11px;} #orderDetailBox .oj-flow .oj-step.hz::before{top:11px;}
+    #orderDetailBox .oj-step.hz .oj-nd{width:24px;height:24px;margin:0 0 2px;font-size:12px;} #orderDetailBox .oj-step.hz .oj-nd svg{width:13px;height:13px;}
     #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jh,#orderDetailBox .oj-step.hz .oj-jh{padding:7px 10px;gap:3px;} #orderDetailBox .oj-hz.hz4 .oj-step.hz .nm-full,#orderDetailBox .oj-step.hz .nm-full{font-size:13.5px;} #orderDetailBox .oj-hz.hz4-top .oj-step.hz .oj-jh .nm-full{min-height:0;}
     #orderDetailBox .oj-step.hz .oj-chip{padding:2px 8px;font-size:9px;} #orderDetailBox .oj-step.hz .oj-jh .dt{font-size:10.5px;}
     #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jb,#orderDetailBox .oj-step.hz .oj-jb{padding:0 10px 8px;} #orderDetailBox .oj-step.hz .oj-jb .doc-row{padding:5px 8px;gap:6px;} #orderDetailBox .oj-hz .oj-step.hz .doc-row .btn{padding:3px 8px !important;} #orderDetailBox .oj-hz.hz4 .oj-step.hz .pay-amt{font-size:14px;margin:0 0 2px;}
-    #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jc{min-height:clamp(0px,calc((100vh - 206px) / 3),230px);display:flex;flex-direction:column;justify-content:center;} #orderDetailBox .oj-step.hz .oj-note{font-size:11px;} #orderDetailBox .oj-step.hz .oj-cta{padding:6px 12px;font-size:12px;}
+    #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jc{min-height:clamp(0px,calc((100vh - 206px) / 3),230px);display:flex;flex-direction:column;justify-content:flex-start;} /* titles line up across a row whatever each cube holds */ #orderDetailBox .oj-step.hz .oj-note{font-size:11px;} #orderDetailBox .oj-step.hz .oj-cta{padding:6px 12px;font-size:12px;}
   }
   .oj-hz.hz4.hz1{grid-template-columns:minmax(0,1fr);max-width:640px;} .oj-hz.hz4.hz1::before{display:none;}
   .oj-step.hz.blinkcard .oj-jc{animation:ojCardBlink 1.4s ease-in-out infinite;} @keyframes ojCardBlink{0%,100%{box-shadow:0 0 0 0 rgba(63,203,126,0);}50%{box-shadow:0 0 26px 1px rgba(63,203,126,.55);}}
@@ -961,8 +961,10 @@ auth.onAuthStateChanged(user => {
     <h3 id="pickupCaptureTitle">PU 2 Client</h3>
     <div class="email-modal-from" id="pickupCaptureIntro"></div>
     <div class="email-modal-field"><label>Pick-up date</label><input type="date" id="pickupCapPu" onchange="pickupCapPuChanged()"></div>
-    <div class="email-modal-field"><label>Estimated crossing</label><input type="date" id="pickupCapCross"></div>
-    <div class="email-modal-field"><label>Live tracking link (optional)</label><input type="url" id="pickupCapLink" placeholder="https://"></div>
+    <div class="email-modal-field" id="pickupCapTimeRow" style="display:none;"><label>Pick-up time (optional)</label><input type="time" id="pickupCapTime"></div>
+    <div class="email-modal-field" id="pickupCapAddrRow" style="display:none;"><label>Pick-up address (optional)</label><input type="text" id="pickupCapAddr" placeholder="Street, city, state"></div>
+    <div class="email-modal-field" id="pickupCapCrossRow"><label>Estimated crossing</label><input type="date" id="pickupCapCross"></div>
+    <div class="email-modal-field" id="pickupCapLinkRow"><label>Live tracking link (optional)</label><input type="url" id="pickupCapLink" placeholder="https://"></div>
     <div class="email-modal-actions">
       <button class="btn secondary" onclick="pickupCaptureDone(false)">Cancel</button>
       <button class="wa-btn" onclick="pickupCaptureDone(true)">Continue</button>
@@ -1225,7 +1227,7 @@ async function loadStatusOrders(){
     freight: o.freight_origin ? { origin: o.freight_origin } : null,
     carrier: o.carrier_provider_id ? { phone: o.carrier_phone, name: o.carrier_name, email: o.carrier_email } : null,
     plant: {
-      whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email, email_cc: o.plant_email_cc, docs_emails: o.plant_docs_emails,
+      whatsapp: o.plant_whatsapp, phone: o.plant_phone, email: o.plant_email, email_cc: o.plant_email_cc, docs_emails: o.plant_docs_emails, appointments_emails: o.plant_appointments_emails,
       payments_contact_name: o.plant_payments_contact_name, payments_email: o.plant_payments_email, payments_whatsapp: o.plant_payments_whatsapp,
     },
     plant_id: o.plant_id,
@@ -2405,7 +2407,7 @@ function orderDocRows(o, nextActionLabel){
     // borrowing wa-btn's green outline. Only the real WhatsApp button stays green (solid fill,
     // matches the channel everywhere else); every other doc-panel action now uses this app's own
     // blue transparent/bordered button (.btn.secondary), same as the rest of BuenTrade.
-    const docRowBtn = (label, onclick) => `<button class="btn secondary doc-row-btn" onclick="${onclick}">${label}</button>`;
+    const docRowBtn = (label, onclick) => `<button class="btn secondary doc-row-btn" onclick="event.stopPropagation();${onclick}">${label}</button>`; // a button inside a cube does its own thing, not the cube's
     const emailBtn = onclick => `<button class="btn secondary" style="padding:6px 10px;" onclick="${onclick}" title="Email"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;width:13px;height:13px;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></button>`;
     const waBtn = onclick => `<button class="wa-btn" style="padding:6px 10px;" onclick="${onclick}" title="WhatsApp"><svg viewBox="0 0 24 24" fill="#fff">${WA_ICON.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg></button>`;
     const poFiles = findFiles(`PO-BT-${btNum(o.order_number)}`);
@@ -2883,6 +2885,7 @@ function cubeEyesOnly(html){
   return rest + (eyes.length ? `<div class="doc-row" style="flex-wrap:nowrap;">${eyes.join('')}</div>` : ''); // all the eyes on one line
 }
 const HZ_TITLES = { PO: 'Purchase Order', SO: 'Sales Order', FO: 'Freight Order' }; // owner 2026-11-23: the Orders cards carry the full names, not PO / SO / FO
+function fmtTimeHM(t){ const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); if (!m) return String(t || ''); const h = Number(m[1]); return (h % 12 || 12) + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'); } // '17:00' -> '5:00 PM'
 function renderJourney(o, attentionOrderNumbers){
   const tl = renderUnifiedTimeline(o, attentionOrderNumbers);
   let steps = tl.journey;
@@ -2928,8 +2931,11 @@ function renderJourney(o, attentionOrderNumbers){
   const requestAgainBtn = o.picked_up_at && !pendingDocs.length && !o.customs_sent_at ? `<button class="oj-ghost" onclick="requestCustomsDocsClick('${o.order_number}')">Ask for the documents again</button>` : '';
   // what the trader captured in Confirm PU (owner 2026-11-21, step 7): the pick-up day, the estimated crossing and the live tracking link, kept on the load
   const pc = (o.pu_confirmed_at && o.pu_capture) || null;
-  const puCaptureHtml = pc ? `<div class="oj-note">Pick-up ${escapeHtml(fmtDateStr(pc.puDate))} · Crossing ${escapeHtml(fmtDateStr(pc.crossing))}${pc.link ? ' · Tracking <a href="' + escapeHtml(pc.link) + '" target="_blank" rel="noopener" style="color:var(--blue);">' + escapeHtml(pc.link) + '</a>' : ''}</div>` : '';
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': puCaptureHtml + rows.date + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
+  // Confirm PU in the SAME design as Wire Factoring and Release # (owner 2026-11-24: "hazlo igual, no esta igual el diseno"): the time as the bold value line, the address inside the same box; the crossing / tracking link (the trader's) as a small line only when they exist.
+  const puApptDoc = (o.received_documents || []).filter(d => d.kind === 'pickup_appointment')[0]; // the proof of the appointment: one eye in this cube
+  const puAddress = pc ? String(pc.address || (o.pickup_location && o.pickup_location.address) || '').trim() : '';
+  const puCaptureHtml = pc ? `${pc.puTime ? `<div class="pay-amt">${escapeHtml(fmtTimeHM(pc.puTime))}</div>` : ''}${puApptDoc ? `<div class="doc-row" data-keep="1" style="justify-content:center;"><a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(puApptDoc.storage_url)}" target="_blank" rel="noopener" title="Pickup appointment ${escapeHtml(fmtDateStr(String(puApptDoc.created_at || '').slice(0, 10)))}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a></div>` : ''}${puAddress ? `<div class="oj-note" style="font-size:10.5px;line-height:1.25;text-align:center;margin:4px 0 0;">${escapeHtml(puAddress)}</div>` : ''}${pc.crossing || pc.link ? `<div class="oj-note">${pc.crossing ? 'Crossing ' + escapeHtml(fmtDateStr(pc.crossing)) : ''}${pc.crossing && pc.link ? ' · ' : ''}${pc.link ? 'Tracking <a href="' + escapeHtml(pc.link) + '" target="_blank" rel="noopener" style="color:var(--blue);">' + escapeHtml(pc.link) + '</a>' : ''}</div>` : ''}` : '';
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   // nothing to press yet but something still pending: the Next card says what it is waiting for, never "All done" (owner 2026-11-21, "sentido común al flujo")
@@ -2968,13 +2974,14 @@ function renderJourney(o, attentionOrderNumbers){
       if (x.label === 'Pay Plant') inner += (rows.summarOk || '') + rows.proforma + (rows.bankReceipt || '');
       if (x.na) inner = `<div class="oj-note">N/A — this load has no ${x.label === 'FO' ? 'freight order' : 'carrier'} of ours.</div>`;
       else if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
-      if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
+      if (z === 'now' && x.onClickRaw && !cube) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
       if (z === 'done' && !inner && !cube) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`; // a cube already says its name and date
       if (cube) inner = cubeEyesOnly(inner); // same as the cubes above: a document is only its eye (the file name and status ride in its tooltip), so the cube keeps the Orders height (owner 2026-11-24: "esto no fue lo que pedi")
       if (!hz && !cube) inner += sendHistoryHtml(o, x.label); // the Orders cards (owner 2026-11-23) show no history lines; every send stays kept in order_send_log
       const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? `<span class="oj-chip done">✓ ${x.label === 'Signature' ? 'Closed' : 'Done'}</span>` : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
-      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release #' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
+      const cubeAct = cube && z === 'now' && !x.na && x.onClickRaw ? x.onClickRaw : ''; // the cube IS the action, like Release # and Wire Factoring: it blinks while it is the next step and touching it does it (owner 2026-11-24: "ponmelo blinking y con esas opciones, porque le doy y eso no esta haciendo nada")
+      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}${cubeAct ? ' blinkcard' : ''}"${cubeAct ? ` role="button" tabindex="0" style="cursor:pointer;" title="${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}" onclick="${cubeAct}"` : ''}><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release #' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
     });
     if (hzDoc) spine += '</div>';
   });
@@ -3163,7 +3170,7 @@ function pickupCaptureNote(c){
 }
 // CONFIRM PU / PU 2 CLIENT (owner 2026-11-21, steps 7-8): before the customer's message the trader writes down what is real — the pick-up day, the estimated crossing and, if the carrier gave one, the live tracking link. It goes into the
 // message and into the load's history. Answers {puDate, crossing, link}, or null when he cancels (nothing is sent and the load stays where it was).
-let pickupCaptureResolve = null;
+let pickupCaptureResolve = null, pickupCaptureConfirmMode = false;
 function askPickupCapture(o, title){
   document.getElementById('pickupCaptureTitle').textContent = title || 'PU 2 Client';
   document.getElementById('pickupCaptureIntro').textContent = `${o.order_number} — ${fullProductLabel(o)} — ${o.plant_name}`;
@@ -3172,6 +3179,12 @@ function askPickupCapture(o, title){
   document.getElementById('pickupCapPu').value = kept.puDate || today;
   document.getElementById('pickupCapCross').value = kept.crossing || pickupBorderDate(today);
   document.getElementById('pickupCapLink').value = kept.link || '';
+  // CONFIRM PU by hand (owner 2026-11-24): only the day, the time and the address — the crossing and the tracking link are asked later, at PU 2 Client
+  pickupCaptureConfirmMode = title === 'Confirm PU';
+  ['pickupCapTimeRow', 'pickupCapAddrRow'].forEach(id => { document.getElementById(id).style.display = pickupCaptureConfirmMode ? '' : 'none'; });
+  ['pickupCapCrossRow', 'pickupCapLinkRow'].forEach(id => { document.getElementById(id).style.display = pickupCaptureConfirmMode ? 'none' : ''; });
+  document.getElementById('pickupCapTime').value = kept.puTime || '';
+  document.getElementById('pickupCapAddr').value = kept.address || (o.pickup_location && o.pickup_location.address) || '';
   document.getElementById('pickupCaptureOverlay').style.display = 'flex';
   return new Promise(resolve => { pickupCaptureResolve = resolve; });
 }
@@ -3185,9 +3198,15 @@ async function pickupCaptureDone(ok){
     const puDate = document.getElementById('pickupCapPu').value;
     const crossing = document.getElementById('pickupCapCross').value;
     const link = document.getElementById('pickupCapLink').value.trim();
-    if (!puDate || !crossing){ await btAlert('Write the pick-up date and the estimated crossing date.'); return; }
-    if (link && !/^https?:\/\//i.test(link)){ await btAlert('The tracking link must start with https://'); return; }
-    result = { puDate, crossing, link };
+    if (pickupCaptureConfirmMode){
+      if (!puDate){ await btAlert('Write the pick-up date.'); return; }
+      const puTime = document.getElementById('pickupCapTime').value, address = document.getElementById('pickupCapAddr').value.trim();
+      result = { puDate, ...(puTime ? { puTime } : {}), ...(address ? { address } : {}) };
+    } else {
+      if (!puDate || !crossing){ await btAlert('Write the pick-up date and the estimated crossing date.'); return; }
+      if (link && !/^https?:\/\//i.test(link)){ await btAlert('The tracking link must start with https://'); return; }
+      result = { puDate, crossing, link };
+    }
   }
   document.getElementById('pickupCaptureOverlay').style.display = 'none';
   const resolve = pickupCaptureResolve; pickupCaptureResolve = null;
@@ -3235,7 +3254,7 @@ async function advanceLoadStatus(orderNumber, newStatus, notes){
   // Steps 7-8 (owner 2026-11-21): the pick-up is written down first; cancelling it leaves the load exactly where it was.
   let puCapture = null;
   if (newStatus === 'picked_up' && typeof askPickupCapture === 'function'){
-    puCapture = (o.pu_confirmed_at && o.pu_capture) ? o.pu_capture : await askPickupCapture(o); // Confirm PU already captured it (owner 2026-11-21, steps 7-8)
+    puCapture = (o.pu_confirmed_at && o.pu_capture && o.pu_capture.crossing) ? o.pu_capture : await askPickupCapture(o); // Confirm PU already captured it (owner 2026-11-21, steps 7-8)
     if (!puCapture) return;
     notes = pickupCaptureNote(puCapture) + (notes ? ' — ' + notes : '');
   }
@@ -3671,7 +3690,7 @@ function releaseHzHtml(o, x, open, cardsOnly, base){
   const act = sent ? x.redo : x.onClickRaw;
   let b1 = '';
   if (o.release_number) b1 += `<div class="pay-amt">${esc(o.release_number)}</div>`;
-  const eyes = (plant ? eyeOpen(plant.storage_url).replace('title="Open"', 'title="Plant\'s order confirmation"') : '') + (appt ? eyeOpen(appt.storage_url).replace('title="Open"', 'title="Pickup appointment ' + esc(day(appt.created_at)) + '"') : ''); // the plant's confirmation and, once it arrives, the appointment: both inside this one cube
+  const eyes = plant ? eyeOpen(plant.storage_url).replace('title="Open"', 'title="Plant\'s order confirmation"') : ''; // ONE eye, one proof per cube (owner 2026-11-24: "un ojo de una prueba en cada cubo"): the plant's confirmation; the appointment's proof is the eye of Confirm PU
   if (eyes) b1 += `<div class="doc-row">${eyes}</div>`;
   if (!o.release_number) b1 += `<div class="oj-note">Waiting for the plant's reply with its order number (it is read automatically).</div><div class="pay-acts" style="margin-top:8px;"><button type="button" class="oj-ghost" onclick="recordReleaseNumber('${on}')">Record the plant's order number</button></div>`;
   // Owner 2026-11-24: the ACTION is the Release # cube itself (no button; "me gustó lo que hiciste con release num… solo tocándolo abre el correo"): it blinks the moment the number is known, touching the cube opens the e-mail with the release number to the plant's appointments contact copying the carrier, so they answer with the appointment; the next cube is Pickup Appointment.
@@ -4001,18 +4020,22 @@ async function sendReleaseNumberByEmail(o){
   const carrierEmails = collectEmails(o.carrier);
   const loc = o.pickup_location || {};
   // the plant's appointments contact as the plant itself gave it in its confirmation (owner 2026-11-24), else the pick-up location's e-mail
-  const copyEmails = String(o.plant_appointments_email || loc.email || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+  const copyEmails = String(o.plant_appointments_email || (o.plant && o.plant.appointments_emails) || loc.email || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+  // Owner 2026-11-24 ("siempre hay que copiar a la persona correcta del carrier, pero también al vendedor al que nos vendió la carga… en este caso Andrew"): the CC is the carrier AND the plant's seller (the sales contact the PO goes to), never only the appointments contact.
+  const sellerEmails = String((o.plant && o.plant.email) || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+  const toLower = new Set(copyEmails.map(e => e.toLowerCase()));
+  const ccEmails = [...new Set([...carrierEmails, ...sellerEmails].map(e => e.trim()).filter(e => e && !toLower.has(e.toLowerCase())))];
   if (!carrierEmails.length || !copyEmails.length) return false;
-  const orderId = `FO-BT-${btNum(o.order_number)}`;
+  // APPROVED BY THE OWNER 2026-11-24 ("Aprobado, no quiero volver a tocar este tema"): written TO the plant (Dear … team), the carrier and the seller only copied, no plant name in the subject, no "we have copied", and it asks for the confirmation itself: date, time and full address.
+  const orderId = `PO-BT-${btNum(o.order_number)}`;
   const plantName = String(o.plant_name || '').trim();
   const place = String(loc.address || loc.location_name || '').trim();
-  const carrierName = String((o.carrier && o.carrier.name) || '').trim();
-  const subject = `${orderId} | Release Number & Pick-Up Appointment – ${plantName}`;
-  const body = `Hi${carrierName ? ' ' + carrierName : ''} team,\n\nPlease find below the release details for Order ${orderId}:\n\n* Release Number: ${o.release_number}\n* Pick-Up Location: ${plantName}${place ? ' – ' + place : ''}\n\n`
-    + `We have copied ${plantName}'s logistics and scheduling team on this email. Kindly coordinate with them, confirm the scheduled pick-up date and time, and, if possible, share the tracking link for this shipment.\n\nBest regards,`;
+  const subject = `${orderId} | Release Number & Pick-Up Appointment`;
+  const body = `Dear ${plantName} team,\n\nPlease find below the release details for Order ${orderId}:\n\n* Release Number: ${o.release_number}\n* Pick-Up Location: ${plantName}${place ? ' – ' + place : ''}\n\n`
+    + `Kindly reply to this email confirming the pick-up appointment: date, time and full address.\n\nThank you in advance for your support.\n\nBest regards,`;
   try {
     // Owner 2026-11-24: to the plant's appointments contact (the pick-up location's e-mail), copying the carrier, so they answer with the appointment.
-    await sendEmailApi('logistics', copyEmails, subject, body, [], (o.carrier && o.carrier.phone) ? { phone: o.carrier.phone, message: releaseNumberMessage(o) } : null, carrierEmails);
+    await sendEmailApi('logistics', copyEmails, subject, body, [], (o.carrier && o.carrier.phone) ? { phone: o.carrier.phone, message: releaseNumberMessage(o) } : null, ccEmails);
     showToast('Release number sent', copyEmails.join(', '));
     await markDocSent(o.order_number, 'release_number');
     await loadStatusOrders();
