@@ -7,6 +7,11 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>BuenTrade Trading OS — Quotes</title>
+<script>
+// THE OS OPENS ON THE DASHBOARD (owner 2026-11-23: "abro el OS y aquí me trae, no me lleva a dashboard"): the installed app keeps the start address it was installed with (Quotes). When this page is opened AS THE APP, straight from the dock
+// (standalone window, no referrer, no link parameters, first load of this window), go to the Dashboard. Quotes opened from a menu, a link, the bell or a browser tab is untouched.
+try { if ((window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) && !document.referrer && !location.search && !sessionStorage.getItem('btLanded')) { sessionStorage.setItem('btLanded', '1'); location.replace('/dashboard.html'); } } catch (e) {}
+</script>
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 <link rel="shortcut icon" href="/icons/favicon.ico">
@@ -677,6 +682,12 @@
   .rq-pal-rel{display:block;height:2px;margin-top:6px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;}
   .rq-pal-rel u{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,#5AAAFF,#3FCB7E);box-shadow:0 0 8px rgba(90,170,255,.8);}
   .rq-pal2 .rq-pal-row .rq-result-add-btn{position:static;}
+  /* owner 2026-11-23 ("no abre bien las fichas… queda estirada"): in the narrow list the buyers' avatars took the room of the name (the name was squeezed to ~50px and cut letter by letter) — the avatars go UNDER the name, the arrow stays at the right */
+  .rq-pal2:not(.rq-pal-solo) .rq-result-variant.rq-pal-row{grid-template-columns:38px minmax(0,1fr) 22px;}
+  .rq-pal2:not(.rq-pal-solo) .rq-pal-row > .rq-result-icon{grid-row:1 / span 2;align-self:start;}
+  .rq-pal2:not(.rq-pal-solo) .rq-pal-row > .rq-pal-nm{grid-column:2;grid-row:1;overflow-wrap:anywhere;}
+  .rq-pal2:not(.rq-pal-solo) .rq-pal-row > div:nth-child(3){grid-column:2;grid-row:2;min-width:0;}
+  .rq-pal2:not(.rq-pal-solo) .rq-pal-row > .rq-result-add-btn{grid-column:3;grid-row:1 / span 2;align-self:center;}
   .rq-pal-sec{display:flex;align-items:baseline;gap:6px;margin:0 0 10px;padding:0 2px;font:500 11px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.06em;}
   .rq-pal-sec b{color:#fff;font-weight:700;}
   .rq-pal-sec.fz{color:var(--amber,#FFC876);margin-top:14px;}
@@ -685,7 +696,7 @@
   .rq-pal-stack .rq-pal-av:first-child{margin-left:0;}
   .rq-pal-more{font:700 10.5px 'IBM Plex Mono',monospace;color:var(--ink-soft);margin-left:6px;}
   .rq-pal-av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 11px 'Space Grotesk',sans-serif;color:#fff;flex:none;border:2px solid #14284a;overflow:hidden;background:linear-gradient(135deg,#2D6FD8,#5AAAFF);}
-  .rq-pal-av.a1{background:linear-gradient(135deg,#7B4FD6,#B08CFF);}
+  .rq-pal-av.a1{background:linear-gradient(135deg,#0F9D8A,#2DD4BF);} /* owner 2026-11-23: no purple — the brand teal */
   .rq-pal-av.a2{background:linear-gradient(135deg,#1F9E6B,#3FCB7E);}
   .rq-pal-av.a3{background:linear-gradient(135deg,#C7822B,#FFC876);}
   .rq-pal-av.logo{background:#fff;}
@@ -818,16 +829,42 @@
   @media (min-width:981px){
     .rq-palette-box.rq-pal2.rq-pal-open.rq-pal-solo:has(#rq_pal_detail.rq-pal-dgrid){grid-template-columns:118px minmax(0,1fr);}
   }
+  /* owner 2026-11-23 ("se salta, abre y se achica"): while typing, a half-written word ("pechuga c", "pechuga con h") matches nothing for an instant — the window flipped to the empty start layout (list hidden, night full width) and flipped back. A search with NO match keeps the same two columns (the message in the list column); only the START (nothing typed) keeps the night alone. */
+  @media (min-width:981px){
+    .rq-pal-night-on #rq_palette_results:has(.rq-results-none){display:block;}
+    .rq-palette-box.rq-pal2.rq-pal-open.rq-pal-night-on:has(#rq_palette_results .rq-results-none){grid-template-columns:minmax(250px,.55fr) minmax(0,2fr);grid-template-areas:"bar bar" "list detail" "asked asked" "foot foot";}
+  }
   .rq-pal-solo #rq_palette_results .rq-pal-sec,.rq-pal-solo #rq_palette_results .rq-results-summary{display:none;}
   .rq-pal-solo #rq_palette_results .rq-result-variant.rq-pal-row{grid-template-columns:38px 22px;justify-content:center;gap:8px;padding:9px 8px;}
   .rq-pal-solo #rq_palette_results .rq-pal-row .rq-pal-nm,.rq-pal-solo #rq_palette_results .rq-pal-row > div:nth-child(3){display:none;}
   .rq-pal-detail.rq-pal-dgrid{grid-template-columns:minmax(0,1fr) 236px;}
   .rq-pal-detail.rq-pal-dgrid > .rq-pal-main{grid-column:1;grid-row:1;}
   .rq-pal-detail.rq-pal-dgrid > .rq-pal-side{grid-column:2;grid-row:1;}
+  /* owner 2026-11-23 ("sí, mapa grande"): with a product shown the map keeps the width of the start screen; the results list (left) and the plants (right) float over it as glass */
+  @media (min-width:981px){
+    .rq-palette-box.rq-pal2.rq-pal-open:has(#rq_pal_detail.rq-pal-dgrid){grid-template-columns:272px minmax(0,1fr);}
+    .rq-palette-box.rq-pal2.rq-pal-open.rq-pal-solo:has(#rq_pal_detail.rq-pal-dgrid){grid-template-columns:130px minmax(0,1fr);}
+    .rq-pal2:has(#rq_pal_detail.rq-pal-dgrid) > #rq_pal_detail{grid-area:2 / 1 / 3 / -1;}
+    .rq-pal2:has(#rq_pal_detail.rq-pal-dgrid) > #rq_palette_results{grid-area:2 / 1 / 3 / 2;z-index:3;position:relative;align-self:start;margin-right:12px;padding:8px 8px 4px;border-radius:16px;background:rgba(6,18,42,.6);border:1px solid rgba(90,170,255,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+    .rq-pal-detail.rq-pal-dgrid{grid-template-columns:minmax(0,1fr);}
+    .rq-pal-detail.rq-pal-dgrid > .rq-pal-main{grid-column:1;grid-row:1;}
+    .rq-pal-detail.rq-pal-dgrid > .rq-pal-main > :not(.rq-pal-night){margin-left:284px;margin-right:260px;}
+    .rq-pal2.rq-pal-solo .rq-pal-detail.rq-pal-dgrid > .rq-pal-main > :not(.rq-pal-night){margin-left:142px;}
+    .rq-pal-detail.rq-pal-dgrid > .rq-pal-side{grid-column:1;grid-row:1;justify-self:end;align-self:start;width:236px;z-index:3;}
+  }
   /* the night is the WHOLE window (owner 2026-11-17: "una tarjeta pegada en vez de ser toda la pantalla"): one canvas of stars and land behind everything; the stage is only where the fichas live */
   #rq_pal_sky{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;border-radius:inherit;display:none;}
   .rq-palette-box.rq-pal2.rq-pal-night-on{overflow:hidden;background:radial-gradient(70% 75% at 55% 50%,#0a2250 0,#04112c 55%,#01040c 100%);}
   .rq-pal-night-on #rq_pal_sky{display:block;}
+  /* owner 2026-11-23 ("haz el mapa más oscuro que se vean los productos" · "unas fichas grandes que se vean"): the map goes dark so the customers' fichas stand out, and the fichas are 20% bigger */
+  .rq-pal-night-on #rq_pal_sky{filter:brightness(.52) saturate(.85);}
+  @media (min-width:981px){
+    .rq-pal-night .rq-pal-fc{width:170px;height:70px;padding:7px 11px 6px;border-radius:16px;box-shadow:0 10px 26px rgba(0,0,0,.55);}
+    .rq-pal-night .rq-pal-fc .rq-pal-av{width:32px;height:32px;font-size:11.5px;}
+    .rq-pal-night .rq-pal-fc b{font-size:14.5px;}
+    .rq-pal-night.sm .rq-pal-fc{width:151px;height:55px;padding:5px 9px 4px;}
+    .rq-pal-night.xs .rq-pal-fc{width:130px;height:43px;padding:4px 7px 3px;}
+  }
   .rq-pal-night-on > *:not(#rq_pal_sky){z-index:1;}
   .rq-pal-night{position:relative;margin:10px 0 0;}
   .rq-pal-night > svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
@@ -983,7 +1020,7 @@
   html body .rq-rail-c:hover{background:rgba(255,255,255,.05);}
   html body .rq-rail-c.on{background:rgba(90,170,255,.12);border-color:rgba(90,170,255,.5);}
   html body .rq-rail-av{grid-area:a;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 12px 'Space Grotesk',sans-serif;background:linear-gradient(135deg,#2D6FD8,#5AAAFF);color:#fff;flex:none;}
-  html body .rq-rail-c:nth-of-type(2n) .rq-rail-av{background:linear-gradient(135deg,#7B4FD6,#B08CFF);}
+  html body .rq-rail-c:nth-of-type(2n) .rq-rail-av{background:linear-gradient(135deg,#0F9D8A,#2DD4BF);}
   html body .rq-rail-n{grid-area:n;font-weight:600;font-size:13px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;}
   html body .rq-rail-st{grid-area:s;display:flex;gap:5px;flex-wrap:wrap;}
   html body .rq-rail-p{font:700 10px 'IBM Plex Mono',monospace;border-radius:20px;padding:2px 8px;border:1px solid rgba(255,200,118,.5);color:#FFC876;white-space:nowrap;}
@@ -6264,9 +6301,10 @@ function rqPalMapCells(){
 // where a latitude / longitude falls on the night stage (centre: northern Mexico, the part of the world where the customers are)
 function rqPalMapProj(W, H){ const sy = H / 34, sx = sy * .86; return (lat, lon) => [W / 2 + (lon + 98) * sx, H / 2 - (lat - 26.5) * sy]; }
 // the fichas: each one on the ring of its state, pushed apart until none overlaps and all stay inside the stage
-function rqPalOrbit(list, W, H){
+function rqPalOrbit(list, W, H, k){
   // the fichas shrink as the buyers grow (never a different screen): up to 7 buyers exactly as before; with more, the first size (142×58 → 126×46 → 108×36, avatar and name only) at which the placement leaves no ficha touching another
   const SZ = [[142, 58], [126, 46], [108, 36]], n = list.length, by = { has: [], notsent: [], never: [] }, ang = { has: [-42, 24, 100, -104], notsent: [-66, 0, 62, 126, -118], never: [24, 84, -22, 142] };
+  if (k) SZ.forEach(z => { z[0] *= k; z[1] *= k; }); // (bigger fichas: the same placement with every size multiplied)
   list.forEach(x => by[x.s.st].push(x));
   const place = (tier) => {
     const CW = SZ[tier][0], CH = SZ[tier][1], cx = W / 2, cy = H / 2, RX = W / 2 - CW / 2 - 8, RY = H / 2 - CH / 2 - 8, f = { has: .47, notsent: .78, never: 1 };
@@ -6302,6 +6340,17 @@ function rqPalNightW(){
   return W >= 400 ? W : 0; // (owner 2026-11-18: "no salen fichas": at 1000 px with several results the stage is 433 px wide: it fits, so the fichas come out)
 }
 // the height the stage can have: the window is the whole screen, minus the search bar, the product, the "Who asked" row and the footer
+// owner 2026-11-23 ("sí, mapa grande"): the MAP keeps the whole width of the window as on the start screen; the list of results (left) and the plants (right) float over it. rqPalNightW stays the "does the night fit" gate; this is the width of the stage itself.
+function rqPalStageW(){
+  const g = rqPalNightW(); if (!g) return 0;
+  const bx = document.querySelector('.rq-palette-box'), bw = bx ? bx.clientWidth : 0;
+  return Math.max(g, Math.min(1200, bw - 48));
+}
+// the fichas orbit only in the part of the stage the list and the plants do not cover
+function rqPalOrbitIn(list, W, H){
+  const solo = document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1, pl = solo ? 130 : 272, pr = 248, free = W - pl - pr, Wo = Math.max(Math.min(W, 440), free), off = free >= Wo ? pl + (free - Wo) / 2 : (W - Wo) / 2;
+  const L = rqPalOrbit(list, Wo, H, 1.2); L.items.forEach(o => { o.x += off; }); L.cx += off; return L;
+}
 function rqPalNightH(){
   const ask = document.getElementById('rq_sheet_asked'), askH = ask ? ask.getBoundingClientRect().height : 0;
   return Math.max(250, Math.min(900, Math.round(window.innerHeight - 20 - 40 - 66 - 64 - 14 - askH - 100 - 34)));
@@ -6318,8 +6367,8 @@ function rqPalOtherHtml(B){
 }
 function rqPalNightHtml(x){
   const { pid, p, qts, frozen, B, st, askedIds, plants, plantRows, tags, changed, lbl, cls, txt, busy } = x;
-  const W = rqPalNightW() || 440, H = rqPalNightH();
-  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbit(list, W, H), priced = plants.filter(v => v.priced), needed = rqAskedNeeded && rqPaletteNeedsCustomer();
+  const W0 = rqPalNightW() || 440, W = rqPalStageW() || W0, H = rqPalNightH();
+  const list = B.map(c => ({ c, s: st.get(c.id) })).filter(v => v.s), L = rqPalOrbitIn(list, W, H), priced = plants.filter(v => v.priced), needed = rqAskedNeeded && rqPaletteNeedsCustomer();
   const pct = (v, T) => (v / T * 100).toFixed(2) + '%';
   const rings = [['has', '#3FCB7E'], ['notsent', '#FFC876'], ['never', '#8FA3BF']].map(([k, col]) => { const rx = L.ring[k][0], ry = L.ring[k][1]; return `<ellipse cx="${L.cx}" cy="${L.cy}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${col}" stroke-opacity=".38" stroke-dasharray="2 8"/><text x="${(L.cx - rx * .7071).toFixed(1)}" y="${(L.cy - ry * .7071).toFixed(1)}" fill="${col}" fill-opacity=".85" font-size="8.5" font-family="IBM Plex Mono,monospace" letter-spacing="1.4" text-anchor="middle">${lbl[k]}</text>`; }).join('');
   const spokes = L.items.map(o => o.s.st === 'never' ? '' : `<line x1="${L.cx}" y1="${L.cy}" x2="${o.x.toFixed(1)}" y2="${o.y.toFixed(1)}" stroke="${o.s.st === 'has' ? '#3FCB7E' : '#FFC876'}" stroke-width="${o.s.st === 'has' ? 1.8 : 1.1}" stroke-opacity="${o.s.st === 'has' ? .75 : .45}"${o.s.st === 'has' ? '' : ' stroke-dasharray="3 7"'}/>`).join('');
@@ -6461,8 +6510,16 @@ function rqPalRenderDetail(){
   if (!rqAllPlantProductRows.length && rqPalDetailTries < 20){ rqPalDetailTries++; setTimeout(rqPalRenderDetail, 800); }
   const changed = rqPalLastPid !== pid, html = rqPalDetailHtml(pid, changed), key = html.replace(/ pop/g, '');
   if (!changed && host.dataset.html === key) return;
+  // owner 2026-11-23 ("se brinca y se achica"): another typed letter only moves the highlight of the title — the radar and the map were rebuilt at every key. Same product, same content: only the highlighted words of the title are repainted.
+  const hn = key.replace(/<\/?mark[^>]*>/g, '');
+  if (!changed && host.dataset.hn === hn){
+    const tpl = document.createElement('template'); tpl.innerHTML = html;
+    ['.rq-pal-ph h3', '.rq-pal-ph .es'].forEach(sel => { const a = host.querySelector(sel), b = tpl.content.querySelector(sel); if (a && b && a.innerHTML !== b.innerHTML) a.innerHTML = b.innerHTML; });
+    host.dataset.html = key; return;
+  }
+  host.dataset.hn = hn;
   const ae = document.activeElement, focusC = ae && host.contains(ae) && ae.dataset ? ae.dataset.c : null, focusCls = ae && ae.classList && ae.classList.contains('rq-pal-by') ? '.rq-pal-by' : ae && ae.classList && ae.classList.contains('rq-pal-fc') ? '.rq-pal-fc' : '.rq-pal-nd';
-  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid; { const dn = html.indexOf('rq-pal-night') > -1, bx = document.querySelector('.rq-palette-box'); host.classList.toggle('rq-pal-dgrid', dn); if (bx) bx.classList.toggle('rq-pal-solo', dn && document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1); if (bx && !dn) bx.classList.remove('rq-pal-night-on'); if (dn) rqPalNight(host); if (dn && !rqPalRerun){ const sg = host.querySelector('.rq-pal-night'), need = rqPalNightW(); if (sg && Math.abs((need || 440) - sg.clientWidth) > 24){ rqPalRerun = true; host.dataset.html = ''; try { rqPalRenderDetail(); } finally { rqPalRerun = false; } } } } // one result: its tile shrinks to a small picker, the product is written once (owner: "se repite el producto")
+  host.dataset.html = key; host.innerHTML = html; rqPalLastPid = pid; { const dn = html.indexOf('rq-pal-night') > -1, bx = document.querySelector('.rq-palette-box'); host.classList.toggle('rq-pal-dgrid', dn); if (bx) bx.classList.toggle('rq-pal-solo', dn && document.querySelectorAll('#rq_palette_results .rq-pal-row').length === 1); if (bx && !dn) bx.classList.remove('rq-pal-night-on'); if (dn) rqPalNight(host); if (dn && !rqPalRerun){ const sg = host.querySelector('.rq-pal-night'), need = rqPalStageW() || rqPalNightW(); if (sg && Math.abs((need || 440) - sg.clientWidth) > 24){ rqPalRerun = true; host.dataset.html = ''; host.dataset.hn = ''; try { rqPalRenderDetail(); } finally { rqPalRerun = false; } } } } // one result: its tile shrinks to a small picker, the product is written once (owner: "se repite el producto")
   if (focusC){ const again = host.querySelector(`${focusCls}[data-c="${focusC}"]:not(:disabled)`); if (again) again.focus(); }
 }
 function rqPalSetHi(pid){
@@ -6544,7 +6601,7 @@ function rqPalMapVector(x, P, BW, BH, cx, cy, tint, colors, hide){
   { const gc = P(24, -91), sg = x.createRadialGradient(gc[0], gc[1], 0, gc[0], gc[1], Math.max(BW, BH) * .42); sg.addColorStop(0, 'rgba(30,150,180,.16)'); sg.addColorStop(1, 'rgba(30,150,180,0)'); x.fillStyle = sg; x.fillRect(0, 0, BW, BH); const pc = P(21, -113), pg = x.createRadialGradient(pc[0], pc[1], 0, pc[0], pc[1], Math.max(BW, BH) * .3); pg.addColorStop(0, 'rgba(70,90,200,.14)'); pg.addColorStop(1, 'rgba(70,90,200,0)'); x.fillStyle = pg; x.fillRect(0, 0, BW, BH); } // the sea has colour too: teal over the Gulf, indigo over the Pacific
   x.fillStyle = 'rgba(34,76,140,.20)'; sp.forEach(o => x.fill(o.p));
   const dimK = [...tint.values()].some(v => v !== 'mix') ? .72 : 1; // a product has painted its states by status: the other states take a step back
-  if (colors){ const PAL = ['90,170,255', '45,212,191', '167,139,250', '244,114,182', '251,191,36', '52,211,153', '96,165,250', '251,146,60']; sp.forEach((o, i) => { o.c = PAL[i % 8]; const g2 = x.createLinearGradient(0, o.y0, 0, o.y1); g2.addColorStop(0, `rgba(${o.c},${(.46 * dimK).toFixed(2)})`); g2.addColorStop(1, `rgba(${o.c},${(.20 * dimK).toFixed(2)})`); x.fillStyle = g2; x.fill(o.p); }); }
+  if (colors){ const PAL = ['90,170,255', '45,212,191', '142,197,255', '244,114,182', '251,191,36', '52,211,153', '96,165,250', '251,146,60']; sp.forEach((o, i) => { o.c = PAL[i % 8]; const g2 = x.createLinearGradient(0, o.y0, 0, o.y1); g2.addColorStop(0, `rgba(${o.c},${(.46 * dimK).toFixed(2)})`); g2.addColorStop(1, `rgba(${o.c},${(.20 * dimK).toFixed(2)})`); x.fillStyle = g2; x.fill(o.p); }); }
   const gl = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(BW, BH) * .5); gl.addColorStop(0, 'rgba(70,150,240,.10)'); gl.addColorStop(1, 'rgba(70,150,240,0)'); x.fillStyle = gl; x.fillRect(0, 0, BW, BH);
   x.strokeStyle = 'rgba(150,205,255,.30)'; x.lineWidth = .9; sp.forEach(o => x.stroke(o.p));
   if (colors) sp.forEach(o => { x.strokeStyle = `rgba(${o.c},.8)`; x.lineWidth = 1.1; x.stroke(o.p); });
@@ -6699,6 +6756,7 @@ function rqPalRowHtml(r, R){
   </div>`;
 }
 
+let rqPalNoMatchTimer = null, rqPalNoMatchTerm = null; // (the grace before a no-match search replaces the list and the radar)
 async function rqRenderGroupedResults(){
   // Real bug fixed 2026-09-05 (reported live: "le pongo combo y no los puedo ver ni escoger") — live-typed results render into #rq_palette_results, inside the floating box itself, always.
   const box = document.getElementById('rq_palette_results');
@@ -6726,8 +6784,15 @@ async function rqRenderGroupedResults(){
   if (rqPendingInlineOpenId) await rqCloseCalculator(rqPendingInlineOpenId);
   const R = rqSearchProducts(term), flat = [...R.strict, ...R.fuzzy];
   if (pal) pal.classList.add('rq-pal-open');
+  // owner 2026-11-23 ("abre bien y se brinca y se achica"): a half-written word ("pechuga c", "pechuga con h") matches nothing for an instant; the list and the radar were swapped for the empty ones and back at every such key. While the typing goes on the last good list and radar STAY; only a term that stays without a match for 0.9 s shows the "no match" message.
+  if (!flat.length && rqPalHi && rqPalNoMatchTerm !== term){
+    clearTimeout(rqPalNoMatchTimer);
+    rqPalNoMatchTimer = setTimeout(() => { const po = document.getElementById('rq_palette_overlay'), inp = document.getElementById('rq_product_name'); if (!po || po.style.display === 'none' || !inp || inp.value.trim() !== term) return; rqPalNoMatchTerm = term; rqRenderGroupedResults(); }, 900);
+    return;
+  }
+  if (flat.length){ clearTimeout(rqPalNoMatchTimer); rqPalNoMatchTerm = null; }
   if (!flat.length){
-    box.innerHTML = `<div class="rq-results-empty">${RQ_SEARCH_ICO_SVG}<div>No catalog product matches "${escapeHtml(term)}".</div></div>`;
+    box.innerHTML = `<div class="rq-results-empty rq-results-none">${RQ_SEARCH_ICO_SVG}<div>No catalog product matches "${escapeHtml(term)}".</div></div>`;
     if (countEl) countEl.classList.remove('show');
     rqPalHi = null; rqPalRenderDetail();
   } else {
@@ -6748,6 +6813,7 @@ async function rqRenderGroupedResults(){
 
   const tiles = box ? box.querySelectorAll('.rq-result-variant') : [];
   tiles.forEach((el, i) => {
+    if (pal && pal.classList.contains('rq-pal2')) return; // owner 2026-11-23 ("pongo las 3 primeras letras y abre y después se encoge"): in the Find Product window the cards no longer slide and pop at every key (they overlapped each other for 0.3 s and the list jumped); they just stay where they are
     const prev = beforeRects.get(el.dataset.key);
     if (prev){
       const now = el.getBoundingClientRect();

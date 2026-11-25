@@ -187,6 +187,8 @@
     .tdr[data-u="pending"] .tdr-urgent tr:not([data-kind="pending"]),.tdr[data-u="answer"] .tdr-urgent tr:not([data-kind="answer"]),.tdr[data-u="best"] .tdr-urgent tr:not([data-kind="best"]){display:none;}
   }
   .tdc{display:block !important;height:auto !important;} .tdc .tdr-urgent{grid-column:1/-1;order:0;display:flex;flex-direction:column;} .tdc .tdr-scroll{max-height:none;overflow:visible;} .tdc .tdr-urgent{overflow:visible !important;height:auto !important;} /* the list is as tall as its content: the page scrolls, never a small box inside it (owner 2026-11-14: "por qué esta tabla tan chiquita, alárgala para abajo para no tener que scrollear") */ .tdc-ask{color:#FFC876 !important;} .tdc-px{text-align:right !important;white-space:nowrap;} .tdc-px b{font:700 15px 'IBM Plex Mono',monospace;display:block;}
+  /* owner 2026-11-23: "poner search para filtrar todo lo que hay en la lista de dashboard" */
+  .today-search{display:flex;align-items:center;gap:12px;margin:0 0 10px;} .today-search input{flex:1;min-width:0;box-sizing:border-box;padding:11px 14px 11px 40px;border-radius:12px;border:1px solid rgba(90,170,255,.3);background:rgba(255,255,255,.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238EC5FF' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.3-4.3'/%3E%3C/svg%3E") no-repeat 13px center;color:#fff;font:500 14px Inter,sans-serif;outline:none;} .today-search input:focus{border-color:#5AAAFF;box-shadow:0 0 0 3px rgba(90,170,255,.2);} .today-search .muted{font-size:12.5px;white-space:nowrap;}
   .tdo-p{padding:12px 0 6px;border-top:1px solid rgba(255,255,255,.1);} .tdo-p:first-child{border-top:none;} .tdo-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline;} .tdo-h .name-link{font-size:15.5px;font-weight:700;} .tdo-n{font:600 11px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);white-space:nowrap;} .tdo-pl{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;} .tdo-chip{font:600 12px 'IBM Plex Mono',monospace;border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:2px 10px;color:rgba(255,255,255,.85);} .tdo-chip b{color:#fff;} .tdo-r{color:rgba(255,255,255,.7);} .tdo-r.g{color:#3FCB7E;} .tdo-r.a{color:#FFC876;} .tdo-r.n{color:#8EC5FF;} .tdo-chip.old{opacity:.6;border-style:dashed;} .tdo-age{font-style:normal;font-weight:500;color:rgba(255,255,255,.55);} .tdo-dim{opacity:.55;} .tdo-t{margin-left:6px;font:600 10.5px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.55);white-space:nowrap;} .tdo-t.ask{color:#FFC876;} .tdo-cs{display:flex;flex-wrap:wrap;gap:6px 14px;padding:8px 0 4px;} .tdo-c{font-size:13.5px;font-weight:600;color:var(--blue);text-decoration:none;} .tdo-c:hover{text-decoration:underline;} .tdo-c.tdo-dim{opacity:.5;} .tdo-new{font:700 9.5px 'IBM Plex Mono',monospace;font-style:normal;letter-spacing:.06em;color:#8EC5FF;border:1px solid rgba(142,197,255,.6);border-radius:20px;padding:0 6px;margin-left:4px;}
   .tdr-go{text-decoration:none !important;}.tdr-urg{border-color:rgba(255,200,118,.75) !important;color:#FFC876 !important;} .td-other{margin-top:18px;} .td-other>summary{cursor:pointer;color:var(--ink-soft);font-size:13px;padding:8px 2px;user-select:none;}
   .tdboard{display:flex;flex-direction:column;gap:10px;} .tdboard .td-sec{margin:14px 2px 2px;} .tdboard .td-sec:first-child{margin-top:0;} .td-leaving{display:flex;flex-direction:column;gap:10px;}
@@ -399,6 +401,7 @@ auth.onAuthStateChanged(user => {
   <div class="phase-tabs" id="dashTabs"></div>
 
   <div id="dashPanel_today">
+    <div class="today-search"><input type="search" id="todaySearch" placeholder="Search the list: product, plant, customer…" autocomplete="off" aria-label="Search the Today list" oninput="dashTodayFilter()"><span id="todaySearchCount" class="muted"></span></div>
     <div class="tbl-wrap" style="padding:12px 14px;">
       <div id="todayWrap"><div class="empty">Loading today…</div></div>
     </div>
@@ -734,6 +737,21 @@ function todayListHtml(all){
 document.addEventListener('visibilitychange', () => { if (!document.hidden) reloadTodayIfStale(); });
 window.addEventListener('pageshow', (e) => { if (e.persisted) reloadTodayIfStale(); });
 window.addEventListener('focus', reloadTodayIfStale);
+// TODAY SEARCH (owner 2026-11-23: "poner search para filtrar todo lo que hay en la lista de dashboard"): one box above the list; every product block, group and line of Today (Offer today, Money and bids) stays only when it contains ALL the typed words
+// (accents and capitals ignored, the customers inside a closed block count). Nothing is read or written: it only shows or hides what is already drawn, and it is applied again every time Today is redrawn.
+function dashTodayMatch(text, q){
+  const norm = t => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), words = norm(q).split(/\s+/).filter(Boolean), hay = norm(text);
+  return words.every(w => hay.includes(w));
+}
+function dashTodayFilter(){
+  const inp = document.getElementById('todaySearch'), wrap = document.getElementById('todayWrap'), cnt = document.getElementById('todaySearchCount'); if (!inp || !wrap) return;
+  const q = inp.value.trim(), units = [...wrap.querySelectorAll('.tdo-p, .tdg, .td-row')].filter(el => !(el.parentElement && el.parentElement.closest('.tdo-p, .tdg, .td-row')));
+  let shown = 0;
+  units.forEach(el => { const hit = !q || dashTodayMatch(el.textContent, q); el.style.display = hit ? '' : 'none'; if (hit) shown++; });
+  wrap.querySelectorAll('.td-sec').forEach(h => { let n = h.nextElementSibling, any = !q; while (n && !any && !n.classList.contains('td-sec')){ if (n.matches('.tdo-p, .tdg, .td-row') ? n.style.display !== 'none' : [...n.querySelectorAll('.tdo-p, .tdg, .td-row')].some(u => u.style.display !== 'none')) any = true; n = n.nextElementSibling; } h.style.display = any ? '' : 'none'; });
+  if (cnt) cnt.textContent = q ? (shown ? shown + ' of ' + units.length : 'nothing matches') : '';
+}
+(function(){ const w = document.getElementById('todayWrap'); if (w && typeof MutationObserver === 'function') new MutationObserver(() => { const i = document.getElementById('todaySearch'); if (i && i.value.trim()) dashTodayFilter(); }).observe(w, { childList: true }); })();
 async function loadToday(){
   todayLoadedAt = Date.now();
   const wrap = document.getElementById('todayWrap');

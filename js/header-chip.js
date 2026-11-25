@@ -293,3 +293,13 @@ window.btFetch = async function(url, opts){
   if (fn === 'messaging') return btMqEnqueue(function(){ return btFetchOnce(url, opts, read || record); }, read || record);
   return btFetchOnce(url, opts, read || record);
 };
+
+// DARK SCROLLBARS (owner 2026-11-23: "esos scrolls están muy feos"): every scroll box of every page uses a thin BuenTrade-blue bar on a transparent track instead of the OS's white one. A page's own scrollbar rule (more specific) still wins.
+(function(){
+  var s = document.createElement('style'); s.id = 'bt-dark-scroll';
+  s.textContent = '*{scrollbar-width:thin;scrollbar-color:rgba(90,170,255,.4) transparent;}'
+    + '*::-webkit-scrollbar{width:9px;height:9px;}*::-webkit-scrollbar-track{background:transparent;}'
+    + '*::-webkit-scrollbar-thumb{background:rgba(90,170,255,.4);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}'
+    + '*::-webkit-scrollbar-thumb:hover{background:rgba(90,170,255,.65);background-clip:padding-box;}*::-webkit-scrollbar-corner{background:transparent;}';
+  (document.head || document.documentElement).appendChild(s);
+})();

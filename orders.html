@@ -10,7 +10,7 @@
 <script>
 // THE OS OPENS ON QUOTES (owner 2026-10-31: "cuando entro debe llegar a quotes… no lo pongas en find, ponlo en quotes"): the installed app was set up with Orders as its start page and keeps it until it is reinstalled. When this page is opened AS THE APP, straight from the dock
 // (standalone window, no referrer, no link parameters, first load of this window), go to Quotes. Opening Orders from a menu, a link or a browser tab is untouched.
-try { if ((window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) && !document.referrer && !location.search && !sessionStorage.getItem('btLanded')) { sessionStorage.setItem('btLanded', '1'); location.replace('/quotes.html'); } } catch (e) {}
+try { if ((window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) && !document.referrer && !location.search && !sessionStorage.getItem('btLanded')) { sessionStorage.setItem('btLanded', '1'); location.replace('/dashboard.html'); } } catch (e) {} // owner 2026-11-23: "cuando entro al OS entre por default a dashboard" — the app now opens on the Dashboard
 </script>
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
@@ -577,12 +577,18 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-k{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.4);text-transform:uppercase;}
   .oj-next{text-align:center;margin-bottom:10px;}
   .oj-next b{display:block;font:700 19px 'Space Grotesk',sans-serif;}
+  .wf-word{font:700 26px 'Space Grotesk',sans-serif;letter-spacing:-.01em;color:#fff;} .wf-word span{color:#66A3FF;}
+  .oj-orderid{text-align:center;padding:2px 0 12px;margin-bottom:8px;border-bottom:1px solid var(--line);}
+  .oj-orderid span{font:600 10px Inter,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#E8B54C;}
+  .oj-orderid b{display:block;font:700 25px 'IBM Plex Mono',monospace;color:#fff;letter-spacing:.01em;margin:3px 0 6px;}
+  .oj-route{width:100%;height:40px;display:block;} .oj-route-box{filter:drop-shadow(0 0 5px rgba(0,169,160,.85));}
+  .oj-here{font:600 12px Inter,sans-serif;color:#8CC4FF;} .oj-here i{font-style:normal;color:var(--ink-soft);margin-right:8px;letter-spacing:.14em;text-transform:uppercase;font-size:10px;}
   .oj-fact{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;}
   .oj-fact span:first-child{color:var(--ink-soft);}
   .oj-fact b{text-align:right;font-weight:600;}
   .oj-legend{display:flex;gap:12px;flex-wrap:wrap;font:500 10.5px 'IBM Plex Mono',monospace;color:var(--ink-soft);}
   .oj-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;}
-  .oj-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;padding:12px 20px;border-radius:13px;font:700 14px Inter,sans-serif;color:#04101f;background:linear-gradient(90deg,#5AAAFF,#7CE0FF);box-shadow:0 12px 30px -10px rgba(90,170,255,.9),inset 0 1px 0 rgba(255,255,255,.5);transition:.18s;position:relative;overflow:hidden;cursor:pointer;}
+  .oj-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;padding:12px 20px;border-radius:13px;font:700 14px Inter,sans-serif;color:#fff;background:linear-gradient(135deg,#1E6ADB,#3F8CFF);box-shadow:0 12px 30px -10px rgba(63,140,255,.75),inset 0 1px 0 rgba(255,255,255,.25);transition:.18s;position:relative;overflow:hidden;cursor:pointer;}
   .oj-cta:hover{transform:translateY(-2px);}
   .oj-cta.wide{width:100%;}
   .oj-cta::after{content:"";position:absolute;top:0;bottom:0;width:50%;left:-70%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);animation:ojShine 3.2s infinite;}
@@ -621,6 +627,60 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .oj-step.hz .doc-row-label{flex-basis:100%;}
   .oj-step.hz .doc-row-status{margin-left:0;flex-basis:100%;white-space:normal;}
   @media(max-width:700px){.oj-hz{grid-template-columns:minmax(0,1fr);}.oj-hz::before{display:none;}}
+  /* owner 2026-11-23: Docs 2 Factoring = PO / SO / SC / PF, the same cards as the Orders row, four across (never one under the other on a computer) */
+  .oj-hz.hz4{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+  .oj-hz.hz4 .oj-step.hz .oj-jh{padding:10px 12px;gap:6px;} .oj-hz.hz4 .oj-step.hz .nm-full{font-size:15px;} .oj-hz.hz4 .oj-step.hz .oj-jb{padding:0 12px 12px;}
+  .oj-hz.hz4 .doc-row-link{overflow-wrap:anywhere;font-size:13px;} .oj-hz.hz4 .doc-row-label{overflow-wrap:anywhere;}
+  .fd-wrap{display:flex;gap:10px;align-items:stretch;} .fd-wrap > .oj-hz{flex:1;min-width:0;} .fd-bar{display:flex;align-items:center;} .fd-bar.pc{display:none;}
+  .fd-wrap{position:relative;}
+  .fd-bar{position:absolute;top:-2px;right:0;z-index:3;}
+  .fd-bar .oj-send{width:34px;height:34px;padding:0;gap:0;border-radius:50%;justify-content:center;background:#0b1a36;box-shadow:0 0 16px rgba(90,170,255,.5);}
+  .fd-bar .oj-send::before{padding:2px;background:#5AAAFF;}
+  .fd-bar .oj-send .oj-send-go{width:100%;height:100%;border:0;background:none;color:#8CC4FF;} .fd-bar .oj-send .oj-send-go svg{width:16px;height:16px;}
+  .fd-bar .oj-send:hover{background:#12294f;box-shadow:0 0 22px rgba(90,170,255,.85);} .fd-bar .oj-send:hover .oj-send-go{background:none;transform:translateX(2px);box-shadow:none;}
+  .fd-bar::after{content:attr(data-tip);position:absolute;right:42px;top:50%;transform:translateY(-50%);white-space:nowrap;font:600 11px Inter,sans-serif;color:#fff;background:#0b1a36;border:1px solid rgba(90,170,255,.6);border-radius:8px;padding:4px 9px;opacity:0;pointer-events:none;transition:opacity .15s;}
+  .fd-bar:hover::after{opacity:1;}
+  .oj-hz.hz4 .oj-step.hz .oj-jh{flex-direction:column;align-items:center;text-align:center;} .oj-hz.hz4 .oj-step.hz .oj-jh .dt{margin:0;}
+  .oj-hz.hz4 .oj-step.hz .oj-jb{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;} .oj-hz.hz4 .oj-step.hz .oj-jb .doc-row{align-self:stretch;}
+  .oj-hz.hz4 .oj-step.hz .oj-jh .nm-full{flex:none;display:flex;align-items:center;justify-content:center;text-align:center;} .oj-hz.hz4-top .oj-step.hz .oj-jh .nm-full{min-height:2.5em;} .oj-hz.hz4 .oj-step.hz .pay-amt{font-size:15px;line-height:1.15;margin:0 0 4px;}
+  .fd-send{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin:16px 0 10px;} .fd-send.pc{display:none;}
+  /* SEND 2 FACTORING: an outlined glass pill, centred, with the Orders-list road colours on its border (amber → sky-blue → green, same as the progress line) and a round green-outlined arrow at its end, like the shield nodes. No solid fill (owner 2026-11-23) */
+  .oj-send{position:relative;display:inline-flex;align-items:center;gap:16px;padding:8px 8px 8px 26px;border-radius:999px;border:0;background:linear-gradient(90deg,rgba(255,200,118,.07),rgba(90,170,255,.08) 55%,rgba(63,203,126,.12));color:#fff;font:700 14px Inter,sans-serif;letter-spacing:.01em;cursor:pointer;box-shadow:0 0 26px -8px rgba(90,170,255,.45);transition:box-shadow .18s,background .18s;}
+  .oj-send::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:linear-gradient(90deg,#FFC876,#5AAAFF 55%,#3FCB7E);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;}
+  .oj-send .oj-send-go{width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(63,203,126,.7);background:rgba(63,203,126,.1);display:inline-flex;align-items:center;justify-content:center;color:#7CF0AE;transition:background .18s,transform .18s,box-shadow .18s;}
+  .oj-send .oj-send-go svg{width:18px;height:18px;display:block;}
+  .oj-send:hover{background:linear-gradient(90deg,rgba(255,200,118,.13),rgba(90,170,255,.15) 55%,rgba(63,203,126,.22));box-shadow:0 0 30px -4px rgba(63,203,126,.5);}
+  .oj-send:hover .oj-send-go{background:rgba(63,203,126,.28);transform:translateX(3px);box-shadow:0 0 14px rgba(63,203,126,.55);}
+  .oj-send:focus-visible{outline:2px solid #5AAAFF;outline-offset:3px;}
+  .oj-hz .oj-step.hz .oj-jb .doc-row{justify-content:center;flex-wrap:nowrap;gap:8px;} .oj-hz .oj-step.hz .doc-row .btn{padding:6px 10px !important;font-size:12px !important;flex-shrink:0;} .oj-hz .pay-acts{align-items:center;} .oj-hz .oj-note{text-align:center;} /* owner 2026-11-23: buttons centred; Resend beside the eye, in the middle, in every card */
+  .oj-hz.hz4 .oj-step.hz .oj-jb .doc-row{flex-wrap:wrap;} .oj-hz.hz4 .oj-step.hz .doc-row-label,.oj-hz.hz4 .oj-step.hz .doc-row-status{text-align:center;} /* Confirm PU … Sign & Close: a document row with a name and a status wraps inside the cube instead of overflowing it (owner 2026-11-24) */
+  .oj-hz.hz4 .oj-step.hz .oj-jc{min-height:168px;} /* all twelve cubes the same size (owner 2026-11-24: "si que queden iguales") */
+  /* ONE grid for all the cubes after the Orders row: they follow one another with no gaps, four across; the thin line runs from each circle to the next (owner 2026-11-24: "todos seguidos sin espacios") */
+  .oj-hz.oj-flow::before{display:none;} .oj-flow .oj-step.hz{position:relative;} .oj-flow .oj-step.hz .oj-nd{position:relative;left:0;top:0;z-index:2;}
+  .oj-flow .oj-step.hz::before{content:"";position:absolute;left:15px;right:-10px;top:14px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);z-index:1;} .oj-flow .oj-step.hz:nth-of-type(4n)::before{right:15px;}
+  .oj-flow .fd-send{grid-column:1 / -1;margin:0;} @media(max-width:900px){.oj-flow .oj-step.hz::before{display:none;}}
+  /* EVERYTHING IN ONE SCREEN, no scroll (owner 2026-11-24: "todo cabe en una pantalla sin necesidad de scroll"): on a computer the Workflow is compact — smaller circles, cubes and left cards — so the twelve cubes and the order card fit together */
+  @media (min-width:901px){
+    #orderDetailBox{padding-top:12px;padding-bottom:12px;}
+    #orderDetailBox{display:flex;flex-direction:column;} #orderDetailBody{flex:1;display:flex;flex-direction:column;} #orderDetailBox .oj{margin:auto 0;} /* centred in the screen, grows with its height (owner 2026-11-24: "muy arriba desproporcionado puedes agrandar y centrar sin scroll") */
+    #orderDetailBox .oj-hz.hz4 .oj-step.hz .nm-full{font-size:clamp(13.5px,calc(100vh / 44),17px);} #orderDetailBox .oj-ring{width:clamp(92px,calc((100vh - 360px) / 2.6),140px);height:clamp(92px,calc((100vh - 360px) / 2.6),140px);} #orderDetailBox .oj-ring svg{width:100%;height:100%;}
+    #orderDetailBox .oj{gap:18px;grid-template-columns:260px minmax(0,1fr);} #orderDetailBox .oj-side{gap:8px;} #orderDetailBox .oj-card{padding:10px 14px;border-radius:16px;}
+    #orderDetailBox .oj-ring{margin:0 auto 4px;} #orderDetailBox .oj-ring .c b{font-size:22px;} #orderDetailBox .oj-next{margin-bottom:6px;} #orderDetailBox .oj-next b{font-size:15px;}
+    #orderDetailBox .oj-cta.wide{padding:8px 14px;font-size:13px;} #orderDetailBox .oj-fact{padding:4px 0;font-size:12px;} #orderDetailBox .oj-route{height:30px;} #orderDetailBox .oj-legend{margin-top:0;}
+    #orderDetailBox .oj-hz{gap:8px;margin-bottom:6px;} #orderDetailBox .oj-hz::before{top:11px;} #orderDetailBox .oj-flow .oj-step.hz::before{top:11px;}
+    #orderDetailBox .oj-step.hz .oj-nd{width:24px;height:24px;margin:0 0 4px;font-size:12px;} #orderDetailBox .oj-step.hz .oj-nd svg{width:13px;height:13px;}
+    #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jh,#orderDetailBox .oj-step.hz .oj-jh{padding:7px 10px;gap:3px;} #orderDetailBox .oj-hz.hz4 .oj-step.hz .nm-full,#orderDetailBox .oj-step.hz .nm-full{font-size:13.5px;} #orderDetailBox .oj-hz.hz4-top .oj-step.hz .oj-jh .nm-full{min-height:0;}
+    #orderDetailBox .oj-step.hz .oj-chip{padding:2px 8px;font-size:9px;} #orderDetailBox .oj-step.hz .oj-jh .dt{font-size:10.5px;}
+    #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jb,#orderDetailBox .oj-step.hz .oj-jb{padding:0 10px 8px;} #orderDetailBox .oj-step.hz .oj-jb .doc-row{padding:5px 8px;gap:6px;} #orderDetailBox .oj-hz .oj-step.hz .doc-row .btn{padding:3px 8px !important;} #orderDetailBox .oj-hz.hz4 .oj-step.hz .pay-amt{font-size:14px;margin:0 0 2px;}
+    #orderDetailBox .oj-hz.hz4 .oj-step.hz .oj-jc{min-height:clamp(0px,calc((100vh - 206px) / 3),230px);display:flex;flex-direction:column;justify-content:center;} #orderDetailBox .oj-step.hz .oj-note{font-size:11px;} #orderDetailBox .oj-step.hz .oj-cta{padding:6px 12px;font-size:12px;}
+  }
+  .oj-hz.hz4.hz1{grid-template-columns:minmax(0,1fr);max-width:640px;} .oj-hz.hz4.hz1::before{display:none;}
+  .oj-step.hz.blinkcard .oj-jc{animation:ojCardBlink 1.4s ease-in-out infinite;} @keyframes ojCardBlink{0%,100%{box-shadow:0 0 0 0 rgba(63,203,126,0);}50%{box-shadow:0 0 26px 1px rgba(63,203,126,.55);}}
+  .pay-amt{font:700 22px 'IBM Plex Mono',monospace;color:#fff;margin:2px 0 10px;} .pay-acts{display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
+  .oj-send.blink{animation:ojSendBlink 1.3s ease-in-out infinite;} @keyframes ojSendBlink{0%,100%{box-shadow:0 0 22px -6px rgba(63,203,126,.45);}50%{box-shadow:0 0 38px 2px rgba(63,203,126,.9),0 0 18px 1px rgba(255,200,118,.55);}}
+  @media(max-width:900px){.oj-hz.hz4{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:700px){.oj-hz.hz4{grid-template-columns:minmax(0,1fr);}}
+
   .oj-step{position:relative;margin-bottom:10px;}
   .oj-nd{position:absolute;left:-44px;top:10px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:#0b1a36;border:2px solid;z-index:2;}
   .oj-nd svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
@@ -876,41 +936,6 @@ auth.onAuthStateChanged(user => {
      never just the trader's own typed claim. -->
 <input type="file" id="bankConfirmationInput" accept=".pdf,.png,.jpg,.jpeg" style="display:none;">
 
-<!-- Real ask 2026-09-21, confirmed word by word against the signed Summar Factoring Proposal
-     (9/18/2026) and directly by the user: when financing_method is 'summar', Summar — not
-     BuenTrade — pays the plant the full cost of the load, using their own 80% P.O. Financing
-     advance (80% of the SALE price per the signed proposal) plus what BuenTrade wires them here —
-     only the part of the cost that advance doesn't cover (see summarWireAmount, corrected 2026-09-28). BuenTrade → Summar → Planta, never BuenTrade → Planta
-     directly for these orders. Same dark modal classes every other modal in this file already
-     uses (.email-modal-box/.email-modal-overlay) — no new component. -->
-<div id="summarPaymentOverlay" class="email-modal-overlay" style="display:none;">
-  <div class="email-modal-box" style="max-width:460px;">
-    <h3>Pay via Summar</h3>
-    <div class="email-modal-from" id="summarPaymentIntro"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;">
-      <div style="background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:10px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:6px;">Sale Price</div>
-        <div id="summarPaySalePrice" style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);"></div>
-      </div>
-      <div style="background:rgba(255,255,255,.05);border:1.5px solid rgba(232,181,76,.4);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:10px;color:#E8B54C;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:6px;">Wire to Summar</div>
-        <div id="summarPayAmount" style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;color:var(--ink);"></div>
-      </div>
-    </div>
-    <div style="background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.7;color:var(--ink-soft);">
-      <b style="color:var(--ink);">Summar Financial, LLC</b><br>
-      Bank of America — 701 Brickell Ave., Miami, FL 33131<br>
-      Account #: 0036 6939 6990<br>
-      ABA: 026009593 (wire) / 063000047 (ACH) — SWIFT: BOFAUS3N
-    </div>
-    <div class="email-modal-actions">
-      <button class="btn secondary" onclick="closeSummarPaymentOverlay()">Cancel</button>
-      <button class="btn secondary" onclick="window.open(BANK_LOGIN_URL,'_blank')">Open Grove Bank →</button>
-      <button class="wa-btn" onclick="sendPaymentToSummar(summarPaymentOrderNumber)">Send Payment to Summar</button>
-    </div>
-  </div>
-</div>
-
 <!-- Owner 2026-11-21, step 4 "Docs 2 Factoring": the PO and the SO go by themselves; the trader adds the client's confirmation (photo, screenshot or PDF) from the phone or the computer, then sends. -->
 <div id="factoringDocsOverlay" class="email-modal-overlay" style="display:none;">
   <div class="email-modal-box" style="max-width:460px;">
@@ -924,6 +949,7 @@ auth.onAuthStateChanged(user => {
     <div class="email-modal-actions">
       <button class="btn secondary" onclick="closeFactoringDocsOverlay()">Cancel</button>
       <button class="btn secondary" onclick="document.getElementById('factoringDocsInput').click()">Add client confirmation</button>
+      <button class="btn secondary" id="factoringDocsManual" onclick="factoringDocsManual()" title="Already sent outside the system: saves the files from your order folder and marks the step done, no e-mail goes out">Already sent — save</button>
       <button class="wa-btn" id="factoringDocsSend" onclick="sendFactoringDocs()">Send to Summar</button>
     </div>
   </div>
@@ -1438,6 +1464,11 @@ function factoringDocsAllowPayment(o){
   if (!o || !(o.financing && o.financing.financing_method === 'summar')) return true;
   return !!(o.factoring_docs_sent_at || o.summar_payment_sent_at || o.plant_paid_at);
 }
+// Owner 2026-11-23 (the step after Docs 2 Factoring): the documents went to Summar and the mail reader has not yet read Summar's reply saying the breakdown is correct (shipments.factoring_confirmed_at) — Pay 2 Factoring waits.
+// An order already sent to Summar for payment or already paid never goes back to waiting, so every order that was in flight before this step existed keeps working.
+function factoringAwaitsSummarOk(o){
+  return !!(o && o.financing && o.financing.financing_method === 'summar' && o.factoring_docs_sent_at && !o.factoring_confirmed_at && !o.summar_payment_sent_at && !o.plant_paid_at);
+}
 // Owner 2026-11-21 (new 12-step flow): the names of the steps as he dictated them. Only what is SHOWN changes; the internal labels (the keys the phases, the Next Action and the payment rows match on) stay as they were.
 const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release 2 Carrier', 'Pick up': 'PU 2 Client', 'Sent to customs': 'Docs to border', Delivered: 'Create Invoice', Invoice: 'Invoice client', Signature: 'Sign & Close' };
 // The places that SHOW a name call it as `(typeof stepName === 'function' ? stepName : (l => l))(label, o)`: a page piece that is read on its own (the protected tests build the render functions alone) keeps the original label.
@@ -1802,17 +1833,29 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   // Owner 2026-11-19: "nunca confirmé que había mandado email y sale como delivered" — the step is done ONLY when he recorded the plant's confirmation; a payment already under way without any status
   // request (e.g. 1002, paid before this step existed) no longer shows it as done — the step is simply not part of that order's line.
   // Owner 2026-11-21 (new 12-step flow, step 4): "Docs 2 Factoring" — the PO, the SO and the client's confirmation to Summar; only for orders financed by Summar that have not been paid or sent to Summar yet (or that already did it).
-  if (isSummarFinancedTimeline && (o.factoring_docs_sent_at || !(o.plant_paid_at || o.summar_payment_sent_at))){
-    entries.push(miniEntry({ icon: '✉', label: 'Docs 2 Factoring', done: !!o.factoring_docs_sent_at, date: o.factoring_docs_sent_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: `sendFactoringDocsClick('${o.order_number}')` }));
+  // owner 2026-11-23: "todo es financiado por Summar y no sale el paso 4" — every Summar order shows step 4, also the one paid before the step existed (it stays NOT done until he records it)
+  // owner 2026-11-23 ("siguiente paso esperar que llegue la proforma para poder seguir con factoring"): the documents go to Summar only once the plant's proforma has arrived (filed by the mail reader or uploaded by hand)
+  const hasProforma = (o.proforma_invoices || []).length > 0;
+  if (isSummarFinancedTimeline){
+    entries.push(miniEntry({ icon: '✉', label: 'Docs 2 Factoring', done: !!o.factoring_docs_sent_at, date: o.factoring_docs_sent_at, wait: !docBeforePaymentDone || !hasProforma, waitReason: !docBeforePaymentDone ? docBeforePaymentReason : "Waiting for the plant's proforma.", onClick: `sendFactoringDocsClick('${o.order_number}')` }));
   }
+  // nothing after Docs 2 Factoring jumps ahead of it while it waits for the plant's proforma (owner 2026-11-23)
+  const waitsForProforma = !!isSummarFinancedTimeline && !hasProforma && !o.factoring_docs_sent_at && !(o.plant_paid_at || o.summar_payment_sent_at);
   if (o.pickup_status_sent_at || o.pickup_status_confirmed_at || !(o.plant_paid_at || o.summar_payment_sent_at)){
-    entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: !!o.pickup_status_confirmed_at, date: o.pickup_status_confirmed_at, wait: !docBeforePaymentDone, waitReason: docBeforePaymentReason, onClick: o.pickup_status_sent_at ? `confirmPlantStatusClick('${o.order_number}')` : `askPlantStatusClick('${o.order_number}')` }));
+    entries.push(miniEntry({ icon: '✉', label: 'Plant status', done: !!o.pickup_status_confirmed_at, date: o.pickup_status_confirmed_at, wait: !docBeforePaymentDone || waitsForProforma, waitReason: waitsForProforma ? "Waiting for the plant's proforma." : docBeforePaymentReason, onClick: o.pickup_status_sent_at ? `confirmPlantStatusClick('${o.order_number}')` : `askPlantStatusClick('${o.order_number}')` }));
   }
-  entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: !docBeforePaymentDone || !plantStatusAllowsPayment(o), waitReason: !docBeforePaymentDone ? docBeforePaymentReason : 'The plant must confirm the load status first.', onClick: payPlantOnClick }));
+  // Owner 2026-11-23: when Summar's reply saying the breakdown is correct is read, the wire is due — Pay 2 Factoring blinks (the same urgent blink as Release #) until the payment to Summar is recorded.
+  const wireNow = !!(isSummarFinancedTimeline && o.factoring_confirmed_at && !o.summar_payment_sent_at && !o.plant_paid_at && docBeforePaymentDone && plantStatusAllowsPayment(o));
+  entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: !docBeforePaymentDone || !plantStatusAllowsPayment(o), waitReason: !docBeforePaymentDone ? docBeforePaymentReason : 'The plant must confirm the load status first.', onClick: payPlantOnClick, urgent: wireNow }));
   // Owner 2026-11-21 (step 4): a Summar order whose documents have not gone to Summar yet waits here too (the line above stays as the owner approved it on 2026-11-19).
   if (!factoringDocsAllowPayment(o) && docBeforePaymentDone && plantStatusAllowsPayment(o)){
     entries.pop();
     entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: !!o.plant_paid_at, date: o.plant_paid_at, wait: true, waitReason: 'Send the documents to Summar first.', onClick: payPlantOnClick }));
+  }
+  // Owner 2026-11-23: after the documents went to Summar, paying waits for Summar's OK to the breakdown (read from its reply by the mail reader).
+  if (factoringAwaitsSummarOk(o) && entries.length && entries[entries.length - 1].label === 'Pay Plant'){
+    entries.pop();
+    entries.push(miniEntry({ icon: '$', label: 'Pay Plant', done: false, date: null, wait: true, waitReason: 'Waiting for Summar to confirm the numbers.', onClick: payPlantOnClick }));
   }
   // Real gap found 2026-09-07: "revisa todo... faltan mas cosas" — recordReleaseNumber/
   // sendReleaseNumberToCarrier only lived inside the collapsed Documentos panel, invisible on the
@@ -1923,7 +1966,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   // reads that same order, no new sequence invented.
   const PHASE_DEFS = [
     { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
-    { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Pay Plant', 'Send Release #'] },
+    { name: 'Prepayment', labels: ['Docs 2 Factoring', 'Pay Plant', 'Send Release #'] },
     { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Sent to customs', 'Delivered'] },
     { name: 'Closing', labels: ['Invoice', 'Signature'] },
   ];
@@ -2143,7 +2186,7 @@ function computeAttentionItems(){
         // Owner 2026-11-19: it shows once the plant confirmed the load status (until then the items above ask for it).
         // Owner 2026-11-21 (step 4): a Summar order whose documents have not gone to Summar yet is not asked to pay.
         if (factoringDocsAllowPayment(o))
-        if (plantStatusAllowsPayment(o)) items.push({ orderNumber: label, order_number: o.order_number, text: `Pay the plant — ${productName}`, btn: payBtnHtml });
+        if (plantStatusAllowsPayment(o) && !factoringAwaitsSummarOk(o)) items.push({ orderNumber: label, order_number: o.order_number, text: o.factoring_confirmed_at && isSummarFinancedItem && !o.summar_payment_sent_at ? `Pay ${(() => { const w = summarWireAmount(o, Number(o.sale_amount) || 0); return w == null ? '' : '$' + w.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' '; })()}to Summar — ${productName}` : `Pay the plant — ${productName}`, btn: payBtnHtml });
       }
     }
     // Owner 2026-11-19: three days before pick-up, ask the plant for the status of the load (same day-count as shipment-alerts-poll); the email opens for HIS approval.
@@ -2430,6 +2473,9 @@ function orderDocRows(o, nextActionLabel){
       if (!factoringDocsAllowPayment(o)){
         paymentBtn = docRowBtn('Docs 2 Factoring', `sendFactoringDocsClick('${o.order_number}')`);
         paymentStatus = 'Send the documents to Summar first';
+      } else if (factoringAwaitsSummarOk(o)){
+        paymentBtn = '';
+        paymentStatus = 'Waiting for Summar to confirm the numbers';
       } else if (!o.summar_payment_sent_at){
         paymentBtn = docRowBtn('Pay via Summar', `showSummarPaymentBreakdown('${o.order_number}')`);
         paymentStatus = 'Not paid — via Summar';
@@ -2500,6 +2546,7 @@ function orderDocRows(o, nextActionLabel){
       proforma: proformaHtml,
       salesConfirmation: salesConfirmationHtml,
       bankReceipt: receivedDocsOf('bank_receipt', 'Bank receipt'),
+      summarOk: receivedDocsOf('summar_confirmation', "Summar's OK to the numbers"),
       plantOrder: receivedDocsOf('plant_order_confirmation', "Plant's order confirmation"),
       appointment: receivedDocsOf('pickup_appointment', 'Pickup appointment'),
       pickup: pickupDocsHtml,
@@ -2785,7 +2832,7 @@ function toggleJourneyStep(orderNumber, i){
   journeyOpen.set(orderNumber, set);
   refreshOpenOrderDetail();
 }
-// Owner 2026-11-22: "no despliegues todo cuando entro por default; déjalo cerrado Documentation, Logistics, Closing; blinking el doc que está pendiente". The phases are closed every time an order is opened; a click opens one.
+// Owner 2026-11-22 had the phases closed by default; owner 2026-11-24 reversed it ("deja esto abierto cuando lo abra y dejemos un solo nombre, Workflow"): one "Workflow" header, OPEN every time an order is opened; a click on it closes it (key -1).
 const journeyPhaseOpen = new Map(); // order_number -> Set of phase indexes opened by hand
 function toggleJourneyPhase(orderNumber, pi){
   const set = journeyPhaseOpen.get(orderNumber) || new Set();
@@ -2795,10 +2842,21 @@ function toggleJourneyPhase(orderNumber, pi){
 }
 const JOURNEY_PHASES = [
   { name: 'Documentation', labels: ['PO', 'SO', 'FO'] },
-  { name: 'Payment & Release', labels: ['Docs 2 Factoring', 'Plant status', 'Pay Plant', 'Send Release #'] },
+  { name: 'Prepayment', labels: ['Docs 2 Factoring', 'Plant status', 'Pay Plant', 'Send Release #'] }, // owner 2026-11-23: "puede ser prepayment… con ese correo esperamos que nos confirmen para pagar" (before: Payment & Release)
   { name: 'Logistics', labels: ['Confirm PU', 'Pick up', 'Sent to customs', 'Delivered'] },
   { name: 'Closing', labels: ['Invoice', 'Signature'] },
 ];
+// THE ORDER'S NUMBER AND WHERE IT IS NOW, in the BuenTrade logo design (owner 2026-11-24: "el consecutivo de la orden ponlo mas significativo arriba de product… y donde esta en este momento un workflow en diseno del logo"): the logo's wave (#5FA8E8) is the track — solid up to where the order is, faint after it — and the logo's teal box (#00A9A0) rides on it at the current point.
+function orderRouteHtml(orderNumber, frac, nowName){
+  const esc = escapeHtml, W = 220, H = 40, x0 = 14, x1 = W - 14;
+  const f = Math.max(0, Math.min(1, Number(frac) || 0));
+  const yAt = x => H / 2 + 8 * Math.sin(((x - x0) / (x1 - x0)) * Math.PI * 3);
+  const pts = []; for (let x = x0; x <= x1; x += 4) pts.push([x, yAt(x)]);
+  const bx = x0 + f * (x1 - x0), by = yAt(bx);
+  const line = list => 'M' + list.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' L');
+  const done = pts.filter(p => p[0] <= bx).concat([[bx, by]]);
+  return `<div class="oj-orderid"><span>Order</span><b>${esc(orderNumber)}</b><svg class="oj-route" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path class="oj-route-all" d="${line(pts)}" stroke="#5FA8E8" stroke-opacity=".25" stroke-width="2.4" fill="none" stroke-linecap="round"/><path class="oj-route-done" d="${line(done)}" stroke="#5FA8E8" stroke-width="2.6" fill="none" stroke-linecap="round"/><rect class="oj-route-box" x="${(bx - 8).toFixed(1)}" y="${(by - 5).toFixed(1)}" width="16" height="10" rx="1.8" fill="#00A9A0"/></svg><div class="oj-here"><i>Now</i>${esc(nowName)}</div></div>`;
+}
 // THE HISTORY OF WHAT WENT OUT, inside the step it belongs to (owner 2026-11-21): date and hour (Miami), channel, From, To, CC, status. The newest five of each step.
 const SEND_STEP_OF = { po: 'PO', so: 'SO', fo: 'FO', factoring_docs: 'Docs 2 Factoring', summar_payment: 'Pay Plant', plant_payment: 'Pay Plant', pickup_status: 'Pay Plant', release_number: 'Send Release #',
   picked_up: 'Pick up', pickup_docs_request: 'Pick up', customs: 'Sent to customs', invoice: 'Invoice' };
@@ -2810,6 +2868,19 @@ function sendHistoryHtml(o, label){
     const parts = [when(g.sent_at), g.channel === 'whatsapp' ? 'WhatsApp' : 'E-mail', g.from_address ? 'from ' + g.from_address : '', g.to_addresses ? 'to ' + g.to_addresses : '', g.cc_addresses ? 'cc ' + g.cc_addresses : '', g.status].filter(Boolean);
     return `<div class="oj-note">${escapeHtml(parts.join(' · '))}</div>`;
   }).join('');
+}
+// A document row (file name link + status) becomes ONE row of eyes for the cube; its buttons (if any) stay beside the eye. A row without a file link is left as it was.
+function cubeEyesOnly(html){
+  const eyes = [];
+  const rest = String(html || '').replace(/<div class="doc-row[^"]*">((?:(?!<\/div>)[^])*)<\/div>/g, (m, inner) => {
+    const a = inner.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/);
+    if (!a){ const only = inner.match(/<(button|label)\b[^]*?<\/\1>/g) || []; return only.length ? `<div class="doc-row">${only.join('')}</div>` : ''; } // a row that is only a name and a status ("Not generated", "Not signed yet") is not drawn: the chip already says Waiting, like the cubes above
+    const st = inner.match(/<span class="doc-row-status[^"]*">([^<]*)<\/span>/);
+    const btns = inner.match(/<(button|label)\b[^]*?<\/\1>/g) || [];
+    eyes.push(`<a class="btn secondary" style="padding:6px 10px;" href="${a[1]}" target="_blank" rel="noopener" title="${a[2]}${st ? ' — ' + st[1] : ''}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>${btns.join('')}`);
+    return '';
+  });
+  return rest + (eyes.length ? `<div class="doc-row" style="flex-wrap:nowrap;">${eyes.join('')}</div>` : ''); // all the eyes on one line
 }
 const HZ_TITLES = { PO: 'Purchase Order', SO: 'Sales Order', FO: 'Freight Order' }; // owner 2026-11-23: the Orders cards carry the full names, not PO / SO / FO
 function renderJourney(o, attentionOrderNumbers){
@@ -2865,35 +2936,49 @@ function renderJourney(o, attentionOrderNumbers){
   const nxWait = !tl.nextActionEntry ? steps.find(x => !x.done && !x.na) : null;
   const nx = tl.nextActionEntry && tl.nextActionEntry.label === 'Plant status' ? { ...tl.nextActionEntry, label: 'Pay Plant' } : tl.nextActionEntry; // the plant-status action is shown as part of the pay step (owner 2026-11-22)
   const nextBtn = nx && nx.onClickRaw ? `<button class="oj-cta wide ${urgent ? 'urgent' : ''}" onclick="${nx.onClickRaw}">${escapeHtml(nx.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(nx.label, o))} →</button>` : '';
-  let spine = '';
+  let spine = '', flow = '', flowBar = ''; // flow = ALL the cubes after the Orders row, one grid, one after another with no gaps (owner 2026-11-24: "todos seguidos sin espacios")
   const phaseOpenSet = journeyPhaseOpen.get(o.order_number) || new Set();
+  // ONE name, on the title bar (owner 2026-11-24: "dejemos un solo nombre, Workflow" · "quita este, ya hay uno arriba"): the phase headers are gone and so is the inner "Workflow" header; every step is always shown, open, under the title. The count of the flow is on the wheel.
+  const wfOpen = true;
   JOURNEY_PHASES.forEach((ph, pi) => {
     const idxs = steps.map((x, i) => i).filter(i => ph.labels.includes(steps[i].label));
     if (!idxs.length) return;
-    const isPhaseOpen = phaseOpenSet.has(pi);
-    const nowIdx = idxs.find(i => steps[i].now);
-    const pendingName = nowIdx != null && !isPhaseOpen ? `<u class="oj-pg-now ${urgent ? 'urgent' : ''}">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(steps[nowIdx].label, o))}</u>` : '';
-    spine += `<div class="oj-pg ${isPhaseOpen ? 'open' : ''}${nowIdx != null ? ' has-now' : ''}" onclick="toggleJourneyPhase('${o.order_number}',${pi})"><b>${ph.name === 'Documentation' ? 'Orders' : ph.name}</b><span></span>${pendingName}<em>${idxs.filter(i => steps[i].done && !steps[i].na).length}/${idxs.filter(i => !steps[i].na).length}</em><i class="oj-pg-cv">${isPhaseOpen ? '▾' : '▸'}</i></div>`;
-    const hz = ph.name === 'Documentation'; // owner 2026-11-23: PO / SO / FO side by side, not stacked
-    if (hz) spine += `<div class="oj-hz${isPhaseOpen ? ' open' : ''}">`;
+    // owner 2026-11-23 ("quitas orders: antes de llegar ahí ya las habremos enviado"): PO, SO and FO go out when the order is created (Offers); once all of them are sent the Orders row is not shown — it comes back by itself if one is still unsent, so it can be sent
+    if (ph.name === 'Documentation' && idxs.every(i => steps[i].done || steps[i].na)) return;
+    const isPhaseOpen = wfOpen;
+    const hz4 = ph.name === 'Logistics' || ph.name === 'Closing'; // owner 2026-11-24 ("vuelve los 12 pasos igual en diseno todos al lado de los otros"): Confirm PU … Sign & Close are the same cubes, side by side, not stacked rows
+    const hzDoc = ph.name === 'Documentation';
+    const hz = hzDoc || hz4; // owner 2026-11-23: PO / SO / FO side by side, not stacked
+    if (hzDoc) spine += `<div class="oj-hz${isPhaseOpen ? ' open' : ''}">`;
+    let releaseBesideWire = false;
     idxs.forEach(i => {
       const x = steps[i];
+      if (x.label === 'Docs 2 Factoring' && o.financing && o.financing.financing_method === 'summar'){ const f = factoringHzHtml(o, rows, isPhaseOpen, true); flow += f.cards + f.note; flowBar = f.bar; return; } // the four documents as cards side by side, the same as the Orders row (owner 2026-11-23)
+      if (x.label === 'Pay Plant' && o.financing && o.financing.financing_method === 'summar'){
+        const rel = idxs.map(k => steps[k]).find(z => z.label === 'Send Release #' && !z.na); // the Release cubes sit on the same row, beside Wire Factoring (owner 2026-11-24)
+        if (rel){ releaseBesideWire = true; flow += payHzHtml(o, isPhaseOpen, releaseHzHtml(o, rel, isPhaseOpen, true, 1), true); } else flow += payHzHtml(o, isPhaseOpen, '', true);
+        return;
+      } // Pay 2 Factoring as the same four cards (owner 2026-11-23: "quita lo que hay ahí hoy y hazlo")
+      if (x.label === 'Send Release #' && !x.na){ if (!releaseBesideWire) flow += releaseHzHtml(o, x, isPhaseOpen, true); return; } // Release 2 Carrier as the same card, the same size, the same pill button as Wire Factoring (owner 2026-11-24: "cuadros iguales")
+      const cube = hz4 || (x.na && x.label === 'Send Release #'); // a load with no carrier of ours: Release is N/A, drawn as the same cube in the same grid (owner 2026-11-24: "mejor NA")
       const z = x.done ? 'done' : x.now ? 'now' : 'wait';
       const isOpen = z === 'now' || opened.has(i);
       let inner = own[x.label] || '';
       if (i === payIdx) inner += rows.payment;
-      if (x.label === 'Pay Plant') inner += rows.proforma + (rows.bankReceipt || '');
+      if (x.label === 'Pay Plant') inner += (rows.summarOk || '') + rows.proforma + (rows.bankReceipt || '');
       if (x.na) inner = `<div class="oj-note">N/A — this load has no ${x.label === 'FO' ? 'freight order' : 'carrier'} of ours.</div>`;
       else if (z === 'wait' && x.info) inner += `<div class="oj-note">${escapeHtml(x.info)}</div>`;
       if (z === 'now' && x.onClickRaw) inner += `<button class="oj-cta ${urgent ? 'urgent' : ''}" onclick="${x.onClickRaw}">${escapeHtml(x.actionTitle || (typeof stepName === 'function' ? stepName : (l => l))(x.label, o))} →</button>`;
       if (z === 'done' && x.redo && !own[x.label]) inner += `<button class="oj-ghost" onclick="${x.redo}">Open</button>`;
-      if (z === 'done' && !inner) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`;
-      if (!hz) inner += sendHistoryHtml(o, x.label); // the Orders cards (owner 2026-11-23) show no history lines; every send stays kept in order_send_log
+      if (z === 'done' && !inner && !cube) inner = `<div class="oj-note">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}${x.dateStr ? ' — ' + escapeHtml(x.dateStr) : ''}</div>`; // a cube already says its name and date
+      if (cube) inner = cubeEyesOnly(inner); // same as the cubes above: a document is only its eye (the file name and status ride in its tooltip), so the cube keeps the Orders height (owner 2026-11-24: "esto no fue lo que pedi")
+      if (!hz && !cube) inner += sendHistoryHtml(o, x.label); // the Orders cards (owner 2026-11-23) show no history lines; every send stays kept in order_send_log
       const chip = x.na ? '<span class="oj-chip wait">N/A</span>' : z === 'done' ? `<span class="oj-chip done">✓ ${x.label === 'Signature' ? 'Closed' : 'Done'}</span>` : z === 'now' ? `<span class="oj-chip now ${urgent ? 'urgent' : ''}"><i></i>Next</span>` : '<span class="oj-chip wait">Waiting</span>';
-      spine += `<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz ? ' hz' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${hz && HZ_TITLES[x.label] ? `<span class="nm-full">${HZ_TITLES[x.label]}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`;
+      (cube ? (t => { flow += t; }) : (t => { spine += t; }))(`<div class="oj-step ${z} ${z === 'now' && urgent ? 'urgent' : ''} ${isOpen ? 'open' : ''} ${isPhaseOpen ? '' : 'pc'}${hz || cube ? ' hz' : ''}"><div class="oj-nd">${z === 'done' ? OC_ICO.check : x.icon}</div><div class="oj-jc"><div class="oj-jh" onclick="toggleJourneyStep('${o.order_number}',${i})"><span class="nm">${escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o))}</span>${chip}${(hz || cube) && (HZ_TITLES[x.label] || cube) ? `<span class="nm-full">${HZ_TITLES[x.label] || (x.label === 'Send Release #' ? 'Release #' : escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(x.label, o)))}</span>` : ''}<span class="dt">${escapeHtml(z === 'done' ? x.dateStr : '')}</span><span class="cv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div class="oj-jb">${inner}</div></div></div>`);
     });
-    if (hz) spine += '</div>';
+    if (hzDoc) spine += '</div>';
   });
+  if (flow) spine += `<div class="oj-hz hz4 oj-flow${wfOpen ? ' open' : ''}">${flow}${flowBar}</div>`;
   const pu = ocPickupDay(o), de = ocDeliveryDay(o);
   const carrier = o.carrier && o.carrier.name ? `<div class="oj-fact"><span>Carrier</span><b>${escapeHtml(o.carrier.name)}</b></div>` : '';
   const qt = o.sent_offer_id ? `<div class="oj-fact"><span>Quote</span><button class="oj-ghost" style="padding:4px 12px;" onclick="openOrderQT('${o.order_number}')" title="Open QT">QT</button></div>` : '';
@@ -2901,7 +2986,7 @@ function renderJourney(o, attentionOrderNumbers){
     <div class="oj-side">
       <div class="oj-card"><div class="oj-ring"><svg viewBox="0 0 150 150"><circle cx="75" cy="75" r="${R}" stroke="rgba(255,255,255,.1)"/><circle cx="75" cy="75" r="${R}" stroke="#5AAAFF" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/></svg><div class="c"><b>${Math.round(pct * 100)}%</b><span class="oj-k">${done} of ${total}</span></div></div>
         <div class="oj-next"><div class="oj-k">Next</div><b>${nx ? escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nx.label, o)) : nxWait ? escapeHtml((typeof stepName === 'function' ? stepName : (l => l))(nxWait.label, o)) : 'All done'}</b>${nxWait && nxWait.info ? `<div class="oj-note">Waiting — ${escapeHtml(nxWait.info)}</div>` : ''}</div>${nextBtn}</div>
-      <div class="oj-card"><div class="oj-fact" style="border-top:0;padding-top:0"><span>Product</span><b>${escapeHtml(fullProductLabel(o) || '—')}</b></div><div class="oj-fact"><span>Plant</span><b>${escapeHtml(o.plant_name || '—')}</b></div>${carrier}<div class="oj-fact"><span>Pickup</span><b>${pu ? escapeHtml(ocFmtDay(pu)) : '—'}</b></div><div class="oj-fact"><span>Delivery</span><b>${de ? escapeHtml(ocFmtDay(de)) : '—'}</b></div>${qt}</div>
+      <div class="oj-card">${orderRouteHtml(o.order_number, pct, nx ? (typeof stepName === 'function' ? stepName : (l => l))(nx.label, o) : nxWait ? (typeof stepName === 'function' ? stepName : (l => l))(nxWait.label, o) : 'All done')}<div class="oj-fact" style="border-top:0;padding-top:0"><span>Customer</span><b>${escapeHtml(o.customer_name || '—')}</b></div><div class="oj-fact"><span>Product</span><b>${escapeHtml(fullProductLabel(o) || '—')}</b></div><div class="oj-fact"><span>Plant</span><b>${escapeHtml(o.plant_name || '—')}</b></div>${carrier}<div class="oj-fact"><span>Pickup</span><b>${pu ? escapeHtml(ocFmtDay(pu)) : '—'}</b></div><div class="oj-fact"><span>Delivery</span><b>${de ? escapeHtml(ocFmtDay(de)) : '—'}</b></div>${qt}</div>
       <div class="oj-legend"><span><i style="background:#3FCB7E"></i>done</span><span><i style="background:#5AAAFF"></i>next</span><span><i style="background:rgba(255,255,255,.3)"></i>waiting</span></div>
     </div>
     <div class="oj-spine"><div class="oj-fillbar" style="height:calc((100% - 20px) * ${pct.toFixed(3)})"></div>${spine}</div>
@@ -2974,12 +3059,13 @@ function renderOrderCardBody(o, attentionOrderNumbers){ return renderJourney(o, 
 // Real ask 2026-09-08: "si tu le das click en un boton te salga grande y puedas ver que estas
 // haciendo" — opens the full detail (everything renderOrderCardBody builds) big, in its own modal.
 async function openOrderDetail(orderNumber){
-  journeyPhaseOpen.delete(orderNumber); // every phase starts closed (owner 2026-11-22)
+  journeyPhaseOpen.delete(orderNumber); // the Workflow starts open (owner 2026-11-24)
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   openOrderNumber = orderNumber;
   const attentionOrderNumbers = new Set(computeAttentionItems().map(it => it.order_number));
-  document.getElementById('orderDetailTitle').innerHTML = `<span class="order-num" style="font-size:18px;">${escapeHtml(o.order_number)}</span> <span class="muted" style="font-weight:600;">— ${escapeHtml(o.customer_name || '')}</span>`;
+  // owner 2026-11-24 ("quitalo de aqui y ahi poner workflow" · "con este diseno"): the order's number now lives big in the left card; the title says Workflow in the BuenTrade wordmark design (white + light blue, bold)
+  document.getElementById('orderDetailTitle').innerHTML = `<span class="wf-word">Work<span>flow</span></span>`; // only the word: the customer is a row of the left card (owner 2026-11-24: "el cliente ponlo en la ficha, no ahi, ahi deja solo workflow")
   document.getElementById('orderDetailBody').innerHTML = renderOrderCardBody(o, attentionOrderNumbers);
   document.getElementById('orderDetailOverlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -3283,7 +3369,8 @@ function payPlantClick(orderNumber){
 // plus what BuenTrade wires them here (cost − 80% of sale; see summarWireAmount below). BuenTrade -> Summar -> Planta, never BuenTrade ->
 // Planta directly for these orders.
 const SUMMAR_EMAIL = BC_SUMMAR_EMAIL; // owner 2026-11-19: achavez@summar.com is the only Summar address (js/email-modal.js)
-let summarPaymentOrderNumber = null;
+// the number the Docs 2 Factoring WhatsApp goes to: Andres Chavez at Summar, given by the owner 2026-11-23 ("summar whatsapp andres chavez +1 7864067301")
+const SUMMAR_WHATSAPP = '+17864067301';
 // Corrected 2026-09-28 with the user's own examples (cost 60,000 / sale 63,000 → wire 9,600; cost 20,000 / sale
 // 25,000 → wire 0): Summar advances 80% of the SALE and pays the plant 100% of the COST; BuenTrade wires Summar only
 // what that advance leaves uncovered. It used to be 20% of the sale, which always over-sent exactly our margin
@@ -3294,37 +3381,33 @@ function summarWireAmount(o, salePrice){
   return Math.max(0, Math.round((cost - 0.80 * salePrice) * 100) / 100);
 }
 
+// Pay Summar (owner 2026-11-23: the same blinking box, no separate payment window): every old button that said "Pay via Summar" now starts the same one click — the bank opens, the app asks "Did you wire it?", yes → the screenshot → the e-mail to Summar.
+let summarPaymentOrderNumber = null, summarPayReceipt = null, summarPayReceiptOrder = null;
 function showSummarPaymentBreakdown(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   if (!plantStatusAllowsPayment(o)){ plantStatusGate(o); return; } // owner 2026-11-19: the plant confirms the load status first
-  const salePrice = Number(o.sale_amount) || 0;
-  const wireAmount = summarWireAmount(o, salePrice);
+  const wireAmount = summarWireAmount(o, Number(o.sale_amount) || 0);
   if (wireAmount == null){ btAlert(`${orderNumber}: the plant cost or the sale price is missing, so the amount to wire Summar can't be calculated.`); return; }
-  summarPaymentOrderNumber = orderNumber;
-  document.getElementById('summarPaymentIntro').textContent = `${orderNumber} — ${fullProductLabel(o)} — ${o.plant_name}`;
-  document.getElementById('summarPaySalePrice').textContent = '$' + salePrice.toLocaleString('en-US', { minimumFractionDigits: 2 });
-  document.getElementById('summarPayAmount').textContent = '$' + wireAmount.toLocaleString('en-US', { minimumFractionDigits: 2 });
-  document.getElementById('summarPaymentOverlay').style.display = 'flex';
+  payGoBank(orderNumber);
 }
-function closeSummarPaymentOverlay(){
-  document.getElementById('summarPaymentOverlay').style.display = 'none';
-  summarPaymentOrderNumber = null;
-}
-
 // Owner 2026-11-19 ("el boton de pay plant y el email esta mal hecho, esta mandando la SO"): the email to Summar carries BuenTrade's OWN payment
 // confirmation (the bank proof, attached by the trader), never the SO. Summar sends its payment confirmation to the plant's payments person
 // (the same one the direct payment goes to), copying BuenTrade; the plant answers with proforma, release number and, on FOB loads, the pick-up
 // appointment, and the mail reader takes it from there. The amount is still summarWireAmount — what BuenTrade owes Summar, nothing else changes.
 // Exact wording approved by the owner 2026-11-19.
-function summarPaymentEmailContent(orderNumber, plantName, clientName, plantPaymentsEmails, withBankingInstructions){
-  // PAY 2 FACTORING (owner 2026-11-21, step 5, his text word for word): an answer in the thread of Docs 2 Factoring — same subject with "Re: " — with the Grove Bank receipt and the plant's banking instructions.
-  // The clause about the banking instructions is there only when the plant has them on file (they are added plant by plant as the plants send them), so the e-mail never says something is attached when it is not.
-  const orderId = `BT-${btNum(orderNumber)}`;
-  const subject = `Re: ${orderId} | Factoring Documents & Financial Breakdown – ${clientName}`;
-  const body = `Hi Summar team,\n\nFollowing up on Order ${orderId}, please find attached the Grove Bank payment receipt${withBankingInstructions ? ` along with ${plantName}'s banking instructions` : ''}.\n\n`
-    + `Could you please forward the payment receipt directly to ${plantName} (${plantPaymentsEmails.join(', ')}) keeping BuenTrade in CC, and request the Release Number and Proforma Invoice?\n\n`
-    + `Thank you in advance for your support.\n\nBest regards,`;
+function summarPaymentEmailContent(orderNumber, plantName, product, wireAmount, plantPaymentsEmails, pickupAppointment){
+  // The 2026-11-19 e-mail the owner actually sent, with the one sentence he changed on 2026-11-24 (verbatim: "mandanos el payment confirmation copiando a (plant payment email)", "once you have wired", "they will then reply with", no "BuenTrade" at the end because his Gmail signature follows). Replaces the 2026-11-21 draft: that one was not the e-mail he sent.
+  const subject = `Payment Sent — Order BT-${btNum(orderNumber)} — ${plantName} / ${product}`;
+  const body = `Dear Summar Team,\n\nAttached is our payment confirmation for the order below.\n\n`
+    + `Order: BT-${btNum(orderNumber)}\n`
+    + `Plant: ${plantName}\n`
+    + `Product: ${product}\n`
+    + `Amount: $${wireAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\n`
+    + `Once you have wired ${plantName}, please send us the payment confirmation, copying ${plantPaymentsEmails.join(', ')}. They will then reply with:\n`
+    + `- Release number\n` // the proforma is NOT asked any more: the plant already sent it in its first reply (owner 2026-11-24: "es solo release number y pickup appointment. proforma ya la tenemos, quitar del correo")
+    + (pickupAppointment ? `- Pick-up appointment\n` : '')
+    + `\nPlease keep us copied on their reply.\n\nThank you,`;
   return { subject, body };
 }
 // The plant's banking instructions on file (plants.html > Documents > Banking instructions), ready to attach. None on file, or the lookup failing: nothing is attached and the e-mail does not mention them.
@@ -3362,21 +3445,22 @@ async function sendPaymentToSummar(orderNumber){
   // Same recipient rule as the direct payment: the plant's payments person, or the sales contact when no payments person is on file.
   const { to: plantPaymentsEmails } = resolvePaymentRecipients(o);
   if (!plantPaymentsEmails.length){ await btAlert(`This plant has no email on file at all (neither Payments Contact nor general contact) — add one in Plants before sending the payment to Summar for ${orderNumber}.`); return; }
-  await btAlert('Select the bank payment confirmation (PDF or image) to attach.');
-  const file = await pickBankConfirmationFile();
-  if (!file) return; // no bank confirmation selected — nothing sent
+  const file = summarPayReceipt; // the screenshot chosen after "Did you wire it?" (summarPayReceipt)
+  if (!file){ await btAlert('Upload the wire screenshot first.'); return; } // no bank confirmation — nothing sent
   let base64;
   try { base64 = await readFileAsBase64(file); }
   catch (e) { await btAlert('No se pudo leer el archivo: ' + e.message); return; }
   const bankingFiles = await plantBankingInstructionsFiles(o.plant_id, o.plant_name);
-  const { subject, body } = summarPaymentEmailContent(orderNumber, String(o.plant_name || '').trim(), String(o.customer_name || '').trim(), plantPaymentsEmails, bankingFiles.length > 0);
-  const receiptExt = (String(file.name || '').match(/\.[A-Za-z0-9]+$/) || [''])[0];
+  const isFob = !!(o.carrier && (o.carrier.name || o.carrier.email || o.carrier.phone)); // a load with our own carrier booked is FOB: only then does the plant also owe the pick-up appointment
+  const { subject, body } = summarPaymentEmailContent(orderNumber, String(o.plant_name || '').trim(), soProductName, wireAmount, plantPaymentsEmails, isFob);
+  const receiptExt = (String(file.name || '').match(/\.[A-Za-z0-9]+$/) || [''])[0] || (file.type === 'application/pdf' ? '.pdf' : '');
+  const wireName = `Wire2f-BT-${btNum(orderNumber)}${receiptExt}`; // the fixed name of the wire-to-factoring proof (owner 2026-11-23: Wire2f-), the same in the e-mail and on the order
   try {
-    await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, [{ filename: `Grove_Bank_Receipt_BT-${btNum(orderNumber)}${receiptExt}`, content: base64, contentType: file.type }, ...bankingFiles], null); // from logistics@ as his spec says (owner 2026-11-21, step 5)
+    await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, [{ filename: wireName, content: base64, contentType: file.type }, ...bankingFiles], null); // from logistics@ as his spec says (owner 2026-11-21, step 5)
     showToast('Sent to Summar', SUMMAR_EMAIL);
-    await markDocSent(orderNumber, 'summar_payment');
-    await keepReceivedFile(orderNumber, 'bank_receipt', file, 'bank', 'Bank wire confirmation');
-    closeSummarPaymentOverlay();
+    if (!summarPayResend) await markDocSent(orderNumber, 'summar_payment');
+    if (!summarPayResend) await keepReceivedFile(orderNumber, 'bank_receipt', new File([file], wireName, { type: file.type }), 'bank', 'Bank wire confirmation');
+    summarPayReceipt = null;
     await loadStatusOrders();
   } catch(e) {
     if (e.cancelled) return;
@@ -3406,6 +3490,7 @@ function sendFactoringDocsClick(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   if (!(o.financing && o.financing.financing_method === 'summar')){ btAlert(`${orderNumber} is not financed with Summar.`); return; }
+  if (!o.factoring_docs_sent_at && !(o.proforma_invoices || []).length){ btAlert("Waiting for the plant's proforma: the documents go to Summar once it arrives (the mail reader files it by itself, or upload it from the order folder)."); return; } // owner 2026-11-23
   factoringDocsOrderNumber = orderNumber;
   // what is already on the order (given by the owner, with who it came from) goes in by itself; more can be added
   factoringDocsFiles = (o.received_documents || []).filter(d => d.kind === 'sales_confirmation').map(d => ({ name: d.file_name, type: 'application/pdf', stored: true, url: d.storage_url }));
@@ -3413,6 +3498,8 @@ function sendFactoringDocsClick(orderNumber){
   (o.proforma_invoices || []).forEach(d => factoringDocsFiles.push({ name: d.filename, type: 'application/pdf', stored: true, url: d.storage_url, plantProof: true }));
   document.getElementById('factoringDocsIntro').textContent = `${orderNumber} — ${fullProductLabel(o)} — ${o.plant_name}`;
   renderFactoringDocsFiles();
+  // owner 2026-11-23 ("esto no me gusta, debe sacar un correo y un whatsapp a factoring con los 3 docs"): with the client's confirmation already on the order the e-mail (and the WhatsApp) opens straight away; the window to add it only shows while it is missing
+  if (factoringDocsFiles.some(f => !f.plantProof)){ sendFactoringDocs(); return; }
   document.getElementById('factoringDocsOverlay').style.display = 'flex';
 }
 function closeFactoringDocsOverlay(){
@@ -3449,7 +3536,7 @@ function loadImageElement(src){
 }
 // Pictures -> one pdf (a page per picture, as wide as the picture); PDFs go as they are; a picture the browser cannot read goes as the original file. One file: Sales_Confirmation_BT-….pdf; several: -1, -2, …
 async function factoringConfirmationAttachments(orderNumber, files){
-  const base = `Sales_Confirmation_BT-${btNum(orderNumber)}`;
+  const base = `SC-BT-${btNum(orderNumber)}`; // owner 2026-11-23: fixed names, SC- for the client's Sales Confirmation
   const parts = [];
   const images = files.filter(f => /^image\//.test(f.type));
   const others = files.filter(f => !/^image\//.test(f.type));
@@ -3484,14 +3571,22 @@ async function sendFactoringDocs(){
   try {
     confirmation = await factoringConfirmationAttachments(orderNumber, clientFiles);
     plantProof = [];
-    for (const f of plantProofFiles) plantProof.push({ filename: f.name, content: await readUrlAsBase64(f.url), contentType: 'application/pdf' });
+    for (const [pi, f] of plantProofFiles.entries()) plantProof.push({ filename: `PF-BT-${btNum(orderNumber)}${plantProofFiles.length > 1 ? '-' + (pi + 1) : ''}.pdf`, content: await readUrlAsBase64(f.url), contentType: 'application/pdf' }); // PF- = the plant's proforma (owner 2026-11-23)
   } catch(e){ await btAlert('The confirmation could not be read: ' + e.message); return; }
   const attachments = [pdfAttachment(poBuilt.doc, `PO-BT-${btNum(orderNumber)}.pdf`), pdfAttachment(soBuilt.doc, `SO-BT-${btNum(orderNumber)}.pdf`), ...confirmation, ...plantProof];
   const orderId = `BT-${btNum(orderNumber)}`;
   const subject = `${orderId} | Factoring Documents & Financial Breakdown – ${o.customer_name || ''}`;
-  const body = `Dear Summar Team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\nLet us know once everything is reviewed on your end.\n\nBest regards,`;
+  // owner 2026-11-23 ("por qué no sale aquí el desglose de porcentajes, de quién paga qué y cuánto" · "hazlo, lo intento mandar y le damos visto bueno"): the e-mail gives the numbers of the factoring between his two paragraphs. The terms are settled (Summar advances 80% of the SALE, pays the plant 100% of the COST,
+  // BuenTrade wires only what that advance leaves uncovered); the lines are a PROPOSAL he reviews in the preview and can edit. Without the sale or the cost nothing is written or sent.
+  const sale = Number(soBuilt.so && soBuilt.so.total_sale) || 0, cost = Number(o.financing && o.financing.total_cost) || 0, wire = summarWireAmount(o, sale);
+  if (!(sale > 0) || !(cost > 0) || wire == null){ await btAlert(`${orderNumber}: the plant cost or the sale price is missing, so the financial breakdown for Summar can't be written.`); return; }
+  const usd = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), advance = Math.round(sale * 0.80 * 100) / 100;
+  const breakdown = `Financial breakdown:\n- Sale: ${usd(sale)}\n- Cost: ${usd(cost)}\n- Factoring advance (80% of the sale): ${usd(advance)}\n- Summar pays the plant: ${usd(cost)}\n- BuenTrade pays Summar: ${usd(wire)}\n\n`;
+  // the closing line asks for the check of the numbers BEFORE the wire (owner 2026-11-23: "no solo ok, para que no digan que sí a un monto más arriba y perdamos dinero"); nothing is written for a load with no wire (the advance covers the cost): no approved wording for that case
+  const wireLine = wire > 0 ? `We will wire ${usd(wire)} once you confirm these numbers are correct.\n\n` : '';
+  const body = `Dear Summar Team,\n\nPlease find attached the Purchase Order, Sales Order, and Sales Confirmation (including the financial breakdown) for Order ${orderId}.\n\n${breakdown}Let us know once everything is reviewed on your end.\n\n${wireLine}Best regards,`;
   try {
-    await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, attachments, null); // Docs 2 Factoring goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
+    await sendEmailApi('logistics', [SUMMAR_EMAIL], subject, body, attachments, SUMMAR_WHATSAPP ? { phone: SUMMAR_WHATSAPP, message: body } : null); // Docs 2 Factoring goes from logistics@ (owner 2026-11-22: his spec says From logistics@); the WhatsApp carries HIS e-mail text, nothing written by me (owner 2026-11-23)
     showToast('Sent to Summar', SUMMAR_EMAIL);
     await markDocSent(orderNumber, 'factoring_docs');
     for (const f of clientFiles) if (!f.stored) await keepReceivedFile(orderNumber, 'sales_confirmation', f, 'client', o.customer_name || '');
@@ -3501,6 +3596,193 @@ async function sendFactoringDocs(){
     if (e.cancelled) return;
     showToast('Automatic send failed', e.message, true);
   }
+}
+
+// TOUCHING A DOCUMENT CUBE of Docs 2 Factoring opens the e-mail window with THAT document attached and nobody in To: it goes to any address, one document at a time (owner 2026-11-24: "si toco cada uno individualmente me permite enviarlo a cualquier correo"). Nothing is worded for him: the subject is the document's name and the message is his.
+async function sendDocToAnyEmail(kind, orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const n = btNum(orderNumber), base = { PO: 'PO', SO: 'SO', sales_confirmation: 'SC', proforma: 'PF' }[kind] + '-BT-' + n;
+  const mimeOf = ext => ({ pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' })[ext] || 'application/octet-stream';
+  const attachments = [];
+  try {
+    if (kind === 'PO') attachments.push(pdfAttachment((await buildPODoc(orderNumber)).doc, base + '.pdf'));
+    else if (kind === 'SO') attachments.push(pdfAttachment((await buildSODoc(orderNumber)).doc, base + '.pdf'));
+    else {
+      const list = kind === 'proforma' ? (o.proforma_invoices || []) : (o.received_documents || []).filter(d => d.kind === 'sales_confirmation');
+      for (const [i, d] of list.entries()) {
+        const ext = kind === 'proforma' ? 'pdf' : (String(d.file_name || '').split('.').pop() || 'pdf').toLowerCase();
+        attachments.push({ filename: `${base}${list.length > 1 ? '-' + (i + 1) : ''}.${ext}`, content: await readUrlAsBase64(d.storage_url), contentType: mimeOf(ext) });
+      }
+    }
+  } catch (e) { await btAlert('Could not prepare the document: ' + e.message); return; }
+  if (!attachments.length) return;
+  try {
+    await sendEmailApi('logistics', [], base, '', attachments, null);
+    showToast('Document sent', base);
+  } catch (e) {
+    if (e.cancelled) return;
+    showToast('Automatic send failed', e.message, true);
+  }
+}
+// DOCS 2 FACTORING AS CARDS (owner 2026-11-23: "construyelos igual que las órdenes, ordenadamente horizontales de izquierda a derecha. los docs 2 factoring deben quedar siempre ahí puestos automáticamente y que suban los dos adicionales SC y PF"):
+// four cards side by side, always there for a Summar order: Purchase Order and Sales Order (built by the system), Sales Confirmation (SC-) and Proforma (PF-) — the proforma is filed by the mail reader, and both can also be uploaded by hand from the order folder.
+function factoringHzHtml(o, rows, open, cardsOnly){
+  const esc = escapeHtml, on = o.order_number, n = btNum(on);
+  const sc = (o.received_documents || []).filter(d => d.kind === 'sales_confirmation'), pf = o.proforma_invoices || [];
+  const day = t => t ? new Date(t).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
+  // owner 2026-11-23 ("quita el texto, que queden iguales todas, solo la fecha"): the four cards are identical — title, chip, date and ONE document row (name, eye, button); no other text
+  const eyeOpen = url => `<a class="btn secondary" style="padding:6px 10px;" href="${esc(url)}" target="_blank" rel="noopener" title="Open" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`;
+  const eyePrev = kind => `<button class="btn secondary" style="padding:6px 10px;" onclick="event.stopPropagation();openDocPreview('${kind}','${on}')" title="Preview & send">${PREVIEW_ICON}</button>`;
+  const up = kind => `<label class="btn secondary doc-row-btn" title="Upload from the order folder">↑ Upload<input type="file" accept="image/*,.pdf,application/pdf" style="display:none;" onchange="uploadFactoringDoc('${on}','${kind}',this)"></label>`;
+  const row = (label, eye, btn) => `<div class="doc-row">${eye}${btn}</div>`; // the name is already the title of the card above: only the eye and the buttons (owner 2026-11-23)
+  const card = (full, ready, date, body, click) => `<div class="oj-step ${ready ? 'done' : 'now'} open${open ? '' : ' pc'} hz"${click ? ` role="button" tabindex="0" style="cursor:pointer;" title="Send ${full} to any e-mail" onclick="${click}"` : ''}><div class="oj-nd">${ready ? OC_ICO.check : '✉'}</div><div class="oj-jc"><div class="oj-jh"><span class="nm-full">${full}</span>${ready ? '<span class="oj-chip done">✓ Done</span>' : '<span class="oj-chip wait">Waiting</span>'}<span class="dt">${esc(date)}</span></div><div class="oj-jb">${body}</div></div></div>`;
+  const resend = kind => `<button class="btn secondary doc-row-btn" onclick="event.stopPropagation();openDocPreview('${kind}','${on}')" title="Resend ${kind}">↻ Resend</button>`;
+  const fileCard = (full, list, kind) => list.length
+    ? card(full, true, day(list[0].created_at), row(`<a href="${esc(list[0].storage_url)}" target="_blank" rel="noopener" class="doc-row-link" onclick="event.stopPropagation()">${full}</a>`, eyeOpen(list[0].storage_url), ''), `sendDocToAnyEmail('${kind}','${on}')`) // already there: only the eye; the Upload button shows only while it is missing (owner 2026-11-23)
+    : card(full, false, '', row(full, '', up(kind)));
+  const sent = o.factoring_docs_sent_at;
+  const send = sent
+    ? `<button type="button" class="oj-send" onclick="sendFactoringDocsClick('${on}')" aria-label="Send 2 Factoring"><span class="oj-send-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>`
+    : (sc.length && pf.length ? `<button type="button" class="oj-send" onclick="sendFactoringDocsClick('${on}')" aria-label="Send 2 Factoring"><span class="oj-send-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>` : `<div class="oj-note">${!pf.length ? "Waiting for the plant's proforma." : 'Upload the Sales Confirmation to send.'}</div>`);
+  // Send 2 Factoring keeps doing what it did; the capsule is now a small check-style circle at the far RIGHT end of the cubes' timeline, the same look as the four checks; hovering it says Send 2 Factoring (owner 2026-11-24: "que tal los 4 checks igual que tiene cada cubo pero en el extremo derecho chiquito y si me paro dice send to factoring")
+  const isBtn = send.startsWith('<button');
+  if (cardsOnly){ const four = card('Purchase Order', true, day(o.po_sent_at), row(`<a href="#" class="doc-row-link" onclick="event.stopPropagation();openDocPreview('PO','${on}');return false;">Purchase Order</a>`, eyePrev('PO'), ''), `sendDocToAnyEmail('PO','${on}')`) + card('Sales Order', true, day(o.so_sent_at), row(`<a href="#" class="doc-row-link" onclick="event.stopPropagation();openDocPreview('SO','${on}');return false;">Sales Order</a>`, eyePrev('SO'), ''), `sendDocToAnyEmail('SO','${on}')`) + fileCard('Sales Confirmation', sc, 'sales_confirmation') + fileCard('Proforma', pf, 'proforma'); return { cards: four, bar: isBtn ? `<span class="fd-bar${open ? '' : ' pc'}" data-tip="Send 2 Factoring">${send}</span>` : '', note: isBtn ? '' : `<section class="fd-send${open ? '' : ' pc'}">${send}</section>` }; } // the same four cards, handed back to be part of the one grid of cubes
+  return `<div class="fd-wrap"><div class="oj-hz hz4 hz4-top${open ? ' open' : ''}">`
+    + card('Purchase Order', true, day(o.po_sent_at), row(`<a href="#" class="doc-row-link" onclick="event.stopPropagation();openDocPreview('PO','${on}');return false;">Purchase Order</a>`, eyePrev('PO'), ''), `sendDocToAnyEmail('PO','${on}')`)
+    + card('Sales Order', true, day(o.so_sent_at), row(`<a href="#" class="doc-row-link" onclick="event.stopPropagation();openDocPreview('SO','${on}');return false;">Sales Order</a>`, eyePrev('SO'), ''), `sendDocToAnyEmail('SO','${on}')`)
+    + fileCard('Sales Confirmation', sc, 'sales_confirmation')
+    + fileCard('Proforma', pf, 'proforma')
+    + `</div>${isBtn ? `<div class="fd-bar${open ? '' : ' pc'}" data-tip="Send 2 Factoring">${send}</div>` : ''}</div>${isBtn ? '' : `<div class="fd-send${open ? '' : ' pc'}">${send}</div>`}`;
+}
+// PAY 2 FACTORING (owner 2026-11-23, agreed word by word): ONE box does the work — "Pay Summar" — and it BLINKS with the bank link the moment Summar's OK is read (the mail reader reads its reply and the trader is notified).
+// Clicking Go to Bank opens Grove Bank; the app asks "Did you wire it?"; Yes → he picks the screenshot of the wire → the e-mail to Summar opens already written, with it attached → Send → the box turns green.
+// After the e-mail the old action (Record Summar's Confirmation) stays inside the same box until Summar confirms it paid the plant. No other boxes, no payment window.
+// RELEASE 2 CARRIER as ONE cube beside Wire Factoring (owner 2026-11-24): Release # (what the plant answered + its appointment once it arrives; it blinks and touching it sends the e-mail). Nothing new is written: the same data and the same actions as before.
+function releaseHzHtml(o, x, open, cardsOnly, base){
+  base = base || 0; // the circles are numbered after the cubes already on the row (Wire Factoring)
+  const esc = escapeHtml, on = o.order_number;
+  const day = t => t ? new Date(t).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
+  const rd = kind => (o.received_documents || []).filter(d => d.kind === kind)[0];
+  const eyeOpen = url => `<a class="btn secondary" style="padding:6px 10px;" href="${esc(url)}" target="_blank" rel="noopener" title="Open" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`;
+  const card = (i, full, state, date, body, blink, click) => `<div class="oj-step ${state}${blink ? ' blinkcard' : ''} open${open ? '' : ' pc'} hz"${click ? ` role="button" tabindex="0" style="cursor:pointer;" onclick="${click}"` : ''}><div class="oj-nd">${state === 'done' ? OC_ICO.check : i + base}</div><div class="oj-jc"><div class="oj-jh"><span class="nm-full">${full}</span>${state === 'done' ? '<span class="oj-chip done">\u2713 Done</span>' : state === 'now' ? '<span class="oj-chip now"><i></i>Next</span>' : '<span class="oj-chip wait">Waiting</span>'}<span class="dt">${esc(date)}</span></div><div class="oj-jb">${body}</div></div></div>`;
+  const plant = rd('plant_order_confirmation'), appt = rd('pickup_appointment');
+  const sent = !!o.release_number_sent_at, ready = !!o.release_number && !sent;
+  const act = sent ? x.redo : x.onClickRaw;
+  let b1 = '';
+  if (o.release_number) b1 += `<div class="pay-amt">${esc(o.release_number)}</div>`;
+  const eyes = (plant ? eyeOpen(plant.storage_url).replace('title="Open"', 'title="Plant\'s order confirmation"') : '') + (appt ? eyeOpen(appt.storage_url).replace('title="Open"', 'title="Pickup appointment ' + esc(day(appt.created_at)) + '"') : ''); // the plant's confirmation and, once it arrives, the appointment: both inside this one cube
+  if (eyes) b1 += `<div class="doc-row">${eyes}</div>`;
+  if (!o.release_number) b1 += `<div class="oj-note">Waiting for the plant's reply with its order number (it is read automatically).</div><div class="pay-acts" style="margin-top:8px;"><button type="button" class="oj-ghost" onclick="recordReleaseNumber('${on}')">Record the plant's order number</button></div>`;
+  // Owner 2026-11-24: the ACTION is the Release # cube itself (no button; "me gustó lo que hiciste con release num… solo tocándolo abre el correo"): it blinks the moment the number is known, touching the cube opens the e-mail with the release number to the plant's appointments contact copying the carrier, so they answer with the appointment; the next cube is Pickup Appointment.
+  // ONE cube (owner 2026-11-24: "estos dos pueden ser uno solo… blinkee y cuando llega tocas para enviar"): it blinks when the plant's number arrives, touching it opens the e-mail, and the plant's appointment joins it when it is read; the step is done when the e-mail is sent, never waiting for the appointment.
+  const cards = card(1, 'Release #', sent ? 'done' : 'now', day(sent ? o.release_number_sent_at : plant && plant.created_at), b1, ready, (o.release_number && act) ? act : '');
+  // beside Wire Factoring on the same row (owner 2026-11-24: "sube los cubos al lado de wire factoring"): only the cubes are handed back, the row belongs to Wire Factoring
+  return cardsOnly ? cards : `<div class="oj-hz hz4${open ? ' open' : ''}">` + cards + `</div>`;
+}
+function payHzHtml(o, open, besideCards, cardsOnly){
+  const esc = escapeHtml, on = o.order_number;
+  const day = t => t ? new Date(t).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
+  const money = w => w == null ? '' : '$' + w.toLocaleString('en-US', { minimumFractionDigits: 2 });
+  const wire = summarWireAmount(o, Number(o.sale_amount) || 0);
+  const rd = kind => (o.received_documents || []).filter(d => d.kind === kind);
+  const eyeOpen = url => `<a class="btn secondary" style="padding:6px 10px;" href="${esc(url)}" target="_blank" rel="noopener" title="Open" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`;
+  const row = (label, eye, btn) => `<div class="doc-row">${eye}${btn}</div>`; // the name is already the title of the card above: only the eye and the buttons (owner 2026-11-23)
+  const paid = !!o.plant_paid_at, wired = !!o.summar_payment_sent_at || paid;
+  const okRead = !!o.factoring_confirmed_at || wired; // an order already paid before this step existed counts as confirmed
+  const okDoc = rd('summar_confirmation')[0], receipt = rd('bank_receipt')[0];
+  const ready = okRead && !wired && plantStatusAllowsPayment(o) && wire > 0; // the wire can start: this box blinks
+  const card = (i, full, state, date, body, blink, click, ndHtml) => `<div class="oj-step ${state}${blink ? ' blinkcard' : ''} open${open ? '' : ' pc'} hz"${click ? ` role="button" tabindex="0" style="cursor:pointer;" onclick="${click}"` : ''}>${ndHtml || `<div class="oj-nd">${state === 'done' ? OC_ICO.check : i}</div>`}<div class="oj-jc"><div class="oj-jh"><span class="nm-full">${full}</span>${state === 'done' ? '<span class="oj-chip done">✓ Done</span>' : state === 'now' ? '<span class="oj-chip now"><i></i>Next</span>' : '<span class="oj-chip wait">Waiting</span>'}<span class="dt">${esc(date)}</span></div><div class="oj-jb">${body}</div></div></div>`;
+  const note = t => `<div class="oj-note">${t}</div>`;
+  let b1 = '';
+  if (okRead && o.factoring_confirmed_at) b1 += `<div class="oj-note" style="color:#7CF0AE;">Summar confirmed the numbers${okDoc ? ` — <a href="${esc(okDoc.storage_url)}" target="_blank" rel="noopener" class="doc-row-link">read</a>` : ''}.</div>`;
+  if ((ready || wired) && wire > 0) b1 += `<div class="pay-amt">${money(wire)}</div>`; // the amount stays once it is paid: nothing disappears (owner 2026-11-23)
+  if (!o.factoring_docs_sent_at && !wired) b1 += note('Send the documents to Summar first.');
+  else if (!okRead) b1 += note(`${wire == null ? 'The amount' : money(wire)} to wire — Summar's OK comes first (read automatically).`);
+  else if (!wired && !plantStatusAllowsPayment(o)) b1 += note('The plant must confirm the load status first.');
+  else if (!wired && wire == null) b1 += note("The plant cost or the sale price is missing, so the amount to wire Summar can't be calculated.");
+  else if (!wired && wire === 0) b1 += note("Summar's 80% advance already covers the plant cost — there is nothing to wire.");
+  if (wired) b1 += receipt ? `<div class="doc-row">${eyeOpen(receipt.storage_url)}</div>` : ''; // eye only, like every other cube (owner 2026-11-24); touching the cube resends the screenshot to Summar, the same action Resend had
+  const summarPaidDoc = rd('summar_plant_payment')[0]; // Summar's own confirmation that it paid the plant, read from its e-mail (owner 2026-11-24)
+  if (summarPaidDoc) b1 += `<div class="doc-row">${eyeOpen(summarPaidDoc.storage_url)}</div>`;
+  if (wired && !paid) b1 += note(`Wired to Summar ${esc(day(o.summar_payment_sent_at))} · Waiting for Summar to pay the plant`) ; // like Docs 2 Factoring after it is sent: the date, who is next and Send again
+  // after the e-mail to Summar, the old action stays inside this same box until Summar confirms it paid the plant (it opens nothing new: the release # comes from the plant's own reply)
+  const askRecord = wired && !paid;
+  if (askRecord) b1 += `<div class="pay-acts" style="margin-top:8px;"><button type="button" class="oj-send blink" onclick="event.stopPropagation();recordSummarConfirmation('${on}')">Record Summar's Confirmation<span class="oj-send-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button></div>`;
+  const c1 = card(1, 'Wire Factoring', paid ? 'done' : (ready || askRecord) ? 'now' : 'wait', day(o.plant_paid_at || o.summar_payment_sent_at), b1, ready || askRecord, `payGoBank('${on}')`, `<div class="oj-nd" role="button" tabindex="0" title="Send to Summar" style="cursor:pointer;color:#3FCB7E;border-color:#3FCB7E;" onclick="event.stopPropagation();payEmailToSummar('${on}')">${OC_ICO.check}</div>`); // owner 2026-11-24: touching the cube opens the bank (the bank button lives only in this cube); the green check sends the e-mail to Summar (again, once it is wired)
+  if (cardsOnly) return c1 + (besideCards || '');
+  return `<div class="oj-hz hz4${open ? ' open' : ''}">${c1}${besideCards || ''}</div>`;
+}
+// TWO ACTIONS IN THE ONE CUBE (owner 2026-11-24: "si le doy al cubo me lleva al banco, si le doy al check verde mando email"): touching the cube only opens the bank; the green check asks for the screenshot of the wire and opens the e-mail to Summar already written (the final Send is in that window); once it is wired, the check sends it again.
+async function payGoBank(orderNumber){
+  window.open(BANK_LOGIN_URL, '_blank');
+}
+async function payEmailToSummar(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  if (o.summar_payment_sent_at){ await payResendToSummar(orderNumber); return; }
+  const f = await pickBankConfirmationFile();
+  if (!f) return;
+  summarPayReceipt = f; summarPayReceiptOrder = orderNumber;
+  await sendPaymentToSummar(orderNumber);
+}
+// SEND AGAIN, like Docs 2 Factoring (owner 2026-11-23: "cuando pago quiero que quede como el paso anterior"): the wire screenshot already kept on the order goes to Summar again in the same e-mail window; it is not saved a second time.
+let summarPayResend = false;
+async function payResendToSummar(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  const receipt = o && (o.received_documents || []).find(d => d.kind === 'bank_receipt');
+  if (!receipt){ await btAlert('No wire screenshot kept on this order.'); return; }
+  try {
+    const blob = await (await fetch(receipt.storage_url)).blob();
+    const name = String(receipt.file_name || 'wire.png');
+    summarPayReceipt = new File([blob], name, { type: blob.type || 'image/png' }); summarPayReceiptOrder = orderNumber;
+  } catch (e) { await btAlert('Could not open the wire screenshot: ' + e.message); return; }
+  summarPayResend = true;
+  try { await sendPaymentToSummar(orderNumber); } finally { summarPayResend = false; }
+}
+async function uploadFactoringDoc(orderNumber, kind, input){
+  const f = input.files && input.files[0]; input.value = '';
+  if (!f) return;
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const have = kind === 'proforma' ? (o.proforma_invoices || []).length : (o.received_documents || []).filter(d => d.kind === 'sales_confirmation').length;
+  const ext = (f.name.match(/\.[A-Za-z0-9]+$/) || [''])[0] || (f.type === 'application/pdf' ? '.pdf' : '');
+  const name = `${kind === 'proforma' ? 'PF' : 'SC'}-BT-${btNum(orderNumber)}${have ? '-' + (have + 1) : ''}${ext}`;
+  try {
+    const file_base64 = await readFileAsBase64(f);
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'received_file', kind, file_name: name, file_base64, content_type: f.type || null, from_party: 'trader', from_name: 'Uploaded from the order folder' });
+  } catch (e) { await btAlert('Could not save: ' + e.message); return; }
+  showToast('Saved', name);
+  await loadStatusOrders();
+}
+async function factoringMarkSentClick(orderNumber){
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  factoringDocsOrderNumber = orderNumber;
+  factoringDocsFiles = (o.received_documents || []).filter(d => d.kind === 'sales_confirmation').map(d => ({ name: d.file_name, type: 'application/pdf', stored: true, url: d.storage_url }));
+  await factoringDocsManual();
+}
+// DOCS 2 FACTORING BY HAND (owner 2026-11-23: "todo el flujo de las órdenes debe ser automatizado pero tener también forma de hacerlo manual subiéndolo de la carpeta manualmente"): the documents already went to Summar outside the system. The trader adds the client's confirmation from his
+// order folder and the step is done: the files are kept on the order and the step is marked, with NO e-mail. It asks first, and an error is shown (nothing is marked if the files could not be kept).
+async function factoringDocsManual(){
+  const orderNumber = factoringDocsOrderNumber;
+  if (!orderNumber) return;
+  const o = findStatusOrder(orderNumber);
+  if (!o) return;
+  const clientFiles = factoringDocsFiles.filter(f => !f.plantProof);
+  if (!clientFiles.length){ await btAlert("Add the client's confirmation first: choose the file from the order folder."); return; }
+  const yes = await btConfirm(`Did you already send the documents of ${orderNumber} to Summar? This only saves the file and marks the step done — no e-mail goes out.`, 'Yes, save it', 'Not yet');
+  if (!yes) return;
+  try {
+    for (const f of clientFiles) if (!f.stored){
+      const file_base64 = await readFileAsBase64(f);
+      await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'received_file', kind: 'sales_confirmation', file_name: f.name, file_base64, content_type: f.type || null, from_party: 'client', from_name: o.customer_name || null });
+    }
+    await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'factoring_docs', sends: [] });
+  } catch (e) { await btAlert('Could not save: ' + e.message); return; }
+  showToast('Saved', 'Docs 2 Factoring marked as sent (no e-mail)');
+  closeFactoringDocsOverlay();
+  await loadStatusOrders();
 }
 
 // Real ask 2026-09-20: "deberia ir a la persona correcta del location no solo a la vendedora de la
@@ -3718,7 +4000,8 @@ function releaseNumberMessage(o){
 async function sendReleaseNumberByEmail(o){
   const carrierEmails = collectEmails(o.carrier);
   const loc = o.pickup_location || {};
-  const copyEmails = String(loc.email || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+  // the plant's appointments contact as the plant itself gave it in its confirmation (owner 2026-11-24), else the pick-up location's e-mail
+  const copyEmails = String(o.plant_appointments_email || loc.email || '').split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
   if (!carrierEmails.length || !copyEmails.length) return false;
   const orderId = `FO-BT-${btNum(o.order_number)}`;
   const plantName = String(o.plant_name || '').trim();
@@ -3728,8 +4011,9 @@ async function sendReleaseNumberByEmail(o){
   const body = `Hi${carrierName ? ' ' + carrierName : ''} team,\n\nPlease find below the release details for Order ${orderId}:\n\n* Release Number: ${o.release_number}\n* Pick-Up Location: ${plantName}${place ? ' – ' + place : ''}\n\n`
     + `We have copied ${plantName}'s logistics and scheduling team on this email. Kindly coordinate with them, confirm the scheduled pick-up date and time, and, if possible, share the tracking link for this shipment.\n\nBest regards,`;
   try {
-    await sendEmailApi('logistics', carrierEmails, subject, body, [], (o.carrier && o.carrier.phone) ? { phone: o.carrier.phone, message: releaseNumberMessage(o) } : null, copyEmails);
-    showToast('Release number sent', carrierEmails.join(', '));
+    // Owner 2026-11-24: to the plant's appointments contact (the pick-up location's e-mail), copying the carrier, so they answer with the appointment.
+    await sendEmailApi('logistics', copyEmails, subject, body, [], (o.carrier && o.carrier.phone) ? { phone: o.carrier.phone, message: releaseNumberMessage(o) } : null, carrierEmails);
+    showToast('Release number sent', copyEmails.join(', '));
     await markDocSent(o.order_number, 'release_number');
     await loadStatusOrders();
   } catch (e) {

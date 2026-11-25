@@ -42,7 +42,9 @@ const BT_WA_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" ><path d="M12.04
 const BT_MAIL_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" ><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>`;
 const BT_X_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 function btFitBox(t){ if (!t || !t.offsetParent) return; t.style.overflowY = 'hidden'; t.style.height = 'auto'; t.style.height = (t.scrollHeight + (t.offsetHeight - t.clientHeight)) + 'px'; t.style.overflowY = t.scrollHeight > t.clientHeight + 1 ? 'auto' : 'hidden'; } // grows to its text (+ its border); a scrollbar only appears once the max height is reached
-function btFitAll(overlayId){ const fit = () => document.querySelectorAll('#' + overlayId + ' textarea').forEach(t => btFitBox(t)); fit(); setTimeout(fit, 80); }
+// a tiny window (owner 2026-11-23, a ~460px-high screen): if the message still does not fit its window, the letters get a little smaller (down to 10.5px) until ALL of it shows — no inner scroll bar
+function btShrinkToFit(overlayId){ const ov = document.getElementById(overlayId), box = ov && ov.querySelector('.email-modal-box'), t = ov && ov.querySelector('#emailModalBody'); if (!t || !t.offsetParent) return; t.style.fontSize = ''; btFitBox(t); let fs = parseFloat(getComputedStyle(t).fontSize) || 14; while (fs > 10.5 && (t.scrollHeight > t.clientHeight + 1 || (box && box.scrollHeight > box.clientHeight + 1))){ fs -= .5; t.style.fontSize = fs + 'px'; btFitBox(t); } }
+function btFitAll(overlayId){ const fit = () => { document.querySelectorAll('#' + overlayId + ' textarea').forEach(t => btFitBox(t)); btShrinkToFit(overlayId); }; fit(); setTimeout(fit, 80); }
 function bcEnsureEmailModal(){
   if (document.getElementById('emailModalOverlay')) return;
   const wrap = document.createElement('div');
@@ -524,3 +526,54 @@ async function bcSummarCopy(callApi, orderNumber){
     return sh && sh.financing && sh.financing.financing_method === 'summar' ? [BC_SUMMAR_EMAIL] : [];
   } catch (e) { console.warn('bcSummarCopy failed (the email goes without the Summar copy):', e && e.message); return []; }
 }
+
+// THE E-MAIL WINDOW, IN THE BRAND LOOK AND BIG ENOUGH TO READ IT ALL (owner 2026-11-23: "abre más grande el correo que no haya que scrollear · hazlo bonito con estos colores, sin scrolles, con alegría"): wide glass window, blue borders, green attachment pills,
+// the message grows to its text (btFitBox) and the window only gets a bar if the screen is really too short. One shared skin for every page that opens the e-mail / WhatsApp windows (it comes after each page's own older rules).
+(function(){
+  var s = document.createElement('style'); s.id = 'bt-email-skin';
+  s.textContent =
+    '.email-modal-overlay{padding:2vh 2vw;}' +
+    '.email-modal-box{width:100%;max-width:min(1040px,96vw);max-height:96vh;padding:26px 30px 22px;border-radius:22px;border:1.5px solid transparent;' +
+      'background:linear-gradient(160deg,rgba(26,40,72,.98),rgba(11,19,38,.99)) padding-box,linear-gradient(90deg,#FFC876,#5AAAFF 55%,#3FCB7E) border-box;box-shadow:0 30px 90px rgba(2,10,28,.65),0 0 0 1px rgba(90,170,255,.10),0 0 60px rgba(63,140,255,.14);}' +
+    '.email-modal-box h3{font:700 22px "Space Grotesk",sans-serif;letter-spacing:.005em;color:#fff;}' +
+    '.email-modal-from{font:500 12.5px "IBM Plex Mono",monospace;color:#FFC876;margin-bottom:16px;}' +
+    '.email-modal-field{margin-bottom:14px;}' +
+    // lettering and colours of the Orders list: Space Grotesk title, small spaced mono capitals with a dot (like "• LOADS IN TRANSIT"), each label in a road colour — blue for the addresses, amber for the message, green for the files
+    '.email-modal-field label{display:flex;align-items:center;gap:7px;font:600 11px "IBM Plex Mono",monospace;text-transform:uppercase;color:#5AAAFF;letter-spacing:.14em;margin-bottom:7px;}' +
+    '.email-modal-field label::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor;flex-shrink:0;}' +
+    '.email-modal-field:has(#emailModalBody) label{color:#FFC876;}.email-modal-field:has(#emailModalAttachments) label{color:#7BE0A8;}' +
+    '.email-modal-field input,.email-modal-field textarea{font-family:Inter,sans-serif;}.email-modal-field input::placeholder{color:rgba(190,215,255,.4);}' +
+    '.email-modal-field input,.email-modal-field textarea{padding:11px 14px;border:1.5px solid rgba(90,170,255,.38);border-radius:14px;font-size:14.5px;background:rgba(90,170,255,.06);color:#fff;transition:border-color .15s,box-shadow .15s;}' +
+    '.email-modal-field input:focus,.email-modal-field textarea:focus{outline:none;border-color:#5AAAFF;box-shadow:0 0 0 3px rgba(90,170,255,.2);}' +
+    '.email-modal-field:has(#emailModalBody) textarea{border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.05);}.email-modal-field:has(#emailModalBody) textarea:focus{border-color:#FFC876;box-shadow:0 0 0 3px rgba(255,200,118,.18);}' +
+    '.email-modal-field textarea{min-height:150px;resize:none;line-height:1.55;overflow:hidden;}' +
+    '.email-modal-chip,.email-modal-attachment-chip{display:inline-flex;align-items:center;gap:6px;letter-spacing:.04em;background:rgba(63,203,126,.12);color:#7BE0A8;border:1px solid rgba(63,203,126,.42);font:600 12px "IBM Plex Mono",monospace;padding:5px 12px;border-radius:20px;}' +
+    '.email-modal-actions{gap:12px;margin-top:18px;}' +
+    // Send / Done: the same outlined glass pill as Send 2 Factoring on Orders — road-colour border (amber → blue → green), green glow; Cancel stays the blue outlined button
+    'html body .email-modal-box .email-modal-actions #emailModalSendBtn,html body .email-modal-box .email-modal-actions #emailModalDoneBtn{border:1.5px solid transparent !important;border-radius:999px !important;padding:0 30px !important;min-height:40px;color:#fff !important;font-weight:700 !important;' +
+      'background:linear-gradient(90deg,rgba(255,200,118,.10),rgba(90,170,255,.12) 55%,rgba(63,203,126,.2)) padding-box,linear-gradient(#0d2250,#0d2250) padding-box,linear-gradient(90deg,#FFC876,#5AAAFF 55%,#3FCB7E) border-box !important;box-shadow:0 0 22px -8px rgba(63,203,126,.5) !important;}' +
+    'html body .email-modal-box .email-modal-actions #emailModalSendBtn:hover:not(:disabled),html body .email-modal-box .email-modal-actions #emailModalDoneBtn:hover:not(:disabled){color:#fff !important;border-color:transparent !important;' +
+      'background:linear-gradient(90deg,rgba(255,200,118,.2),rgba(90,170,255,.22) 55%,rgba(63,203,126,.36)) padding-box,linear-gradient(#0d2250,#0d2250) padding-box,linear-gradient(90deg,#FFC876,#5AAAFF 55%,#3FCB7E) border-box !important;box-shadow:0 0 28px -4px rgba(63,203,126,.6) !important;}' +
+    // Cancel and the other buttons stay the Orders-list ones (translucent sky-blue, blue border, from css/bt-ui.css)
+    'html body .email-modal-box .email-modal-field textarea#emailModalBody,html body .email-modal-box .email-modal-field textarea#emailModalWaBody{max-height:calc(100vh - 210px);}' +
+    // a short screen (a laptop, a half window): the fields go on the left and the message on the right, so everything fits without a bar
+    '@media (max-height:860px) and (min-width:900px){' +
+      '#emailModalOverlay .email-modal-box{display:grid;grid-template-columns:minmax(300px,.72fr) minmax(0,1.5fr);column-gap:26px;align-content:start;padding:18px 26px 16px;}' +
+      '#emailModalOverlay .email-modal-box > .bt-modal-head,#emailModalOverlay .email-modal-box > .email-modal-from,#emailModalOverlay .email-modal-box > #emailModalSentWrap,#emailModalOverlay .email-modal-box > #emailModalWaWrap,#emailModalOverlay .email-modal-box > #emailModalErr,#emailModalOverlay .email-modal-box > .email-modal-actions{grid-column:1 / -1;}' +
+      '#emailModalOverlay .email-modal-box > .rq-em-fields{grid-column:1;display:block;}' +
+      '#emailModalOverlay .email-modal-box > .email-modal-field:has(#emailModalSubject){grid-column:1;}' +
+      '#emailModalOverlay .email-modal-box > #emailModalAttachWrap{grid-column:1;}' +
+      '#emailModalOverlay .email-modal-box > .email-modal-field:has(#emailModalBody){grid-column:2;grid-row:3 / span 3;}' +
+      '.email-modal-field{margin-bottom:10px;}.email-modal-field textarea{min-height:200px;}.email-modal-actions{margin-top:8px;}' +
+    '}' +
+    '@media (max-height:760px){.email-modal-overlay{padding:1vh 2vw;}#emailModalOverlay .email-modal-box{max-height:98vh;padding:14px 22px 12px;}.email-modal-box h3{font-size:18px;}.email-modal-from{margin-bottom:8px;}.email-modal-field textarea{font-size:13px;line-height:1.4;padding:9px 12px;}.email-modal-actions{margin-top:6px;}html body .email-modal-box .email-modal-field textarea#emailModalBody{max-height:calc(100vh - 175px);}}' +
+    // a really short screen (a laptop with the dock and tabs, ~530px): the buttons go under the fields on the left, so the message gets the whole height and shows ALL its text with no bar
+    '@media (max-height:640px) and (min-width:900px){' +
+      '#emailModalOverlay .email-modal-box{padding:10px 22px 10px;}.email-modal-box .bt-modal-head{margin:0 0 4px;}.email-modal-box .bt-x{width:32px;height:32px;}.email-modal-from{margin-bottom:2px;}.email-modal-field{margin-bottom:7px;}.email-modal-field label{margin-bottom:3px;}' +
+      '.email-modal-field input{padding:8px 12px;}.email-modal-attachment-chip{padding:3px 10px;font-size:11.5px;}' +
+      '#emailModalOverlay .email-modal-box > .email-modal-field:has(#emailModalBody){grid-row:3 / span 4;}' +
+      '#emailModalOverlay .email-modal-box > .email-modal-actions{grid-column:1;grid-row:6;align-self:end;justify-content:flex-start;margin-top:4px;}' +
+      'html body .email-modal-box .email-modal-field textarea#emailModalBody{max-height:calc(100vh - 118px);}' +
+    '}';
+  (document.head || document.documentElement).appendChild(s);
+})();
