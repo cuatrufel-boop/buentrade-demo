@@ -1475,7 +1475,7 @@ function factoringAwaitsSummarOk(o){
 const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Docs to border', Delivered: 'Create Invoice', Invoice: 'Invoice client', Signature: 'Sign & Close' };
 // The places that SHOW a name call it as `(typeof stepName === 'function' ? stepName : (l => l))(label, o)`: a page piece that is read on its own (the protected tests build the render functions alone) keeps the original label.
 function stepName(label, o){
-  if (label === 'Pay Plant' && o && o.financing && o.financing.financing_method === 'summar') return 'Pay 2 Factoring';
+  if (label === 'Pay Plant') return 'Wire'; // owner 2026-11-25: "mejor solo wire": the system already knows (factoring or direct) where it takes him; both go to the same bank
   return STEP_NAMES[label] || label;
 }
 async function plantStatusGate(o){
@@ -3747,7 +3747,7 @@ function payHzHtml(o, open, besideCards, cardsOnly){
   // after the e-mail to Summar, the old action stays inside this same box until Summar confirms it paid the plant (it opens nothing new: the release # comes from the plant's own reply)
   const askRecord = wired && !paid;
   if (askRecord) b1 += `<div class="pay-acts" style="margin-top:8px;"><button type="button" class="oj-send blink" onclick="event.stopPropagation();recordSummarConfirmation('${on}')">Record Summar's Confirmation<span class="oj-send-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button></div>`;
-  const c1 = card(1, 'Wire Factoring', paid ? 'done' : (ready || askRecord || statusNext) ? 'now' : 'wait', day(o.plant_paid_at || o.summar_payment_sent_at), b1, ready || askRecord || statusNext, statusClick || `payGoBank('${on}')`, `<div class="oj-nd" role="button" tabindex="0" title="Send to Summar" style="cursor:pointer;color:#3FCB7E;border-color:#3FCB7E;" onclick="event.stopPropagation();payEmailToSummar('${on}')">${OC_ICO.check}</div>`); // owner 2026-11-24: touching the cube opens the bank (the bank button lives only in this cube); the green check sends the e-mail to Summar (again, once it is wired)
+  const c1 = card(1, 'Wire', paid ? 'done' : (ready || askRecord || statusNext) ? 'now' : 'wait', day(o.plant_paid_at || o.summar_payment_sent_at), b1, ready || askRecord || statusNext, statusClick || `payGoBank('${on}')`, `<div class="oj-nd" role="button" tabindex="0" title="Send to Summar" style="cursor:pointer;color:#3FCB7E;border-color:#3FCB7E;" onclick="event.stopPropagation();payEmailToSummar('${on}')">${OC_ICO.check}</div>`); // owner 2026-11-24: touching the cube opens the bank (the bank button lives only in this cube); the green check sends the e-mail to Summar (again, once it is wired)
   if (cardsOnly) return c1 + (besideCards || '');
   return `<div class="oj-hz hz4${open ? ' open' : ''}">${c1}${besideCards || ''}</div>`;
 }
