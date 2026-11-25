@@ -351,14 +351,14 @@ function bcWaWaitSent(label){
   });
 }
 function bcWaOpenAndConfirm(phone, message, label){
-  window.open('https://wa.me/' + String(phone || '').replace(/\D/g, '') + '?text=' + encodeURIComponent(message), '_blank');
+  window.open('https://api.whatsapp.com/send?phone=' + String(phone || '').replace(/\D/g, '') + '&text=' + encodeURIComponent(message), '_blank');
   return bcWaWaitSent(label || phone).then(sent => { if (sent) bcNoteSend({ channel: 'whatsapp', to: [phone], subject: String(message || '') }); return sent; });
 }
 // Returns a promise: true = the trader confirmed he sent it; false = he did not. opts.ask === false: nothing depends on it, no question (a follow-up after an email that already went).
 function bcConfirmWaSend(phone, message, filename, opts){
   opts = opts || {};
   const label = opts.label || phone;
-  const go = () => opts.ask === false ? (window.open('https://wa.me/' + String(phone).replace(/\D/g, '') + '?text=' + encodeURIComponent(message), '_blank'), bcNoteSend({ channel: 'whatsapp', to: [phone], subject: String(message || '') }), Promise.resolve(true)) : bcWaOpenAndConfirm(phone, message, label);
+  const go = () => opts.ask === false ? (window.open('https://api.whatsapp.com/send?phone=' + String(phone).replace(/\D/g, '') + '&text=' + encodeURIComponent(message), '_blank'), bcNoteSend({ channel: 'whatsapp', to: [phone], subject: String(message || '') }), Promise.resolve(true)) : bcWaOpenAndConfirm(phone, message, label);
   if (!filename) return go();
   bcEnsureWaAttachModal();
   return new Promise(resolve => {

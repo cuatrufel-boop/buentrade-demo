@@ -979,7 +979,7 @@ async function askCarrierRates(providerId){
   let link;
   try { link = (await callApi('provider-rate-update-request', { action: 'carrier_link', actor: currentActor(), provider_id: providerId })).link; }
   catch (e) { await btAlert('Could not get the carrier\'s link: ' + e.message); return; }
-  window.open('https://wa.me/' + String(c.whatsapp || c.phone || '').replace(/\D/g, '') + '?text=' + encodeURIComponent(carrierWhatsAppText(c, link)), '_blank');
+  window.open('https://api.whatsapp.com/send?phone=' + String(c.whatsapp || c.phone || '').replace(/\D/g, '') + '&text=' + encodeURIComponent(carrierWhatsAppText(c, link)), '_blank');
   markRateUpdateRequested(providerId);
 }
 

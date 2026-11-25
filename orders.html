@@ -1354,7 +1354,7 @@ async function requestCustomsDocsClick(orderNumber){
 
   if (!toEmail){
     if (!waPhone){ await btAlert('No carrier/plant phone or email on file to request customs documents.'); return; }
-    window.open('https://wa.me/' + waPhone + '?text=' + encodeURIComponent(requestCustomsDocsMessage(o)), '_blank');
+    window.open('https://api.whatsapp.com/send?phone=' + waPhone + '&text=' + encodeURIComponent(requestCustomsDocsMessage(o)), '_blank');
     return;
   }
 
@@ -3230,7 +3230,7 @@ async function askFleteroWhatsApp(orderNumber){
   if (!o || !o.carrier) return;
   const phone = (o.carrier.phone || '').replace(/\D/g, '');
   if (!phone) { await btAlert('This carrier has no phone on file.'); return; }
-  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(statusCheckMessage(o)), '_blank');
+  window.open('https://api.whatsapp.com/send?phone=' + phone + '&text=' + encodeURIComponent(statusCheckMessage(o)), '_blank');
 }
 
 // DAP/self-delivered counterpart to askFleteroWhatsApp — no carrier ever gets booked for these
@@ -3240,7 +3240,7 @@ async function askPlantWhatsApp(orderNumber){
   if (!o || !o.plant) return;
   const phone = (o.plant.whatsapp || o.plant.phone || '').replace(/\D/g, '');
   if (!phone) { await btAlert('This plant has no phone on file.'); return; }
-  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(statusCheckMessage(o)), '_blank');
+  window.open('https://api.whatsapp.com/send?phone=' + phone + '&text=' + encodeURIComponent(statusCheckMessage(o)), '_blank');
 }
 
 // Real correction 2026-09-07: email and WhatsApp are no longer the same short text reused in both

@@ -1614,7 +1614,7 @@ function openConfirm(){
   document.getElementById('confirmOverlay').style.display = 'flex';
 }
 function sendConfirmEmail(){ const { contact, copy } = confirmState; window.open(gmailComposeUrl([contact.customer_email], copy.subject, copy.emailBody), '_blank'); }
-function sendConfirmWhatsapp(){ const { contact, copy } = confirmState; window.open('https://wa.me/' + contact.customer_whatsapp.replace(/\D/g, '') + '?text=' + encodeURIComponent(copy.waMessage), '_blank'); }
+function sendConfirmWhatsapp(){ const { contact, copy } = confirmState; window.open('https://api.whatsapp.com/send?phone=' + contact.customer_whatsapp.replace(/\D/g, '') + '&text=' + encodeURIComponent(copy.waMessage), '_blank'); }
 function closeConfirm(){ document.getElementById('confirmOverlay').style.display = 'none'; confirmState = null; }
 
 // The page = one list of loads, like Orders' Active Loads (2026-09-29, the tabs are gone: "no

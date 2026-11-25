@@ -10046,7 +10046,7 @@ function rqWaModalOpenOne(i, allowMissingFichas){
       rqShowNotice('The complete picture could not be copied. WhatsApp was not opened. Try again.');
       rqRenderWaModal(); return;
     }
-    target.location.href = 'https://wa.me/' + it.phone + '?text=' + encodeURIComponent(it.body);
+    target.location.href = 'https://api.whatsapp.com/send?phone=' + it.phone + '&text=' + encodeURIComponent(it.body);
     it.opened = true;
     if (it.onOpened && !it.recorded) { rqWaWatching.add(it); rqWaLeft = false; }
     rqRenderWaModal();
@@ -10246,7 +10246,7 @@ async function rqCmpSendSugg(i, k){
   if (!String(x.text).trim()) { if (typeof rqShowNotice === 'function') rqShowNotice('The message is empty.'); return; }
   if (rqCmpSugState[key] !== 'opened'){
     if (rqCmpOfferPending(it)) { if (typeof rqShowNotice === 'function') rqShowNotice('The offer is already waiting in WhatsApp. Send it first (or tap "I sent it"): this message must go on its own, before the offer, not inside it.'); return; }
-    window.open('https://wa.me/' + it.phone + '?text=' + encodeURIComponent(x.text), '_blank'); rqCmpSugState[key] = 'opened'; rqOfferWindowRender(); return;
+    window.open('https://api.whatsapp.com/send?phone=' + it.phone + '&text=' + encodeURIComponent(x.text), '_blank'); rqCmpSugState[key] = 'opened'; rqOfferWindowRender(); return;
   }
   const pid = (it.personal && it.personal.pid) || (rqActiveProductFilterIds || [])[0] || null, prod = String(it.label || '').split(' — ')[1] || '';
   try {

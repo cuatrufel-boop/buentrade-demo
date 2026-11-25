@@ -3067,7 +3067,7 @@ async function negoSendToPlant(channel){
   } else {
     const phone = (negoPlant.whatsapp || negoPlant.phone || '').replace(/\D/g, '');
     if (!phone){ document.getElementById('negoMsg').textContent = 'This plant has no phone/WhatsApp on file.'; return; }
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(body)}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(body)}`, '_blank');
   }
 }
 
@@ -3422,7 +3422,7 @@ async function negoSaveDefinitive(overrideCreditCheck, confirmedDeliveryDate, ca
         } catch (e) { if (!e.cancelled) console.error('Customs agency heads-up failed:', e.message); }
       } else {
         const phone = (agency.whatsapp || agency.phone || '').replace(/\D/g, '');
-        if (phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        if (phone) window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`, '_blank');
       }
     }
   }
