@@ -1521,7 +1521,15 @@ async function signatureInfoClick(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   if (o.invoice_signed_at) await sendSignatureThankYou(orderNumber);
-  else await btAlert('Waiting for the customer to sign — they sign remotely once they receive the Invoice. No action needed from you.');
+  else {
+    // by hand too (owner 2026-11-24, G96): the customer signs by the link by himself; if he signed another way, the trader records it here and the order closes.
+    const yes = await btConfirm(`${orderNumber}: did the customer sign the Invoice? He signs by himself from the link; only say yes if he signed another way.`, 'Yes, signed', 'Not yet');
+    if (!yes) return;
+    try { await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'invoice_signed' }); }
+    catch (e) { await btAlert('Could not record the signature: ' + e.message); return; }
+    showToast('Signed', `${orderNumber} is closed`);
+    await loadStatusOrders();
+  }
 }
 
 // Same Spanish-line idea as quotes.html's rqSignalLineEs / trading-tool.html's negoSignalTextEn —
@@ -1760,7 +1768,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
       // drift from what this circle itself does — exactly the class of bug found live with Plant
       // Payment (3 independently-computed copies of the same decision).
       onClickRaw: realOnClick || null,
-      actionTitle: (isNext || isPendingPickupConfirm) ? (typeof stepName === 'function' ? stepName : (l => l))(s.label, o) : '',
+      actionTitle: (isNext || isPendingPickupConfirm) ? (typeof stepName === 'function' ? stepName : (l => l))(displayLabel, o) : '', // the Next card says Confirm PU, never the old "Pending Pickup" (owner 2026-11-24)
       dateStr,
       info: realOnClick ? '' : infoMsg,
       lineDone: i < stageIdx || puConfirmed,
@@ -2928,7 +2936,9 @@ function renderJourney(o, attentionOrderNumbers){
   // the plant's order number is written by hand only when the mail reader did not get it: in Release 2 Carrier, or in Confirm PU for a load without a carrier of ours
   const hasCarrierPhone = !!(o.carrier && o.carrier.phone);
   const recordRelBtn = !o.release_number ? `<button class="oj-ghost" onclick="recordReleaseNumber('${o.order_number}')">Record the plant's order number</button>` : '';
-  const requestAgainBtn = o.picked_up_at && !pendingDocs.length && !o.customs_sent_at ? `<button class="oj-ghost" onclick="requestCustomsDocsClick('${o.order_number}')">Ask for the documents again</button>` : '';
+  // by hand too (owner 2026-11-24, G96 "todos los cubos… también a mano"): while the plant's documents have not arrived, the trader can upload them himself (BOL, slaughter letter…); they are filed where the mail reader files them and Docs to border blinks.
+  const uploadPickupBtn = o.picked_up_at && !pendingDocs.length && !o.customs_sent_at ? `<label class="btn secondary doc-row-btn" style="align-self:center;" title="Upload the pick-up documents" onclick="event.stopPropagation()">↑ Upload<input type="file" multiple accept="image/*,.pdf,application/pdf" style="display:none;" onchange="uploadPickupDocuments('${o.order_number}',this)"></label>` : '';
+  const requestAgainBtn = (o.picked_up_at && !pendingDocs.length && !o.customs_sent_at ? `<button class="oj-ghost" onclick="requestCustomsDocsClick('${o.order_number}')">Ask for the documents again</button>` : '') + uploadPickupBtn;
   // what the trader captured in Confirm PU (owner 2026-11-21, step 7): the pick-up day, the estimated crossing and the live tracking link, kept on the load
   const pc = (o.pu_confirmed_at && o.pu_capture) || null;
   // Confirm PU in the SAME design as Wire Factoring and Release # (owner 2026-11-24: "hazlo igual, no esta igual el diseno"): the time as the bold value line, the address inside the same box; the crossing / tracking link (the trader's) as a small line only when they exist.
@@ -3695,7 +3705,7 @@ function releaseHzHtml(o, x, open, cardsOnly, base){
   if (!o.release_number) b1 += `<div class="oj-note">Waiting for the plant's reply with its order number (it is read automatically).</div><div class="pay-acts" style="margin-top:8px;"><button type="button" class="oj-ghost" onclick="recordReleaseNumber('${on}')">Record the plant's order number</button></div>`;
   // Owner 2026-11-24: the ACTION is the Release # cube itself (no button; "me gustó lo que hiciste con release num… solo tocándolo abre el correo"): it blinks the moment the number is known, touching the cube opens the e-mail with the release number to the plant's appointments contact copying the carrier, so they answer with the appointment; the next cube is Pickup Appointment.
   // ONE cube (owner 2026-11-24: "estos dos pueden ser uno solo… blinkee y cuando llega tocas para enviar"): it blinks when the plant's number arrives, touching it opens the e-mail, and the plant's appointment joins it when it is read; the step is done when the e-mail is sent, never waiting for the appointment.
-  const cards = card(1, 'Release #', sent ? 'done' : 'now', day(sent ? o.release_number_sent_at : plant && plant.created_at), b1, ready, (o.release_number && act) ? act : '');
+  const cards = card(1, 'Release #', sent ? 'done' : o.release_number ? 'now' : 'wait', day(sent ? o.release_number_sent_at : plant && plant.created_at), b1, ready, (o.release_number && act) ? act : '');
   // beside Wire Factoring on the same row (owner 2026-11-24: "sube los cubos al lado de wire factoring"): only the cubes are handed back, the row belongs to Wire Factoring
   return cardsOnly ? cards : `<div class="oj-hz hz4${open ? ' open' : ''}">` + cards + `</div>`;
 }
@@ -3711,6 +3721,9 @@ function payHzHtml(o, open, besideCards, cardsOnly){
   const okRead = !!o.factoring_confirmed_at || wired; // an order already paid before this step existed counts as confirmed
   const okDoc = rd('summar_confirmation')[0], receipt = rd('bank_receipt')[0];
   const ready = okRead && !wired && plantStatusAllowsPayment(o) && wire > 0; // the wire can start: this box blinks
+  // PLANT STATUS lives in this cube too (owner 2026-11-19 G60 "se confirma status de la carga antes de pagar"; owner 2026-11-24 G96 "todos los cubos… blinkear"): once the documents went to Summar and the plant's load status is not confirmed yet, the Next step is that status, and the cube blinks and does it (ask the plant, then record its answer); when it is confirmed the cube goes back to the wire (bank).
+  const statusNext = !!o.factoring_docs_sent_at && !wired && !plantStatusAllowsPayment(o);
+  const statusClick = statusNext ? (o.pickup_status_sent_at ? `confirmPlantStatusClick('${on}')` : `askPlantStatusClick('${on}')`) : '';
   const card = (i, full, state, date, body, blink, click, ndHtml) => `<div class="oj-step ${state}${blink ? ' blinkcard' : ''} open${open ? '' : ' pc'} hz"${click ? ` role="button" tabindex="0" style="cursor:pointer;" onclick="${click}"` : ''}>${ndHtml || `<div class="oj-nd">${state === 'done' ? OC_ICO.check : i}</div>`}<div class="oj-jc"><div class="oj-jh"><span class="nm-full">${full}</span>${state === 'done' ? '<span class="oj-chip done">✓ Done</span>' : state === 'now' ? '<span class="oj-chip now"><i></i>Next</span>' : '<span class="oj-chip wait">Waiting</span>'}<span class="dt">${esc(date)}</span></div><div class="oj-jb">${body}</div></div></div>`;
   const note = t => `<div class="oj-note">${t}</div>`;
   let b1 = '';
@@ -3728,7 +3741,7 @@ function payHzHtml(o, open, besideCards, cardsOnly){
   // after the e-mail to Summar, the old action stays inside this same box until Summar confirms it paid the plant (it opens nothing new: the release # comes from the plant's own reply)
   const askRecord = wired && !paid;
   if (askRecord) b1 += `<div class="pay-acts" style="margin-top:8px;"><button type="button" class="oj-send blink" onclick="event.stopPropagation();recordSummarConfirmation('${on}')">Record Summar's Confirmation<span class="oj-send-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></button></div>`;
-  const c1 = card(1, 'Wire Factoring', paid ? 'done' : (ready || askRecord) ? 'now' : 'wait', day(o.plant_paid_at || o.summar_payment_sent_at), b1, ready || askRecord, `payGoBank('${on}')`, `<div class="oj-nd" role="button" tabindex="0" title="Send to Summar" style="cursor:pointer;color:#3FCB7E;border-color:#3FCB7E;" onclick="event.stopPropagation();payEmailToSummar('${on}')">${OC_ICO.check}</div>`); // owner 2026-11-24: touching the cube opens the bank (the bank button lives only in this cube); the green check sends the e-mail to Summar (again, once it is wired)
+  const c1 = card(1, 'Wire Factoring', paid ? 'done' : (ready || askRecord || statusNext) ? 'now' : 'wait', day(o.plant_paid_at || o.summar_payment_sent_at), b1, ready || askRecord || statusNext, statusClick || `payGoBank('${on}')`, `<div class="oj-nd" role="button" tabindex="0" title="Send to Summar" style="cursor:pointer;color:#3FCB7E;border-color:#3FCB7E;" onclick="event.stopPropagation();payEmailToSummar('${on}')">${OC_ICO.check}</div>`); // owner 2026-11-24: touching the cube opens the bank (the bank button lives only in this cube); the green check sends the e-mail to Summar (again, once it is wired)
   if (cardsOnly) return c1 + (besideCards || '');
   return `<div class="oj-hz hz4${open ? ' open' : ''}">${c1}${besideCards || ''}</div>`;
 }
@@ -3758,6 +3771,21 @@ async function payResendToSummar(orderNumber){
   } catch (e) { await btAlert('Could not open the wire screenshot: ' + e.message); return; }
   summarPayResend = true;
   try { await sendPaymentToSummar(orderNumber); } finally { summarPayResend = false; }
+}
+// The plant's pick-up documents uploaded by hand (owner 2026-11-24, G96): kept where the mail reader keeps them (shipment_pickup_documents), so Docs to border blinks and the same "Send to Customs" sends them.
+async function uploadPickupDocuments(orderNumber, input){
+  const files = [...(input.files || [])]; input.value = '';
+  if (!files.length) return;
+  let saved = 0;
+  for (const f of files){
+    try {
+      const file_base64 = await readFileAsBase64(f);
+      await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: orderNumber, doc_type: 'received_file', kind: 'pickup_document', file_name: f.name, file_base64, content_type: f.type || null, from_name: 'Uploaded by hand' });
+      saved++;
+    } catch (e) { await btAlert('Could not save ' + f.name + ': ' + e.message); }
+  }
+  if (saved) showToast('Saved', `${saved} document${saved === 1 ? '' : 's'} — ${orderNumber}`);
+  await loadStatusOrders();
 }
 async function uploadFactoringDoc(orderNumber, kind, input){
   const f = input.files && input.files[0]; input.value = '';

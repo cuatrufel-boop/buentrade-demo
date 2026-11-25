@@ -296,6 +296,7 @@ window.btFetch = async function(url, opts){
 
 // DARK SCROLLBARS (owner 2026-11-23: "esos scrolls están muy feos"): every scroll box of every page uses a thin BuenTrade-blue bar on a transparent track instead of the OS's white one. A page's own scrollbar rule (more specific) still wins.
 (function(){
+  if (typeof document === 'undefined') return; // the protected tests run this file without a page
   var s = document.createElement('style'); s.id = 'bt-dark-scroll';
   s.textContent = '*{scrollbar-width:thin;scrollbar-color:rgba(90,170,255,.4) transparent;}'
     + '*::-webkit-scrollbar{width:9px;height:9px;}*::-webkit-scrollbar-track{background:transparent;}'
