@@ -1540,7 +1540,7 @@ function factoringAwaitsSummarOk(o){
   return !!(o && o.financing && o.financing.financing_method === 'summar' && o.factoring_docs_sent_at && !o.factoring_confirmed_at && !o.summar_payment_sent_at && !o.plant_paid_at);
 }
 // Owner 2026-11-21 (new 12-step flow): the names of the steps as he dictated them. Only what is SHOWN changes; the internal labels (the keys the phases, the Next Action and the payment rows match on) stay as they were.
-const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Docs to border', Delivered: 'Create Invoice', Invoice: 'Invoice client', Signature: 'Sign & Close' };
+const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Customs', Delivered: 'Create Invoice', Invoice: 'Invoice client', Signature: 'Sign & Close' };
 // The places that SHOW a name call it as `(typeof stepName === 'function' ? stepName : (l => l))(label, o)`: a page piece that is read on its own (the protected tests build the render functions alone) keeps the original label.
 function stepName(label, o){
   if (label === 'Pay Plant') return 'Wire'; // owner 2026-11-25: "mejor solo wire": the system already knows (factoring or direct) where it takes him; both go to the same bank
