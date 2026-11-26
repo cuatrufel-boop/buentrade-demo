@@ -3058,7 +3058,7 @@ function renderJourney(o, attentionOrderNumbers){
     if (!same) return line('⚠ the documents differ', 'color:#b45309;');
     return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
   })();
-  const customsCubeHtml = cuReadLine + `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${cuEyes}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}${cuFromCustoms.length ? `<span style="align-self:center;opacity:.45;">|</span>${cuStack(cuFromCustoms)}` : ''}</div>`;
+  const customsCubeHtml = `${cuReadLine}<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${cuEyes}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}${cuFromCustoms.length ? `<span style="align-self:center;opacity:.45;">|</span>${cuStack(cuFromCustoms)}` : ''}</div>`;
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
