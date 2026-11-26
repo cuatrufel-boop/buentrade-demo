@@ -1707,7 +1707,7 @@ function renderMilestoneTimeline(o){
   if (o.has_freight_order) stops.push({ icon: STEP_ICONS.picked_up, label: 'FO', done: !!o.fo_sent_at, date: o.fo_sent_at, onClick: `openDocPreview('FO','${o.order_number}')` });
   stops.push({ icon: MONEY_ICON, label: 'Pago Planta', done: !!o.plant_paid_at, date: o.plant_paid_at, onClick: `confirmPlantPaymentSent('${o.order_number}')` });
   stops.push({ icon: CLIP_ICON, label: 'Docs Recogida', done: hasAnyPickupDoc, date: null, wait: stageIdx < pickedUpIdx, onClick: `requestPickupDocsClick('${o.order_number}')` });
-  stops.push({ icon: CUSTOMS_ICON, label: 'Aduana', done: !!o.customs_sent_at, date: o.customs_sent_at, wait: !pendingCustoms && !o.customs_sent_at, onClick: `shareCustoms('${o.order_number}')` });
+  stops.push({ icon: CUSTOMS_ICON, label: 'Aduana', done: !!customsDoneAt(o), date: customsDoneAt(o) === true ? null : customsDoneAt(o), wait: !pendingCustoms && !customsDoneAt(o), onClick: `shareCustoms('${o.order_number}')` });
   stops.push({ icon: RECEIPT_ICON, label: 'Factura', done: !!o.invoice_sent_at, date: o.invoice_sent_at, wait: stageIdx < deliveredIdx, onClick: `openInvoiceQT('${o.order_number}')` });
   stops.push({ icon: SIGN_ICON, label: 'Firma Cliente', done: !!o.invoice_signed_at, date: o.invoice_signed_at, wait: !o.invoice_sent_at, onClick: null });
 
@@ -1738,6 +1738,12 @@ function renderMilestoneTimeline(o){
 // literally, exactly as shown, rather than keeping the SVGs the mockup itself never used.
 const PIN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 function renderUnifiedTimeline(o, attentionOrderNumbers){
+  // CUSTOMS IS DONE WHEN WE SENT THE DOCUMENTS OR WHEN THE AGENCY ANSWERED (owner 2026-11-26: "cuando se terminan los docs y se empieza invoice con pedimento… llega pedimento parpadea invoice, la siguiente cubo"): the agency's papers on the order (customs_document) close the Customs cube and the next cube (Create Invoice) is the one that blinks.
+  function customsDoneAt(o){
+    if (o.customs_sent_at) return o.customs_sent_at;
+    const t = (o.received_documents || []).filter(d => d.kind === 'customs_document').map(d => d.created_at || '').sort();
+    return t.length ? (t[0] || true) : null;
+  }
   const stageIdx = LOAD_STAGES.findIndex(s => s.key === (o.load_status || 'pending_pickup'));
   const pickedUpIdx = LOAD_STAGES.findIndex(s => s.key === 'picked_up');
   const deliveredIdx = LOAD_STAGES.findIndex(s => s.key === 'delivered');
@@ -1772,7 +1778,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
     // (Customs docs/Sent to customs) already enforce among themselves now also blocks Delivered
     // from racing ahead of them (moved here from Unloading once that stage was removed — see
     // [[project_order_lifecycle_and_alerting_spec]]).
-    const deliveredBlocked = s.key === 'delivered' && !o.customs_sent_at;
+    const deliveredBlocked = s.key === 'delivered' && !customsDoneAt(o);
     // PU 2 Client (step 8) comes after Confirm PU (step 7): the load cannot be marked picked up before the pick-up was captured, so the Pick up button never blinks ahead of it (owner 2026-11-21, "sentido común al flujo")
     const waitsForConfirm = s.key === 'picked_up' && i === stageIdx + 1 && !o.pu_confirmed_at;
     // THE CARRIER'S PICK-UP PAGE (owner 2026-11-25: "a la hora de recogida… que la persona pueda subir en el cel y dar recogida"): with a carrier of ours and the Appointment done, Pickup blinks only (a) at the hour of the appointment, to SEND the carrier
@@ -1964,7 +1970,7 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   const confirmIdx = entries.length;
   entries.push(mainEntry('pending_pickup'));
   entries.push(mainEntry('picked_up'));
-  entries.push(miniEntry({ icon: CUSTOMS_ICON, label: 'Sent to customs', done: !!o.customs_sent_at, date: o.customs_sent_at, wait: !pendingCustoms && !o.customs_sent_at, waitReason: 'No pickup documents have arrived yet.', onClick: `shareCustoms('${o.order_number}')`, raised: true }));
+  entries.push(miniEntry({ icon: CUSTOMS_ICON, label: 'Sent to customs', done: !!customsDoneAt(o), date: customsDoneAt(o) === true ? null : customsDoneAt(o), wait: !pendingCustoms && !customsDoneAt(o), waitReason: 'No pickup documents have arrived yet.', onClick: `shareCustoms('${o.order_number}')`, raised: true }));
   const deliveredIdxInEntries = entries.length;
   entries.push(mainEntry('delivered'));
   entries.push(miniEntry({ icon: RECEIPT_ICON, label: 'Invoice', done: !!o.invoice_sent_at, date: o.invoice_sent_at, wait: stageIdx < deliveredIdx, waitReason: 'The load must be Delivered first.', onClick: `openInvoiceQT('${o.order_number}')` }));
