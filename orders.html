@@ -3047,7 +3047,18 @@ function renderJourney(o, attentionOrderNumbers){
   // what the customs agency sent back (certificate, stamped BOL…): its own eyes after the button, never attached to what goes TO customs (owner 2026-11-25)
   const cuFromCustoms = (o.received_documents || []).filter(d => d.kind === 'customs_document' && d.storage_url).map(d => ({ storage_url: d.storage_url, filename: 'From customs — ' + (d.file_name || 'Document') }));
   const cuEyes = cuStack(cuDocs);
-  const customsCubeHtml = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${cuEyes}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}${cuFromCustoms.length ? `<span style="align-self:center;opacity:.45;">|</span>${cuStack(cuFromCustoms)}` : ''}</div>`;
+  // what the documents SAY about the load (owner 2026-11-26, step 2): boxes + net weight read from the plant's BOL, the stamped BOL and the USDA certificate. ✓ when 2+ documents agree, ⚠ when they differ; one reading alone has no ✓; none = nothing drawn. Readings only, never the invoice's numbers.
+  const cuReads = (o.load_readings || []).filter(r => !r.read_error && r.boxes != null && r.net_weight_lb != null);
+  const cuFmt = (n, d) => Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const cuReadLine = (() => {
+    if (!cuReads.length) return '';
+    const tip = escapeHtml(cuReads.map(r => `${r.file_name}: ${cuFmt(r.boxes, 0)} boxes · ${cuFmt(r.net_weight_lb, 2)} lb`).join('\n'));
+    const same = cuReads.every(r => Number(r.boxes) === Number(cuReads[0].boxes) && Number(r.net_weight_lb) === Number(cuReads[0].net_weight_lb));
+    const line = (txt, extra) => `<div class="pay-amt" style="font-weight:700;${extra || ''}" title="${tip}">${txt}</div>`;
+    if (!same) return line('⚠ the documents differ', 'color:#b45309;');
+    return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
+  })();
+  const customsCubeHtml = cuReadLine + `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${cuEyes}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}${cuFromCustoms.length ? `<span style="align-self:center;opacity:.45;">|</span>${cuStack(cuFromCustoms)}` : ''}</div>`;
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
