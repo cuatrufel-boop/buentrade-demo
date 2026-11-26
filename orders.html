@@ -2963,6 +2963,17 @@ function sendHistoryHtml(o, label){
   }).join('');
 }
 // A document row (file name link + status) becomes ONE row of eyes for the cube; its buttons (if any) stay beside the eye. A row without a file link is left as it was.
+// THE SAME BOL IS NEVER SENT TWICE (owner 2026-11-26, e-mail to customs of 1002 carried the plant's BOL and GLT's copy of it: "es el mismo bol, no se puede duplicar, el que primero llene el cubo completo para enviar"): of the documents the readings found to be a BOL only the first to arrive stays; every other document is untouched. A document with no reading is never guessed to be a BOL.
+function withoutDuplicateBols(docs, readings){
+  const bolNames = new Set((readings || []).filter(r => r.origin !== 'customs_document' && r.doc_kind === 'bol' && !r.read_error).map(r => r.file_name));
+  let seen = false;
+  return [...(docs || [])].sort((x, y) => String(x.created_at || '').localeCompare(String(y.created_at || ''))).filter(d => {
+    const name = d.filename || d.file_name;
+    if (!bolNames.has(name)) return true;
+    if (seen) return false;
+    seen = true; return true;
+  });
+}
 function cubeEyesOnly(html){
   const eyes = [];
   const rest = String(html || '').replace(/<div class="doc-row[^"]*">((?:(?!<\/div>)[^])*)<\/div>/g, (m, inner) => {
@@ -3046,7 +3057,7 @@ function renderJourney(o, attentionOrderNumbers){
       // owner 2026-11-25: no "Link sent" / "Carrier loaded" text; the cube is like the others: the hour (link sent, then the carrier's) and the eyes
       + puUpload; // the old "Mark picked up" text button is gone (owner 2026-11-25: no duplicates, no texts): the Customer button does it; ↑ Upload adds the papers by hand
   // DOCS TO BORDER fills itself and has ONE green WhatsApp button (owner 2026-11-25: "no quiero tocar el cubo… que llene el cubo automatico con docs (ojo) pero un boton de whatsapp (customs) para mandar a aduana"): one EYE per document the plant/carrier sent (and the plant's load confirmation when there is no carrier of ours), the Customs button sends them to the agency (same action as before); touching the cube does nothing
-  const cuDocs = (o.pickup_documents || []).filter(d => d.storage_url).concat(!(o.carrier && o.carrier.name) ? (o.received_documents || []).filter(d => d.kind === 'plant_order_confirmation' && d.storage_url).map(d => ({ storage_url: d.storage_url, filename: d.file_name || "Plant's order confirmation" })) : []);
+  const cuDocs = (typeof withoutDuplicateBols === 'function' ? withoutDuplicateBols : (x => x))((o.pickup_documents || []).filter(d => d.storage_url), o.load_readings).concat(!(o.carrier && o.carrier.name) ? (o.received_documents || []).filter(d => d.kind === 'plant_order_confirmation' && d.storage_url).map(d => ({ storage_url: d.storage_url, filename: d.file_name || "Plant's order confirmation" })) : []);
   // standing on an eye says WHAT the document is (owner 2026-11-26: "no dice que doc es cada uno cuando paso por encima"): its type as the reading found it (BOL, BOL stamped by customs, USDA certificate, other document), then the file name. A document no reading has seen shows only its file name, as before.
   const cuKindLabel = (d) => { const rd = (o.load_readings || []).find(r => r.file_name && r.file_name === (d.rawName || d.filename || d.file_name)); if (!rd) return ''; if (rd.doc_kind === 'bol') return rd.customs_stamp ? 'BOL stamped by customs' : 'BOL'; if (rd.doc_kind === 'export_certificate') return 'USDA certificate'; return 'Other document'; };
   const cuEye = d => { const lbl = cuKindLabel(d); const nm = d.filename || 'Document'; return `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(lbl ? lbl + '\n' + nm : nm)}${d.forwarded_to_customs_at ? ' — Sent to Customs' : ''}" aria-label="${escapeHtml(lbl || nm)}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`; };
@@ -5191,7 +5202,7 @@ async function shareCustoms(orderNumber){
   if (!emails.length){ await btAlert('This customs agency has no email on file.'); return; }
 
   const pending = shipment.pending_pickup_documents || [];
-  const allDocs = (shipment.pickup_documents || []).filter(d => d.storage_url); // COMPLETE every time, in the order they arrived (owner 2026-11-25: "no pueden salir desordenadamente, tienen que salir completos"): never only what is still pending
+  const allDocs = withoutDuplicateBols((shipment.pickup_documents || []).filter(d => d.storage_url), shipment.load_readings); // COMPLETE every time, in the order they arrived (owner 2026-11-25: "no pueden salir desordenadamente, tienen que salir completos"): never only what is still pending
   // Owner 2026-11-23: "la planta manda una confirmación de la carga que hay que mandar a aduana, pero si carrier no hay (delivered border)": a load with no carrier of ours (the plant delivers to the border) sends the plant's confirmation of the load to customs too.
   const plantConfirmations = !shipment.carrier_name ? (shipment.received_documents || []).filter(d => d.kind === 'plant_order_confirmation' && d.storage_url) : [];
   if (!allDocs.length && !plantConfirmations.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
