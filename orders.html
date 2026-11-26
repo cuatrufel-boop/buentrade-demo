@@ -5169,12 +5169,13 @@ async function shareCustoms(orderNumber){
   if (!emails.length){ await btAlert('This customs agency has no email on file.'); return; }
 
   const pending = shipment.pending_pickup_documents || [];
+  const allDocs = (shipment.pickup_documents || []).filter(d => d.storage_url); // COMPLETE every time, in the order they arrived (owner 2026-11-25: "no pueden salir desordenadamente, tienen que salir completos"): never only what is still pending
   // Owner 2026-11-23: "la planta manda una confirmación de la carga que hay que mandar a aduana, pero si carrier no hay (delivered border)": a load with no carrier of ours (the plant delivers to the border) sends the plant's confirmation of the load to customs too.
   const plantConfirmations = !shipment.carrier_name ? (shipment.received_documents || []).filter(d => d.kind === 'plant_order_confirmation' && d.storage_url) : [];
-  if (!pending.length && !plantConfirmations.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
+  if (!allDocs.length && !plantConfirmations.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
 
   const attachments = [];
-  for (const doc of pending){
+  for (const doc of allDocs){
     try {
       const res = await fetch(doc.storage_url);
       const blob = await res.blob();

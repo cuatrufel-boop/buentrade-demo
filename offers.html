@@ -2044,10 +2044,11 @@ async function shareCustoms(orderNumber){
 
   const shipment = ((await callApi('shipments-search', { order_number: orderNumber, limit: 1 })).results || [])[0];
   const pending = (shipment && shipment.pending_pickup_documents) || [];
-  if (!pending.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
+  const allDocs = ((shipment && shipment.pickup_documents) || []).filter(d => d.storage_url); // COMPLETE every time, in the order they arrived (owner 2026-11-25)
+  if (!allDocs.length){ await btAlert('No pickup documents have been received yet for this order (BOL/packing list/photos/USDA). They arrive by email from the plant/carrier after pickup.'); return; }
 
   const attachments = [];
-  for (const doc of pending){
+  for (const doc of allDocs){
     try {
       const res = await fetch(doc.storage_url);
       const blob = await res.blob();
