@@ -3029,15 +3029,15 @@ function renderJourney(o, attentionOrderNumbers){
   // TWO green WhatsApp buttons beside the eyes, nothing else in the cube (owner 2026-11-25: "pon dos botones uno para enviar a carrier y otro enviar a cliente verdes asi no enredamos todo"): Carrier sends him the pick-up link, Customer sends the approved pick-up notice; same actions as touching the cube, always available (by hand)
   const waGreen = 'padding:6px 10px;color:#4ADE80 !important;border-color:rgba(74,222,128,.55) !important;background:rgba(74,222,128,.14) !important;';
   const waBtn = (who, act, icon) => `<button class="btn secondary cube-tip" style="${waGreen}" data-tip="${who}" aria-label="${who}" onclick="event.stopPropagation();${act}">${icon || (typeof WA_ICON === 'undefined' ? '' : WA_ICON)}</button>`;
-  const puWaCarrier = waBtn('Carrier', `sendPickupLinkClick('${o.order_number}')`)
+  const puWaCarrier = (o.carrier && o.carrier.phone ? waBtn('Carrier', `sendPickupLinkClick('${o.order_number}')`) : '') // a load with no carrier of ours (or no phone) has no Carrier button, but Customer and Plant stay: the cube is never left without its actions
     + waBtn('Customer', `customerPickupButtonClick('${o.order_number}')`)
     + waBtn('Plant', `requestPickupDocsOnPickup('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON); // 3 buttons (owner 2026-11-25): carrier WhatsApp -> customer WhatsApp -> plant e-mail; each one opens the next, and each can be done by hand on its own
   const puEyes = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${puDocs.map(d => `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(d.filename || 'Pick-up document')}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`).join('')}${puWaCarrier}</div>`;
   const puUpload = !o.customs_sent_at ? `<label class="btn secondary doc-row-btn" style="align-self:center;" title="Upload the pick-up documents" onclick="event.stopPropagation()">↑ Upload<input type="file" multiple accept="image/*,.pdf,application/pdf" style="display:none;" onchange="uploadPickupDocuments('${o.order_number}',this)"></label>` : '';
-  const pickupCubeHtml = !(o.carrier && o.carrier.phone) ? ''
+  const pickupCubeHtml = !(o.carrier && o.carrier.phone) ? puEyes
     : (o.carrier_picked_up_at || o.pickup_link_sent_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at || o.pickup_link_sent_at))}</div>` : '') + puEyes
       // owner 2026-11-25: no "Link sent" / "Carrier loaded" text; the cube is like the others: the hour (link sent, then the carrier's) and the eyes
-      + puUpload + (o.pu_confirmed_at && !o.picked_up_at ? `<button class="oj-ghost" onclick="event.stopPropagation();advanceLoadStatus('${o.order_number}','picked_up')">Mark picked up</button>` : ''); // by hand: the cube sends the link, ↑ Upload adds the papers, Mark picked up marks it; once the carrier loaded, touching the cube is the customer's WhatsApp (owner 2026-11-25)
+      + puUpload; // the old "Mark picked up" text button is gone (owner 2026-11-25: no duplicates, no texts): the Customer button does it; ↑ Upload adds the papers by hand
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': sendCustomsBtn + (rows.pickup || '') + requestAgainBtn, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
@@ -3485,10 +3485,11 @@ async function resendPickupNoticeClick(orderNumber){
 // window (WhatsApp offered after it). The documents that come back — from the plant or from the carrier — are read by the mail reader and filed on the order. No e-mail on file: nothing opens (the Customs docs step is still there).
 async function requestPickupDocsOnPickup(orderNumber){
   const o = findStatusOrder(orderNumber);
-  if (!o || !o.plant) return;
+  if (!o) return;
+  if (!o.plant){ if (typeof btAlert === 'function') await btAlert('No plant on this order to ask for the documents.'); return; }
   // the plant's sales contact and its DOCUMENTS contacts (not its CC list: those get the PO and the price requests) — owner 2026-11-22
   const to = [...new Set([String(o.plant.email || '').trim(), ...String(o.plant.docs_emails || '').split(/[,;\s]+/).map(e => e.trim())].filter(Boolean))];
-  if (!to.length) return;
+  if (!to.length){ if (typeof btAlert === 'function') await btAlert('No e-mail on file for the plant to ask for the documents.'); return; } // by hand it is never silent
   const cc = o.carrier ? collectEmails(o.carrier) : [];
   const waPhone = String(o.plant.whatsapp || o.plant.phone || '').replace(/\D/g, '');
   const subject = requestCustomsDocsSubject(orderNumber);
