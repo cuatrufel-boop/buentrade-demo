@@ -1741,8 +1741,8 @@ const FROM_DISPLAY = {
 // call now live once in js/email-modal.js (bcOpenEmailModal/bcSendEmailApi) instead of four
 // separate copies. This file's own sendEmailApi keeps its exact original signature and every one
 // of its real call sites is unchanged — it's now a thin wrapper onto the shared implementation.
-async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc){
-  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
+async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc, html){
+  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc, html, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
 }
 
 // Opens Gmail's own compose screen instead of a mailto: link — same fix as quotes.html's
@@ -2020,18 +2020,21 @@ function customsCrossingDay(s){
   const w = d.getDay(); if (w === 6) d.setDate(d.getDate() + 2); else if (w === 0) d.setDate(d.getDate() + 1);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
-function customsEmailBody(agencyName, num, shipment, customer){
+function customsEmailMarked(agencyName, num, shipment, customer){
   const cd = customsCrossingDay(shipment || {});
   const when = cd ? new Date(cd + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
   const c = customer || {};
   const place = [c.city, c.state, c.country].map(x => String(x || '').trim()).filter(Boolean).join(', ');
   const consignee = [String(c.legal_name || c.trade_name || (shipment && shipment.customer_name) || '').trim(), String(c.address || '').trim(), place, c.phone ? 'Phone: ' + String(c.phone).trim() : ''].filter(Boolean).join('\n');
   return `Hi${agencyName ? ' ' + agencyName : ''} team,\n\n`
-    + `Please find attached the BOL, Slaughter Letter (SL), and crossing instructions for the shipment${when ? ' scheduled to cross on ' + when + ',' : ''} under Order BT-${num}.\n\n`
+    + `Please find attached the BOL, Slaughter Letter (SL), and crossing instructions for the shipment${when ? ' scheduled to cross on \u0001' + when + '\u0002,' : ''} under Order BT-${num}.\n\n`
     + `Exporter:\nBuenTrade LLC\nEIN (Tax ID): 30-1499465\nDUNS: 14-732-2738\n1525 N Park Dr, Suite 104, Weston, FL 33326\nPhone: +1 754 248 1016\nEmail: info@buentradegroup.com\n\n`
     + `Consignee:\n${consignee}\n\n`
-    + `Could you please share the Mexican carrier's details, schedule, and contact information so our carriers can coordinate and expedite the transfer? As soon as you reply with that information after inspection , we will send over the commercial invoice.\n\nBest regards,`;
+    + `Could you please share the Mexican carrier's details, schedule, and contact information so our carriers can coordinate and expedite the transfer? As soon as you reply with that information after inspection , \u0001we will send over the commercial invoice\u0002.\n\nBest regards,`;
 }
+function customsEmailBody(agencyName, num, shipment, customer){ return customsEmailMarked(agencyName, num, shipment, customer).replace(/[\u0001\u0002]/g, ''); }
+// the same text with the arrival day and "we will send over the commercial invoice" in bold (owner 2026-11-25); the e-mail window sends it only while the trader has not edited the text
+function customsEmailHtml(agencyName, num, shipment, customer){ return escapeHtml(customsEmailMarked(agencyName, num, shipment, customer)).replace(/\u0001/g, '<b>').replace(/\u0002/g, '</b>').replace(/\n/g, '<br>'); }
 async function shareCustoms(orderNumber){
   const sentOffer = ((await callApi('sent-offers-search', { order_number: orderNumber, limit: 1 })).results || [])[0];
   if (!sentOffer || !sentOffer.customs_agency_provider_id){ await btAlert('No customs agency on file for this order.'); return; }
@@ -2068,10 +2071,11 @@ async function shareCustoms(orderNumber){
   const docsLine = shipment.docs_on === true ? 'This load comes WITH its documents from the plant.' : shipment.docs_on === false ? 'This load comes WITHOUT documents: please prepare them.' : '';
   const consigneeCustomer = shipment && shipment.customer_id ? ((await callApi('customers-search', { ids: [shipment.customer_id] })).results || [])[0] : null;
   const body = customsEmailBody(agency && agency.name, btNum(orderNumber), shipment, consigneeCustomer);
+  const bodyHtml = customsEmailHtml(agency && agency.name, btNum(orderNumber), shipment, consigneeCustomer);
   const waPhoneCustoms = agency && (agency.whatsapp || agency.phone);
   const waMessageCustoms = `Orden BT-${btNum(orderNumber)}\nHi BT-${btNum(orderNumber)}. I'm sending you the documents here as well.${docsLine ? ' ' + docsLine : ''} Please confirm you have received them and that everything is in order on your end. We'll proceed accordingly. Thank you!`;
   try {
-    await sendEmailApi('logistics', emails, subject, body, attachments, { phone: waPhoneCustoms, message: waMessageCustoms });
+    await sendEmailApi('logistics', emails, subject, body, attachments, { phone: waPhoneCustoms, message: waMessageCustoms }, undefined, bodyHtml);
     showToast('Documentos reenviados a aduana', emails.join(', '));
     await callApi('shipment-pickup-documents-mark-forwarded', { actor: currentActor(), document_ids: pending.map(d => d.id) });
     markDocSent(orderNumber, 'customs');
