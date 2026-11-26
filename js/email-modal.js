@@ -436,6 +436,8 @@ function btTypedResolve(ok){
 
 // A whole number the trader types (owner 2026-11-21, step 11: the real box count from the customs document). Resolves the number (1 or more), or null when he cancels.
 let btNumberResolveFn = null;
+let btNumberDecimal = false;
+function btCleanDecimal(v){ const t = String(v).replace(/[^\d.]/g, ''); const k = t.indexOf('.'); return k < 0 ? t : t.slice(0, k + 1) + t.slice(k + 1).replace(/\./g, '').slice(0, 2); }
 let btNumberChoice = null; // when the prompt offers choices (opts.choices = [[value, label, message], ...]) this is the one picked on OK
 function btPromptNumber(message, initial){
   const opts = arguments[2]; // optional { choices: [[value, label, message], ...] }
@@ -474,13 +476,18 @@ function btPromptNumber(message, initial){
   });
   if (choices){ choicesEl.firstChild.classList.remove('secondary'); document.getElementById('btNumberMessage').textContent = choices[0][2] || message; }
   const input = document.getElementById('btNumberInput');
+  // opts.decimal (a weight such as 39,978.70): digits and ONE dot, two decimals; the count prompts keep whole numbers only
+  btNumberDecimal = !!(opts && opts.decimal);
+  input.setAttribute('inputmode', btNumberDecimal ? 'decimal' : 'numeric');
+  input.setAttribute('maxlength', btNumberDecimal ? '10' : '7');
+  input.oninput = () => { input.value = btNumberDecimal ? btCleanDecimal(input.value) : input.value.replace(/\D/g, ''); };
   input.value = initial || '';
   document.getElementById('btNumberOverlay').style.display = 'flex';
   setTimeout(() => input.focus(), 50);
   return new Promise(resolve => { btNumberResolveFn = resolve; });
 }
 function btNumberResolve(ok){
-  const n = parseInt(document.getElementById('btNumberInput').value, 10);
+  const n = btNumberDecimal ? parseFloat(document.getElementById('btNumberInput').value) : parseInt(document.getElementById('btNumberInput').value, 10);
   if (ok && !(n >= 1)){ document.getElementById('btNumberInput').focus(); return; }
   document.getElementById('btNumberOverlay').style.display = 'none';
   if (btNumberResolveFn) btNumberResolveFn(ok ? n : null);

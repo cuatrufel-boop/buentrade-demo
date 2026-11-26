@@ -2734,6 +2734,11 @@ const APP_ORIGIN = 'https://buentradegroup.com';
 // whatsapp y recibe pantalla para firma email y whatsapp" — one combined send: the Invoice PDF
 // attached, and the remote sign link in the SAME message (not a second, separate email/WhatsApp),
 // so the trader can follow up for a signature in that same WhatsApp thread.
+// What the load documents SAY (order_load_readings, step 2 of Customs → Invoice, owner 2026-11-26): the number is offered in the question only when every reading that has it agrees; he confirms or changes it — a reading is never the real number by itself.
+function bcAgreedReading(readings, field){
+  const v = (readings || []).filter(r => !r.read_error && r[field] != null).map(r => Number(r[field]));
+  return v.length && v.every(x => x === v[0]) ? v[0] : null;
+}
 async function createAndShareInvoice(){
   if (!negoOffer || !negoOffer.order_number){ await btAlert('No order on this offer yet.'); return; }
   const orderNumber = negoOffer.order_number;
@@ -2742,7 +2747,7 @@ async function createAndShareInvoice(){
   let result;
   try { result = await bcComposeSO(orderNumber); }
   catch (e) { msgEl.textContent = 'Error: ' + e.message; return; }
-  const { document: composed, so, customer } = result;
+  let { document: composed, so, customer } = result;
   // Real correction 2026-09-06: "cobros a clientes (no cliente)... para no molestar al cliente con
   // todo" — the Invoice is a billing document, so it goes to the customer's own Payments Contact
   // (already a real field on customers.html, just never wired to any send until now) when one is
@@ -2758,17 +2763,26 @@ async function createAndShareInvoice(){
   let shipmentRow = null;
   try { shipmentRow = ((await callApi('shipments-search', { order_number: orderNumber, limit: 1 })).results || [])[0] || null; } catch (e) {}
   // Boxes or combos (owner 2026-11-23): he picks which one the customs document counts, then types how many; it is printed on the invoice itself.
-  const realBoxes = await btPromptNumber(`Real box count from the customs document — ${orderNumber}`, shipmentRow && shipmentRow.real_boxes, { choices: [['boxes', 'Boxes', `Real box count from the customs document — ${orderNumber}`], ['combos', 'Combos', `Real combo count from the customs document — ${orderNumber}`]] });
+  const realBoxes = await btPromptNumber(`Real box count from the customs document — ${orderNumber}`, (shipmentRow && shipmentRow.real_boxes) || bcAgreedReading(shipmentRow && shipmentRow.load_readings, 'boxes'), { choices: [['boxes', 'Boxes', `Real box count from the customs document — ${orderNumber}`], ['combos', 'Combos', `Real combo count from the customs document — ${orderNumber}`]] });
   if (!realBoxes){ msgEl.textContent = ''; return; }
   const countKind = btNumberChoice === 'combos' ? 'combos' : 'boxes';
+  // Real net weight (owner 2026-11-26: "para la factura nueva con peso real y cajas debo hacerlo en el qt"): asked here, in the QT, with the number the customs documents agree on already written; it is saved on the sales order (real_weight) and the invoice is composed again with it.
+  const readLb = bcAgreedReading(shipmentRow && shipmentRow.load_readings, 'net_weight_lb');
+  const readNote = readLb ? `\nThe documents say ${readLb.toLocaleString('en-US', { minimumFractionDigits: 2 })} lb — confirm or change it.` : ((shipmentRow && (shipmentRow.load_readings || []).some(r => !r.read_error && r.net_weight_lb != null)) ? '\nThe documents differ (see Customs) — type the real one.' : '');
+  const realWeight = await btPromptNumber(`Real net weight in lb from the customs document — ${orderNumber}${readNote}`, (so && Number(so.real_weight) > 0 && so.real_weight) || readLb || (so && Number(so.weight) > 0 && so.weight) || '', { decimal: true });
+  if (!realWeight){ msgEl.textContent = ''; return; }
   if (composed.invoice && composed.invoice.line_item){ composed.invoice.line_item.count = realBoxes; composed.invoice.line_item.count_kind = countKind; }
 
   let issueRes;
-  try { issueRes = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber }); }
+  try { issueRes = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber, real_weight: realWeight }); }
   catch (e) { msgEl.textContent = 'Error creando el link de firma: ' + e.message; return; }
   // Real ask 2026-09-15: short link (/f/x7k9m2) everywhere instead of the long ?order=&token= URL
   // — WhatsApp always shows the raw link text next to the branded preview card, no way to hide it.
   const signLink = `${APP_ORIGIN}/f/${encodeURIComponent(issueRes.short_code)}`;
+  // the weight he confirmed is on the sales order now: the invoice (and the signature page, which composes it from the order) carries it; the count is still applied here as before
+  try { result = await bcComposeSO(orderNumber); composed = result.document; so = result.so; customer = result.customer; }
+  catch (e) { msgEl.textContent = 'Error: ' + e.message; return; }
+  if (composed.invoice && composed.invoice.line_item){ composed.invoice.line_item.count = realBoxes; composed.invoice.line_item.count_kind = countKind; }
 
   const { doc, finalTotal } = buildInvoicePdfUnsigned(composed, so, customer, orderNumber);
   const filename = `INV-BT-${btNum(orderNumber)}.pdf`;
