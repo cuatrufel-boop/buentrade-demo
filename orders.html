@@ -1458,6 +1458,7 @@ async function sendPickupLinkClick(orderNumber){
   catch (e) { await btAlert('Could not record that the link was sent: ' + e.message); return; }
   showToast('Pick-up link sent', (o.carrier && o.carrier.name) || orderNumber);
   await loadStatusOrders();
+  await customerPickupButtonClick(orderNumber); // the chain (owner 2026-11-25): after the carrier, the customer's (it warns first if the carrier has not loaded; Cancel stops the chain)
 }
 // APPOINTMENT BY HAND -> E-MAIL TO THE CARRIER (owner 2026-11-25: "el cubo de appointments se limenta con lo que lee de respuesta, pero el manual debe enviar en un mensaje a carrier confirmando datos" · "coge el de carrier adaptalo a confirmacion de appointment a carrier"):
 // his Paso 6 e-mail to the carrier (Hi {carrier} team, "Please find below…", bullets, tracking-link sentence, Best regards) adapted to confirm the appointment. TO the carrier, CC the plant's appointments contact and the seller (as the Release e-mail),
@@ -3027,9 +3028,10 @@ function renderJourney(o, attentionOrderNumbers){
   // the WhatsApp logo beside the eyes (owner 2026-11-25: "dame un logo de whatsapp al lado del ojo que si me paro arriba diga carrier"): it sends the carrier the pick-up link, the same action as touching the cube
   // TWO green WhatsApp buttons beside the eyes, nothing else in the cube (owner 2026-11-25: "pon dos botones uno para enviar a carrier y otro enviar a cliente verdes asi no enredamos todo"): Carrier sends him the pick-up link, Customer sends the approved pick-up notice; same actions as touching the cube, always available (by hand)
   const waGreen = 'padding:6px 10px;color:#4ADE80 !important;border-color:rgba(74,222,128,.55) !important;background:rgba(74,222,128,.14) !important;';
-  const waBtn = (who, act) => `<button class="btn secondary cube-tip" style="${waGreen}" data-tip="${who}" aria-label="${who}" onclick="event.stopPropagation();${act}">${typeof WA_ICON === 'undefined' ? '' : WA_ICON}</button>`;
+  const waBtn = (who, act, icon) => `<button class="btn secondary cube-tip" style="${waGreen}" data-tip="${who}" aria-label="${who}" onclick="event.stopPropagation();${act}">${icon || (typeof WA_ICON === 'undefined' ? '' : WA_ICON)}</button>`;
   const puWaCarrier = waBtn('Carrier', `sendPickupLinkClick('${o.order_number}')`)
-    + waBtn('Customer', `customerPickupButtonClick('${o.order_number}')`);
+    + waBtn('Customer', `customerPickupButtonClick('${o.order_number}')`)
+    + waBtn('Plant', `requestPickupDocsOnPickup('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON); // 3 buttons (owner 2026-11-25): carrier WhatsApp -> customer WhatsApp -> plant e-mail; each one opens the next, and each can be done by hand on its own
   const puEyes = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${puDocs.map(d => `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(d.filename || 'Pick-up document')}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`).join('')}${puWaCarrier}</div>`;
   const puUpload = !o.customs_sent_at ? `<label class="btn secondary doc-row-btn" style="align-self:center;" title="Upload the pick-up documents" onclick="event.stopPropagation()">↑ Upload<input type="file" multiple accept="image/*,.pdf,application/pdf" style="display:none;" onchange="uploadPickupDocuments('${o.order_number}',this)"></label>` : '';
   const pickupCubeHtml = !(o.carrier && o.carrier.phone) ? ''
@@ -3476,7 +3478,7 @@ async function resendPickupNoticeClick(orderNumber){
   if (!o || !STAGE_WHATSAPP_ES.picked_up) return;
   const sent = await sendPickupWhatsapps(o, o, STAGE_WHATSAPP_ES.picked_up);
   if (sent === null) await btAlert(`${o.customer_name} has no WhatsApp on file (or is blocked for automatic messages).`);
-  else if (sent && typeof logSends === 'function') await logSends(orderNumber, 'picked_up');
+  else if (sent){ if (typeof logSends === 'function') await logSends(orderNumber, 'picked_up'); await requestPickupDocsOnPickup(orderNumber); } // the chain (owner 2026-11-25): after the customer, the plant's e-mail (the first time, marking picked up opens it)
 }
 // PICK UP -> THE DOCUMENTS ARE ASKED FOR AT ONCE (owner 2026-11-22: "inmediatamente después de que confirmamos pickup debe salir ese correo, a los involucrados, en este caso Andrew y Kristi; el botón de picked up manda ese correo
 // pidiendo esos docs; adicionalmente puede llegar del carrier"). The e-mail goes to every e-mail the plant has on file (its sales contact and its other contacts), copying the carrier when one is booked, through the usual preview
