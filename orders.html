@@ -3073,7 +3073,7 @@ function renderJourney(o, attentionOrderNumbers){
     if (!cuReads.length) return '';
     const tip = escapeHtml(cuReads.map(r => `${r.file_name}: ${cuFmt(r.boxes, 0)} boxes · ${cuFmt(r.net_weight_lb, 2)} lb`).join('\n'));
     const same = cuReads.every(r => Number(r.boxes) === Number(cuReads[0].boxes) && Number(r.net_weight_lb) === Number(cuReads[0].net_weight_lb));
-    const line = (txt, extra) => `<div class="pay-amt" style="font-weight:700;font-size:15px;white-space:nowrap;${extra || ''}" title="${tip}">${txt}</div>`;
+    const line = (txt, extra) => `<div style="container-type:inline-size;"><div class="pay-amt" style="font-weight:700;font-size:15px;white-space:nowrap;font-size:min(15px,6.2cqw);${extra || ''}" title="${tip}">${txt}</div></div>`; // one line that SHRINKS to the cube's width instead of being cut at the edges (owner 2026-11-26, screenshot: "612 boxes · 39,978.70 lb" was clipped on both sides); cqw = share of the cube's width
     if (!same) return line('⚠ the documents differ', 'color:#b45309;');
     return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
   })();
