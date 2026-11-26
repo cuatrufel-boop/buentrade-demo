@@ -1437,9 +1437,11 @@ function pickupLinkMessage(o, link){
   // the carrier's contact by his first name (owner 2026-11-25: "Hi… nombre del carrier"), else the company's name
   const name = String(car.contact_name || '').trim().split(/\s+/)[0] || String(car.name || '').trim();
   const day = String(c.puDate || o.pickup_date || '').slice(0, 10), today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-  const when = [day && day !== today ? fmtDateStr(day) : '', c.puTime ? fmtTimeHM(c.puTime) : (day === today ? 'today' : '')].filter(Boolean).join(' ');
-  // his words, as he wrote them (owner 2026-11-25): "Hi Felipe, 🚚 PO-BT-2026-1002, pick-up 5:00 PM. Please Upload all docs & tap picked up: <link>"
-  return `Hi${name ? ' ' + name : ''}, 🚚 PO-BT-${btNum(o.order_number)}, pick-up${when ? ' ' + when : ''}. Please Upload all docs & tap picked up: ${link}`;
+  const dm = /^\d{4}-(\d{2})-(\d{2})$/.exec(day);
+  const dayLabel = !day ? '' : day === today ? 'Today' : dm ? `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+dm[1] - 1]} ${+dm[2]}` : day;
+  const lines = [dayLabel ? `▪ Date: ${dayLabel}` : '', c.puTime ? `▪ Time: ${fmtTimeHM(c.puTime)}` : ''].filter(Boolean).join('\n');
+  // the carrier's WhatsApp, same design as the customer's (owner 2026-11-25, option A of the card): the card above (icons/carrier-pickup-card-2.png) and this text, symbols only ✅ ▪ ➡
+  return `Hi${name ? ' ' + name : ''},\n\n✅ Time to pick up our order\nPO-BT-${btNum(o.order_number)}.\n\n${lines ? lines + '\n\n' : ''}➡ Upload all docs &\ntap Picked up:\n${link}`; // short lines so nothing is cut on his phone (the order number alone on its line, the upload line in two)
 }
 async function sendPickupLinkClick(orderNumber){
   const o = findStatusOrder(orderNumber);
