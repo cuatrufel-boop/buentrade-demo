@@ -2636,6 +2636,7 @@ function orderDocRows(o, nextActionLabel){
       fo: o.has_freight_order ? renderTradeDocRow('Freight Order (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing, resendDocBtn('FO', o.order_number)) : '',
       payment: paymentRow,
       invoice: renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions),
+      invoiceCreated: invoiceActions ? `<div class="doc-row">${invoiceActions}</div>` : '', // the Create Invoice cube holds the eye of the invoice that was created in the QT (owner 2026-11-27, option A)
       signature: renderSignatureEvidenceRow(o),
       proforma: proformaHtml,
       salesConfirmation: salesConfirmationHtml,
@@ -3085,7 +3086,7 @@ function renderJourney(o, attentionOrderNumbers){
     return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
   })();
   const customsCubeHtml = `${cuReadLine}<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuDocs.concat(cuFromCustoms))}${cuDocs.length || cuFromCustoms.length ? '<span style="align-self:center;opacity:.45;">|</span>' : ''}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}</div>`; // ONE eye for every document (what we send, then what the agency sent back): standing on it opens the others under the row (owner 2026-11-27: "customs tiene varios ojos, no tiene unfold de una a varios"); the e-mail button on the other side, the e-mail button on the other, like the Pickup cube (owner 2026-11-27)
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, Delivered: rows.invoiceCreated || '', 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   // nothing to press yet but something still pending: the Next card says what it is waiting for, never "All done" (owner 2026-11-21, "sentido común al flujo")

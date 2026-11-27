@@ -2809,11 +2809,12 @@ async function createAndShareInvoice(){
   msgEl.textContent = '';
   // Real ask 2026-09-12: same preview-before-send screen PO/SO/FO already have — this used to
   // send straight through with no look at the real PDF first.
-  openInvoiceDocPreview({ orderNumber, doc, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: customer && (customer.trade_name || customer.name), boxes: realBoxes, countKind, customs: customsCtx });
+  openInvoiceDocPreview({ orderNumber, doc, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: customer && (customer.trade_name || customer.name), boxes: realBoxes, countKind, customs: customsCtx, invoice: composed.invoice, qt: typeof invoiceQtNumbers === 'function' ? invoiceQtNumbers() : null });
 }
 
 let invoicePreviewCtx = null;
 function closeDocPreview(){
+  const cmpEl = document.getElementById('docPreviewCompare'); if (cmpEl){ cmpEl.style.display = 'none'; cmpEl.innerHTML = ''; }
   document.getElementById('docPreviewOverlay').style.display = 'none';
   document.getElementById('docPreviewFrame').src = 'about:blank';
 }
@@ -2835,14 +2836,16 @@ async function markInvoiceSentFallback(){
 // The same invoice to the customs agency (owner 2026-11-21, step 11): its own e-mail, in English, from logistics@; sending it records nothing (the invoice counts as sent when the client has it).
 async function sendInvoicePreviewCustoms(){
   const ctx = invoicePreviewCtx;
-  if (!ctx || !ctx.customs) return;
+  if (!ctx || !ctx.customs) return false;
   const msgEl = document.getElementById('invoiceMsg');
   try {
     await sendEmailApi('logistics', ctx.customs.emails, ctx.customs.subject, ctx.customs.body, [pdfAttachment(ctx.doc, ctx.filename)], null);
     msgEl.textContent = `Invoice sent to customs (${ctx.customs.emails.join(', ')}).`;
+    return true;
   } catch (e) {
-    if (e.cancelled) return;
+    if (e.cancelled) return false;
     msgEl.textContent = 'The invoice could not be sent to customs: ' + e.message;
+    return false;
   }
 }
 async function sendInvoicePreviewEmail(){
@@ -2854,15 +2857,17 @@ async function sendInvoicePreviewEmail(){
     // own standalone WhatsApp button (sendInvoicePreviewWhatsApp), so no waInfo here.
     await sendEmailApi('logistics', ctx.emails, ctx.subject, ctx.body, [pdfAttachment(ctx.doc, ctx.filename)], null, ctx.ccEmails); // Invoice client goes from logistics@ (owner 2026-11-22: his spec says From logistics@)
     await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined, real_boxes_kind: ctx.countKind || undefined, sends: bcTakeSends(ctx.orderNumber) });
-    closeDocPreview();
+    if (!ctx.chain) closeDocPreview();
     // Collections module (2026-09-08): "el flujo debe llevarme a collections" — the order now has
     // an invoice, so it just became a real Collections item; give the trader the direct link
     // instead of leaving them to remember to go look for it.
     msgEl.innerHTML = 'Invoice sent — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
+    return true;
   } catch (e) {
-    if (e.cancelled) return;
+    if (e.cancelled) return false;
     const url = gmailComposeUrl(ctx.emails, ctx.subject, ctx.body + EMAIL_SIGNATURE);
     msgEl.innerHTML = `Automatic send failed: ${negoEscapeHtml(e.message)} — <a href="${negoEscapeHtml(url)}" target="bt_gmail" rel="noopener" onclick="markInvoiceSentFallback()" style="color:var(--blue);text-decoration:underline;font-weight:700;">Open in Gmail →</a>`;
+    return false;
   }
 }
 // Real bug found live 2026-09-14: "los dos medios whatsapp y email crean el doc y queda terminada
@@ -2874,14 +2879,52 @@ async function sendInvoicePreviewEmail(){
 // just the one someone happened to build first.
 async function sendInvoicePreviewWhatsApp(){
   const ctx = invoicePreviewCtx;
-  if (!ctx || !ctx.waPhone) return;
+  if (!ctx || !ctx.waPhone) return false;
   ctx.doc.save(ctx.filename);
   const sentInv = await bcWaOpenAndConfirm(ctx.waPhone, ctx.waMessage, ctx.customerName || 'the customer');
-  if (!sentInv) return; // the invoice counts as sent only when the trader says he sent it on WhatsApp
+  if (!sentInv) return false; // the invoice counts as sent only when the trader says he sent it on WhatsApp
   try {
     await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: ctx.orderNumber, doc_type: 'invoice', real_boxes: ctx.boxes || undefined, real_boxes_kind: ctx.countKind || undefined, sends: bcTakeSends(ctx.orderNumber) });
     document.getElementById('invoiceMsg').innerHTML = 'Invoice sent — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
   } catch (e) { /* best-effort — the WhatsApp send itself already went out above regardless */ }
+  return true;
+}
+// The QT compared with the invoice, same look as the PO / SO / FO window's bar (owner 2026-11-27): the sale price must match the QT; the weight is the REAL net weight he confirmed (so it is shown next to the QT's, never as a mismatch); the boxes are the ones he confirmed.
+function invoiceCompareHtml(ctx){
+  const q = ctx && ctx.qt; const li = ctx && ctx.invoice && ctx.invoice.line_item;
+  if (!li) return '';
+  const pesos = li.unit === 'kg';
+  const mono = "font-family:'IBM Plex Mono',monospace;";
+  const row = (label, a, b, tag, ok) => `<div style="display:flex;align-items:center;gap:10px;font-size:12.5px;"><span style="color:var(--ink-soft);min-width:60px;">${label}</span>${a != null ? `<span style="${mono}">${a}</span><span style="color:var(--ink-soft);">→</span>` : ''}<span style="${mono}font-weight:700;color:${ok === false ? '#FF9C8A' : '#3FCB7E'};">${b}</span><span style="color:${ok === false ? '#FF9C8A' : ok === true ? '#3FCB7E' : 'var(--ink-soft)'};font-size:11px;font-weight:700;">${tag}</span></div>`;
+  const rows = [];
+  if (!pesos && q && Number(q.price) > 0){ const ok = Math.abs(Number(q.price) - Number(li.price)) < 0.0001; rows.push(row('Price/lb', '$' + Number(q.price).toFixed(4), '$' + Number(li.price).toFixed(4), ok ? '✓ matches' : '⚠ mismatch', ok)); }
+  const unit = pesos ? 'kg' : 'lbs', wFmt = n => Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + unit;
+  rows.push(row('Weight', !pesos && q && Number(q.weight) > 0 ? wFmt(q.weight) : null, wFmt(li.weight), 'real net weight', null));
+  if (Number(li.count) >= 1) rows.push(row(li.count_kind === 'combos' ? 'Combos' : 'Boxes', null, Number(li.count).toLocaleString('en-US'), 'confirmed', null));
+  return `<div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;"><div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;">Sale (Customer) <span style="opacity:.6;">(QT → Invoice)</span></div>${rows.join('')}</div>`;
+}
+// what the QT says now: the customer's price and the weight, to compare with the invoice
+function invoiceQtNumbers(){
+  return { price: negoCustomerPriceOf(negoOffer), weight: Number(negoOffer.weight) || (window.__calc && window.__calc.totalWeight) || 0 };
+}
+// ONE button for everyone involved (owner 2026-11-27, option A): the client's e-mail (with the signature link) → the client's WhatsApp → the customs agency's e-mail. Each one is the window he already knew, so he sees every text before it goes; cancelling the first stops the rest, and a WhatsApp he did not send does not block customs.
+async function sendInvoiceToAll(){
+  const ctx = invoicePreviewCtx;
+  if (!ctx) return;
+  const msgEl = document.getElementById('invoiceMsg');
+  ctx.chain = true;
+  const done = [];
+  try {
+    const emailOk = await sendInvoicePreviewEmail();
+    if (!emailOk){ msgEl.textContent = 'Nothing else was sent: the client\'s e-mail was not sent.'; return; }
+    done.push('client e-mail');
+    if (ctx.waPhone && await sendInvoicePreviewWhatsApp()) done.push('client WhatsApp');
+    if (ctx.customs && await sendInvoicePreviewCustoms()) done.push('customs');
+    msgEl.innerHTML = 'Invoice sent (' + done.join(' · ') + ') — pending customer signature. <a href="collections.html" target="_blank" style="color:var(--blue);font-weight:700;">View in Pay &amp; Receive →</a>';
+    closeDocPreview(); // the client has it: the window closes; if the first e-mail was cancelled or failed it stays open so he can try again
+  } finally {
+    ctx.chain = false;
+  }
 }
 function openInvoiceDocPreview(ctx){
   invoicePreviewCtx = ctx;
@@ -2896,11 +2939,12 @@ function openInvoiceDocPreview(ctx){
   frame.src = ctx.doc.output('bloburl');
   frame.onload = () => { loading.style.display = 'none'; frame.style.display = 'block'; };
   const secondaryBtnStyle = 'display:inline-flex;align-items:center;gap:7px;background:var(--card);color:var(--blue-bright);border:1.5px solid var(--blue);border-radius:8px;padding:9px 16px;font-weight:600;font-size:13px;cursor:pointer;';
+  // OPTION A (owner 2026-11-27, "hagamos la A"): the same window PO / SO / FO use — the invoice, the QT compared with it on top, and ONE button that sends it to everyone involved (the client by e-mail and WhatsApp with the signature link, then the customs agency). Download stays.
+  const cmpEl = document.getElementById('docPreviewCompare');
+  if (cmpEl){ cmpEl.innerHTML = invoiceCompareHtml(ctx); cmpEl.style.display = cmpEl.innerHTML ? 'block' : 'none'; }
   document.getElementById('docPreviewActions').innerHTML = `
     <button style="${secondaryBtnStyle}" onclick="invoicePreviewCtx.doc.save(invoicePreviewCtx.filename)">${DOWNLOAD_ICON}Download</button>
-    <button style="${secondaryBtnStyle}" onclick="sendInvoicePreviewEmail()">${EMAIL_ICON}Email</button>
-    ${ctx.customs ? `<button style="${secondaryBtnStyle}" onclick="sendInvoicePreviewCustoms()">${EMAIL_ICON}Customs</button>` : ''}
-    ${ctx.waPhone ? `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;" onclick="sendInvoicePreviewWhatsApp()">${WA_ICON}WhatsApp</button>` : ''}`;
+    <button style="${secondaryBtnStyle.replace('background:var(--card);color:var(--blue-bright);', 'background:var(--blue);color:#fff;')}" onclick="sendInvoiceToAll()">Send to all</button>`;
   document.getElementById('docPreviewOverlay').style.display = 'flex';
 }
 
@@ -3470,6 +3514,7 @@ async function negoSaveDefinitive(overrideCreditCheck, confirmedDeliveryDate, ca
     </div>
     <button class="tt-overlay-close" onclick="closeDocPreview()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
+  <div id="docPreviewCompare" style="display:none;flex-shrink:0;padding:10px 20px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.12);"></div>
   <div style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;">
     <div id="docPreviewLoading" style="color:var(--ink-soft);font-size:13px;display:flex;align-items:center;gap:10px;">Building document…</div>
     <iframe id="docPreviewFrame" style="width:100%;height:100%;border:none;display:none;position:absolute;inset:0;"></iframe>
