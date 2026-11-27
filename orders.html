@@ -4926,6 +4926,9 @@ async function freshInvoiceEmail(){
     await sendEmailApi('logistics', c.emails, c.subject, c.body, [att], null, c.ccEmails); // Invoice client goes from logistics@ (owner 2026-11-22)
     await freshInvoiceMarkSent();
     showToast('Invoice sent — pending customer signature', c.emails.join(', '));
+    // THE FLOW LEADS TO THE END (owner 2026-11-27: "debe ser un flujo que me vaya llevando hasta el final"): after the e-mail, the next step is the signature by WhatsApp; the WhatsApp button stays for doing it by hand at any time.
+    try { if (c.waPhone && await btConfirm(`Send the signature link by WhatsApp to ${c.customerName || 'the customer'}?`, 'WhatsApp', 'Later')) await freshInvoiceWhatsApp(); } catch (e2) { /* the e-mail already went out */ }
+    return;
   } catch (e) {
     if (e.cancelled) return;
     showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true, gmailFallbackLinkHtml(c.emails, c.subject, c.body, c.orderNumber, 'invoice'));
