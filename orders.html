@@ -4395,6 +4395,7 @@ function ttRenderLeft(active){
   document.getElementById('ttOverlayLeft').innerHTML = tabs.length
     ? `<button class="btn secondary eye-tip" id="ttCustomsEye" style="padding:6px 10px;justify-self:start;" data-tip="Documents" aria-label="Documents" onclick="toggleTtCustoms()">${PREVIEW_ICON}</button>` : '';
   pane.style.display = tabs.length ? 'flex' : 'none';
+  const sp = document.getElementById('ttSplit'); if (sp) sp.style.display = tabs.length ? 'block' : 'none';
 }
 function showTtCustomsDoc(i){
   const tabs = ttTabs(); if (!tabs[i]) return;
@@ -4405,7 +4406,18 @@ function showTtCustomsDoc(i){
 function toggleTtCustoms(){
   const p = document.getElementById('ttCustomsPane'); if (!p) return;
   p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+  const sp = document.getElementById('ttSplit'); if (sp) sp.style.display = p.style.display === 'none' ? 'none' : 'block';
   ttFitQt();
+}
+// the halves start equal; the divider is dragged to give more room to the QT (it grows, still the same shape) or to the document
+function ttStartDrag(ev){
+  const body = document.getElementById('ttOverlayBody'), left = document.getElementById('ttCustomsPane');
+  if (!body || !left) return;
+  ev.preventDefault();
+  const frames = [...body.querySelectorAll('iframe')]; frames.forEach(f => { f.style.pointerEvents = 'none'; });
+  const move = e => { const r = body.getBoundingClientRect(); const pct = Math.max(25, Math.min(75, (e.clientX - r.left) / r.width * 100)); left.style.flex = '0 0 ' + pct + '%'; ttFitQt(); };
+  const up = () => { frames.forEach(f => { f.style.pointerEvents = ''; }); document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+  document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
 }
 // THE QT KEEPS ITS SHAPE (owner 2026-11-27: "conservar la forma del qt, no dañar el orden de tablas y números, ajustada a la pantalla"): the QT is drawn at its own design width (its tables and numbers collapse into one column below ~920 px) and the whole picture is scaled to the half of the screen it has, never reflowed.
 const TT_QT_DESIGN_W = 1200;
@@ -4450,7 +4462,7 @@ function openTTOverlay(sentOfferId, title, opts){
   document.getElementById('ttOverlayLeft').innerHTML = '';
   const strip = 'display:flex;gap:6px;align-items:center;height:44px;box-sizing:border-box;padding:0 14px;background:rgba(255,255,255,.04);flex-shrink:0;';
   document.getElementById('ttOverlayBody').innerHTML = invoicePage || ttCustomsDocs.length
-    ? `<div style="display:flex;height:100%;"><div id="ttCustomsPane" style="flex:1 1 50%;min-width:0;display:none;flex-direction:column;border-right:1px solid rgba(255,255,255,.12);"><div id="ttCustomsTabs" style="${strip}"></div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;width:100%;border:none;"></iframe></div><div style="flex:1 1 50%;min-width:0;display:flex;flex-direction:column;"><div style="${strip}"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.03em;">QT</span></div><div id="ttQtBox" style="flex:1;min-height:0;position:relative;overflow:hidden;">${ttFrameHtml.replace('<iframe id="ttIframe"', '<iframe id="ttIframe" style="position:absolute;top:0;left:0;border:none;transform-origin:0 0;"')}</div></div></div>`
+    ? `<div style="display:flex;height:100%;"><div id="ttCustomsPane" style="flex:0 0 50%;min-width:0;display:none;flex-direction:column;"><div id="ttCustomsTabs" style="${strip}"></div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;width:100%;border:none;"></iframe></div><div id="ttSplit" onmousedown="ttStartDrag(event)" title="Drag to give more room to the documents or to the QT" style="flex:0 0 10px;cursor:col-resize;background:rgba(255,255,255,.10);border-left:1px solid rgba(255,255,255,.12);border-right:1px solid rgba(255,255,255,.12);display:none;"></div><div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="${strip}"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.03em;">QT</span></div><div id="ttQtBox" style="flex:1;min-height:0;position:relative;overflow:hidden;">${ttFrameHtml.replace('<iframe id="ttIframe"', '<iframe id="ttIframe" style="position:absolute;top:0;left:0;border:none;transform-origin:0 0;"')}</div></div></div>`
     : ttFrameHtml;
   if (invoicePage || ttCustomsDocs.length){ ttRenderLeft(0); setTimeout(ttFitQt, 0); }
   ttRenderActions();
