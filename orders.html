@@ -4405,7 +4405,19 @@ function showTtCustomsDoc(i){
 function toggleTtCustoms(){
   const p = document.getElementById('ttCustomsPane'); if (!p) return;
   p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+  ttFitQt();
 }
+// THE QT KEEPS ITS SHAPE (owner 2026-11-27: "conservar la forma del qt, no dañar el orden de tablas y números, ajustada a la pantalla"): the QT is drawn at its own design width (its tables and numbers collapse into one column below ~920 px) and the whole picture is scaled to the half of the screen it has, never reflowed.
+const TT_QT_DESIGN_W = 1200;
+function ttFitQt(){
+  const box = document.getElementById('ttQtBox'), fr = document.getElementById('ttIframe');
+  if (!box || !fr || !box.clientWidth) return;
+  const w = box.clientWidth, h = box.clientHeight, scale = w >= TT_QT_DESIGN_W ? 1 : w / TT_QT_DESIGN_W;
+  fr.style.width = (scale === 1 ? w : TT_QT_DESIGN_W) + 'px';
+  fr.style.height = (h / scale) + 'px';
+  fr.style.transform = scale === 1 ? 'none' : `scale(${scale})`;
+}
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => ttFitQt());
 function ttRenderActions(){
   const el = document.getElementById('ttOverlayActions'); if (!el) return;
   if (!ttInvoice){ el.style.display = 'none'; el.innerHTML = ''; document.body.classList.remove('fresh-invoice'); return; } // no invoice yet: no buttons (the numbers are written in the QT, never on this page)
@@ -4436,10 +4448,11 @@ function openTTOverlay(sentOfferId, title, opts){
   }).catch(() => {});
   const ttFrameHtml = `<iframe id="ttIframe" src="trading-tool.html?${new URLSearchParams({ offerId: sentOfferId, embed: '1', v: String(Date.now()) }).toString()}"></iframe>`;
   document.getElementById('ttOverlayLeft').innerHTML = '';
+  const strip = 'display:flex;gap:6px;align-items:center;height:44px;box-sizing:border-box;padding:0 14px;background:rgba(255,255,255,.04);flex-shrink:0;';
   document.getElementById('ttOverlayBody').innerHTML = invoicePage || ttCustomsDocs.length
-    ? `<div style="display:flex;height:100%;"><div id="ttCustomsPane" style="flex:1;min-width:0;display:none;flex-direction:column;border-right:1px solid rgba(255,255,255,.12);"><div id="ttCustomsTabs" style="display:flex;gap:6px;align-items:center;padding:8px 14px;background:rgba(255,255,255,.04);flex-shrink:0;"></div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;"></iframe></div><div style="flex:1.5;min-width:0;height:100%;">${ttFrameHtml}</div></div>`
+    ? `<div style="display:flex;height:100%;"><div id="ttCustomsPane" style="flex:1 1 50%;min-width:0;display:none;flex-direction:column;border-right:1px solid rgba(255,255,255,.12);"><div id="ttCustomsTabs" style="${strip}"></div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;width:100%;border:none;"></iframe></div><div style="flex:1 1 50%;min-width:0;display:flex;flex-direction:column;"><div style="${strip}"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.03em;">QT</span></div><div id="ttQtBox" style="flex:1;min-height:0;position:relative;overflow:hidden;">${ttFrameHtml.replace('<iframe id="ttIframe"', '<iframe id="ttIframe" style="position:absolute;top:0;left:0;border:none;transform-origin:0 0;"')}</div></div></div>`
     : ttFrameHtml;
-  if (invoicePage || ttCustomsDocs.length) ttRenderLeft(0);
+  if (invoicePage || ttCustomsDocs.length){ ttRenderLeft(0); setTimeout(ttFitQt, 0); }
   ttRenderActions();
   document.getElementById('ttOverlay').style.display = 'flex';
   return new Promise(resolve => { ttOverlayResolve = resolve; });
