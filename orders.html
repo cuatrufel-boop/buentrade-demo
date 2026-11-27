@@ -1039,7 +1039,7 @@ auth.onAuthStateChanged(user => {
       <img id="ttOverlayLogo" class="tt-logo-inline" alt="" style="display:none;">
       <div class="tt-overlay-title" id="ttOverlayTitle"></div>
     </div>
-    <button class="tt-overlay-close" onclick="closeTTOverlay()" title="Close" aria-label="Close" style="justify-self:end;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div style="display:flex;align-items:center;gap:10px;justify-self:end;"><span id="ttOverlayRight"></span><button class="tt-overlay-close" onclick="closeTTOverlay()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   </div>
   <div class="tt-overlay-body" id="ttOverlayBody"></div>
   <div id="ttOverlayActions" style="display:none;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.12);flex-shrink:0;background:var(--navy);"></div>
@@ -4391,21 +4391,17 @@ function customsDocsOfOrder(o){
   }).map((d, i, all) => { const n = all.slice(0, i + 1).filter(x => x.label === d.label).length; return n > 1 ? { ...d, label: d.label.replace(' (customs)', ' ' + n + ' (customs)') } : d; }); // two of the same kind: 'USDA (customs)', 'USDA 2 (customs)'
 }
 let ttCustomsDocs = [];
-// THE INVOICE PAGE — ONE screen (owner 2026-11-27: "el flujo es email de aduana activa create invoice, debe abrir misma pagina con docs de aduana y qt con botones para compartir, bajar" · "no hay doc, no hay qt, no hay botones"): on the left the agency's document(s) and, once it exists, the invoice (tabs); on the right the QT where the invoice is made; at the bottom Download · Email · WhatsApp · Customs of that invoice. The comparison is agency document vs QT; the invoice is the result.
+// THE INVOICE PAGE — TWO FULL SCREENS (owner 2026-11-27: "en el primer shot el usda completo y en el segundo el qt completo. si doy ojo izquierdo voy a doc, si doy ojo derecho voy qt. despues me pide numero de cajas y confirmo qt para invoice"): the LEFT eye of the head shows the agency's document(s) full screen (tabs by short name; the invoice joins as a tab once generated), the RIGHT eye shows the QT full screen (it keeps its own shape, scaled to the screen); Invoice in the QT asks the boxes and the weight, he confirms and the QT makes the invoice; Download · Email · WhatsApp · Customs of that invoice sit at the bottom of both screens. The comparison is agency document vs QT; the invoice is the result.
 let ttInvoice = null; // { orderNumber, url, filename, fresh: ctx of the invoice just made | null }
-let ttActiveTab = 0;
+let ttActiveTab = 0, ttView = 'doc';
 function ttTabs(){ return ttCustomsDocs.concat(ttInvoice ? [{ url: ttInvoice.url, label: 'Invoice' }] : []); }
 function ttRenderLeft(active){
   const tabs = ttTabs();
-  const pane = document.getElementById('ttCustomsPane'); if (!pane) return;
+  if (!document.getElementById('ttCustomsPane')) return;
   ttActiveTab = Math.max(0, Math.min(active == null ? ttActiveTab : active, tabs.length - 1));
   const head = document.getElementById('ttCustomsTabs');
-  if (head) head.innerHTML = '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.03em;">Documents</span>' + tabs.map((d, k) => `<button class="btn secondary" id="ttCustomsTab${k}" style="padding:4px 10px;font-size:11.5px;${k === ttActiveTab ? '' : 'opacity:.55;'}" onclick="showTtCustomsDoc(${k})">${escapeHtml(d.label)}</button>`).join('');
+  if (head) head.innerHTML = tabs.map((d, k) => `<button class="btn secondary" id="ttCustomsTab${k}" style="padding:4px 10px;font-size:11.5px;${k === ttActiveTab ? '' : 'opacity:.55;'}" onclick="showTtCustomsDoc(${k})">${escapeHtml(d.label)}</button>`).join('');
   const f = document.getElementById('ttCustomsFrame'); if (f && tabs[ttActiveTab]) f.src = tabs[ttActiveTab].url + '#view=FitH';
-  document.getElementById('ttOverlayLeft').innerHTML = tabs.length
-    ? `<button class="btn secondary eye-tip" id="ttCustomsEye" style="padding:6px 10px;justify-self:start;" data-tip="Documents" aria-label="Documents" onclick="toggleTtCustoms()">${PREVIEW_ICON}</button>` : '';
-  pane.style.display = tabs.length ? 'flex' : 'none';
-  const sp = document.getElementById('ttSplit'); if (sp) sp.style.display = tabs.length ? 'block' : 'none';
 }
 function showTtCustomsDoc(i){
   const tabs = ttTabs(); if (!tabs[i]) return;
@@ -4413,21 +4409,22 @@ function showTtCustomsDoc(i){
   const f = document.getElementById('ttCustomsFrame'); if (f) f.src = tabs[i].url + '#view=FitH';
   tabs.forEach((x, k) => { const b = document.getElementById('ttCustomsTab' + k); if (b) b.style.opacity = k === i ? '1' : '.55'; });
 }
-function toggleTtCustoms(){
-  const p = document.getElementById('ttCustomsPane'); if (!p) return;
-  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
-  const sp = document.getElementById('ttSplit'); if (sp) sp.style.display = p.style.display === 'none' ? 'none' : 'block';
-  ttFitQt();
+// the two eyes of the head: left = the document, right = the QT; the one you are on is filled
+function ttShowView(v){
+  const doc = document.getElementById('ttCustomsPane'), qt = document.getElementById('ttQtPane');
+  if (!doc || !qt) return;
+  ttView = v === 'doc' && ttTabs().length ? 'doc' : 'qt';
+  doc.style.display = ttView === 'doc' ? 'flex' : 'none';
+  qt.style.display = ttView === 'qt' ? 'flex' : 'none';
+  const eye = (id, on) => { const e = document.getElementById(id); if (e) e.style.background = on ? '#1E6ADB' : ''; };
+  eye('ttDocEye', ttView === 'doc'); eye('ttQtEye', ttView === 'qt');
+  if (ttView === 'qt') ttFitQt();
 }
-// the halves start equal; the divider is dragged to give more room to the QT (it grows, still the same shape) or to the document
-function ttStartDrag(ev){
-  const body = document.getElementById('ttOverlayBody'), left = document.getElementById('ttCustomsPane');
-  if (!body || !left) return;
-  ev.preventDefault();
-  const frames = [...body.querySelectorAll('iframe')]; frames.forEach(f => { f.style.pointerEvents = 'none'; });
-  const move = e => { const r = body.getBoundingClientRect(); const pct = Math.max(25, Math.min(75, (e.clientX - r.left) / r.width * 100)); left.style.flex = '0 0 ' + pct + '%'; ttFitQt(); };
-  const up = () => { frames.forEach(f => { f.style.pointerEvents = ''; }); document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-  document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+function ttRenderEyes(on){
+  const l = document.getElementById('ttOverlayLeft'), r = document.getElementById('ttOverlayRight');
+  const eye = (id, tip, view) => `<button class="btn secondary eye-tip" id="${id}" style="padding:6px 10px;" data-tip="${tip}" aria-label="${tip}" onclick="ttShowView('${view}')">${PREVIEW_ICON}</button>`;
+  if (l) l.innerHTML = on && ttTabs().length ? eye('ttDocEye', 'Documents', 'doc') : '';
+  if (r) r.innerHTML = on ? eye('ttQtEye', 'QT', 'qt') : '';
 }
 // THE QT KEEPS ITS SHAPE (owner 2026-11-27: "conservar la forma del qt, no dañar el orden de tablas y números, ajustada a la pantalla"): the QT is drawn at its own design width (its tables and numbers collapse into one column below ~920 px) and the whole picture is scaled to the half of the screen it has, never reflowed.
 const TT_QT_DESIGN_W = 1200;
@@ -4472,9 +4469,10 @@ function openTTOverlay(sentOfferId, title, opts){
   document.getElementById('ttOverlayLeft').innerHTML = '';
   const strip = 'display:flex;gap:6px;align-items:center;height:44px;box-sizing:border-box;padding:0 14px;background:rgba(255,255,255,.04);flex-shrink:0;';
   document.getElementById('ttOverlayBody').innerHTML = invoicePage || ttCustomsDocs.length
-    ? `<div style="display:flex;height:100%;"><div id="ttCustomsPane" style="flex:0 0 50%;min-width:0;display:none;flex-direction:column;"><div id="ttCustomsTabs" style="${strip}"></div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;width:100%;border:none;"></iframe></div><div id="ttSplit" onmousedown="ttStartDrag(event)" title="Drag to give more room to the documents or to the QT" style="flex:0 0 10px;cursor:col-resize;background:rgba(255,255,255,.10);border-left:1px solid rgba(255,255,255,.12);border-right:1px solid rgba(255,255,255,.12);display:none;"></div><div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="${strip}"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.03em;">QT</span></div><div id="ttQtBox" style="flex:1;min-height:0;position:relative;overflow:hidden;">${ttFrameHtml.replace('<iframe id="ttIframe"', '<iframe id="ttIframe" style="position:absolute;top:0;left:0;border:none;transform-origin:0 0;"')}</div></div></div>`
+    ? `<div style="position:relative;height:100%;"><div id="ttCustomsPane" style="position:absolute;inset:0;display:none;flex-direction:column;"><div id="ttCustomsTabs" style="${strip}"></div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;width:100%;border:none;"></iframe></div><div id="ttQtPane" style="position:absolute;inset:0;display:flex;flex-direction:column;"><div id="ttQtBox" style="flex:1;min-height:0;position:relative;overflow:hidden;">${ttFrameHtml.replace('<iframe id="ttIframe"', '<iframe id="ttIframe" style="position:absolute;top:0;left:0;border:none;transform-origin:0 0;"')}</div></div></div>`
     : ttFrameHtml;
-  if (invoicePage || ttCustomsDocs.length){ ttRenderLeft(0); setTimeout(ttFitQt, 0); }
+  ttRenderEyes(invoicePage || ttCustomsDocs.length > 0);
+  if (invoicePage || ttCustomsDocs.length){ ttRenderLeft(0); ttShowView('doc'); setTimeout(ttFitQt, 0); } // the first shot is the document, complete; the right eye goes to the QT
   ttRenderActions();
   document.getElementById('ttOverlay').style.display = 'flex';
   return new Promise(resolve => { ttOverlayResolve = resolve; });
@@ -4492,7 +4490,9 @@ function openInvoicePage(orderNumber, url, filename, startUrl){
   if (!o || !o.sent_offer_id){ return openInvoicePreview(orderNumber, url, filename); }
   openTTOverlay(o.sent_offer_id, `Factura — ${orderNumber}`, { customsDocs: customsDocsOfOrder(o), invoicePage: true, invoice: url ? { orderNumber, url, filename } : null });
   const at = startUrl ? ttTabs().findIndex(t => t.url === startUrl) : -1;
+  ttRenderEyes(true);
   if (at >= 0) ttRenderLeft(at); else if (url) ttRenderLeft(ttTabs().length - 1); // the eye that was pressed, else the invoice
+  ttShowView('doc');
 }
 
 // Real correction 2026-09-07, explicit: "Delivered abre QT, Invoice" — this used to continue into
@@ -4890,7 +4890,7 @@ function openFreshInvoice(ctx){
   const page = document.getElementById('ttOverlay');
   if (page && page.style.display === 'flex' && document.getElementById('ttCustomsPane')){ // the Create Invoice page is open: the invoice joins it (a tab and its buttons), no second window
     ttInvoice = { orderNumber: ctx.orderNumber, url: ctx.url, filename: ctx.filename, fresh: ctx };
-    ttRenderLeft(ttTabs().length - 1); ttRenderActions();
+    ttRenderEyes(true); ttRenderLeft(ttTabs().length - 1); ttShowView('doc'); ttRenderActions(); // the invoice made in the QT is shown (its own tab) with its buttons
     return;
   }
   document.body.classList.add('fresh-invoice');
