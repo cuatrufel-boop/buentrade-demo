@@ -1976,8 +1976,9 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   entries.push(miniEntry({ icon: CUSTOMS_ICON, label: 'Sent to customs', done: !!customsDoneAt(o), date: customsDoneAt(o) === true ? null : customsDoneAt(o), wait: !pendingCustoms && !customsDoneAt(o), waitReason: 'No pickup documents have arrived yet.', onClick: `shareCustoms('${o.order_number}')`, raised: true }));
   const deliveredIdxInEntries = entries.length;
   // ONE invoice cube (owner 2026-11-27: "hay dos cubos de invoice que no necesitamos… customs, Invoice, sign and close"): the agency's answer opens it, its action is the ONE page (agency document + QT + Download / Email / WhatsApp / Customs), it is done when the invoice is sent. The old Delivered cube is gone from the line; the load is still marked Delivered when he confirms it after the page (markDeliveredWithSignature).
-  entries.push(miniEntry({ icon: RECEIPT_ICON, label: 'Invoice', done: !!o.invoice_sent_at, date: o.invoice_sent_at, wait: !customsDoneAt(o) && stageIdx < deliveredIdx, waitReason: 'Send the pickup documents to customs first.', onClick: o.invoice_sent_at ? `openInvoiceQT('${o.order_number}')` : `markDeliveredWithSignature('${o.order_number}')` }));
-  entries.push(miniEntry({ icon: SIGN_ICON, label: 'Signature', done: !!o.invoice_signed_at, date: o.invoice_signed_at, wait: !o.invoice_sent_at, waitReason: 'Send the Invoice first — the customer signs it once they receive it.', onClick: `signatureInfoClick('${o.order_number}')`, raised: true }));
+  const invDone = typeof invoiceIsDefinitive === 'function' ? invoiceIsDefinitive(o) : !!o.invoice_sent_at; // an invoice sent before the agency's papers is an old one
+  entries.push(miniEntry({ icon: RECEIPT_ICON, label: 'Invoice', done: invDone, date: invDone ? o.invoice_sent_at : null, wait: !customsDoneAt(o) && stageIdx < deliveredIdx, waitReason: 'Send the pickup documents to customs first.', onClick: invDone ? `openInvoiceQT('${o.order_number}')` : `markDeliveredWithSignature('${o.order_number}')` }));
+  entries.push(miniEntry({ icon: SIGN_ICON, label: 'Signature', done: !!o.invoice_signed_at, date: o.invoice_signed_at, wait: !invDone, waitReason: 'Send the Invoice first — the customer signs it once they receive it.', onClick: `signatureInfoClick('${o.order_number}')`, raised: true }));
 
   // Real ask 2026-09-07: "un hombre andando hasta el pickup. un camion desde el pickup hasta la
   // entrega en movimiento" — a walking-person rides whichever connector line sits at the real
@@ -2532,7 +2533,7 @@ function orderDocRows(o, nextActionLabel){
     // scratch — see the comment on resendInvoiceEmail below for why that's wrong once a real
     // signature/customs weight exists). openInvoicePreview instead previews the actual uploaded
     // file's URL directly, real Download/Email/WhatsApp still live inside the same overlay.
-    const invoiceCubeEye = invoiceFiles.length ? `<div class="doc-row"><button class="btn secondary" style="padding:6px 10px;" onclick="openInvoicePage('${o.order_number}','${invoiceFiles[0].url}','${invoiceFiles[0].name}')" title="Agency document, QT and invoice">${PREVIEW_ICON}</button></div>` : ''; // the Invoice cube: ONE eye that opens the invoice page (documents + QT + buttons), not the bare PDF
+    const invoiceCubeEye = invoiceFiles.length && (invoiceIsDefinitive(o) || (!o.invoice_sent_at && !(o.received_documents || []).some(d => d.kind === 'customs_document'))) ? `<div class="doc-row"><button class="btn secondary" style="padding:6px 10px;" onclick="openInvoicePage('${o.order_number}','${invoiceFiles[0].url}','${invoiceFiles[0].name}')" title="Agency document, QT and invoice">${PREVIEW_ICON}</button></div>` : ''; // the Invoice cube: ONE eye that opens the invoice page (documents + QT + buttons), not the bare PDF
     const invoiceActions = invoiceFiles.length
       ? `<button class="btn secondary" style="padding:6px 10px;" onclick="openInvoicePreview('${o.order_number}','${invoiceFiles[0].url}','${invoiceFiles[0].name}')" title="Preview & send">${PREVIEW_ICON}</button>`
       : '';
@@ -4364,6 +4365,12 @@ let ttOverlayResolve = null;
 // Real ask 2026-09-26 ("orders QT no tiene producto ni marca"): same header as Offers' QT — plant logo + "product — plant
 // — customer" — built from this order's own row; the caller's title is only the fallback if the order isn't loaded.
 // THE CUSTOMS DOCUMENT NEXT TO THE QT (owner 2026-11-27: "UNA pantalla con el documento de la aduana junto al QT" · "el doc de aduana debe estar en un ojo"): the documents the agency sent back, with the SHORT name the reader found printed on them (BOL stamped, USDA, SL…). Create Invoice opens the QT with them on the left; the eye on the head hides / shows them.
+// THE DEFINITIVE INVOICE (owner 2026-11-27: "no sé por qué está la invoice si no la hemos generado… apenas la vamos a construir"): an invoice sent BEFORE the agency's papers arrived is an old one (the weights were not the real ones); the definitive one is made after them. Without the agency's papers, any sent invoice counts as it always did.
+function invoiceIsDefinitive(o){
+  if (!o || !o.invoice_sent_at) return false;
+  const t = (o.received_documents || []).filter(d => d.kind === 'customs_document' && d.created_at).map(d => new Date(d.created_at).getTime()).sort()[0];
+  return !t || new Date(o.invoice_sent_at).getTime() >= t;
+}
 const TT_CUSTOMS_SHORT = { bol: 'BOL', export_certificate: 'USDA', slaughter_letter: 'SL', truck_manifest: 'Manifest', pod: 'POD', packing_list: 'Packing list' };
 function customsDocsOfOrder(o){
   if (!o) return [];
@@ -4401,7 +4408,7 @@ function toggleTtCustoms(){
 }
 function ttRenderActions(){
   const el = document.getElementById('ttOverlayActions'); if (!el) return;
-  if (!ttInvoice){ el.style.display = 'none'; el.innerHTML = ''; document.body.classList.remove('fresh-invoice'); return; }
+  if (!ttInvoice){ el.style.display = 'none'; el.innerHTML = ''; document.body.classList.remove('fresh-invoice'); return; } // no invoice yet: no buttons (the numbers are written in the QT, never on this page)
   document.body.classList.add('fresh-invoice'); // the e-mail / WhatsApp windows open above this page
   const c = ttInvoice.fresh;
   el.innerHTML = `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceDownload()">${DOWNLOAD_ICON}Download</button>
