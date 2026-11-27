@@ -1044,10 +1044,11 @@ auth.onAuthStateChanged(user => {
 <div id="ttOverlay" class="tt-overlay">
   <div class="tt-overlay-head">
     <div id="ttOverlayLeft"></div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;min-width:0;">
+      <span id="ttOverlayDocs"></span>
       <img id="ttOverlayLogo" class="tt-logo-inline" alt="" style="display:none;">
-      <span id="ttOverlayViews" style="display:inline-flex;align-items:center;gap:8px;"></span>
       <div class="tt-overlay-title" id="ttOverlayTitle"></div>
+      <span id="ttOverlayQt"></span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;justify-self:end;"><button class="tt-overlay-close" onclick="closeTTOverlay()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   </div>
@@ -1553,7 +1554,7 @@ function factoringAwaitsSummarOk(o){
   return !!(o && o.financing && o.financing.financing_method === 'summar' && o.factoring_docs_sent_at && !o.factoring_confirmed_at && !o.summar_payment_sent_at && !o.plant_paid_at);
 }
 // Owner 2026-11-21 (new 12-step flow): the names of the steps as he dictated them. Only what is SHOWN changes; the internal labels (the keys the phases, the Next Action and the payment rows match on) stay as they were.
-const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Customs', Delivered: 'Create Invoice', Invoice: 'Create Invoice', Signature: 'Sign & Close' };
+const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Customs', Delivered: 'Invoice', Invoice: 'Invoice', Signature: 'Sign & Close' };
 // The places that SHOW a name call it as `(typeof stepName === 'function' ? stepName : (l => l))(label, o)`: a page piece that is read on its own (the protected tests build the render functions alone) keeps the original label.
 function stepName(label, o){
   if (label === 'Pay Plant') return 'Wire'; // owner 2026-11-25: "mejor solo wire": the system already knows (factoring or direct) where it takes him; both go to the same bank
@@ -4431,9 +4432,10 @@ function ttShowView(v){
   if (ttView === 'qt') ttFitQt();
 }
 function ttRenderEyes(on){
-  const v = document.getElementById('ttOverlayViews');
+  const d = document.getElementById('ttOverlayDocs'), q = document.getElementById('ttOverlayQt');
   const eye = (id, word, view) => `<button class="tt-view-btn" id="${id}" aria-label="${word}" onclick="ttShowView('${view}')">${PREVIEW_ICON}<span>${word}</span></button>`;
-  if (v) v.innerHTML = on ? (ttTabs().length ? eye('ttDocEye', 'Docs', 'doc') : '') + eye('ttQtEye', 'QT', 'qt') : ''; // between the logo and the company's name, centred
+  if (d) d.innerHTML = on && ttTabs().length ? eye('ttDocEye', 'Docs', 'doc') : ''; // one at each end of the logo + name, close to the middle (owner 2026-11-27: "los dos en cada extremo pero mas al medio")
+  if (q) q.innerHTML = on ? eye('ttQtEye', 'QT', 'qt') : '';
 }
 // THE QT KEEPS ITS SHAPE (owner 2026-11-27: "conservar la forma del qt, no dañar el orden de tablas y números, ajustada a la pantalla"): the QT is drawn at its own design width (its tables and numbers collapse into one column below ~920 px) and the whole picture is scaled to the half of the screen it has, never reflowed.
 const TT_QT_DESIGN_W = 1200;
