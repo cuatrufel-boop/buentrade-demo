@@ -231,6 +231,14 @@ try { if ((window.matchMedia('(display-mode: standalone)').matches || window.nav
   .tt-overlay-title{color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14.5px;}
   /* Real ask 2026-09-26 ("el close es mediocre", picked option D): icon-only round close in Market Flash's bright blue —
      blue ring + tinted glass, fills solid blue with a glow on hover. Same rule on every page that has it. */
+  /* THE TWO VIEW BUTTONS OF THE INVOICE PAGE (owner 2026-11-27: "ojo izquierdo que diga docs, derecho que diga qt, con buen diseno buentrade"): the same blue glass as the close button, an eye and its word; the screen you are on is filled blue with a glow */
+  .tt-view-btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px 0 13px;border-radius:999px;cursor:pointer;background:rgba(30,106,219,.25);border:1.5px solid #5AAAFF;color:#8CC4FF;font:700 13px 'Space Grotesk',sans-serif;letter-spacing:.02em;transition:background .18s,box-shadow .18s,color .18s;}
+  .tt-view-btn svg{width:17px;height:17px;flex-shrink:0;}
+  .tt-view-btn:hover{background:rgba(30,106,219,.5);color:#fff;box-shadow:0 0 14px 2px rgba(90,170,255,.4);}
+  .tt-view-btn.on{background:#1E6ADB;color:#fff;box-shadow:0 0 18px 3px rgba(90,170,255,.55);}
+  .tt-view-btn:focus-visible{outline:2px solid #5AAAFF;outline-offset:2px;}
+  /* THE CLOSE OF THE INVOICE PAGE (owner 2026-11-27: "la x de cerrar mejor color y diseno"): a coral glass circle that fills red when touched; only this page, the other windows keep theirs */
+  #ttOverlay .tt-overlay-close{width:38px;height:38px;background:rgba(229,72,77,.16);border:1.5px solid rgba(255,138,142,.75);color:#FF9DA1;} #ttOverlay .tt-overlay-close:hover{background:linear-gradient(135deg,#F0555A,#D83A40);border-color:#FFB3B6;color:#fff;box-shadow:0 0 18px 3px rgba(240,85,90,.5);} #ttOverlay .tt-overlay-close:focus-visible{outline:2px solid #FF9DA1;outline-offset:2px;}
   .tt-overlay-close{width:36px;height:36px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:rgba(30,106,219,.25);border:1.5px solid #5AAAFF;color:#5AAAFF;transition:background .18s,box-shadow .18s,color .18s;}
   .tt-overlay-close svg{width:15px;height:15px;display:block;}
   .tt-overlay-close:hover{background:#1E6ADB;color:#fff;box-shadow:0 0 16px 3px rgba(90,170,255,.55);}
@@ -1038,9 +1046,10 @@ auth.onAuthStateChanged(user => {
     <div id="ttOverlayLeft"></div>
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;">
       <img id="ttOverlayLogo" class="tt-logo-inline" alt="" style="display:none;">
+      <span id="ttOverlayViews" style="display:inline-flex;align-items:center;gap:8px;"></span>
       <div class="tt-overlay-title" id="ttOverlayTitle"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;justify-self:end;"><span id="ttOverlayRight"></span><button class="tt-overlay-close" onclick="closeTTOverlay()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div style="display:flex;align-items:center;gap:10px;justify-self:end;"><button class="tt-overlay-close" onclick="closeTTOverlay()" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   </div>
   <div class="tt-overlay-body" id="ttOverlayBody"></div>
   <div id="ttOverlayActions" style="display:none;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.12);flex-shrink:0;background:var(--navy);"></div>
@@ -4417,15 +4426,14 @@ function ttShowView(v){
   ttView = v === 'doc' && ttTabs().length ? 'doc' : 'qt';
   doc.style.display = ttView === 'doc' ? 'flex' : 'none';
   qt.style.display = ttView === 'qt' ? 'flex' : 'none';
-  const eye = (id, on) => { const e = document.getElementById(id); if (e) e.style.background = on ? '#1E6ADB' : ''; };
+  const eye = (id, on) => { const e = document.getElementById(id); if (e) e.classList.toggle('on', on); };
   eye('ttDocEye', ttView === 'doc'); eye('ttQtEye', ttView === 'qt');
   if (ttView === 'qt') ttFitQt();
 }
 function ttRenderEyes(on){
-  const l = document.getElementById('ttOverlayLeft'), r = document.getElementById('ttOverlayRight');
-  const eye = (id, tip, view) => `<button class="btn secondary eye-tip" id="${id}" style="padding:6px 10px;" data-tip="${tip}" aria-label="${tip}" onclick="ttShowView('${view}')">${PREVIEW_ICON}</button>`;
-  if (l) l.innerHTML = on && ttTabs().length ? eye('ttDocEye', 'Documents', 'doc') : '';
-  if (r) r.innerHTML = on ? eye('ttQtEye', 'QT', 'qt') : '';
+  const v = document.getElementById('ttOverlayViews');
+  const eye = (id, word, view) => `<button class="tt-view-btn" id="${id}" aria-label="${word}" onclick="ttShowView('${view}')">${PREVIEW_ICON}<span>${word}</span></button>`;
+  if (v) v.innerHTML = on ? (ttTabs().length ? eye('ttDocEye', 'Docs', 'doc') : '') + eye('ttQtEye', 'QT', 'qt') : ''; // between the logo and the company's name, centred
 }
 // THE QT KEEPS ITS SHAPE (owner 2026-11-27: "conservar la forma del qt, no dañar el orden de tablas y números, ajustada a la pantalla"): the QT is drawn at its own design width (its tables and numbers collapse into one column below ~920 px) and the whole picture is scaled to the half of the screen it has, never reflowed.
 const TT_QT_DESIGN_W = 1200;

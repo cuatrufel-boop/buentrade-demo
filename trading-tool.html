@@ -785,9 +785,9 @@ if (FIREBASE_READY) {
       <div class="qb-group-row">
         <div class="qb-item" style="width:auto;">
           <label style="visibility:hidden;">Invoice</label>
-          <button id="createShareInvoiceBtn" class="wa-btn" onclick="createAndShareInvoice()" title="Creates and sends the customer invoice" style="display:inline-flex;height:27px;padding:0 12px;font-size:11.5px;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;">
+          <button id="createShareInvoiceBtn" class="wa-btn" onclick="createAndShareInvoice()" title="Create Invoice: asks the boxes and the weight, then makes the invoice" style="display:inline-flex;height:27px;padding:0 12px;font-size:11.5px;align-items:center;justify-content:center;gap:5px;white-space:nowrap;flex-shrink:0;">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Invoice
+      Create Invoice
     </button>
         </div>
       </div>
@@ -2721,7 +2721,9 @@ function buildInvoicePdfUnsigned(composed, so, customer, orderNumber){
 async function realCostsInit(){
   let shipment = null;
   try { shipment = ((await callApi('shipments-search', { order_number: negoOffer.order_number, limit: 1 })).results || [])[0] || null; } catch (e) {}
-  document.getElementById('createShareInvoiceWrap').style.display = (shipment && shipment.status === 'delivered') ? 'flex' : 'none';
+  // the button is there as soon as the Create Invoice step is open in Orders — the documents were sent to customs or the agency answered (owner 2026-11-27: the agency's answer opens Create Invoice; the load is confirmed as delivered AFTER the invoice page) — and, as always, once the load is delivered
+  const customsDone = !!(shipment && (shipment.customs_sent_at || (shipment.received_documents || []).some(d => d.kind === 'customs_document')));
+  document.getElementById('createShareInvoiceWrap').style.display = (shipment && (shipment.status === 'delivered' || customsDone)) ? 'flex' : 'none';
 }
 
 // Real, confirmed production URL (2026-09-06) — never guessed. Netlify's own free-plan credit
