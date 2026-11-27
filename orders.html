@@ -2446,6 +2446,7 @@ async function ensureOrderDocsFiles(orderNumber){
         name: f.name,
         // The file's own version in the link: a document generated again (same name) never opens the copy the browser / CDN cached for an hour.
         url: storageClient.storage.from('order-documents').getPublicUrl(f.name).data.publicUrl + '?v=' + encodeURIComponent(f.updated_at || f.created_at || ''),
+        updated_at: f.updated_at || f.created_at || '',
       }));
     });
     orderDocsFileCache.set(orderNumber, files);
@@ -2533,7 +2534,11 @@ function orderDocRows(o, nextActionLabel){
     // scratch — see the comment on resendInvoiceEmail below for why that's wrong once a real
     // signature/customs weight exists). openInvoicePreview instead previews the actual uploaded
     // file's URL directly, real Download/Email/WhatsApp still live inside the same overlay.
-    const invoiceCubeEye = invoiceFiles.length && (invoiceIsDefinitive(o) || (!o.invoice_sent_at && !(o.received_documents || []).some(d => d.kind === 'customs_document'))) ? `<div class="doc-row"><button class="btn secondary" style="padding:6px 10px;" onclick="openInvoicePage('${o.order_number}','${invoiceFiles[0].url}','${invoiceFiles[0].name}')" title="Agency document, QT and invoice">${PREVIEW_ICON}</button></div>` : ''; // the Invoice cube: ONE eye that opens the invoice page (documents + QT + buttons), not the bare PDF
+    // THE CREATE INVOICE CUBE (owner 2026-11-27: "tanto eso como la invoice en ojo"): ONE eye — the invoice once it is generated, then what the customs agency answered — that unfolds the others; every eye opens the ONE page (agency document, QT, invoice, Download / Email / WhatsApp / Customs) on its own tab
+    const cubeInv = invoiceFiles.length && invoiceFileIsCurrent(o, invoiceFiles[0]) ? invoiceFiles[0] : null;
+    const cubeEyeItems = [].concat(cubeInv ? [{ label: 'Invoice', start: cubeInv.url }] : [], (typeof customsDocsOfOrder === 'function' ? customsDocsOfOrder(o) : []).map(d => ({ label: d.label, start: d.url })));
+    const cubeEyeBtn = it => `<button class="btn secondary eye-tip" style="padding:6px 10px;" data-tip="${escapeHtml(it.label)}" aria-label="${escapeHtml(it.label)}" onclick="event.stopPropagation();openInvoicePage('${o.order_number}','${cubeInv ? cubeInv.url : ''}','${cubeInv ? cubeInv.name : ''}','${it.start}')">${PREVIEW_ICON}</button>`;
+    const invoiceCubeEye = cubeEyeItems.length ? `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cubeEyeItems.length > 1 ? `<span class="eye-stack">${cubeEyeBtn(cubeEyeItems[0])}<span class="eye-more">${cubeEyeItems.slice(1).map(cubeEyeBtn).join('')}</span></span>` : cubeEyeBtn(cubeEyeItems[0])}</div>` : '';
     const invoiceActions = invoiceFiles.length
       ? `<button class="btn secondary" style="padding:6px 10px;" onclick="openInvoicePreview('${o.order_number}','${invoiceFiles[0].url}','${invoiceFiles[0].name}')" title="Preview & send">${PREVIEW_ICON}</button>`
       : '';
@@ -4371,6 +4376,13 @@ function invoiceIsDefinitive(o){
   const t = (o.received_documents || []).filter(d => d.kind === 'customs_document' && d.created_at).map(d => new Date(d.created_at).getTime()).sort()[0];
   return !t || new Date(o.invoice_sent_at).getTime() >= t;
 }
+// THE INVOICE FILE MADE AFTER THE AGENCY'S PAPERS (owner 2026-11-27): the definitive invoice is generated once the agency's answer is on the order; a file older than that answer is an old one and is not shown. Without the agency's papers, the file counts as it always did.
+function invoiceFileIsCurrent(o, file){
+  if (!file) return false;
+  const t = ((o && o.received_documents) || []).filter(d => d.kind === 'customs_document' && d.created_at).map(d => new Date(d.created_at).getTime()).sort()[0];
+  if (!t) return true;
+  return file.updated_at ? new Date(file.updated_at).getTime() >= t : invoiceIsDefinitive(o);
+}
 const TT_CUSTOMS_SHORT = { bol: 'BOL', export_certificate: 'USDA', slaughter_letter: 'SL', truck_manifest: 'Manifest', pod: 'POD', packing_list: 'Packing list' };
 function customsDocsOfOrder(o){
   if (!o) return [];
@@ -4477,11 +4489,12 @@ function closeTTOverlay(){
   ttOverlayResolve = null;
 }
 // the invoice page from the invoice cube's eye: the same page, the invoice already on its tab with its buttons
-function openInvoicePage(orderNumber, url, filename){
+function openInvoicePage(orderNumber, url, filename, startUrl){
   const o = findStatusOrder(orderNumber);
   if (!o || !o.sent_offer_id){ return openInvoicePreview(orderNumber, url, filename); }
   openTTOverlay(o.sent_offer_id, `Factura — ${orderNumber}`, { customsDocs: customsDocsOfOrder(o), invoicePage: true, invoice: url ? { orderNumber, url, filename } : null });
-  if (url) ttRenderLeft(ttTabs().length - 1); // show the invoice first
+  const at = startUrl ? ttTabs().findIndex(t => t.url === startUrl) : -1;
+  if (at >= 0) ttRenderLeft(at); else if (url) ttRenderLeft(ttTabs().length - 1); // the eye that was pressed, else the invoice
 }
 
 // Real correction 2026-09-07, explicit: "Delivered abre QT, Invoice" — this used to continue into
