@@ -65,6 +65,7 @@ function bcEnsureEmailModal(){
     <div class="email-modal-field" id="emailModalAttachWrap" style="display:none;">
       <label>Attachments</label>
       <div class="email-modal-attachments" id="emailModalAttachments"></div>
+      <label class="email-modal-attach-pick" id="emailModalAttachPick" style="display:none;">↑ Attach from computer<input type="file" multiple id="emailModalAttachInput" style="display:none;" onchange="bcEmailModalAttachFiles(this)"></label>
     </div>
     <div class="email-modal-field" id="emailModalSentWrap" style="display:none;">
       <div style="display:flex;align-items:center;gap:8px;color:#3FCB7E;font-weight:700;font-size:13.5px;">✓ Email sent</div>
@@ -99,6 +100,32 @@ function bcEnsureEmailModal(){
 // unwraps this into the same throw/return contract every caller already had, so none of the ~50
 // real call sites (or their own catch-block Gmail-fallback logic) change at all.
 let bcEmailModalOpts = null;
+// the chips of the files that will go with the e-mail; when the window allows attaching, each one has an ✕ to take it off
+function bcRenderEmailAttachments(){
+  const opts = bcEmailModalOpts || {};
+  const attachments = opts.attachments || [];
+  document.getElementById('emailModalAttachWrap').style.display = attachments.length || opts.allowAttach ? '' : 'none';
+  const esc = (t) => String(t || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  document.getElementById('emailModalAttachments').innerHTML = attachments
+    .map((a, i) => `<span class="email-modal-attachment-chip">📎 ${esc(a.filename)}${opts.allowAttach ? `<button type="button" class="email-modal-attachment-x" title="Remove" onclick="bcEmailModalRemoveAttachment(${i})">✕</button>` : ''}</span>`)
+    .join('');
+}
+function bcEmailModalRemoveAttachment(i){
+  if (!bcEmailModalOpts || !bcEmailModalOpts.attachments) return;
+  bcEmailModalOpts.attachments.splice(i, 1);
+  bcRenderEmailAttachments();
+}
+async function bcEmailModalAttachFiles(input){
+  const files = [...(input.files || [])]; input.value = '';
+  if (!files.length || !bcEmailModalOpts) return;
+  for (const f of files){
+    try {
+      const content = await new Promise((resolve, reject) => { const r = new FileReader(); r.onloadend = () => resolve(String(r.result).split(',')[1]); r.onerror = reject; r.readAsDataURL(f); });
+      bcEmailModalOpts.attachments = (bcEmailModalOpts.attachments || []).concat([{ filename: f.name, content, contentType: f.type || 'application/octet-stream' }]);
+    } catch (e) { document.getElementById('emailModalErr').textContent = 'Could not read ' + f.name; document.getElementById('emailModalErr').style.display = ''; }
+  }
+  bcRenderEmailAttachments();
+}
 function bcOpenEmailModal(opts){
   opts = opts || {};
   bcEmailModalOpts = opts;
@@ -115,12 +142,10 @@ function bcOpenEmailModal(opts){
   document.getElementById('emailModalBody').value = opts.text || '';
   ['emailModalTo', 'emailModalCc', 'emailModalSubject', 'emailModalBody'].forEach(id => document.getElementById(id).disabled = false);
 
-  const attachments = opts.attachments || [];
-  const attachWrap = document.getElementById('emailModalAttachWrap');
-  attachWrap.style.display = attachments.length ? '' : 'none';
-  document.getElementById('emailModalAttachments').innerHTML = attachments
-    .map(a => `<span class="email-modal-attachment-chip">📎 ${(a.filename || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</span>`)
-    .join('');
+  // a window that allows it (allowAttach) lets the trader attach files from his computer before sending (owner 2026-11-27: "si lo abro debo poder attached desde el pc"); they go out with the e-mail and are not filed anywhere else
+  bcEmailModalOpts.attachments = (opts.attachments || []).slice();
+  document.getElementById('emailModalAttachPick').style.display = opts.allowAttach ? '' : 'none';
+  bcRenderEmailAttachments();
 
   bcEmailModalWaInfo = (opts.waInfo && opts.waInfo.phone) ? opts.waInfo : null;
   document.getElementById('emailModalWaWrap').style.display = 'none';
@@ -512,7 +537,7 @@ async function bcSendEmailApi(opts){
   const outcome = await bcOpenEmailModal({
     fromAlias: opts.fromAlias, to: opts.to, cc: opts.cc, subject: opts.subject, text: opts.text,
     attachments, fromDisplay: opts.fromDisplay, waInfo: waInfoWithFile, title: opts.title, lockPrices: opts.lockPrices,
-    html: opts.html, htmlText: opts.text,
+    html: opts.html, htmlText: opts.text, allowAttach: opts.allowAttach === true,
   });
   if (outcome.cancelled){
     const cancelErr = new Error('Cancelled by user');
@@ -554,6 +579,7 @@ async function bcSummarCopy(callApi, orderNumber){
     '.email-modal-field input:focus,.email-modal-field textarea:focus{outline:none;border-color:#5AAAFF;box-shadow:0 0 0 3px rgba(90,170,255,.2);}' +
     '.email-modal-field:has(#emailModalBody) textarea{border-color:rgba(255,200,118,.5);background:rgba(255,200,118,.05);}.email-modal-field:has(#emailModalBody) textarea:focus{border-color:#FFC876;box-shadow:0 0 0 3px rgba(255,200,118,.18);}' +
     '.email-modal-field textarea{min-height:150px;resize:none;line-height:1.55;overflow:hidden;}' +
+    '.email-modal-attach-pick{display:inline-flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;font:700 12px "IBM Plex Mono",monospace;letter-spacing:.04em;color:#7BE0A8;border:1px dashed rgba(63,203,126,.55);border-radius:20px;padding:5px 12px;}.email-modal-attachment-x{background:none;border:0;color:inherit;cursor:pointer;font-size:12px;padding:0 0 0 4px;}' +
     '.email-modal-chip,.email-modal-attachment-chip{display:inline-flex;align-items:center;gap:6px;letter-spacing:.04em;background:rgba(63,203,126,.12);color:#7BE0A8;border:1px solid rgba(63,203,126,.42);font:600 12px "IBM Plex Mono",monospace;padding:5px 12px;border-radius:20px;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;word-break:break-all;}.email-modal-attachments{min-width:0;max-width:100%;}' + // a long file name wraps inside its pill and never runs over the message (owner 2026-11-26, screenshot of the Customs e-mail)
     '.email-modal-actions{gap:12px;margin-top:18px;}' +
     // Send / Done: the same outlined glass pill as Send 2 Factoring on Orders — road-colour border (amber → blue → green), green glow; Cancel stays the blue outlined button

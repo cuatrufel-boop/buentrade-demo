@@ -3052,11 +3052,9 @@ function renderJourney(o, attentionOrderNumbers){
     + waBtn('Customer', `customerPickupButtonClick('${o.order_number}')`)
     + waBtn('Plant', `requestPickupDocsOnPickup('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON); // 3 buttons (owner 2026-11-25): carrier WhatsApp -> customer WhatsApp -> plant e-mail; each one opens the next, and each can be done by hand on its own
   const puEyes = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;">${puDocs.map(d => `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(d.filename || 'Pick-up document')}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`).join('')}${puWaCarrier}</div>`;
-  const puUpload = !o.customs_sent_at ? `<label class="btn secondary doc-row-btn" style="align-self:center;" title="Upload the pick-up documents" onclick="event.stopPropagation()">↑ Upload<input type="file" multiple accept="image/*,.pdf,application/pdf" style="display:none;" onchange="uploadPickupDocuments('${o.order_number}',this)"></label>` : '';
   const pickupCubeHtml = !(o.carrier && o.carrier.phone) ? puEyes
     : (o.carrier_picked_up_at || o.pickup_link_sent_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at || o.pickup_link_sent_at))}</div>` : '') + puEyes
-      // owner 2026-11-25: no "Link sent" / "Carrier loaded" text; the cube is like the others: the hour (link sent, then the carrier's) and the eyes
-      + puUpload; // the old "Mark picked up" text button is gone (owner 2026-11-25: no duplicates, no texts): the Customer button does it; ↑ Upload adds the papers by hand
+      ; // owner 2026-11-25: no "Link sent" / "Carrier loaded" text; the cube is like the others: the hour (link sent, then the carrier's) and the eyes; the old "Mark picked up" text button is gone (owner 2026-11-25: no duplicates, no texts): the Customer button does it; the by-hand attach is in the plant e-mail window, not in this cube (owner 2026-11-27)
   // DOCS TO BORDER fills itself and has ONE green WhatsApp button (owner 2026-11-25: "no quiero tocar el cubo… que llene el cubo automatico con docs (ojo) pero un boton de whatsapp (customs) para mandar a aduana"): one EYE per document the plant/carrier sent (and the plant's load confirmation when there is no carrier of ours), the Customs button sends them to the agency (same action as before); touching the cube does nothing
   const cuDocs = (typeof withoutDuplicateBols === 'function' ? withoutDuplicateBols : (x => x))((o.pickup_documents || []).filter(d => d.storage_url), o.load_readings).concat(!(o.carrier && o.carrier.name) ? (o.received_documents || []).filter(d => d.kind === 'plant_order_confirmation' && d.storage_url).map(d => ({ storage_url: d.storage_url, filename: d.file_name || "Plant's order confirmation" })) : []);
   // standing on an eye says WHAT the document is (owner 2026-11-26: "no dice que doc es cada uno cuando paso por encima"): its type as the reading found it (BOL, BOL stamped by customs, USDA certificate, other document), then the file name. A document no reading has seen shows only its file name, as before.
@@ -3536,7 +3534,7 @@ async function requestPickupDocsOnPickup(orderNumber){
   const subject = requestCustomsDocsSubject(orderNumber);
   const body = requestCustomsDocsMessage(o);
   try {
-    await sendEmailApi('logistics', to, subject, body, [], waPhone ? { phone: waPhone, message: body } : null, cc);
+    await sendEmailApi('logistics', to, subject, body, [], waPhone ? { phone: waPhone, message: body } : null, cc, undefined, true); // the window lets him attach files from his computer (owner 2026-11-27)
     showToast('Documents requested from the plant', to.join(', '));
     if (typeof logSends === 'function') await logSends(orderNumber, 'pickup_docs_request');
   } catch (e) {
@@ -4555,8 +4553,8 @@ function pickupLocationModalResolve(locationId){
 }
 
 // This file's own signature is unchanged (7 args, cc last) — every real call site stays as-is.
-async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc, html){
-  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc, html, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
+async function sendEmailApi(fromAlias, to, subject, text, attachments, waInfo, cc, html, allowAttach){
+  return bcSendEmailApi({ fromAlias, to, subject, text, attachments, waInfo, cc, html, allowAttach, fromDisplay: FROM_DISPLAY[fromAlias] || fromAlias });
 }
 
 function gmailComposeUrl(emails, subject, body){
