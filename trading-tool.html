@@ -2809,7 +2809,17 @@ async function createAndShareInvoice(){
   msgEl.textContent = '';
   // Real ask 2026-09-12: same preview-before-send screen PO/SO/FO already have — this used to
   // send straight through with no look at the real PDF first.
-  openInvoiceDocPreview({ orderNumber, doc, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: customer && (customer.trade_name || customer.name), boxes: realBoxes, countKind, customs: customsCtx, invoice: composed.invoice, qt: typeof invoiceQtNumbers === 'function' ? invoiceQtNumbers() : null });
+  // Opened from Orders (the QT inside its overlay): the invoice is shown in ORDERS' own window — the one PO / SO / FO use, with Compare to QT, Download, Email, WhatsApp and Customs (owner 2026-11-27: "esta es la que esta en orders"). The PDF is already uploaded; the texts and the recipients travel with it. Opened on its own (no Orders around), this window stays as it was.
+  const invoiceCtx = { orderNumber, doc, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: customer && (customer.trade_name || customer.name), boxes: realBoxes, countKind, customs: customsCtx, invoice: composed.invoice, qt: typeof invoiceQtNumbers === 'function' ? invoiceQtNumbers() : null };
+  let handedToOrders = false;
+  try {
+    if (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.openFreshInvoice === 'function'){
+      window.parent.openFreshInvoice({ orderNumber, url: invoiceUrl, filename, emails, ccEmails, subject, body, waPhone, waMessage, customerName: invoiceCtx.customerName, boxes: realBoxes, countKind, customs: customsCtx });
+      handedToOrders = true;
+      msgEl.textContent = 'Invoice ready — it opened in the Orders window.';
+    }
+  } catch (e) { handedToOrders = false; }
+  if (!handedToOrders) openInvoiceDocPreview(invoiceCtx);
 }
 
 let invoicePreviewCtx = null;
