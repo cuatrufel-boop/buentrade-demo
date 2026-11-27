@@ -1034,7 +1034,7 @@ auth.onAuthStateChanged(user => {
 
 <div id="ttOverlay" class="tt-overlay">
   <div class="tt-overlay-head">
-    <div></div>
+    <div id="ttOverlayLeft"></div>
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;">
       <img id="ttOverlayLogo" class="tt-logo-inline" alt="" style="display:none;">
       <div class="tt-overlay-title" id="ttOverlayTitle"></div>
@@ -3087,7 +3087,7 @@ function renderJourney(o, attentionOrderNumbers){
     return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
   })();
   const customsCubeHtml = `${cuReadLine}<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuDocs.concat(cuFromCustoms))}${cuDocs.length || cuFromCustoms.length ? '<span style="align-self:center;opacity:.45;">|</span>' : ''}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}</div>`; // ONE eye for every document (what we send, then what the agency sent back): standing on it opens the others under the row (owner 2026-11-27: "customs tiene varios ojos, no tiene unfold de una a varios"); the e-mail button on the other side, the e-mail button on the other, like the Pickup cube (owner 2026-11-27)
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, Delivered: rows.invoiceCreated || '', 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, Delivered: (cuFromCustoms.length ? `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuFromCustoms)}</div>` : '') + (rows.invoiceCreated || ''), 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   // nothing to press yet but something still pending: the Next card says what it is waiting for, never "All done" (owner 2026-11-21, "sentido común al flujo")
@@ -4361,8 +4361,29 @@ let ttOverlayResolve = null;
 // same as every other QT overlay — the overlay's own title + close are all that's needed here.
 // Real ask 2026-09-26 ("orders QT no tiene producto ni marca"): same header as Offers' QT — plant logo + "product — plant
 // — customer" — built from this order's own row; the caller's title is only the fallback if the order isn't loaded.
-function openTTOverlay(sentOfferId, title){
+// THE CUSTOMS DOCUMENT NEXT TO THE QT (owner 2026-11-27: "UNA pantalla con el documento de la aduana junto al QT" · "el doc de aduana debe estar en un ojo"): the documents the agency sent back, with the SHORT name the reader found printed on them (BOL stamped, USDA, SL…). Create Invoice opens the QT with them on the left; the eye on the head hides / shows them.
+const TT_CUSTOMS_SHORT = { bol: 'BOL', export_certificate: 'USDA', slaughter_letter: 'SL', truck_manifest: 'Manifest', pod: 'POD', packing_list: 'Packing list' };
+function customsDocsOfOrder(o){
+  if (!o) return [];
+  return (o.received_documents || []).filter(d => d.kind === 'customs_document' && d.storage_url).map(d => {
+    const rd = (o.load_readings || []).find(r => r.file_name && r.file_name === d.file_name);
+    const base = rd && TT_CUSTOMS_SHORT[rd.doc_kind] ? TT_CUSTOMS_SHORT[rd.doc_kind] + (rd.doc_kind === 'bol' && rd.customs_stamp ? ' stamped' : '') : 'Doc';
+    return { url: d.storage_url, label: base + ' (customs)' };
+  });
+}
+let ttCustomsDocs = [];
+function showTtCustomsDoc(i){
+  const d = ttCustomsDocs[i]; if (!d) return;
+  const f = document.getElementById('ttCustomsFrame'); if (f) f.src = d.url + '#view=FitH';
+  ttCustomsDocs.forEach((x, k) => { const b = document.getElementById('ttCustomsTab' + k); if (b) b.style.opacity = k === i ? '1' : '.55'; });
+}
+function toggleTtCustoms(){
+  const p = document.getElementById('ttCustomsPane'); if (!p) return;
+  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+}
+function openTTOverlay(sentOfferId, title, opts){
   const o = statusOrders.find(x => x.sent_offer_id === sentOfferId);
+  ttCustomsDocs = (opts && opts.customsDocs) || [];
   document.getElementById('ttOverlayTitle').textContent = o
     ? `${(o.product_spec || o.product_name) || ''} — ${o.plant_name || ''} — ${o.customer_name || ''}` : (title || '');
   const logoEl = document.getElementById('ttOverlayLogo');
@@ -4372,8 +4393,12 @@ function openTTOverlay(sentOfferId, title){
     const logo = plant && (plant.logo_url || plant.logo_url_dark);
     if (logo && document.getElementById('ttOverlay').style.display !== 'none'){ logoEl.src = logo; logoEl.style.display = 'block'; }
   }).catch(() => {});
-  document.getElementById('ttOverlayBody').innerHTML =
-    `<iframe id="ttIframe" src="trading-tool.html?${new URLSearchParams({ offerId: sentOfferId, embed: '1', v: String(Date.now()) }).toString()}"></iframe>`;
+  const ttFrameHtml = `<iframe id="ttIframe" src="trading-tool.html?${new URLSearchParams({ offerId: sentOfferId, embed: '1', v: String(Date.now()) }).toString()}"></iframe>`;
+  document.getElementById('ttOverlayLeft').innerHTML = ttCustomsDocs.length
+    ? `<button class="btn secondary eye-tip" id="ttCustomsEye" style="padding:6px 10px;justify-self:start;" data-tip="Customs document" aria-label="Customs document" onclick="toggleTtCustoms()">${PREVIEW_ICON}</button>` : '';
+  document.getElementById('ttOverlayBody').innerHTML = ttCustomsDocs.length
+    ? `<div style="display:flex;height:100%;"><div id="ttCustomsPane" style="flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.12);"><div style="display:flex;gap:6px;align-items:center;padding:8px 14px;background:rgba(255,255,255,.04);flex-shrink:0;"><span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.03em;">From customs</span>${ttCustomsDocs.map((d, k) => `<button class="btn secondary" id="ttCustomsTab${k}" style="padding:4px 10px;font-size:11.5px;${k ? 'opacity:.55;' : ''}" onclick="showTtCustomsDoc(${k})">${escapeHtml(d.label)}</button>`).join('')}</div><iframe id="ttCustomsFrame" style="flex:1;min-height:0;" src="${escapeHtml(ttCustomsDocs[0].url)}#view=FitH"></iframe></div><div style="flex:1;min-width:0;height:100%;">${ttFrameHtml}</div></div>`
+    : ttFrameHtml;
   document.getElementById('ttOverlay').style.display = 'flex';
   return new Promise(resolve => { ttOverlayResolve = resolve; });
 }
@@ -4401,7 +4426,7 @@ async function markDeliveredWithSignature(orderNumber){
   const o = findStatusOrder(orderNumber);
   if (!o) return;
   if (!o.sent_offer_id){ await btAlert('This order has no linked offer — cannot open Real Costs.'); return; }
-  await openTTOverlay(o.sent_offer_id, `Factura — ${orderNumber}`);
+  await openTTOverlay(o.sent_offer_id, `Factura — ${orderNumber}`, { customsDocs: typeof customsDocsOfOrder === 'function' ? customsDocsOfOrder(o) : [] }); // the agency's document on the left, the QT beside it (owner 2026-11-27)
   // Owner 2026-11-23 (order 1002 went on without his confirming the invoice): "el sistema no puede dejar pasar sin confirmar". Closing the QT is not a confirmation: the load is marked Delivered (and the collections clock starts)
   // ONLY when the trader says so; otherwise it stays exactly where it was.
   const yes = await btConfirm(`${orderNumber}: confirm the load was delivered? This starts the invoice and the collection clock.`, 'Yes, delivered', 'Not yet');
@@ -4848,6 +4873,7 @@ async function openInvoicePreview(orderNumber, fileUrl, filename, fresh){
     ${fresh && freshInvoiceCtx && freshInvoiceCtx.customs ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceCustoms()">${EMAIL_ICON}Customs</button>` : ''}
     ${fresh ? `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceWhatsApp()">${WA_ICON}WhatsApp</button>` : `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="waResendInvoice('${orderNumber}','${fileUrl}','${filename}')">${WA_ICON}WhatsApp</button>`}`;
   document.getElementById('docPreviewActions').innerHTML = actionsHtml(false);
+  if (fresh) return; // the invoice just made is the RESULT of comparing the customs document with the QT (owner 2026-11-27): no Compare to QT on it; an invoice that already exists keeps it
   const offer = await loadCompareOffer(orderNumber);
   if (offer && document.getElementById('docPreviewTitle').textContent === 'Invoice' && docPreviewOrderNumber === orderNumber){
     docPreviewOffer = offer;
