@@ -2975,17 +2975,21 @@ function withoutDuplicateBols(docs, readings){
     seen = true; return true;
   });
 }
+// FOLD: in a cube, ONE eye, ONE WhatsApp and ONE e-mail show; standing on one opens the others of its kind as a panel under the row (owner 2026-11-27: "todos los cubos deben tener un solo ojo, un solo whatsapp, un solo email y si me paro arriba saca los otros"). Nothing is removed: every button stays and does what it did.
 function cubeEyesOnly(html){
-  const eyes = [];
+  const foldStack = items => items.length > 1 ? `<span class="eye-stack">${items[0]}<span class="eye-more">${items.slice(1).join('')}</span></span>` : items.join('');
+  const eyes = [], was = [], mails = [], others = [];
   const rest = String(html || '').replace(/<div class="doc-row[^"]*">((?:(?!<\/div>)[^])*)<\/div>/g, (m, inner) => {
     const a = inner.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/);
     if (!a){ const only = inner.match(/<(button|label)\b[^]*?<\/\1>/g) || []; return only.length ? `<div class="doc-row">${only.join('')}</div>` : ''; } // a row that is only a name and a status ("Not generated", "Not signed yet") is not drawn: the chip already says Waiting, like the cubes above
     const st = inner.match(/<span class="doc-row-status[^"]*">([^<]*)<\/span>/);
     const btns = inner.match(/<(button|label)\b[^]*?<\/\1>/g) || [];
-    eyes.push(`<a class="btn secondary" style="padding:6px 10px;" href="${a[1]}" target="_blank" rel="noopener" title="${a[2]}${st ? ' — ' + st[1] : ''}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>${btns.join('')}`);
+    eyes.push(`<a class="btn secondary" style="padding:6px 10px;" href="${a[1]}" target="_blank" rel="noopener" title="${a[2]}${st ? ' — ' + st[1] : ''}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`);
+    btns.forEach(b => (PREVIEW_ICON && b.includes(PREVIEW_ICON) ? eyes : /class="wa-btn"/.test(b) ? was : /title="Email"/.test(b) ? mails : others).push(b));
     return '';
   });
-  return rest + (eyes.length ? `<div class="doc-row" style="flex-wrap:nowrap;">${eyes.join('')}</div>` : ''); // all the eyes on one line
+  const all = eyes.length + was.length + mails.length + others.length;
+  return rest + (all ? `<div class="doc-row" style="flex-wrap:nowrap;position:relative;">${foldStack(eyes)}${foldStack(was)}${foldStack(mails)}${others.join('')}</div>` : ''); // one eye, one WhatsApp, one e-mail; the rest open under the row
 }
 const HZ_TITLES = { PO: 'Purchase Order', SO: 'Sales Order', FO: 'Freight Order' }; // owner 2026-11-23: the Orders cards carry the full names, not PO / SO / FO
 function fmtTimeHM(t){ const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); if (!m) return String(t || ''); const h = Number(m[1]); return (h % 12 || 12) + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'); } // '17:00' -> '5:00 PM'
@@ -3048,13 +3052,13 @@ function renderJourney(o, attentionOrderNumbers){
   // TWO green WhatsApp buttons beside the eyes, nothing else in the cube (owner 2026-11-25: "pon dos botones uno para enviar a carrier y otro enviar a cliente verdes asi no enredamos todo"): Carrier sends him the pick-up link, Customer sends the approved pick-up notice; same actions as touching the cube, always available (by hand)
   const waGreen = 'padding:6px 10px;color:#4ADE80 !important;border-color:rgba(74,222,128,.55) !important;background:rgba(74,222,128,.14) !important;';
   const waBtn = (who, act, icon) => `<button class="btn secondary cube-tip" style="${waGreen}" data-tip="${who}" aria-label="${who}" onclick="event.stopPropagation();${act}">${icon || (typeof WA_ICON === 'undefined' ? '' : WA_ICON)}</button>`;
-  const puButtons = [(o.carrier && o.carrier.phone ? waBtn('Carrier', `sendPickupLinkClick('${o.order_number}')`) : '') // a load with no carrier of ours (or no phone) has no Carrier button, but Customer and Plant stay: the cube is never left without its actions
-    , waBtn('Customer', `customerPickupButtonClick('${o.order_number}')`)
-    , waBtn('Plant', `requestPickupDocsOnPickup('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)].filter(Boolean); // 3 buttons (owner 2026-11-25): carrier WhatsApp -> customer WhatsApp -> plant e-mail; each one opens the next, and each can be done by hand on its own
-  // when there is more than one eye, or more than one button, only the first shows and standing on it opens the others as a panel under the row, like the Customs cube (owner 2026-11-27: "cuando hay mas de un ojo unfold los otros, hazlo con los de whatsapp y email")
+  const puWaButtons = [(o.carrier && o.carrier.phone ? waBtn('Carrier', `sendPickupLinkClick('${o.order_number}')`) : '') // a load with no carrier of ours (or no phone) has no Carrier button, but Customer and Plant stay: the cube is never left without its actions
+    , waBtn('Customer', `customerPickupButtonClick('${o.order_number}')`)].filter(Boolean);
+  const puMailButtons = [waBtn('Plant', `requestPickupDocsOnPickup('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)]; // 3 buttons (owner 2026-11-25): carrier WhatsApp -> customer WhatsApp -> plant e-mail; each one opens the next, and each can be done by hand on its own
+  // ONE eye, ONE WhatsApp, ONE e-mail show; standing on one opens the others of its kind as a panel under the row, like the Customs cube (owner 2026-11-27)
   const puStack = items => items.length > 1 ? `<span class="eye-stack">${items[0]}<span class="eye-more">${items.slice(1).join('')}</span></span>` : items.join('');
   const puEyeList = puDocs.map(d => `<a class="btn secondary" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" title="${escapeHtml(d.filename || 'Pick-up document')}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`);
-  const puEyes = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${puStack(puEyeList)}${puStack(puButtons)}</div>`;
+  const puEyes = `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${puStack(puEyeList)}${puStack(puWaButtons)}${puStack(puMailButtons)}</div>`;
   const pickupCubeHtml = !(o.carrier && o.carrier.phone) ? puEyes
     : (o.carrier_picked_up_at || o.pickup_link_sent_at ? `<div class="pay-amt">${escapeHtml(miamiTime(o.carrier_picked_up_at || o.pickup_link_sent_at))}</div>` : '') + puEyes
       ; // owner 2026-11-25: no "Link sent" / "Carrier loaded" text; the cube is like the others: the hour (link sent, then the carrier's) and the eyes; the old "Mark picked up" text button is gone (owner 2026-11-25: no duplicates, no texts): the Customer button does it; the by-hand attach is in the plant e-mail window, not in this cube (owner 2026-11-27)
@@ -3937,9 +3941,9 @@ function payHzHtml(o, open, besideCards, cardsOnly){
   else if (!wired && !plantStatusAllowsPayment(o)) b1 += note('The plant must confirm the load status first.');
   else if (!wired && wire == null) b1 += note("The plant cost or the sale price is missing, so the amount to wire Summar can't be calculated.");
   else if (!wired && wire === 0) b1 += note("Summar's 80% advance already covers the plant cost — there is nothing to wire.");
-  if (wired) b1 += receipt ? `<div class="doc-row">${eyeOpen(receipt.storage_url)}</div>` : ''; // eye only, like every other cube (owner 2026-11-24); touching the cube resends the screenshot to Summar, the same action Resend had
   const summarPaidDoc = rd('summar_plant_payment')[0]; // Summar's own confirmation that it paid the plant, read from its e-mail (owner 2026-11-24)
-  if (summarPaidDoc) b1 += `<div class="doc-row">${eyeOpen(summarPaidDoc.storage_url)}</div>`;
+  const wireEyes = [wired && receipt ? eyeOpen(receipt.storage_url) : '', summarPaidDoc ? eyeOpen(summarPaidDoc.storage_url) : ''].filter(Boolean); // eye only, like every other cube (owner 2026-11-24); touching the cube resends the screenshot to Summar, the same action Resend had
+  if (wireEyes.length) b1 += `<div class="doc-row"${wireEyes.length > 1 ? ' style="position:relative;"' : ''}>${wireEyes.length > 1 ? `<span class="eye-stack">${wireEyes[0]}<span class="eye-more">${wireEyes.slice(1).join('')}</span></span>` : wireEyes.join('')}</div>`; // ONE eye shows, the other opens under it (owner 2026-11-27)
   if (wired && !paid) b1 += note(`Wired to Summar ${esc(day(o.summar_payment_sent_at))} · Waiting for Summar to pay the plant`) ; // like Docs 2 Factoring after it is sent: the date, who is next and Send again
   // after the e-mail to Summar, the old action stays inside this same box until Summar confirms it paid the plant (it opens nothing new: the release # comes from the plant's own reply)
   const askRecord = wired && !paid;
