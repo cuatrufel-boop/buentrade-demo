@@ -4768,21 +4768,35 @@ function closeDocPreview(){
 // invoice only exists as the file already sitting in Storage (see resendInvoiceEmail's own comment
 // on why it fetches that exact file back instead of rebuilding). So this loads the real uploaded
 // file's URL straight into the same overlay/iframe instead of building anything.
-function openInvoicePreview(orderNumber, fileUrl, filename){
+async function openInvoicePreview(orderNumber, fileUrl, filename){
   document.getElementById('docPreviewTitle').textContent = 'Invoice';
   document.getElementById('docPreviewSub').textContent = `Order ${orderNumber}`;
+  // the same window as PO / SO / FO (owner 2026-11-27: "igual que las orders"): Compare to QT on the left, opening the QT next to the invoice; the QT state is reset every time, like openDocPreview does
+  const compareEl = document.getElementById('docPreviewCompare');
+  compareEl.style.display = 'none'; compareEl.innerHTML = '';
+  const qtPane = document.getElementById('docPreviewQtPane');
+  const qtFrame = document.getElementById('docPreviewQtFrame');
+  qtPane.style.display = 'none'; qtFrame.src = 'about:blank';
+  docPreviewQtShown = false; docPreviewCompareHtml = ''; docPreviewOffer = null; docPreviewOrderNumber = orderNumber;
   const frame = document.getElementById('docPreviewFrame');
   const loading = document.getElementById('docPreviewLoading');
   frame.style.display = 'none';
   loading.style.display = 'flex';
   loading.textContent = 'Loading document…';
-  frame.src = fileUrl;
+  frame.src = fileUrl + '#view=FitH';
   frame.onload = () => { loading.style.display = 'none'; frame.style.display = 'block'; };
-  document.getElementById('docPreviewActions').innerHTML = `
+  document.getElementById('docPreviewOverlay').style.display = 'flex';
+  const actionsHtml = withCompare => `
+    ${withCompare ? `<button class="btn secondary" id="docPreviewCompareBtn" style="margin-right:auto;" onclick="toggleQtCompare()">Compare to QT</button>` : ''}
     <button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="window.open('${fileUrl}', '_blank')">${DOWNLOAD_ICON}Download</button>
     <button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="resendInvoiceEmail('${orderNumber}','${fileUrl}','${filename}')">${EMAIL_ICON}Email</button>
     <button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="waResendInvoice('${orderNumber}','${fileUrl}','${filename}')">${WA_ICON}WhatsApp</button>`;
-  document.getElementById('docPreviewOverlay').style.display = 'flex';
+  document.getElementById('docPreviewActions').innerHTML = actionsHtml(false);
+  const offer = await loadCompareOffer(orderNumber);
+  if (offer && document.getElementById('docPreviewTitle').textContent === 'Invoice' && docPreviewOrderNumber === orderNumber){
+    docPreviewOffer = offer;
+    document.getElementById('docPreviewActions').innerHTML = actionsHtml(true);
+  }
 }
 
 // ============ DOCUMENT SEND SEQUENCE (preview -> send -> next, no extra clicks) — same engine as
