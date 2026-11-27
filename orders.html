@@ -3080,11 +3080,9 @@ function renderJourney(o, attentionOrderNumbers){
   const cuEye = d => { const lbl = cuKindLabel(d); return `<a class="btn secondary eye-tip" style="padding:6px 10px;" href="${escapeHtml(d.storage_url)}" target="_blank" rel="noopener" data-tip="${escapeHtml(lbl)}${d.forwarded_to_customs_at ? ' — Sent to Customs' : ''}" aria-label="${escapeHtml(lbl)}" onclick="event.stopPropagation()">${PREVIEW_ICON}</a>`; }; // standing on an eye shows at once WHICH document it is, in a short name (owner 2026-11-27); the file name is never shown
   // ONE eye for all the documents; standing on it unfolds the list (owner 2026-11-25: "solo un ojo para todos los docs… si me paro en uno despliegue los otros"); the button is the e-mail logo (it sends the e-mail to the agency)
   const cuStack = docs => docs.length > 1 ? `<span class="eye-stack">${cuEye(docs[0])}<span class="eye-more">${docs.slice(1).map(cuEye).join('')}</span></span>` : docs.map(cuEye).join(''); // unfolds in place (no floating box: the card clips what sticks out)
-  // what the customs agency sent back (certificate, stamped BOL…): its own eyes after the button, never attached to what goes TO customs (owner 2026-11-25)
-  const cuFromCustoms = (o.received_documents || []).filter(d => d.kind === 'customs_document' && d.storage_url).map(d => ({ storage_url: d.storage_url, filename: 'From customs — ' + (d.file_name || 'Document'), rawName: d.file_name }));
   const cuEyes = cuStack(cuDocs);
   // what the documents SAY about the load (owner 2026-11-26, step 2): boxes + net weight read from the plant's BOL, the stamped BOL and the USDA certificate. ✓ when 2+ documents agree, ⚠ when they differ; one reading alone has no ✓; none = nothing drawn. Readings only, never the invoice's numbers.
-  const cuReads = (o.load_readings || []).filter(r => !r.read_error && r.boxes != null && r.net_weight_lb != null);
+  const cuReads = (o.load_readings || []).filter(r => r.origin !== 'customs_document' && !r.read_error && r.boxes != null && r.net_weight_lb != null); // the plant's documents only: what the agency answered fills Create Invoice, not this cube (owner 2026-11-27)
   const cuFmt = (n, d) => Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   const cuReadLine = (() => {
     if (!cuReads.length) return '';
@@ -3094,7 +3092,7 @@ function renderJourney(o, attentionOrderNumbers){
     if (!same) return line('⚠ the documents differ', 'color:#b45309;');
     return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
   })();
-  const customsCubeHtml = `${cuReadLine}<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuDocs.concat(cuFromCustoms))}${cuDocs.length || cuFromCustoms.length ? '<span style="align-self:center;opacity:.45;">|</span>' : ''}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}</div>`; // ONE eye for every document (what we send, then what the agency sent back): standing on it opens the others under the row (owner 2026-11-27: "customs tiene varios ojos, no tiene unfold de una a varios"); the e-mail button on the other side, the e-mail button on the other, like the Pickup cube (owner 2026-11-27)
+  const customsCubeHtml = `${cuReadLine}<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuDocs)}${cuDocs.length ? '<span style="align-self:center;opacity:.45;">|</span>' : ''}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}</div>`; // ONE eye for every document (what we send, then what the agency sent back): standing on it opens the others under the row (owner 2026-11-27: "customs tiene varios ojos, no tiene unfold de una a varios"); the e-mail button on the other side, the e-mail button on the other, like the Pickup cube (owner 2026-11-27)
   const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoiceCube === undefined ? rows.invoice : rows.invoiceCube, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
@@ -4390,7 +4388,7 @@ function customsDocsOfOrder(o){
     const rd = (o.load_readings || []).find(r => r.file_name && r.file_name === d.file_name);
     const base = rd && TT_CUSTOMS_SHORT[rd.doc_kind] ? TT_CUSTOMS_SHORT[rd.doc_kind] + (rd.doc_kind === 'bol' && rd.customs_stamp ? ' stamped' : '') : 'Doc';
     return { url: d.storage_url, label: base + ' (customs)' };
-  });
+  }).map((d, i, all) => { const n = all.slice(0, i + 1).filter(x => x.label === d.label).length; return n > 1 ? { ...d, label: d.label.replace(' (customs)', ' ' + n + ' (customs)') } : d; }); // two of the same kind: 'USDA (customs)', 'USDA 2 (customs)'
 }
 let ttCustomsDocs = [];
 // THE INVOICE PAGE — ONE screen (owner 2026-11-27: "el flujo es email de aduana activa create invoice, debe abrir misma pagina con docs de aduana y qt con botones para compartir, bajar" · "no hay doc, no hay qt, no hay botones"): on the left the agency's document(s) and, once it exists, the invoice (tabs); on the right the QT where the invoice is made; at the bottom Download · Email · WhatsApp · Customs of that invoice. The comparison is agency document vs QT; the invoice is the result.

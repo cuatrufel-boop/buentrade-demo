@@ -2735,8 +2735,11 @@ const APP_ORIGIN = 'https://buentradegroup.com';
 // attached, and the remote sign link in the SAME message (not a second, separate email/WhatsApp),
 // so the trader can follow up for a signature in that same WhatsApp thread.
 // What the load documents SAY (order_load_readings, step 2 of Customs → Invoice, owner 2026-11-26): the number is offered in the question only when every reading that has it agrees; he confirms or changes it — a reading is never the real number by itself.
+// THE AGENCY'S ANSWER FILLS THE QT (owner 2026-11-27: "esta respuesta debe llenar siguiente cubo, para llenar qt"): when the customs agency answered with its own documents, the boxes and the weight offered are ITS; before that (or without it) what the plant's documents agree on, as before.
 function bcAgreedReading(readings, field){
-  const v = (readings || []).filter(r => !r.read_error && r[field] != null).map(r => Number(r[field]));
+  const all = (readings || []).filter(r => !r.read_error && r[field] != null);
+  const fromAgency = all.filter(r => r.origin === 'customs_document');
+  const v = (fromAgency.length ? fromAgency : all).map(r => Number(r[field]));
   return v.length && v.every(x => x === v[0]) ? v[0] : null;
 }
 async function createAndShareInvoice(){
