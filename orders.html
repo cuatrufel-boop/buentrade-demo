@@ -2551,7 +2551,13 @@ function orderDocRows(o, nextActionLabel){
     const cubeEyeBtn = it => `<button class="btn secondary eye-tip" style="padding:6px 10px;" data-tip="${escapeHtml(it.label)}" aria-label="${escapeHtml(it.label)}" onclick="event.stopPropagation();openInvoicePage('${o.order_number}','${cubeInv ? cubeInv.url : ''}','${cubeInv ? cubeInv.name : ''}','${it.start}')">${PREVIEW_ICON}</button>`;
     // THE QT HAS ITS OWN EYE IN THE CUBE (owner 2026-11-27: "deja los dos ojos y haz uno para qt donde pueda ver el doc con los numeros"): the document eyes stay as they are; one more eye, named QT, opens the page on the QT (where Create Invoice is).
     const cubeQtEye = o.sent_offer_id ? `<button class="btn secondary eye-tip" style="padding:6px 10px;" data-tip="QT" aria-label="QT" onclick="event.stopPropagation();openInvoicePage('${o.order_number}','${cubeInv ? cubeInv.url : ''}','${cubeInv ? cubeInv.name : ''}','','qt')">${PREVIEW_ICON}</button>` : '';
-    const invoiceCubeEye = (cubeEyeItems.length || cubeQtEye) ? `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cubeEyeItems.length > 1 ? `<span class="eye-stack">${cubeEyeBtn(cubeEyeItems[0])}<span class="eye-more">${cubeEyeItems.slice(1).map(cubeEyeBtn).join('')}</span></span>` : (cubeEyeItems.length ? cubeEyeBtn(cubeEyeItems[0]) : '')}${cubeQtEye}</div>` : '';
+    // THE SENDS BY HAND, IN THE CUBE (owner 2026-11-27: "el de email manual también · todo lo que es automático debe ser manual"): once the invoice is made, the client's e-mail, the agency's e-mail and the WhatsApp with the signature link are buttons of the cube, each one on its own; the guided flow after Create Invoice does the same three in a row. ONE e-mail shows, the other opens under it, like the other cubes.
+    const waG = 'padding:6px 10px;color:#4ADE80 !important;border-color:rgba(74,222,128,.55) !important;background:rgba(74,222,128,.14) !important;';
+    const cubeSend = (who, what, icon, st) => `<button class="btn secondary cube-tip" style="${st || 'padding:6px 10px;'}" data-tip="${who}" aria-label="${who}" onclick="event.stopPropagation();invoiceCubeAct('${o.order_number}','${cubeInv ? cubeInv.url : ''}','${cubeInv ? cubeInv.name : ''}','${what}')">${icon}</button>`;
+    const cubeMails = cubeInv && !o.invoice_signed_at ? [cubeSend('Client', 'email', typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON), cubeSend('Customs', 'customs', typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)] : [];
+    const cubeWa = cubeInv && !o.invoice_signed_at ? cubeSend('WhatsApp', 'whatsapp', typeof WA_ICON === 'undefined' ? '' : WA_ICON, waG) : '';
+    const cubeMailHtml = cubeMails.length > 1 ? `<span class="eye-stack">${cubeMails[0]}<span class="eye-more">${cubeMails.slice(1).join('')}</span></span>` : cubeMails.join('');
+    const invoiceCubeEye = (cubeEyeItems.length || cubeQtEye) ? `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cubeEyeItems.length > 1 ? `<span class="eye-stack">${cubeEyeBtn(cubeEyeItems[0])}<span class="eye-more">${cubeEyeItems.slice(1).map(cubeEyeBtn).join('')}</span></span>` : (cubeEyeItems.length ? cubeEyeBtn(cubeEyeItems[0]) : '')}${cubeQtEye}${cubeMailHtml}${cubeWa}</div>` : '';
     const invoiceActions = invoiceFiles.length
       ? `<button class="btn secondary" style="padding:6px 10px;" onclick="openInvoicePreview('${o.order_number}','${invoiceFiles[0].url}','${invoiceFiles[0].name}')" title="Preview & send">${PREVIEW_ICON}</button>`
       : '';
@@ -4909,6 +4915,42 @@ function openFreshInvoice(ctx){
   document.body.classList.add('fresh-invoice');
   return openInvoicePreview(ctx.orderNumber, ctx.url, ctx.filename, true);
 }
+// The sends by hand from the cube (owner 2026-11-27): the same context the QT builds when it makes the invoice (the real box count saved on the order, the composed invoice, the signature link, the agency's e-mail), built again from the invoice already made, and then the SAME functions the page buttons use.
+async function invoiceManualCtx(orderNumber, url, filename, needLink){
+  const { document: composed, customer } = await bcComposeSO(orderNumber);
+  if (!composed || !composed.invoice || !composed.invoice.line_item) throw new Error('The invoice could not be composed for this order.');
+  const sh = ((await callApi('shipments-search', { order_number: orderNumber, limit: 1 })).results || [])[0] || {};
+  const boxes = Number(sh.real_boxes) || 0, countKind = sh.real_boxes_kind === 'combos' ? 'combos' : 'boxes';
+  if (!boxes) throw new Error('The real box count is not on this order yet: make the invoice in the QT first.');
+  composed.invoice.line_item.count = boxes; composed.invoice.line_item.count_kind = countKind;
+  const general = customer ? collectEmails(customer) : [];
+  const paymentsEmails = (customer && customer.payments_contact_email) ? [customer.payments_contact_email] : [];
+  const emails = paymentsEmails.length ? paymentsEmails : general, ccEmails = paymentsEmails.length ? general : [];
+  let signLink = '';
+  if (needLink){ const issued = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber }); signLink = `${APP_ORIGIN}/f/${encodeURIComponent(issued.short_code)}`; }
+  const inv = composed.invoice, contact = customer && customer.contact_name ? String(customer.contact_name).split(' ')[0] : '';
+  const facts = { number: `INV-BT-${btNum(orderNumber)}`, contact, boxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
+  const { subject, body } = bcInvoiceClientEmail(facts);
+  const waPhone = customer && (customer.payments_contact_whatsapp || customer.payments_contact_phone || customer.whatsapp || customer.phone);
+  let customs = null;
+  try {
+    let agencyId = customer && customer.customs_agency_provider_id;
+    if (!agencyId){ const so = ((await callApi('sent-offers-search', { order_number: orderNumber, limit: 1 })).results || [])[0]; agencyId = so && so.customs_agency_provider_id; }
+    const agency = agencyId ? ((await callApi('providers-search', { id: agencyId })).results || [])[0] : null;
+    const agencyEmails = agency ? collectEmails(agency) : [];
+    if (agencyEmails.length) customs = { emails: agencyEmails, name: agency.name, ...bcInvoiceCustomsEmail({ ...facts, agencyName: agency.name }) };
+  } catch (e) { /* no agency e-mail: the Customs button says so */ }
+  return { orderNumber, url, filename, emails, ccEmails, subject, body, waPhone, waMessage: bcInvoiceClientWhatsApp(facts), customerName: facts.clientName, boxes, countKind, customs };
+}
+async function invoiceCubeAct(orderNumber, url, filename, what){
+  let c;
+  try { c = await invoiceManualCtx(orderNumber, url, filename, what !== 'customs'); }
+  catch (e) { await btAlert(e.message); return; }
+  freshInvoiceCtx = c;
+  if (what === 'email'){ if (!c.emails.length){ await btAlert('This customer has no email on file.'); return; } return freshInvoiceEmail(true); }
+  if (what === 'customs'){ if (!c.customs){ await btAlert('This customer has no customs agency e-mail on file.'); return; } return freshInvoiceCustoms(); }
+  return freshInvoiceWhatsApp();
+}
 async function freshInvoiceAttachment(){
   const c = freshInvoiceCtx;
   const blob = await (await fetch(c.url)).blob();
@@ -4920,7 +4962,7 @@ async function freshInvoiceMarkSent(){
   await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: c.orderNumber, doc_type: 'invoice', real_boxes: c.boxes || undefined, real_boxes_kind: c.countKind || undefined, sends: bcTakeSends(c.orderNumber) });
   await loadStatusOrders();
 }
-async function freshInvoiceEmail(){
+async function freshInvoiceEmail(single){ // single = the cube's own button: only the client's e-mail, no chain
   const c = freshInvoiceCtx;
   if (!c) return;
   try {
@@ -4929,6 +4971,7 @@ async function freshInvoiceEmail(){
     await freshInvoiceMarkSent();
     showToast('Invoice sent — pending customer signature', c.emails.join(', '));
     // THE FLOW LEADS TO THE END (owner 2026-11-27: "se envía por email a cliente y a aduana (separadamente) · una vez enviado por email se abre el whatsapp para firma"): client e-mail → the agency's own e-mail (its own editable window) → WhatsApp with the signature link. Each button stays for doing it by hand at any time.
+    if (single) return;
     try {
       if (c.customs) await freshInvoiceCustoms();
       if (c.waPhone) await freshInvoiceWhatsApp();
