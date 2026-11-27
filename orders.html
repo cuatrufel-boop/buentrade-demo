@@ -1542,7 +1542,7 @@ function factoringAwaitsSummarOk(o){
   return !!(o && o.financing && o.financing.financing_method === 'summar' && o.factoring_docs_sent_at && !o.factoring_confirmed_at && !o.summar_payment_sent_at && !o.plant_paid_at);
 }
 // Owner 2026-11-21 (new 12-step flow): the names of the steps as he dictated them. Only what is SHOWN changes; the internal labels (the keys the phases, the Next Action and the payment rows match on) stay as they were.
-const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Customs', Delivered: 'Create Invoice', Invoice: 'Invoice client', Signature: 'Sign & Close' };
+const STEP_NAMES = { PO: 'PO Send', SO: 'SO Send', FO: 'FO Send', 'Send Release #': 'Release', 'Confirm PU': 'Appointment', 'Pick up': 'Pickup', 'Sent to customs': 'Customs', Delivered: 'Create Invoice', Invoice: 'Create Invoice', Signature: 'Sign & Close' };
 // The places that SHOW a name call it as `(typeof stepName === 'function' ? stepName : (l => l))(label, o)`: a page piece that is read on its own (the protected tests build the render functions alone) keeps the original label.
 function stepName(label, o){
   if (label === 'Pay Plant') return 'Wire'; // owner 2026-11-25: "mejor solo wire": the system already knows (factoring or direct) where it takes him; both go to the same bank
@@ -1974,8 +1974,8 @@ function renderUnifiedTimeline(o, attentionOrderNumbers){
   entries.push(mainEntry('picked_up'));
   entries.push(miniEntry({ icon: CUSTOMS_ICON, label: 'Sent to customs', done: !!customsDoneAt(o), date: customsDoneAt(o) === true ? null : customsDoneAt(o), wait: !pendingCustoms && !customsDoneAt(o), waitReason: 'No pickup documents have arrived yet.', onClick: `shareCustoms('${o.order_number}')`, raised: true }));
   const deliveredIdxInEntries = entries.length;
-  entries.push(mainEntry('delivered'));
-  entries.push(miniEntry({ icon: RECEIPT_ICON, label: 'Invoice', done: !!o.invoice_sent_at, date: o.invoice_sent_at, wait: stageIdx < deliveredIdx, waitReason: 'The load must be Delivered first.', onClick: `openInvoiceQT('${o.order_number}')` }));
+  // ONE invoice cube (owner 2026-11-27: "hay dos cubos de invoice que no necesitamos… customs, Invoice, sign and close"): the agency's answer opens it, its action is the ONE page (agency document + QT + Download / Email / WhatsApp / Customs), it is done when the invoice is sent. The old Delivered cube is gone from the line; the load is still marked Delivered when he confirms it after the page (markDeliveredWithSignature).
+  entries.push(miniEntry({ icon: RECEIPT_ICON, label: 'Invoice', done: !!o.invoice_sent_at, date: o.invoice_sent_at, wait: !customsDoneAt(o) && stageIdx < deliveredIdx, waitReason: 'Send the pickup documents to customs first.', onClick: o.invoice_sent_at ? `openInvoiceQT('${o.order_number}')` : `markDeliveredWithSignature('${o.order_number}')` }));
   entries.push(miniEntry({ icon: SIGN_ICON, label: 'Signature', done: !!o.invoice_signed_at, date: o.invoice_signed_at, wait: !o.invoice_sent_at, waitReason: 'Send the Invoice first — the customer signs it once they receive it.', onClick: `signatureInfoClick('${o.order_number}')`, raised: true }));
 
   // Real ask 2026-09-07: "un hombre andando hasta el pickup. un camion desde el pickup hasta la
@@ -2637,7 +2637,6 @@ function orderDocRows(o, nextActionLabel){
       fo: o.has_freight_order ? renderTradeDocRow('Freight Order (Carrier)', o.fo_sent_at, foFiles, foActions, foActionsWhenMissing, resendDocBtn('FO', o.order_number)) : '',
       payment: paymentRow,
       invoice: renderTradeDocRow('Invoice', o.invoice_sent_at, invoiceFiles, invoiceActions),
-      invoiceCreated: invoiceActions ? `<div class="doc-row">${invoiceActions}</div>` : '', // the Create Invoice cube holds the eye of the invoice that was created in the QT (owner 2026-11-27, option A)
       signature: renderSignatureEvidenceRow(o),
       proforma: proformaHtml,
       salesConfirmation: salesConfirmationHtml,
@@ -3087,7 +3086,7 @@ function renderJourney(o, attentionOrderNumbers){
     return line(`${cuFmt(cuReads[0].boxes, 0)} boxes · ${cuFmt(cuReads[0].net_weight_lb, 2)} lb${cuReads.length > 1 ? ' ✓' : ''}`);
   })();
   const customsCubeHtml = `${cuReadLine}<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuDocs.concat(cuFromCustoms))}${cuDocs.length || cuFromCustoms.length ? '<span style="align-self:center;opacity:.45;">|</span>' : ''}${waBtn('Send to Customs', `shareCustoms('${o.order_number}')`, typeof EMAIL_ICON === 'undefined' ? '' : EMAIL_ICON)}</div>`; // ONE eye for every document (what we send, then what the agency sent back): standing on it opens the others under the row (owner 2026-11-27: "customs tiene varios ojos, no tiene unfold de una a varios"); the e-mail button on the other side, the e-mail button on the other, like the Pickup cube (owner 2026-11-27)
-  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, Delivered: (cuFromCustoms.length ? `<div class="doc-row" data-keep="1" style="justify-content:center;flex-wrap:wrap;gap:4px;position:relative;">${cuStack(cuFromCustoms)}</div>` : '') + (rows.invoiceCreated || ''), 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
+  const own = { PO: rows.po, SO: rows.so, FO: rows.fo, Invoice: rows.invoice, Signature: rows.signature, 'Pick up': pickupCubeHtml, 'Confirm PU': puCaptureHtml + (pc ? '' : rows.date) + (hasCarrierPhone ? '' : recordRelBtn), 'Sent to customs': customsCubeHtml, 'Docs 2 Factoring': rows.salesConfirmation, 'Send Release #': (rows.plantOrder || '') + (rows.appointment || '') + (hasCarrierPhone ? recordRelBtn : '') };
   const opened = journeyOpen.get(o.order_number) || new Set();
   const R = 66, C = 2 * Math.PI * R;
   // nothing to press yet but something still pending: the Next card says what it is waiting for, never "All done" (owner 2026-11-21, "sentido común al flujo")
@@ -4429,6 +4428,7 @@ async function markDeliveredWithSignature(orderNumber){
   await openTTOverlay(o.sent_offer_id, `Factura — ${orderNumber}`, { customsDocs: typeof customsDocsOfOrder === 'function' ? customsDocsOfOrder(o) : [] }); // the agency's document on the left, the QT beside it (owner 2026-11-27)
   // Owner 2026-11-23 (order 1002 went on without his confirming the invoice): "el sistema no puede dejar pasar sin confirmar". Closing the QT is not a confirmation: the load is marked Delivered (and the collections clock starts)
   // ONLY when the trader says so; otherwise it stays exactly where it was.
+  if (o.load_status === 'delivered') return; // already confirmed before: the page was only opened to make / send the invoice
   const yes = await btConfirm(`${orderNumber}: confirm the load was delivered? This starts the invoice and the collection clock.`, 'Yes, delivered', 'Not yet');
   if (!yes){ showToast('Not confirmed', `${orderNumber} stays where it was.`); return; }
   await advanceLoadStatus(orderNumber, 'delivered');
