@@ -4461,15 +4461,18 @@ function ttRenderActions(){
   if (!ttInvoice){ el.style.display = 'none'; el.innerHTML = ''; document.body.classList.remove('fresh-invoice'); return; } // no invoice yet: no buttons (the numbers are written in the QT, never on this page)
   document.body.classList.add('fresh-invoice'); // the e-mail / WhatsApp windows open above this page
   const c = ttInvoice.fresh;
+  const signedAlready = (() => { const o = findStatusOrder(ttInvoice.orderNumber); return !!(o && o.invoice_signed_at); })(); // a signed invoice has nothing left to send for signature
   el.innerHTML = `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceDownload()">${DOWNLOAD_ICON}Download</button>
-    <button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceEmail()">${EMAIL_ICON}Email</button>
-    ${c && c.customs ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceCustoms()">${EMAIL_ICON}Customs</button>` : ''}
-    <button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceWhatsApp()">${WA_ICON}WhatsApp</button>`;
+    ${signedAlready ? '' : `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceEmail()">${EMAIL_ICON}Email</button>`}
+    ${(c ? c.customs : true) ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceCustoms()">${EMAIL_ICON}Customs</button>` : ''}
+    ${signedAlready ? '' : `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="ttInvoiceWhatsApp()">${WA_ICON}WhatsApp</button>`}`;
   el.style.display = 'flex';
 }
 function ttInvoiceDownload(){ if (ttInvoice) window.open(ttInvoice.url, '_blank'); }
-function ttInvoiceEmail(){ if (!ttInvoice) return; return ttInvoice.fresh ? freshInvoiceEmail() : resendInvoiceEmail(ttInvoice.orderNumber, ttInvoice.url, ttInvoice.filename); }
-function ttInvoiceWhatsApp(){ if (!ttInvoice) return; return ttInvoice.fresh ? freshInvoiceWhatsApp() : waResendInvoice(ttInvoice.orderNumber, ttInvoice.url, ttInvoice.filename); }
+// ONE PROCESS FOR EVERY INVOICE (owner 2026-11-27: "todo lo que hicimos en la 1002… para todas las órdenes… no quiero cosas viejas en orders"): an invoice that already exists is sent with the SAME functions and texts as the one just made (the old resend buttons and their old copy are no longer reachable from here).
+function ttInvoiceEmail(){ if (!ttInvoice) return; return ttInvoice.fresh ? freshInvoiceEmail() : invoiceCubeAct(ttInvoice.orderNumber, ttInvoice.url, ttInvoice.filename, 'email'); }
+function ttInvoiceWhatsApp(){ if (!ttInvoice) return; return ttInvoice.fresh ? freshInvoiceWhatsApp() : invoiceCubeAct(ttInvoice.orderNumber, ttInvoice.url, ttInvoice.filename, 'whatsapp'); }
+function ttInvoiceCustoms(){ if (!ttInvoice) return; return ttInvoice.fresh ? freshInvoiceCustoms() : invoiceCubeAct(ttInvoice.orderNumber, ttInvoice.url, ttInvoice.filename, 'customs'); }
 function openTTOverlay(sentOfferId, title, opts){
   const o = statusOrders.find(x => x.sent_offer_id === sentOfferId);
   ttCustomsDocs = (opts && opts.customsDocs) || [];
@@ -5056,9 +5059,9 @@ async function openInvoicePreview(orderNumber, fileUrl, filename, fresh){
   const actionsHtml = withCompare => `
     ${withCompare ? `<button class="btn secondary" id="docPreviewCompareBtn" style="margin-right:auto;" onclick="toggleQtCompare()">Compare to QT</button>` : ''}
     <button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="window.open('${fileUrl}', '_blank')">${DOWNLOAD_ICON}Download</button>
-    ${fresh ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceEmail()">${EMAIL_ICON}Email</button>` : `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="resendInvoiceEmail('${orderNumber}','${fileUrl}','${filename}')">${EMAIL_ICON}Email</button>`}
-    ${fresh && freshInvoiceCtx && freshInvoiceCtx.customs ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceCustoms()">${EMAIL_ICON}Customs</button>` : ''}
-    ${fresh ? `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceWhatsApp()">${WA_ICON}WhatsApp</button>` : `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="waResendInvoice('${orderNumber}','${fileUrl}','${filename}')">${WA_ICON}WhatsApp</button>`}`;
+    ${fresh ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceEmail()">${EMAIL_ICON}Email</button>` : `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="invoiceCubeAct('${orderNumber}','${fileUrl}','${filename}','email')">${EMAIL_ICON}Email</button>`}
+    ${fresh ? (freshInvoiceCtx && freshInvoiceCtx.customs ? `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceCustoms()">${EMAIL_ICON}Customs</button>` : '') : `<button class="btn secondary" style="display:inline-flex;align-items:center;gap:7px;" onclick="invoiceCubeAct('${orderNumber}','${fileUrl}','${filename}','customs')">${EMAIL_ICON}Customs</button>`}
+    ${fresh ? `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="freshInvoiceWhatsApp()">${WA_ICON}WhatsApp</button>` : `<button class="wa-btn" style="display:inline-flex;align-items:center;gap:7px;" onclick="invoiceCubeAct('${orderNumber}','${fileUrl}','${filename}','whatsapp')">${WA_ICON}WhatsApp</button>`}`;
   document.getElementById('docPreviewActions').innerHTML = actionsHtml(false);
   if (fresh) return; // the invoice just made is the RESULT of comparing the customs document with the QT (owner 2026-11-27): no Compare to QT on it; an invoice that already exists keeps it
   const offer = await loadCompareOffer(orderNumber);
