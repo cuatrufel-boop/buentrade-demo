@@ -4906,6 +4906,7 @@ function closeDocPreview(){
 let freshInvoiceCtx = null;
 function openFreshInvoice(ctx){
   freshInvoiceCtx = ctx;
+  ensureInvoicePreview(ctx.orderNumber, ctx.url); // in the background: the card of the WhatsApp link is the invoice itself
   const page = document.getElementById('ttOverlay');
   if (page && page.style.display === 'flex' && document.getElementById('ttCustomsPane')){ // the Create Invoice page is open: the invoice joins it (a tab and its buttons), no second window
     ttInvoice = { orderNumber: ctx.orderNumber, url: ctx.url, filename: ctx.filename, fresh: ctx };
@@ -4914,6 +4915,31 @@ function openFreshInvoice(ctx){
   }
   document.body.classList.add('fresh-invoice');
   return openInvoicePreview(ctx.orderNumber, ctx.url, ctx.filename, true);
+}
+// THE INVOICE'S PICTURE FOR THE WHATSAPP CARD (owner 2026-11-27: "la factura directa para firmar"): the top of the invoice — the header, the customer and the items table, down to where NOTES starts — is drawn from the saved PDF and kept as order-documents/invoice-preview/<order>.png. The link /f/<code> (netlify/functions/invoice-link.js) shows this picture as the card in WhatsApp. Never blocks the send: without the picture the old card is shown.
+function loadPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve();
+  return new Promise((resolve, reject) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; resolve(); }; sc.onerror = reject; document.head.appendChild(sc); });
+}
+async function ensureInvoicePreview(orderNumber, pdfUrl){
+  try {
+    await loadPdfJs();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await (await fetch(pdfUrl)).arrayBuffer()) }).promise;
+    const page = await pdf.getPage(1);
+    const base = page.getViewport({ scale: 1 }), S = 3;
+    const notes = (await page.getTextContent()).items.find(i => String(i.str).trim() === 'NOTES');
+    const cutPt = notes ? Math.max(120, base.height - (notes.transform[5] + (notes.height || 10)) - 10) : base.height * 0.55;
+    const full = document.createElement('canvas'); const vp = page.getViewport({ scale: S }); full.width = Math.floor(vp.width); full.height = Math.floor(vp.height);
+    await page.render({ canvasContext: full.getContext('2d'), viewport: vp }).promise;
+    const out = document.createElement('canvas'); out.width = 1200; out.height = 630; // the size WhatsApp cards use
+    const g = out.getContext('2d'); g.fillStyle = '#050A14'; g.fillRect(0, 0, 1200, 630);
+    const h = 590, w = Math.round(base.width * h / cutPt), x = Math.round((1200 - w) / 2), y = 20;
+    g.fillStyle = '#fff'; g.fillRect(x, y, w, h);
+    g.drawImage(full, 0, 0, full.width, Math.round(cutPt * S), x, y, w, h);
+    const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+    const { error } = await storageClient.storage.from('order-documents').upload(`invoice-preview/${orderNumber}.png`, blob, { upsert: true, contentType: 'image/png' });
+    if (error) throw error;
+  } catch (e) { /* the old card is shown */ }
 }
 // The sends by hand from the cube (owner 2026-11-27): the same context the QT builds when it makes the invoice (the real box count saved on the order, the composed invoice, the signature link, the agency's e-mail), built again from the invoice already made, and then the SAME functions the page buttons use.
 async function invoiceManualCtx(orderNumber, url, filename, needLink){
@@ -4926,6 +4952,7 @@ async function invoiceManualCtx(orderNumber, url, filename, needLink){
   const general = customer ? collectEmails(customer) : [];
   const paymentsEmails = (customer && customer.payments_contact_email) ? [customer.payments_contact_email] : [];
   const emails = paymentsEmails.length ? paymentsEmails : general, ccEmails = paymentsEmails.length ? general : [];
+  if (needLink) await ensureInvoicePreview(orderNumber, url);
   let signLink = '';
   if (needLink){ const issued = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber }); signLink = `${APP_ORIGIN}/f/${encodeURIComponent(issued.short_code)}`; }
   const inv = composed.invoice, contact = customer && customer.contact_name ? String(customer.contact_name).split(' ')[0] : '';
