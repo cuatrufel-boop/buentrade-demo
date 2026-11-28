@@ -844,7 +844,7 @@ async function loadCollections(){
     plant_paid_at: r.plant_paid_at, summar_payment_sent_at: r.summar_payment_sent_at, picked_up_at: r.picked_up_at, delivered_at: r.delivered_at,
     offer_sent_at: r.offer_sent_at, po_sent_at: r.po_sent_at, so_sent_at: r.so_sent_at, order_created_at: r.order_created_at,
     invoice_sent_at: r.invoice_sent_at, payment_due_date: dateOnly(r.payment_due_date), paid_at: r.paid_at, amount_paid: Number(r.amount_paid || 0),
-    interest_amount: r.interest_amount, won_by: r.won_by, customs_agency: r.customs_agency_name, invoice_signed_at: r.invoice_signed_at,
+    interest_amount: r.interest_amount, won_by: r.won_by, customs_agency: r.customs_agency_name, invoice_signed_at: r.invoice_signed_at, invoice_signed_by: r.invoice_signed_by, invoice_url: r.invoice_url, invoice_certificate_url: r.invoice_certificate_url,
     carrier_id: r.carrier_id, carrier_days: r.carrier_days, customs_agency_id: r.customs_agency_id, customs_agency_days: r.customs_agency_days,
     customer_phone: r.customer_phone, payments_contact_name: r.payments_contact_name, payments_contact_email: r.payments_contact_email,
     payments_contact_whatsapp: r.payments_contact_whatsapp, payments_contact_phone: r.payments_contact_phone,
@@ -1213,6 +1213,14 @@ function profitSection(L){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:12px 14px;border-radius:10px;background:rgba(63,203,126,.1);border:1px solid rgba(63,203,126,.35);"><span style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--ink);">${isClosed(L) ? 'Real profit' : 'Profit so far'} <span class="muted" style="font-weight:500;font-size:12px;">· ${(p.profit / L.sale * 100).toFixed(1)}% of sale</span></span><span style="${MONO}font-size:20px;font-weight:700;color:${p.profit >= 0 ? G : RED};">${fmtMoney(p.profit)}</span></div></div>`;
   return `<div class="docs-panel-heading">Profit</div>${bar}${statement}`;
 }
+// THE SIGNED INVOICE IS HERE TOO (owner 2026-11-27: "ahora pasó a pay and receive, pero ¿dónde quedó la factura firmada?"): once the customer signs, the load comes in with the signed invoice and the certificate of the signature (who, when, IP, document hash) one tap away. Nothing is shown for a document that was not saved.
+function docsSection(L){
+  if (!L.invoice_signed_at) return '';
+  const when = new Date(L.invoice_signed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+  const row = (label, url, status) => url ? `<div class="doc-row"><span class="doc-row-label">${label}</span><a class="btn secondary doc-row-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" title="${label}" aria-label="${label}">${PREVIEW_ICON}</a><span class="doc-row-status sent">${status}</span></div>` : '';
+  const rows = row('Invoice (signed)', L.invoice_url, `Signed ${when}${L.invoice_signed_by ? ' · ' + escapeHtml(L.invoice_signed_by) : ''}`) + row('Signature evidence', L.invoice_certificate_url, 'Certificate');
+  return rows ? `<div class="docs-panel-heading">${DOC_ICON.replace('<svg ', '<svg style="width:14px;height:14px;" ')} Documents</div><div class="docs-panel-grid">${rows}</div>` : '';
+}
 function renderDetail(){
   if (!detailOrder) return;
   const L = LOADS.find(x => x.order_number === detailOrder); if (!L) return closeDetail();
@@ -1227,6 +1235,7 @@ function renderDetail(){
       ${nextCard(L, fl)}
       ${moneyTable(L)}
       ${profitSection(L)}
+      ${docsSection(L)}
     </div>`;
 }
 function paidOn(x){ if (!x.done) return null; if (x.key === 'plant') return day(x.L.plant_paid_at); if (x.key === 'gap') return day(x.L.summar_payment_sent_at); return recDate(x); }
