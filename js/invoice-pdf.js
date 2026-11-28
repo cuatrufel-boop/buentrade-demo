@@ -34,13 +34,11 @@ function bcInvoiceWhatsAppRecipient(customer){
   if (pay) return { phone: pay, name: first(c.payments_contact_name) };
   return { phone: c.whatsapp || c.phone || '', name: first(c.contact_name) };
 }
+// His text of 2026-11-27, word for word ("Hola (nombre del que firma) te agradezco me firmes recibido de la orden INV-BT-2026-1002. Gracias !"); the link to sign goes on its own line under it, as the card in WhatsApp is its invoice picture.
 function bcInvoiceClientWhatsApp(f){
   return [
-    `Hola${f.contact ? ' ' + f.contact : ''}, te saludamos de BuenTrade 🤝.`, '',
-    `Te enviamos por correo la Factura Definitiva de tu Orden ${f.number} (${f.boxes} ${f.countKind === 'combos' ? 'combos' : 'cajas'} | ${bcInvoiceMoney(f.total, f.pesos)}).`, '',
-    'Para cerrar la entrega, por favor regálanos tu firma de recibido en esta liga:',
-    `👉 ${f.signLink}`, '',
-    'Quedamos a tus órdenes. ¡Muchas gracias!',
+    `Hola${f.contact ? ' ' + f.contact : ''} te agradezco me firmes recibido de la orden ${f.number}. Gracias !`, '',
+    f.signLink,
   ].join('\n');
 }
 function bcInvoiceCustomsEmail(f){
