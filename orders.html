@@ -4956,7 +4956,7 @@ async function invoiceManualCtx(orderNumber, url, filename, needLink){
   let signLink = '';
   if (needLink){ const issued = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber }); signLink = `${APP_ORIGIN}/f/${encodeURIComponent(issued.short_code)}`; }
   const inv = composed.invoice, contact = bcInvoiceWhatsAppRecipient(customer).name;
-  const facts = { number: `INV-BT-${btNum(orderNumber)}`, contact, boxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
+  const facts = { cardVersion: Date.now().toString(36), number: `INV-BT-${btNum(orderNumber)}`, contact, boxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
   const { subject, body } = bcInvoiceClientEmail(facts);
   const waTo = bcInvoiceWhatsAppRecipient(customer); // the number and the name of the SAME person
   const waPhone = waTo.phone;

@@ -2799,7 +2799,7 @@ async function createAndShareInvoice(){
   const contact = waTo.name;
   // INVOICE CLIENT (owner 2026-11-21, step 11): his texts (js/invoice-pdf.js) — real boxes, real net weight and the total of this invoice.
   const inv = composed.invoice;
-  const facts = { number: `INV-BT-${btNum(orderNumber)}`, contact, boxes: realBoxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
+  const facts = { cardVersion: Date.now().toString(36), number: `INV-BT-${btNum(orderNumber)}`, contact, boxes: realBoxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
   const { subject, body } = bcInvoiceClientEmail(facts);
   const waPhone = waTo.phone;
   const waMessage = bcInvoiceClientWhatsApp(facts);

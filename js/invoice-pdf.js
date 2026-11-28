@@ -34,11 +34,11 @@ function bcInvoiceWhatsAppRecipient(customer){
   if (pay) return { phone: pay, name: first(c.payments_contact_name) };
   return { phone: c.whatsapp || c.phone || '', name: first(c.contact_name) };
 }
-// His text of 2026-11-27, word for word ("Hola (nombre del que firma) te agradezco me firmes recibido de la orden INV-BT-2026-1002. Gracias !"); the link to sign goes on its own line under it, as the card in WhatsApp is its invoice picture.
+// His text of 2026-11-27, word for word ("Hola (nombre del que firma) te agradezco me firmes la factura de la orden INV-BT-2026-1002. Gracias !"); the link to sign goes on its own line under it, as the card in WhatsApp is its invoice picture. The link carries a small version mark, so WhatsApp never shows a picture it kept from an earlier send of the same link.
 function bcInvoiceClientWhatsApp(f){
   return [
-    `Hola${f.contact ? ' ' + f.contact : ''} te agradezco me firmes recibido de la orden ${f.number}. Gracias !`, '',
-    f.signLink,
+    `Hola${f.contact ? ' ' + f.contact : ''} te agradezco me firmes la factura de la orden ${f.number}. Gracias !`, '',
+    f.signLink + (f.cardVersion ? '?v=' + f.cardVersion : ''),
   ].join('\n');
 }
 function bcInvoiceCustomsEmail(f){
