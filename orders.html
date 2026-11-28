@@ -4955,10 +4955,11 @@ async function invoiceManualCtx(orderNumber, url, filename, needLink){
   if (needLink) await ensureInvoicePreview(orderNumber, url);
   let signLink = '';
   if (needLink){ const issued = await callApi('orders-invoice-signature', { action: 'issue', actor: currentActor(), order_number: orderNumber }); signLink = `${APP_ORIGIN}/f/${encodeURIComponent(issued.short_code)}`; }
-  const inv = composed.invoice, contact = customer && customer.contact_name ? String(customer.contact_name).split(' ')[0] : '';
+  const inv = composed.invoice, contact = bcInvoiceWhatsAppRecipient(customer).name;
   const facts = { number: `INV-BT-${btNum(orderNumber)}`, contact, boxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
   const { subject, body } = bcInvoiceClientEmail(facts);
-  const waPhone = customer && (customer.payments_contact_whatsapp || customer.payments_contact_phone || customer.whatsapp || customer.phone);
+  const waTo = bcInvoiceWhatsAppRecipient(customer); // the number and the name of the SAME person
+  const waPhone = waTo.phone;
   let customs = null;
   try {
     let agencyId = customer && customer.customs_agency_provider_id;
@@ -4974,9 +4975,9 @@ async function invoiceCubeAct(orderNumber, url, filename, what){
   try { c = await invoiceManualCtx(orderNumber, url, filename, what !== 'customs'); }
   catch (e) { await btAlert(e.message); return; }
   freshInvoiceCtx = c;
-  if (what === 'email'){ if (!c.emails.length){ await btAlert('This customer has no email on file.'); return; } return freshInvoiceEmail(true); }
+  if (what === 'email'){ if (!c.emails.length){ await btAlert('This customer has no email on file.'); return; } return freshInvoiceEmail(); }
   if (what === 'customs'){ if (!c.customs){ await btAlert('This customer has no customs agency e-mail on file.'); return; } return freshInvoiceCustoms(); }
-  return freshInvoiceWhatsApp();
+  return freshInvoiceWhatsApp(true);
 }
 // Saves a file that lives on another site WITHOUT leaving the page (a plain link with "download" is ignored across sites: the browser opens the file in its own window instead). Never blocks the step it is part of.
 async function saveFileHere(url, filename){
@@ -4997,7 +4998,7 @@ async function freshInvoiceMarkSent(){
   await callApi('shipments-mark-doc-sent', { actor: currentActor(), order_number: c.orderNumber, doc_type: 'invoice', real_boxes: c.boxes || undefined, real_boxes_kind: c.countKind || undefined, sends: bcTakeSends(c.orderNumber) });
   await loadStatusOrders();
 }
-async function freshInvoiceEmail(single){ // single = the cube's own button: only the client's e-mail, no chain
+async function freshInvoiceEmail(){ // the client's e-mail by hand: the guided flow sends the client's invoice by WhatsApp only (owner 2026-11-27)
   const c = freshInvoiceCtx;
   if (!c) return;
   try {
@@ -5005,19 +5006,12 @@ async function freshInvoiceEmail(single){ // single = the cube's own button: onl
     await sendEmailApi('logistics', c.emails, c.subject, c.body, [att], null, c.ccEmails); // Invoice client goes from logistics@ (owner 2026-11-22)
     await freshInvoiceMarkSent();
     showToast('Invoice sent — pending customer signature', c.emails.join(', '));
-    // THE FLOW LEADS TO THE END (owner 2026-11-27: "se envía por email a cliente y a aduana (separadamente) · una vez enviado por email se abre el whatsapp para firma"): client e-mail → the agency's own e-mail (its own editable window) → WhatsApp with the signature link. Each button stays for doing it by hand at any time.
-    if (single) return;
-    try {
-      if (c.customs) await freshInvoiceCustoms();
-      if (c.waPhone) await freshInvoiceWhatsApp();
-    } catch (e2) { /* the client's e-mail already went out */ }
-    return;
   } catch (e) {
     if (e.cancelled) return;
     showToast('Automatic send failed', e.message + ' — click to finish it in Gmail:', true, gmailFallbackLinkHtml(c.emails, c.subject, c.body, c.orderNumber, 'invoice'));
   }
 }
-async function freshInvoiceWhatsApp(){
+async function freshInvoiceWhatsApp(single){ // single = a button of the cube: only the WhatsApp, no chain
   const c = freshInvoiceCtx;
   if (!c || !c.waPhone){ await btAlert('No WhatsApp/phone on file for this customer.'); return; }
   // WhatsApp opens FIRST, with the signature link (the most important thing: "lo más importante es la firma"); the file is saved in the background so he can drag it into the chat. A file on another site cannot be "downloaded" by a link: the browser opened it in its own window and WhatsApp never came (owner 2026-11-27), so it is fetched and saved from here.
@@ -5026,6 +5020,8 @@ async function freshInvoiceWhatsApp(){
   const sent = await waDone;
   if (!sent) return; // the invoice counts as sent only when he says he sent it on WhatsApp
   try { await freshInvoiceMarkSent(); showToast('Invoice sent — pending customer signature', c.customerName || ''); } catch (e) { /* the WhatsApp itself already went out */ }
+  // THE FLOW LEADS TO THE END (owner 2026-11-27: "al cliente solo a la persona correcta a whatsapp y no al correo"): the client gets the invoice ONLY by WhatsApp (to the right person); then the agency's own e-mail (its own editable window). The client's e-mail stays a button for doing it by hand.
+  if (!single && c.customs){ try { await freshInvoiceCustoms(); } catch (e2) { /* the WhatsApp already went out */ } }
 }
 async function freshInvoiceCustoms(){
   const c = freshInvoiceCtx;

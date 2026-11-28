@@ -27,6 +27,13 @@ function bcInvoiceClientEmail(f){
     ].join('\n'),
   };
 }
+// THE RIGHT PERSON (owner 2026-11-27: "solo a la persona correcta a whatsapp"): the invoice goes to the customer's payments contact when it has a WhatsApp / phone, greeted by ITS name; otherwise to the general contact, greeted by its own. The number and the name always belong to the same person.
+function bcInvoiceWhatsAppRecipient(customer){
+  const c = customer || {}, first = n => String(n || '').trim().split(/\s+/)[0] || '';
+  const pay = c.payments_contact_whatsapp || c.payments_contact_phone;
+  if (pay) return { phone: pay, name: first(c.payments_contact_name) };
+  return { phone: c.whatsapp || c.phone || '', name: first(c.contact_name) };
+}
 function bcInvoiceClientWhatsApp(f){
   return [
     `Hola${f.contact ? ' ' + f.contact : ''}, te saludamos de BuenTrade 🤝.`, '',

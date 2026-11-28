@@ -2795,12 +2795,13 @@ async function createAndShareInvoice(){
   try { invoiceUrl = await uploadOrderPdf(doc, filename); }
   catch (e) { msgEl.textContent = 'Error subiendo el PDF: ' + e.message; return; }
 
-  const contact = customer && customer.contact_name ? negoFirstName(customer.contact_name) : '';
+  const waTo = bcInvoiceWhatsAppRecipient(customer); // the number and the name of the SAME person (payments contact first)
+  const contact = waTo.name;
   // INVOICE CLIENT (owner 2026-11-21, step 11): his texts (js/invoice-pdf.js) — real boxes, real net weight and the total of this invoice.
   const inv = composed.invoice;
   const facts = { number: `INV-BT-${btNum(orderNumber)}`, contact, boxes: realBoxes, countKind, weight: inv.line_item.weight, unit: inv.line_item.unit, total: inv.line_item.total, pesos: inv.line_item.unit === 'kg', signLink, clientName: (customer && (customer.trade_name || customer.name)) || '' };
   const { subject, body } = bcInvoiceClientEmail(facts);
-  const waPhone = customer && (customer.payments_contact_whatsapp || customer.payments_contact_phone || customer.whatsapp || customer.phone);
+  const waPhone = waTo.phone;
   const waMessage = bcInvoiceClientWhatsApp(facts);
   // The customs agency gets the invoice too (its own e-mail): the customer's agency, else the offer's, the same order as everywhere else.
   let customsCtx = null;
