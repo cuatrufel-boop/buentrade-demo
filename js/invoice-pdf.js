@@ -114,6 +114,7 @@ function bcRenderInvoice(inv, orderNumber, signature){
   INVOICE_WIRE.forEach((l, i) => doc.text(l, 40, ty + 14 + i * 11));
   const wireEnd = ty + 14 + INVOICE_WIRE.length * 11;
   const sigLineY = ty + 64;
+  doc.btSigBox = { page: doc.internal.getCurrentPageInfo().pageNumber, x: 320, y: ty + 4, w: 252, h: 58, pw: doc.internal.pageSize.getWidth(), ph: doc.internal.pageSize.getHeight() }; // where the customer's signature goes: the signature page puts a tappable field right there (owner 2026-11-27: "firme el campo")
   if (signature && signature.dataUrl) doc.addImage(signature.dataUrl, 'PNG', 320, ty + 6, 165, 55);
   doc.setDrawColor(150, 160, 175); doc.setLineWidth(0.75); doc.line(320, sigLineY, 572, sigLineY);
   doc.setFontSize(8); doc.setTextColor(100, 116, 139);
