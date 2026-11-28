@@ -373,6 +373,8 @@
      every other one — it's been sitting long enough that its price is probably already wrong. Same
      amber-vs-red escalation as every other staleness flag in this app, plus a slow, permanent pulse
      so it doesn't blend into a list of plants scanned quickly. */
+  /* the narrowest phones (320 px): the badge wraps inside its cell instead of poking out of it (phone-budget test, 2026-11-28) */
+  @media (max-width:420px){ .pending-match-badge{max-width:100%;white-space:normal;text-align:left;line-height:1.25;} }
   .pending-match-badge-stale{color:#FF9C8A;border-color:rgba(196,67,46,.55);animation:pending-stale-pulse 2s ease-in-out infinite;}
   .pending-match-badge-stale:hover{background:rgba(196,67,46,.14);border-color:#FF9C8A;}
   @keyframes pending-stale-pulse{0%,100%{box-shadow:0 0 0 0 rgba(196,67,46,0);}50%{box-shadow:0 0 0 3px rgba(196,67,46,.35);}}
